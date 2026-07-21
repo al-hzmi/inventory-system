@@ -1858,49 +1858,49 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
         };
 
         // Full Detailed Card (Exact Match)
-        const FullResultCard = ({ item, warehouseName }) => (
-            <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 md:p-24 bg-bg flex flex-col gap-16">
-                <div>
-                    <div className="text-[14px] font-medium text-secondary mb-1">رقم الصنف</div>
-                    <div className="text-[16px] font-bold text-primary">{item.id}</div>
+       const FullResultCard = ({ item, warehouseName }) => (
+    <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 md:p-24 bg-bg flex flex-col gap-16">
+
+        <div>
+            <div className="text-[14px] font-medium text-secondary mb-1">رقم الصنف</div>
+            <div className="text-[16px] font-bold text-primary">{item.id}</div>
+        </div>
+
+        <div>
+            <div className="text-[14px] font-medium text-secondary mb-1">اسم الصنف</div>
+            <div className="text-[16px] text-primary">{item.name || "---"}</div>
+        </div>
+
+        <div>
+            <div className="text-[14px] font-medium text-secondary mb-1">المستودع</div>
+            <div className="text-[16px] text-primary">{warehouseName}</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
+            <div>
+                <div className="text-[14px] font-medium text-secondary mb-1">الوحدة</div>
+                <div className="text-[16px] font-bold text-primary">
+                    {item.unit || "---"}
                 </div>
-                <div>
-                    <div className="text-[14px] font-medium text-secondary mb-1">اسم الصنف</div>
-                    <div className="text-[16px] text-primary">{item.name || '---'}</div>
-                </div>
-                <div>
-                    <div className="text-[14px] font-medium text-secondary mb-1">المستودع</div>
-                    <div className="text-[16px] text-primary">{warehouseName}</div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
-
-    <div>
-        <div className="text-[14px] font-medium text-secondary mb-1">
-            الوحدة
-        </div>
-        <div className="text-[16px] font-bold text-primary">
-            {item.unit || "---"}
-        </div>
-    </div>
-
-    <div>
-        <div className="text-[14px] font-medium text-secondary mb-1">
-            الشد
-        </div>
-        <div className="text-[16px] font-bold text-primary">
-            {item.pack || "---"}
-        </div>
-    </div>
-
-</div>
-
-<div className="mt-4">
-    <div className="text-[14px] font-medium text-secondary mb-1">
-        الكمية المتوفرة
-    </div>
-    <FormatQuantity qty={item.qty} unit={item.unit} />
-</div>
             </div>
+
+            <div>
+                <div className="text-[14px] font-medium text-secondary mb-1">الشد</div>
+                <div className="text-[16px] font-bold text-primary">
+                    {item.pack || "---"}
+                </div>
+            </div>
+        </div>
+
+        <div className="border-t border-border pt-4">
+            <div className="text-[14px] font-medium text-secondary mb-1">
+                الكمية المتوفرة
+            </div>
+            <FormatQuantity qty={item.qty} unit={item.unit} />
+        </div>
+
+    </div>
+);
         );
 
         // Compact Card (Partial Match - max 5)
