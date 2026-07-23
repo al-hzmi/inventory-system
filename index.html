@@ -295,25 +295,10 @@ const App = () => {
     const [loading, setLoading] = useState(true);
 
     const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
-	
-    const searchInputRef = useRef(null);
-const App = () => {
-
-    const [warehouse, setWarehouse] = useState(null);
-    const [query, setQuery] = useState('');
-
-    const [databases, setDatabases] = useState({
-        jeddah: [],
-        riyadh: []
-    });
-
-    const [loading, setLoading] = useState(true);
-
-    const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
 
     const searchInputRef = useRef(null);
 
-    // قراءة آخر تحديث من version.json
+    // قراءة آخر تحديث
     useEffect(() => {
         fetch("./data/version.json")
             .then(res => res.json())
@@ -325,43 +310,46 @@ const App = () => {
             });
     }, []);
 
-    const loadData = async () => {
+    // تحميل قواعد البيانات
+    useEffect(() => {
 
-        // بقية كود loadData الموجود عندك...
-        try {
+        const loadData = async () => {
 
-            const [jeddahRes, riyadhRes] = await Promise.all([
-                fetch("./data/jeddah.tsv"),
-                fetch("./data/riyadh.tsv")
-            ]);
+            try {
 
-            const jeddahText = await jeddahRes.text();
-            const riyadhText = await riyadhRes.text();
+                const [jeddahRes, riyadhRes] = await Promise.all([
+                    fetch("./data/jeddah.tsv"),
+                    fetch("./data/riyadh.tsv")
+                ]);
 
-            setDatabases({
-                jeddah: parseExcelData(jeddahText),
-                riyadh: parseExcelData(riyadhText)
-            });
+                const jeddahText = await jeddahRes.text();
+                const riyadhText = await riyadhRes.text();
 
-        } catch (err) {
+                setDatabases({
+                    jeddah: parseExcelData(jeddahText),
+                    riyadh: parseExcelData(riyadhText)
+                });
 
-            console.error(err);
+            } catch (err) {
 
-        } finally {
+                console.error(err);
 
-            setLoading(false);
+            } finally {
 
-        }
+                setLoading(false);
 
-    };
+            }
 
-    loadData();
+        };
 
-}, []);
-			
-            const isDbEmpty = useMemo(() => {
-                return databases.jeddah.length === 0 && databases.riyadh.length === 0;
-            }, [databases]);
+        loadData();
+
+    }, []);
+
+    const isDbEmpty = useMemo(() => {
+        return databases.jeddah.length === 0 &&
+               databases.riyadh.length === 0;
+    }, [databases]);
 
             // Auto-focus search input when warehouse is selected
             useEffect(() => {
