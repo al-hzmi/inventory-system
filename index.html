@@ -362,25 +362,8 @@ useEffect(() => {
     // تحميل قواعد البيانات
     useEffect(() => {
 		
-const [notificationEnabled, setNotificationEnabled] = useState(false);
-		useEffect(() => {
 
-    async function checkPermission() {
-
-        if (!window.OneSignal) return;
-
-        const permission =
-            await OneSignal.Notifications.permission;
-
-        setNotificationEnabled(permission);
-
-    }
-
-    checkPermission();
-
-}, []);
-		
-        const loadData = async () => {
+		        const loadData = async () => {
 
             try {
 
