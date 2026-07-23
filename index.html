@@ -318,33 +318,27 @@ const App = () => {
 
     const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
 
-   const [notificationEnabled, setNotificationEnabled] = useState(false);
-
-const searchInputRef = useRef(null);
-
-// التحقق من حالة الإشعارات
-useEffect(() => {
-
-    async function checkPermission() {
-
-        if (!window.OneSignal) return;
-
-        const permission =
-            await OneSignal.Notifications.permission;
-
-        setNotificationEnabled(permission);
-
-    }
-
-    checkPermission();
-
-}, []);
-	   
-    const [loading, setLoading] = useState(true);
-
-    const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
+    const [notificationEnabled, setNotificationEnabled] = useState(false);
 
     const searchInputRef = useRef(null);
+
+    // التحقق من حالة الإشعارات
+    useEffect(() => {
+
+        async function checkPermission() {
+
+            if (!window.OneSignal) return;
+
+            const permission =
+                await OneSignal.Notifications.permission;
+
+            setNotificationEnabled(permission);
+
+        }
+
+        checkPermission();
+
+    }, []);
 
     // قراءة آخر تحديث
     useEffect(() => {
@@ -360,6 +354,8 @@ useEffect(() => {
 
     // تحميل قواعد البيانات
     useEffect(() => {
+
+        ...    useEffect(() => {
 		
 
 		        const loadData = async () => {
