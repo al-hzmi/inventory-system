@@ -308,7 +308,20 @@ const App = () => {
 
     const [warehouse, setWarehouse] = useState(null);
     const [query, setQuery] = useState('');
+	
+const enableNotifications = async () => {
 
+    if (!window.OneSignal) return;
+
+    await OneSignal.Notifications.requestPermission();
+
+    const permission =
+        await OneSignal.Notifications.permission;
+
+    setNotificationEnabled(permission);
+
+};
+	
     const [databases, setDatabases] = useState({
         jeddah: [],
         riyadh: []
@@ -334,7 +347,25 @@ const App = () => {
 
     // تحميل قواعد البيانات
     useEffect(() => {
+		
+const [notificationEnabled, setNotificationEnabled] = useState(false);
+		useEffect(() => {
 
+    async function checkPermission() {
+
+        if (!window.OneSignal) return;
+
+        const permission =
+            await OneSignal.Notifications.permission;
+
+        setNotificationEnabled(permission);
+
+    }
+
+    checkPermission();
+
+}, []);
+		
         const loadData = async () => {
 
             try {
@@ -464,10 +495,10 @@ if (loading) {
                 </p>
 
                 <button
-                    id="enableNotifications"
+    onClick={enableNotifications}
                     className="mt-4 w-full bg-primary text-white rounded-12 py-3 font-medium hover:opacity-90 transition"
                 >
-                    تفعيل الإشعارات
+                    {notificationEnabled ? "✅ الإشعارات مفعلة" : "🔔 تفعيل الإشعارات"}
                 </button>
 
             </div>
