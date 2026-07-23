@@ -282,22 +282,21 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
             </div>
         );
 
-        const App = () => {
-            const [warehouse, setWarehouse] = useState(null);
-const [query, setQuery] = useState('');
+const App = () => {
 
-const [databases, setDatabases] = useState({
-    jeddah: [],
-    riyadh: []
-});
+    const [warehouse, setWarehouse] = useState(null);
+    const [query, setQuery] = useState('');
 
-const [loading, setLoading] = useState(true);
-            const searchInputRef = useRef(null);
+    const [databases, setDatabases] = useState({
+        jeddah: [],
+        riyadh: []
+    });
 
-useEffect(() => {
+    const [loading, setLoading] = useState(true);
 
-	const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
-
+    const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
+	
+    const searchInputRef = useRef(null);
 useEffect(() => {
     fetch("https://api.github.com/repos/al-hzmi/inventory-system")
         .then(res => res.json())
