@@ -296,6 +296,31 @@ const [loading, setLoading] = useState(true);
 
 useEffect(() => {
 
+	const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
+
+useEffect(() => {
+    fetch("https://api.github.com/repos/al-hzmi/inventory-system")
+        .then(res => res.json())
+        .then(data => {
+            if (data.pushed_at) {
+                const date = new Date(data.pushed_at);
+
+                setLastUpdate(
+                    date.toLocaleString("ar-SA", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    })
+                );
+            } else {
+                setLastUpdate("غير متوفر");
+            }
+        })
+        .catch(() => setLastUpdate("غير متوفر"));
+}, []);
+	
     const loadData = async () => {
 
         try {
@@ -397,10 +422,9 @@ if (loading) {
         نظام الاستعلام عن المخزون
     </h2>
 
-    <p className="text-[13px] text-secondary">
-        آخر تحديث: {LAST_UPDATE}
-    </p>
-
+<p className="text-[13px] text-secondary">
+    🕒 آخر تحديث للمخزون: {lastUpdate}
+</p>
 </header>
 					
                     {/* Warehouse Selector */}
