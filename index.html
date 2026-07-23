@@ -308,25 +308,39 @@ const App = () => {
 
     const [warehouse, setWarehouse] = useState(null);
     const [query, setQuery] = useState('');
-	
-const enableNotifications = async () => {
 
-    if (!window.OneSignal) return;
-
-    await OneSignal.Notifications.requestPermission();
-
-    const permission =
-        await OneSignal.Notifications.permission;
-
-    setNotificationEnabled(permission);
-
-};
-	
     const [databases, setDatabases] = useState({
         jeddah: [],
         riyadh: []
     });
 
+    const [loading, setLoading] = useState(true);
+
+    const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
+
+    const [notificationEnabled, setNotificationEnabled] = useState(false);
+
+    const searchInputRef = useRef(null);
+    });
+
+	   // التحقق من حالة الإشعارات
+useEffect(() => {
+
+    async function checkPermission() {
+
+        if (!window.OneSignal) return;
+
+        const permission =
+            await OneSignal.Notifications.permission;
+
+        setNotificationEnabled(permission);
+
+    }
+
+    checkPermission();
+
+}, []);
+	   
     const [loading, setLoading] = useState(true);
 
     const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
@@ -398,7 +412,19 @@ const [notificationEnabled, setNotificationEnabled] = useState(false);
         loadData();
 
     }, []);
+const enableNotifications = async () => {
 
+    if (!window.OneSignal) return;
+
+    await OneSignal.Notifications.requestPermission();
+
+    const permission =
+        await OneSignal.Notifications.permission;
+
+    setNotificationEnabled(permission);
+
+};
+	   
     const isDbEmpty = useMemo(() => {
         return databases.jeddah.length === 0 &&
                databases.riyadh.length === 0;
