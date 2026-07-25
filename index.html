@@ -111,10 +111,15 @@
 <meta name="theme-color" content="#111111">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
+<script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
 
-});
+<script>
+    dayjs.extend(dayjs_plugin_relativeTime);
+    dayjs.locale("ar");
 </script>
-	
+
 </head>
 <body class="min-h-screen">
     <div id="root"></div>
@@ -311,13 +316,22 @@ const App = () => {
     // قراءة آخر تحديث
     useEffect(() => {
         fetch("./data/version.json")
-            .then(res => res.json())
-            .then(data => {
-                setLastUpdate(data.lastUpdate || "غير متوفر");
-            })
-            .catch(() => {
-                setLastUpdate("غير متوفر");
-            });
+    .then(res => res.json())
+    .then(data => {
+
+        if (!data.lastUpdate) {
+            setLastUpdate("غير متوفر");
+            return;
+        }
+
+        setLastUpdate(
+            dayjs(data.lastUpdate).fromNow()
+        );
+
+    })
+    .catch(() => {
+        setLastUpdate("غير متوفر");
+    });
     }, []);
 
     // تحميل قواعد البيانات
