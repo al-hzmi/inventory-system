@@ -475,6 +475,33 @@ if (loading) {
 	
 </header>
 
+					{/* إشعارات التحديثات */}
+
+<div className="max-w-[480px] mx-auto mb-24">
+
+    <div className="border border-border rounded-12 p-16 bg-bg shadow-card">
+
+        <div className="flex items-start gap-3">
+
+            <div className="text-2xl">🔔</div>
+
+            <div className="flex-1">
+
+                <h3 className="text-[16px] font-bold text-primary">
+                    إشعارات تحديث المخزون
+                </h3>
+
+                <p className="text-[14px] text-secondary mt-1">
+                    فعّل الإشعارات ليصلك تنبيه عند تحديث بيانات المخزون.
+                </p>
+
+                <button
+    onClick={enableNotifications}
+                    className="mt-4 w-full bg-primary text-white rounded-12 py-3 font-medium hover:opacity-90 transition"
+                >
+                    {notificationEnabled ? "✅ الإشعارات مفعلة" : "🔔 تفعيل الإشعارات"}
+                </button>
+
             </div>
 
         </div>
