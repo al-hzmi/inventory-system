@@ -111,19 +111,6 @@
 <meta name="theme-color" content="#111111">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-	<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-
-<script>
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-
-OneSignalDeferred.push(async function (OneSignal) {
-
-  await OneSignal.init({
-    appId: "1d3ea40f-5a65-4830-9941-e9efa31c1acd",
-    notifyButton: {
-      enable: false
-    }
-  });
 
 });
 </script>
@@ -318,27 +305,8 @@ const App = () => {
 
     const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
 
-    const [notificationEnabled, setNotificationEnabled] = useState(false);
-
     const searchInputRef = useRef(null);
 
-    // التحقق من حالة الإشعارات
-    useEffect(() => {
-
-        async function checkPermission() {
-
-            if (!window.OneSignal) return;
-
-            const permission =
-                await OneSignal.Notifications.permission;
-
-            setNotificationEnabled(permission);
-
-        }
-
-        checkPermission();
-
-    }, []);
 
     // قراءة آخر تحديث
     useEffect(() => {
@@ -387,18 +355,6 @@ const App = () => {
         loadData();
 
     }, []);
-const enableNotifications = async () => {
-
-    if (!window.OneSignal) return;
-
-    await OneSignal.Notifications.requestPermission();
-
-    const permission =
-        await OneSignal.Notifications.permission;
-
-    setNotificationEnabled(permission);
-
-};
 	   
     const isDbEmpty = useMemo(() => {
         return databases.jeddah.length === 0 &&
