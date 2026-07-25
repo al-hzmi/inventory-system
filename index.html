@@ -68,8 +68,18 @@
                 }
             }
         }
-    </script>
-    
+
+		<!-- استدعاء مكتبة OneSignal -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "1d3ea40f-5a65-4830-9941-e9efa31c1acd",
+    });
+  });
+</script>
+	
     <style>
         body {
             background-color: #FFFFFF;
@@ -306,6 +316,56 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
 const App = () => {
 
+	// أضف هذا داخل المكون الخاص بك
+const [isSubscribed, setIsSubscribed] = React.useState(false);
+
+// التحقق من حالة الاشتراك عند تحميل التطبيق
+React.useEffect(() => {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    const isPushSupported = await OneSignal.Notifications.isPushSupported();
+    if (isPushSupported) {
+      const permission = await OneSignal.Notifications.permission;
+      setIsSubscribed(permission === "granted");
+    }
+  });
+}, []);
+
+	const handleNotificationToggle = () => {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    const isPushSupported = await OneSignal.Notifications.isPushSupported();
+    
+    if (!isPushSupported) {
+      alert("عذراً، هذا المتصفح لا يدعم الإشعارات.");
+      return;
+    }
+
+    // إظهار نافذة المتصفح لطلب الإذن
+    await OneSignal.Slidedown.promptPush();
+    
+    // التحقق من الإذن بعد استجابة المستخدم
+    const permission = await OneSignal.Notifications.permission;
+    
+    if (permission === "granted") {
+      setIsSubscribed(true);
+      // يمكنك إضافة إشعار نجاح هنا للمستخدم
+      alert("تم تفعيل الإشعارات بنجاح! ستصلك تنبيهات تحديث المخزون.");
+    } else {
+      setIsSubscribed(false);
+      alert("لم يتم تفعيل الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات المتصفح.");
+    }
+  });
+};
+
+	// هذا مثال على الزر داخل جزء الإرجاع (return) في React
+<button 
+  onClick={handleNotificationToggle}
+  className={`px-4 py-2 rounded font-cairo ${isSubscribed ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}
+>
+  {isSubscribed ? '🔔 الإشعارات مفعلة' : '🔕 تفعيل الإشعارات'}
+</button>
+	
     const [warehouse, setWarehouse] = useState(null);
     const [query, setQuery] = useState('');
 
