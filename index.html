@@ -68,18 +68,8 @@
                 }
             }
         }
-
-		<!-- استدعاء مكتبة OneSignal -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "1d3ea40f-5a65-4830-9941-e9efa31c1acd",
-    });
-  });
-</script>
-	
+    </script>
+    
     <style>
         body {
             background-color: #FFFFFF;
@@ -315,79 +305,7 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
         );
 
 const App = () => {
-    // 1. حالة الإشعارات
-    const [isSubscribed, setIsSubscribed] = React.useState(false);
 
-    // 2. حالات المستودع والبحث التي قمت بتعريفها مسبقاً
-    const [warehouse, setWarehouse] = React.useState(null);
-    const [query, setQuery] = React.useState('');
-    const [databases, setDatabases] = React.useState({
-        jeddah: [],
-        riyadh: []
-    });
-
-    // 3. التحقق من حالة الاشتراك عند التحميل
-    React.useEffect(() => {
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        window.OneSignalDeferred.push(async function(OneSignal) {
-            const isPushSupported = await OneSignal.Notifications.isPushSupported();
-            if (isPushSupported) {
-                const permission = await OneSignal.Notifications.permission;
-                setIsSubscribed(permission === "granted");
-            }
-        });
-    }, []);
-
-    // 4. دالة تفعيل الإشعارات
-    const handleNotificationToggle = () => {
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        window.OneSignalDeferred.push(async function(OneSignal) {
-            const isPushSupported = await OneSignal.Notifications.isPushSupported();
-            
-            if (!isPushSupported) {
-                alert("عذراً، هذا المتصفح لا يدعم الإشعارات.");
-                return;
-            }
-
-            await OneSignal.Slidedown.promptPush();
-            const permission = await OneSignal.Notifications.permission;
-            
-            if (permission === "granted") {
-                setIsSubscribed(true);
-                alert("تم تفعيل الإشعارات بنجاح! ستصلك تنبيهات تحديث المخزون.");
-            } else {
-                setIsSubscribed(false);
-                alert("لم يتم تفعيل الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات المتصفح.");
-            }
-        });
-    };
-
-    // 5. قسم الـ Return (الواجهة)
-    return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4">
-            {/* Header / Top Bar */}
-            <div className="w-full max-w-md flex justify-between items-center mb-6">
-                <h1 className="text-xl font-bold text-gray-800 font-cairo">بوابة المخزون</h1>
-                
-                {/* زر الإشعارات تم إضافته هنا بتصميم متناسق */}
-                <button 
-                    onClick={handleNotificationToggle}
-                    className={`px-3 py-1.5 rounded-full text-sm font-cairo transition-colors ${
-                        isSubscribed 
-                            ? 'bg-green-100 text-green-700 border border-green-200' 
-                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                >
-                    {isSubscribed ? '🔔 مفعلة' : '🔕 الإشعارات'}
-                </button>
-            </div>
-
-            {/* باقي أجزاء واجهتك: اختيار المستودع، مربع البحث، وعرض النتائج */}
-            {/* ... */}
-        </div>
-    );
-};
-	   
     const [warehouse, setWarehouse] = useState(null);
     const [query, setQuery] = useState('');
 
