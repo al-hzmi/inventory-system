@@ -68,16 +68,7 @@
                 }
             }
         }
-
-		<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/ar.js"></script>
-
-<script>
-    dayjs.extend(dayjs_plugin_relativeTime);
-    dayjs.locale("ar");
-
-</script>
+    </script>
     
     <style>
         body {
@@ -350,24 +341,17 @@ const App = () => {
     }, []);
 
     // قراءة آخر تحديث
-useEffect(() => {
-    fetch("./data/version.json")
-        .then(res => res.json())
-        .then(data => {
-
-            if (!data.lastUpdate) {
+    useEffect(() => {
+        fetch("./data/version.json")
+            .then(res => res.json())
+            .then(data => {
+                setLastUpdate(data.lastUpdate || "غير متوفر");
+            })
+            .catch(() => {
                 setLastUpdate("غير متوفر");
-                return;
-            }
+            });
+    }, []);
 
-setLastUpdate(dayjs(data.lastUpdate).fromNow());            );
-
-        })
-        .catch(() => {
-            setLastUpdate("غير متوفر");
-        });
-}, []);
-	
     // تحميل قواعد البيانات
     useEffect(() => {		
 
@@ -486,7 +470,7 @@ if (loading) {
     </h2>
 
 <p className="text-[13px] text-secondary">
-     آخر تحديث للمخزون: {lastUpdate}
+    🕒 آخر تحديث للمخزون: {lastUpdate}
 </p>
 	
 </header>
