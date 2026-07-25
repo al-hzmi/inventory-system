@@ -1,0 +1,29 @@
+name: Send OneSignal Notification on Inventory Update
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/jeddah.tsv'
+      - 'data/riyadh.tsv'
+      - 'data/version.json'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Send Notification via OneSignal
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'https://onesignal.com/api/v1/notifications'
+          method: 'POST'
+          customHeaders: '{"Content-Type": "application/json; charset=utf-8", "Authorization": "Basic ${{ secrets.ONESIGNAL_REST_API_KEY }}"}'
+          data: >-
+            {
+              "app_id": "${{ secrets.ONESIGNAL_APP_ID }}",
+              "included_segments": ["Subscribed Users"],
+              "headings": {"en": "تحديث جديد في المخزون 📦"},
+              "contents": {"en": "تم تحديث بيانات المخزون للتو. يرجى تحديث الصفحة للحصول على أحدث الكميات."}
+            }
