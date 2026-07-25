@@ -360,9 +360,7 @@ useEffect(() => {
                 return;
             }
 
-            setLastUpdate(
-                dayjs(data.lastUpdate).fromNow()
-            );
+setLastUpdate(dayjs(data.lastUpdate).fromNow());            );
 
         })
         .catch(() => {
