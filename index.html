@@ -705,20 +705,21 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                                 </div>
                                {results.slice(0, 5).map(item => (
     <div
-      {results.slice(0, 5).map(item => (
-    <div
         key={item.id}
         onClick={() => setSelectedItem(item)}
         className="cursor-pointer"
     >
-        <CompactResultCard
-            item={item}
-            warehouseName={
-                warehouse === "jeddah"
-                    ? "مخزون جدة"
-                    : "مخزون الرياض"
-            }
-        />
+        <div
+    key={item.id}
+    onClick={() => setSelectedItem(item)}
+    className="cursor-pointer"
+>
+    <CompactResultCard
+        item={item}
+        warehouseName={warehouse === 'jeddah' ? 'مخزون جدة' : 'مخزون الرياض'}
+    />
+</div>
+		
     </div>
 ))}
                             </div>
