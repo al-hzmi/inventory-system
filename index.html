@@ -69,7 +69,28 @@
             }
         }
     </script>
-    
+
+	<!-- مكاتب Firebase (نسخة التوافق لتناسب ملف HTML) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // إعدادات مشروعك الحقيقية التي نسختها للتو
+        const firebaseConfig = {
+            apiKey: "AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw",
+            authDomain: "inventory-system-ca3dc.firebaseapp.com",
+            projectId: "inventory-system-ca3dc",
+            storageBucket: "inventory-system-ca3dc.firebasestorage.app",
+            messagingSenderId: "139575913885",
+            appId: "1:139575913885:web:110648e07345b36da15374",
+            measurementId: "G-ZGF5DT9D0K"
+        };
+        
+        // تهيئة قاعدة البيانات
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+	
     <style>
         body {
             background-color: #FFFFFF;
