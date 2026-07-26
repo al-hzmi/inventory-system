@@ -527,17 +527,32 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                 
                 // Filter items starting with the query (partial match)
                 const matched = activeDb.filter(item => {
-                    const sku = item.searchId.replace(/[\s_-]/g, "");
 
-                    // إذا كتب المستخدم الرقم فقط
-                    if (/^\d+$/.test(normalizedQuery)) {
-                        const numericSku = sku.replace(/^[a-z_]+/i, "");
-                        return numericSku.startsWith(normalizedQuery);
-                    }
+    const sku = item.searchId.replace(/[\s_-]/g, "");
 
-                    // إذا كتب الرقم مع البادئة
-                    return sku.startsWith(normalizedQuery);
-                });
+    const itemName = normalizeNumerals(item.name || "")
+        .toLowerCase();
+
+    // إذا كتب المستخدم أرقام فقط
+    if (/^\d+$/.test(normalizedQuery)) {
+
+        const numericSku = sku.replace(/^[a-z_]+/i, "");
+
+        return numericSku.startsWith(normalizedQuery);
+
+    }
+
+    // البحث برقم الصنف
+    const skuMatch =
+        sku.startsWith(normalizedQuery);
+
+    // البحث باسم الصنف
+    const nameMatch =
+        itemName.includes(normalizedQuery);
+
+    return skuMatch || nameMatch;
+
+});
                 
                 return matched;
             }, [query, warehouse, databases]);
@@ -647,13 +662,18 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                                 <div className="text-[14px] text-secondary mb-16 text-center">
                                     مطابقات جزئية (نعرض حتى 5 نتائج)
                                 </div>
-                                {results.slice(0, 5).map(item => (
-                                    <CompactResultCard 
-                                        key={item.id}
-                                        item={item} 
-                                        warehouseName={warehouse === 'jeddah' ? 'مخزون جدة' : 'مخزون الرياض'} 
-                                    />
-                                ))}
+                               {results.slice(0, 5).map(item => (
+    <div
+        key={item.id}
+        onClick={() => setSelectedItem(item)}
+        className="cursor-pointer"
+    >
+        <CompactResultCard
+            item={item}
+            warehouseName={warehouse === 'jeddah' ? 'مخزون جدة' : 'مخزون الرياض'}
+        />
+    </div>
+))}
                             </div>
                         ) : null}
                     </div>
