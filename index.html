@@ -665,12 +665,10 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
             );
         };
 
-        // السطران اللذان نسيتهما لكي يعمل React
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-    </script> <!-- هنا نغلق كود React (Babel) -->
+    </script>
 
-    <!-- هنا نفتح كود الجافاسكريبت العادي للـ Service Worker -->
     <script>
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("/sw.js");
