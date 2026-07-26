@@ -425,6 +425,31 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                 setUserName('');
             };
 
+			// ==========================================
+            // نظام تتبع عمليات البحث وحفظها في Firebase
+            // ==========================================
+            useEffect(() => {
+                // إذا كان حقل البحث فارغاً أو لم يتم اختيار مستودع، لا تفعل شيئاً
+                if (!query.trim() || !warehouse || !userName) return;
+
+                // ننتظر 1.5 ثانية بعد توقف المستخدم عن الكتابة لتسجيل البحث النهائي
+                const delaySearchLogging = setTimeout(async () => {
+                    try {
+                        await db.collection('search_logs').add({
+                            name: userName,
+                            searchQuery: query.trim(),
+                            warehouse: warehouse,
+                            time: firebase.firestore.FieldValue.serverTimestamp(),
+                            userAgent: navigator.userAgent
+                        });
+                    } catch (error) {
+                        console.error("Error logging search: ", error);
+                    }
+                }, 1500);
+
+                return () => clearTimeout(delaySearchLogging);
+            }, [query, warehouse, userName]);
+			
             // قراءة آخر تحديث (بنفس طريقتك القديمة باستخدام dayjs)
             useEffect(() => {
                 fetch("./data/version.json")
