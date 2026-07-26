@@ -230,6 +230,8 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
             );
         };
 
+	   const [selectedItem, setSelectedItem] = useState(null);
+	   
         // Full Detailed Card (Exact Match)
        const FullResultCard = ({ item, warehouseName }) => (
     <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 md:p-24 bg-bg flex flex-col gap-16">
