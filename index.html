@@ -377,7 +377,7 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                         <form onSubmit={handleSubmit} className="flex flex-col gap-16">
                             <div className="text-right">
                                 <label className="text-[14px] font-medium text-primary mb-8 block font-cairo">
-                                    اسم الموظف
+                                    الإسم الكريم
                                 </label>
                                 <input 
                                     type="text" 
@@ -530,18 +530,16 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
             }
                         
             return (
-                <div className="max-w-[1024px] mx-auto px-16 sm:px-24 py-40 md:py-64 font-sans selection:bg-gray-200 relative">
+                <div className="max-w-[1024px] mx-auto px-16 sm:px-24 py-40 md:py-64 font-sans selection:bg-gray-200">
                     
-                    {/* زر تسجيل الخروج */}
-                    <div className="absolute top-16 right-16 flex items-center gap-4 bg-white border border-border px-8 py-4 rounded-full shadow-sm">
-                        <span className="text-[13px] font-medium text-primary">مرحباً، {userName}</span>
-                        <button onClick={handleLogout} className="text-[12px] text-red-500 hover:text-red-700 font-bold transition-colors">
-                            (خروج)
-                        </button>
-                    </div>
-
                     {/* Header */}
-                    <header className="text-center mb-32 flex flex-col gap-8">
+                    <header className="text-center mb-32 flex flex-col items-center gap-8">
+                        
+                        {/* الترحيب بالموظف بتصميم نظيف يتماشى مع الواجهة */}
+                        <div className="bg-gray-50 border border-border px-16 py-8 rounded-full mb-8">
+                            <span className="text-[13px] font-medium text-secondary">مرحباً، {userName} 👋</span>
+                        </div>
+
                         <h1 className="text-[28px] md:text-[32px] font-bold text-primary m-0 leading-tight">
                             مخزون شركة بيت الأواني الطيبة
                         </h1>
