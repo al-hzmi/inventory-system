@@ -668,11 +668,7 @@ setImagesList(imgMap);
                                 {galleryResults.length === 0 ? (
                                     <div className="col-span-full text-center text-secondary py-32">لا توجد أصناف متوفرة في هذا القسم.</div>
                                 ) : (
-                                    {console.log(
-    item.searchId,
-    (item.searchId || item.id).match(/\d+/)?.[0],
-    imagesList.get((item.searchId || item.id).match(/\d+/)?.[0])
-)}
+                                    galleryResults.map(item => (
                                         <div key={item.id} className="border border-border rounded-12 p-16 bg-white flex flex-col items-center">
                                             {activeCategory !== 'نواقص الصور' && (
 <img
