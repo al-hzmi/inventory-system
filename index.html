@@ -184,22 +184,30 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                 const cols = lines[i].split('\t').map(c => c.trim());
                 if (cols.length === 0 || (!cols[idIdx] && !cols[nameIdx])) continue;
 
-                const rawId = cols[idIdx] ? cols[idIdx].trim() : '';
-                const searchId = normalizeNumerals(rawId).toLowerCase();
+const rawId = cols[idIdx] ? cols[idIdx].trim() : '';
+const searchId = normalizeNumerals(rawId).toLowerCase();
+
+// استخراج الرقم فقط من رقم الصنف
+const numericId = searchId.match(/\d+/)?.[0] || "";
 
 console.log({
     rawId,
     searchId,
     numericId
 });
-                if (!searchId) continue;
 
-                const name = cols[nameIdx] ? cols[nameIdx].trim() : '';
-                const rawQty = normalizeNumerals(cols[qtyIdx] || '0').replace(/,/g, ''); // Remove commas if any
-                const qty = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
-                const unit = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
-                const pack = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
+if (rawId.includes("14382")) {
+    console.log("RAW ID:", rawId);
+}
 
+if (!searchId) continue;
+
+const name = cols[nameIdx] ? cols[nameIdx].trim() : '';
+const rawQty = normalizeNumerals(cols[qtyIdx] || '0').replace(/,/g, '');
+const qty = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
+const unit = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
+const pack = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
+				
                 // Overwrites if duplicate, keeping the last valid row per instructions
                 // استخراج الرقم فقط من رقم الصنف
 const numericId = searchId.match(/\d+/)?.[0] || "";
@@ -498,8 +506,13 @@ imagesText.split("\n").forEach(line => {
     if (!match) return;
 console.log("IMAGE:", match[0], file);
     imgMap.set(match[0], file);
-
+	
 });
+
+						console.log("عدد الصور:", imgMap.size);
+console.log("14382 =", imgMap.get("14382"));
+console.log("1007 =", imgMap.get("1007"));
+console.log("22267 =", imgMap.get("22267"));
 						
                         // معالجة التصنيفات (بافتراض أن كل عمود هو قسم)
                         const catObj = {};
