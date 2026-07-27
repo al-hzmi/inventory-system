@@ -186,7 +186,13 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
                 const rawId = cols[idIdx] ? cols[idIdx].trim() : '';
                 const searchId = normalizeNumerals(rawId).toLowerCase();
+const numericId = searchId.match(/\d+/)?.[0] || "";
 
+console.log({
+    rawId,
+    searchId,
+    numericId
+});
                 if (!searchId) continue;
 
                 const name = cols[nameIdx] ? cols[nameIdx].trim() : '';
