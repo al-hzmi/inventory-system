@@ -431,13 +431,13 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                 setUserName('');
             };
 
-            // دالة تحويل الأرقام العربية/الهندية إلى إنجليزية وتنظيف النص
+// دالة تحويل الأرقام واستخراج الرقم الصافي فقط (تتجاهل الحروف تماماً)
             const normalizeCleanId = (str) => {
                 if (!str) return "";
                 let englishNumbers = str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-                return englishNumbers.toLowerCase().replace(/[^a-z0-9]/g, ""); // إبقاء الحروف والأرقام فقط
+                return englishNumbers.replace(/\D/g, ""); // الإبقاء على الأرقام فقط وحذف أي حروف أو مسافات
             };
-
+			
             // قراءة آخر تحديث
             useEffect(() => {
                 fetch("./data/version.json")
@@ -588,15 +588,14 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                     </div>
 
                     {/* منطقة البحث */}
-                    <div className="max-w-[480px] mx-auto w-full mb-48 flex flex-col gap-8 relative pb-8 border-b border-border">
-                        <div className="flex justify-between items-end mb-8">
+                   <div className="flex justify-between items-center mb-8">
                             <label htmlFor="searchInput" className={`text-[14px] font-medium ${warehouse ? 'text-primary' : 'text-secondary'}`}>البحث السريع</label>
                             
                             {/* مفتاح (Toggle) عرض الصور في البحث */}
                             <label className="flex items-center gap-8 cursor-pointer">
-                                <span className="text-[13px] text-secondary">عرض مع الصورة</span>
+                                <span className="text-[13px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
                                 <input type="checkbox" className="hidden" checked={showImageInSearch} onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                                <div className={`w-40 h-24 rounded-full transition-colors relative ${showImageInSearch ? 'bg-primary' : 'bg-gray-300'}`}>
+                                <div className={`w-40 h-24 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-gray-300'}`}>
                                     <div className={`absolute top-2 w-20 h-20 bg-white rounded-full transition-transform ${showImageInSearch ? 'left-2 translate-x-16' : 'left-2'}`}></div>
                                 </div>
                             </label>
