@@ -682,14 +682,11 @@ setImagesList(imgMap);
                                             {activeCategory !== 'نواقص الصور' && (
 <img
     src={
-        imagesList.get(
-            (item.searchId || item.id).match(/\d+/)?.[0]
-        )
-            ? `./images/${imagesList.get(
-                  (item.searchId || item.id).match(/\d+/)?.[0]
-              )}`
+        item.image
+            ? `./images/${item.image}`
             : "./images/no-image.webp"
     }
+	
     alt={item.searchId}
     className={`object-contain mb-16 rounded-8 ${
         galleryView === "grid"
