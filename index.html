@@ -497,7 +497,7 @@ imagesText.split("\n").forEach(line => {
     const match = file.match(/\d+/);
 
     if (!match) return;
-
+console.log("IMAGE:", match[0], file);
     imgMap.set(match[0], file);
 
 });
