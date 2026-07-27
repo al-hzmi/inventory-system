@@ -208,25 +208,6 @@ const qty = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
 const unit = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
 const pack = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
 				
-                // Overwrites if duplicate, keeping the last valid row per instructions
-                // استخراج الرقم فقط من رقم الصنف
-const numericId = searchId.match(/\d+/)?.[0] || "";
-
-// البحث عن الصورة المطابقة
-const image = imgMap.get(numericId) || null;
-
-dataMap[searchId] = {
-    id: rawId,
-    searchId,
-    name,
-    qty,
-    unit,
-    pack,
-    image
-};
-            }
-            return Object.values(dataMap);
-        };
 
         // Icons components
         const SearchIcon = ({ className }) => (
