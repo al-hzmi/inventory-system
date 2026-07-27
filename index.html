@@ -165,7 +165,7 @@ let RAW_RIYADH_DATA = "";
         };
 
         // Parser function for pasted Excel (TSV) data
-        const parseExcelData = (rawText) => {
+        const parseExcelData = (rawText, imgMap) => {
             if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
 
             const lines = rawText.trim().split('\n');
@@ -200,9 +200,7 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 const numericId = searchId.match(/\d+/)?.[0] || "";
 
 // البحث عن الصورة المطابقة
-const image = imagesList instanceof Map
-    ? imagesList.get(numericId) || null
-    : null;
+const image = imgMap.get(numericId) || null;
 
 dataMap[searchId] = {
     id: rawId,
@@ -474,13 +472,14 @@ dataMap[searchId] = {
                         const imagesText = (await imagesRes.text()) || "";
                         const categoriesText = (await categoriesRes.text()) || "";
 
-                        // معالجة المخزون
-                        setDatabases({
-                            jeddah: parseExcelData(jeddahText),
-                            riyadh: parseExcelData(riyadhText)
-                        });
+                       setDatabases({
+    jeddah: parseExcelData(jeddahText, imgMap),
+    riyadh: parseExcelData(riyadhText, imgMap)
+});
 
-                        // معالجة قائمة الصور
+setImagesList(imgMap);
+
+// معالجة قائمة الصور
 const imgMap = new Map();
 
 imagesText.split("\n").forEach(line => {
@@ -489,19 +488,14 @@ imagesText.split("\n").forEach(line => {
 
     if (!file) return;
 
-    // استخراج أول رقم من اسم الملف
     const match = file.match(/\d+/);
 
     if (!match) return;
 
-    const sku = match[0];
-
-    imgMap.set(sku, file);
+    imgMap.set(match[0], file);
 
 });
-
-setImagesList(imgMap);
-
+						
                         // معالجة التصنيفات (بافتراض أن كل عمود هو قسم)
                         const catObj = {};
                         if (categoriesText) {
