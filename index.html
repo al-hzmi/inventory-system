@@ -196,14 +196,23 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                 const pack = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
 
                 // Overwrites if duplicate, keeping the last valid row per instructions
-                dataMap[searchId] = { 
-                    id: rawId, 
-                    searchId: searchId, 
-                    name, 
-                    qty, 
-                    unit, 
-                    pack
-                };
+                // استخراج الرقم فقط من رقم الصنف
+const numericId = searchId.match(/\d+/)?.[0] || "";
+
+// البحث عن الصورة المطابقة
+const image = imagesList instanceof Map
+    ? imagesList.get(numericId) || null
+    : null;
+
+dataMap[searchId] = {
+    id: rawId,
+    searchId,
+    name,
+    qty,
+    unit,
+    pack,
+    image
+};
             }
             return Object.values(dataMap);
         };
