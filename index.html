@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>مخزون شركة بيت الأواني الطيبة</title>
+
     <meta name="description" content="نظام البحث عن مخزون شركة بيت الأواني الطيبة">
 
     <meta property="og:title" content="مخزون شركة بيت الأواني الطيبة">
@@ -18,134 +19,56 @@
     <meta name="twitter:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
     <meta name="twitter:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
 
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Noto+Sans+Arabic:wght@400;500;700&family=Cairo:wght@400;500;700&display=swap" rel="stylesheet">
 
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script>
-        /*
-         * ===== نظام التصميم =====
-         * الفلسفة: "نظيف وهادئ + دافئ".
-         * الدفء لا يأتي من لون صارخ، بل من تحويل المحايدات الباردة (gray)
-         * إلى محايدات دافئة (stone). التغيير خفيف على العين لكنه يغيّر
-         * الانطباع الكامل من "لوحة تحكم تقنية" إلى "واجهة منتج".
-         * لون النحاس (accent) مستوحى من مجال العمل نفسه — أواني.
-         */
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'],
+                        sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', '"Cairo"', 'system-ui', 'sans-serif'],
+                        cairo: ['"Cairo"', '"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
                     },
                     colors: {
-                        primary    : '#1C1917', // أسود دافئ بدل #111111 البارد
-                        secondary  : '#57534E', // تباين 7.4:1 — يتجاوز AA بمسافة
-                        muted      : '#A8A29E', // للبيانات الوصفية فقط
-                        border     : '#E7E5E4', // حدود دافئة
-                        surface    : '#FAFAF9', // أبيض مائل للدفء
-                        bg         : '#FFFFFF',
-                        accent     : '#B45309', // نحاسي — يُستخدم بندرة شديدة
-                        accentSoft : '#FEF3C7',
-                        success    : '#15803D',
-                        successSoft: '#F0FDF4',
-                        warn       : '#B45309',
-                        warnSoft   : '#FFFBEB',
-                        danger     : '#B91C1C',
-                        dangerSoft : '#FEF2F2',
+                        primary: '#111111',
+                        secondary: '#6B7280',
+                        border: '#E5E7EB',
+                        hoverBg: '#F3F4F6',
+                        bg: '#FFFFFF'
                     },
+                    /*
+                     * مقياس spacing هنا بالبكسل وليس بالـ rem (خلافاً لـ Tailwind الافتراضي).
+                     * أي مفتاح غير مذكور يعود للقيمة الافتراضية بالـ rem — وهذا كان مصدر عدة أخطاء بصرية.
+                     */
                     spacing: {
-                        '2': '2px',  '4': '4px',  '6': '6px',  '8': '8px',  '10': '10px',
-                        '12': '12px','14': '14px','16': '16px','18': '18px','20': '20px','24': '24px',
-                        '28': '28px','32': '32px','36': '36px','40': '40px','44': '44px',
-                        '48': '48px','56': '56px','64': '64px','72': '72px','120': '120px',
+                        '2': '2px',  '4': '4px',  '8': '8px',  '12': '12px',
+                        '16': '16px','20': '20px','24': '24px','32': '32px',
+                        '40': '40px','48': '48px','56': '56px','64': '64px','120': '120px',
                     },
-                    borderRadius: { '8': '8px', '10': '10px', '12': '12px', '16': '16px', '20': '20px' },
-                    boxShadow: {
-                        'card' : '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)',
-                        'lift' : '0 2px 4px rgba(28,25,23,0.04), 0 8px 24px rgba(28,25,23,0.08)',
-                        'bar'  : '0 1px 0 rgba(231,229,228,1)',
-                    },
+                    borderRadius: { '8': '8px', '12': '12px' },
+                    boxShadow: { 'card': '0 1px 3px rgba(0,0,0,0.06)' },
                     transitionDuration: { '200': '200ms' }
                 }
             }
         }
     </script>
 
-    <style>
-        body {
-            background-color: #FFFFFF;
-            color: #1C1917;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        *:focus-visible { outline: 2px solid #B45309; outline-offset: 2px; border-radius: 4px; }
+	<!-- مكاتب Firebase (نسخة التوافق لتناسب ملف HTML) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-        @media (prefers-reduced-motion: reduce) {
-            *, .animate-card, .animate-flip, .skeleton {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
-
-        @keyframes slideUpFade { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
-        .animate-card { animation: slideUpFade 200ms cubic-bezier(0.16,1,0.3,1) forwards; }
-
-        @keyframes flipIn { from { opacity:0; transform: scale(0.97); } to { opacity:1; transform:none; } }
-        .animate-flip { animation: flipIn 180ms cubic-bezier(0.16,1,0.3,1) forwards; }
-
-        /* هيكل عظمي أثناء التحميل — يجعل نفس زمن الانتظار يبدو أقصر إدراكياً */
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .skeleton {
-            background: linear-gradient(90deg, #F5F5F4 25%, #EFEDEB 37%, #F5F5F4 63%);
-            background-size: 200% 100%;
-            animation: shimmer 1.4s ease-in-out infinite;
-        }
-
-        /* بطاقة المعرض تعتمد النقر المزدوج والثلاثي:
-           بدون هذين المنعين يُظلّل النقر الثلاثي الفقرة، ويُكبّر المزدوج الصفحة. */
-        .tap-card {
-            -webkit-user-select: none; -moz-user-select: none; user-select: none;
-            -webkit-touch-callout: none; touch-action: manipulation;
-        }
-
-        /* شريط الأقسام: تمرير أفقي بدل جدار أزرار متعدد الصفوف */
-        .scroll-x { scrollbar-width: none; -ms-overflow-style: none; }
-        .scroll-x::-webkit-scrollbar { display: none; }
-
-        .lightbox-backdrop { background: rgba(28,25,23,0.88); backdrop-filter: blur(4px); }
-    </style>
-
-    <meta name="theme-color" content="#FFFFFF">
-
-    <!--
-      لتفعيل PWA: ارفع manifest.json إلى public/ وأضف الأيقونات ثم أزل التعليق.
-    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
-    -->
-
-    <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
-    <script>
-        if (typeof dayjs !== 'undefined') {
-            if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime);
-            dayjs.locale("ar");
-        }
-    </script>
-
-    <!--
-      ===== تحميل Firebase كسولاً (Lazy) =====
-      لماذا: Firebase لا يُستخدم إلا بعد إدخال الاسم، وكان يُحمَّل بشكل حاجب
-      في كل زيارة (~330KB مضغوطة على المسار الحرج) بلا أي مقابل.
-      الآن يُحمَّل عند أول حاجة فعلية فقط.
-    -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw",
@@ -157,1090 +80,1200 @@
             measurementId: "G-ZGF5DT9D0K"
         };
 
-        let __fbPromise = null;
-        const loadScript = (src) => new Promise((res, rej) => {
-            const s = document.createElement('script');
-            s.src = src; s.async = true; s.onload = res; s.onerror = () => rej(new Error('load failed: ' + src));
-            document.head.appendChild(s);
-        });
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
 
-        /** يُرجع Firestore، ويُحمّل المكتبة عند أول استدعاء فقط. */
-        function getDb() {
-            if (__fbPromise) return __fbPromise;
-            __fbPromise = loadScript("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js")
-                .then(() => loadScript("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"))
-                .then(() => {
-                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                    return firebase.firestore();
-                });
-            return __fbPromise;
+    <style>
+        body {
+            background-color: #FFFFFF;
+            color: #111111;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        *:focus-visible { outline: 2px solid #111111; outline-offset: 2px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-card { animation: slideUpFade 200ms ease-in-out forwards; }
+
+        @keyframes flipIn {
+            from { opacity: 0; transform: scale(0.97); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .animate-flip { animation: flipIn 180ms ease-out forwards; }
+
+        /*
+         * بطاقة المعرض تعتمد النقر المزدوج والثلاثي.
+         * بدون هذين السطرين: النقر الثلاثي يُظلّل الفقرة على سطح المكتب،
+         * والنقر المزدوج يُفعّل تكبير الصفحة على الجوال.
+         */
+        .tap-card {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+        }
+    </style>
+
+    <meta name="theme-color" content="#111111">
+
+    <!--
+      [قرار DevOps بخصوص خطأ 403 على manifest.json]
+      الرمز 403 (وليس 404) يشير غالباً إلى Vercel Deployment Protection:
+      طلب الـ manifest يُرسَل بدون كوكيز الجلسة فتُرفض المصادقة.
+      لتفعيل PWA: ارفع manifest.json إلى public/ وأضف الأيقونات، ثم أزل التعليق.
+
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    -->
+
+    <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
+
+    <script>
+        if (typeof dayjs !== 'undefined') {
+            if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime);
+            dayjs.locale("ar");
         }
     </script>
+
 </head>
-<body class="min-h-screen bg-bg">
+<body class="min-h-screen">
     <div id="root"></div>
 
-<script type="text/babel">
+   <script type="text/babel">
 
-// ============================================================
-// الثوابت المركزية
-// ============================================================
-const DATA_PATH   = "./data/";
-const IMAGES_PATH = "./images/";
+        // ==========================================
+        // الثوابت المركزية (لا قيم سحرية داخل المكونات)
+        // ==========================================
+        const DATA_PATH   = "./data/";
+        const IMAGES_PATH = "./images/";
 
-const SEARCH_LOG_DEBOUNCE_MS = 1500; // تأخير التسجيل فقط — الفلترة تبقى فورية
-const MULTI_TAP_WINDOW_MS    = 300;  // نافذة تمييز النقر المزدوج عن الثلاثي
-const MAX_SKU_RESULTS        = 5;
-const MAX_NAME_RESULTS       = 15;
-const MIN_NAME_QUERY_LENGTH  = 2;
-const GALLERY_PAGE_SIZE      = 60;
-const LOW_STOCK_THRESHOLD    = 10;   // دونها يُلوَّن الرصيد تحذيرياً
+        /** مهلة تسجيل البحث في Firestore. الفلترة تبقى فورية — التأخير للتسجيل فقط. */
+        const SEARCH_LOG_DEBOUNCE_MS = 1500;
 
-const STORAGE_KEYS = {
-    NAME : 'inventory_user_name',
-    TOKEN: 'inventory_admin_token',
-};
+        /** نافذة تجميع النقرات لتمييز المزدوج عن الثلاثي. */
+        const MULTI_TAP_WINDOW_MS = 300;
 
-const VISIBILITY_RULES = {
-    hideOutOfStockInGallery         : true,
-    hideOutOfStockInSearchWithImage : true,
-    hideOutOfStockInPlainSearch     : false,
-    hideQtyInSearchWithImage        : false, // اقلبها true لإخفاء الكمية في وضع العميل
-};
+        const MAX_SKU_RESULTS  = 5;   // مطابقات رقم الصنف (حسب المواصفة الأصلية)
+        const MAX_NAME_RESULTS = 15;  // مطابقات الاسم تحتاج مجالاً أوسع
+        const MIN_NAME_QUERY_LENGTH = 2;
 
-const CARD_VIEW = { IMAGE: 0, QUANTITY: 1, DETAILS: 2 };
+        const GALLERY_PAGE_SIZE = 60;
 
-const WAREHOUSES = {
-    jeddah: { key: 'jeddah', label: 'جدة',   name: 'مستودع جدة'   },
-    riyadh: { key: 'riyadh', label: 'الرياض', name: 'مستودع الرياض' },
-};
-
-const SPECIAL_CATEGORIES = {
-    UNCATEGORIZED : 'بقية الأصناف',
-    MISSING_IMAGES: 'نواقص الصور',
-};
-
-/** أقسام لا تظهر إلا للمسؤول. */
-const ADMIN_ONLY_CATEGORIES = new Set([SPECIAL_CATEGORIES.MISSING_IMAGES]);
-
-const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
-const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
-
-// ============================================================
-// التطبيع (Mission Critical)
-// ============================================================
-const ARABIC_INDIC_DIGITS   = '٠١٢٣٤٥٦٧٨٩';
-const EASTERN_ARABIC_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
-
-const toEnglishDigits = (str) => {
-    if (!str) return '';
-    return String(str).replace(/[٠-٩۰-۹]/g, (d) => {
-        const i = ARABIC_INDIC_DIGITS.indexOf(d);
-        return i > -1 ? String(i) : String(EASTERN_ARABIC_DIGITS.indexOf(d));
-    });
-};
-
-/** AR_13438 -> 13438 | ITEM-00591 -> 591 | ١٣٤٣٨ -> 13438 | ۱۳۴۳۸ -> 13438 */
-const normalizeCleanId = (str) => {
-    if (!str) return "";
-    return toEnglishDigits(str).replace(/\D/g, "");
-};
-
-/** بدونه "أواني" لا تطابق "اواني" و"مقلاة" لا تطابق "مقلاه". */
-const normalizeText = (str) => {
-    if (!str) return '';
-    return toEnglishDigits(String(str))
-        .toLowerCase()
-        .replace(/[\u064B-\u065F\u0670]/g, '')
-        .replace(/\u0640/g, '')
-        .replace(/[أإآٱ]/g, 'ا')
-        .replace(/[ىئ]/g, 'ي')
-        .replace(/ؤ/g, 'و')
-        .replace(/ة/g, 'ه')
-        .replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-};
-
-const toSafeDocId = (name) => {
-    const c = String(name || '').replace(/[\/\\\[\]#?]/g, '_').replace(/^\.+|\.+$/g, '').trim();
-    return c.slice(0, 200) || 'unknown';
-};
-
-// ============================================================
-// الصلاحيات
-// ============================================================
-/*
- * ⚠️ اقرأ هذا قبل التعديل:
- * هذا الملف ثابت (Static) ويُسلَّم كاملاً لمتصفح المستخدم.
- * أي رمز هنا يمكن قراءته عبر "عرض المصدر". التجزئة (hash) ترفع الكلفة
- * من "صفر جهد" إلى "جهد ملموس"، لكنها ليست أماناً حقيقياً.
- * الأمان الحقيقي = قواعد Firestore + Vercel Password Protection.
- *
- * لتوليد بصمة رمز جديد: افتح الكونسول واكتب __genCode("رمزك")
- */
-const CODE_SALT = 'bayt-awani::v5::';
-
-const hashCode = (str) => {
-    let h1 = 0x811c9dc5, h2 = 0xc2b2ae35;
-    const s = CODE_SALT + String(str);
-    for (let i = 0; i < s.length; i++) {
-        const c = s.charCodeAt(i);
-        h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
-        h2 = Math.imul(h2 ^ c, 0x85ebca6b) >>> 0;
-    }
-    return h1.toString(36) + '-' + h2.toString(36);
-};
-window.__genCode = (code) => hashCode(code);
-
-/**
- * الحسابات المحمية: الاسم (مُطبَّعاً) -> بصمة رمز الدخول.
- * لا يمكن الدخول بهذا الاسم إلا بالرمز الصحيح، ومن يدخل به يصبح مسؤولاً.
- *
- * 👇 استبدل البصمة أدناه بناتج __genCode("رمزك الحقيقي") من الكونسول.
- */
-const PROTECTED_ACCOUNTS = {
-    'مهند': 'REPLACE_ME',
-};
-
-const isProtectedName = (name) => Object.prototype.hasOwnProperty.call(PROTECTED_ACCOUNTS, normalizeText(name));
-const verifyCode = (name, code) => {
-    const expected = PROTECTED_ACCOUNTS[normalizeText(name)];
-    return Boolean(expected) && hashCode(code) === expected;
-};
-
-// ============================================================
-// تحميل البيانات
-// ============================================================
-const fetchText = async (url) => {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.text();
-    } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return ""; }
-};
-
-const fetchJson = async (url) => {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-    } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return null; }
-};
-
-/** warehouseKey يُحقن في كل صنف => الفصل بين المستودعين بنيوي لا بصري. */
-const parseExcelData = (rawText, warehouseKey) => {
-    if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
-    const lines = rawText.trim().split('\n');
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split('\t').map(h => h.trim());
-    const idIdx   = headers.findIndex(h => /رقم|كود|sku|item/i.test(h));
-    const nameIdx = headers.findIndex(h => /اسم|وصف|description|name/i.test(h));
-    const qtyIdx  = headers.findIndex(h => /كمية|رصيد|متوفر|qty|quantity/i.test(h));
-    const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
-    const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
-
-    if (idIdx === -1) {
-        console.error(`[Parser:${warehouseKey}] لم يُعثر على عمود رقم الصنف:`, headers);
-        return [];
-    }
-
-    const dataMap = {};
-    for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split('\t').map(c => c.trim());
-        if (cols.length === 0 || (!cols[idIdx] && (nameIdx === -1 || !cols[nameIdx]))) continue;
-
-        const rawId    = cols[idIdx] ? cols[idIdx].trim() : '';
-        const searchId = toEnglishDigits(rawId).toLowerCase();
-        if (!searchId) continue;
-
-        const name   = nameIdx !== -1 && cols[nameIdx] ? cols[nameIdx].trim() : '';
-        const rawQty = toEnglishDigits(qtyIdx !== -1 ? (cols[qtyIdx] || '0') : '0').replace(/,/g, '');
-        const qty    = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
-
-        dataMap[searchId] = {
-            uid: `${warehouseKey}:${searchId}`,
-            warehouseKey,
-            id: rawId,
-            searchId,
-            cleanId: normalizeCleanId(rawId),
-            name,
-            searchName: normalizeText(name),
-            qty,
-            unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
-            pack: packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '',
+        /**
+         * سياسة الإظهار — مركزية في مكان واحد لتغييرها بسطر واحد.
+         * مفتاح "عرض مع الصورة" يُعامَل كـ "وضع العميل": الواجهة تصبح معروضة لطرف خارجي.
+         */
+        const VISIBILITY_RULES = {
+            hideOutOfStockInGallery         : true,   // المعرض واجهة عميل => لا تُعرض الأصناف المنتهية إطلاقاً
+            hideOutOfStockInSearchWithImage : true,   // وضع العميل داخل البحث
+            hideOutOfStockInPlainSearch     : false,  // بحث الموظف يعرض المنتهي مع وسم واضح
+            hideQtyInSearchWithImage        : false,  // اقلبها true لإخفاء الكمية في البحث عند تفعيل الصور
         };
-    }
-    return Object.values(dataMap);
-};
 
-/** AR_100 و 100 يُنتجان الرقم الصافي 100 => صنفان يتقاسمان صورة واحدة. */
-const reportCleanIdCollisions = (items, warehouseKey) => {
-    const byClean = new Map();
-    items.forEach(it => {
-        if (!it.cleanId) return;
-        if (!byClean.has(it.cleanId)) byClean.set(it.cleanId, []);
-        byClean.get(it.cleanId).push(it.id);
-    });
-    const collisions = [];
-    byClean.forEach((ids, clean) => { if (ids.length > 1) collisions.push({ clean, ids }); });
-    if (collisions.length) {
-        console.warn(`[Integrity:${warehouseKey}] ${collisions.length} تصادم في الأرقام الصافية:`, collisions);
-    }
-};
+        /** طبقات عرض بطاقة المعرض. */
+        const CARD_VIEW = { IMAGE: 0, QUANTITY: 1, DETAILS: 2 };
 
-/** Map يحفظ اسم الملف الحقيقي — يدعم أي امتداد ويمنع افتراض .webp. */
-const buildImagesMap = (imagesText) => {
-    const map = new Map();
-    imagesText.split('\n').forEach((line) => {
-        const fileName = line.trim();
-        if (!fileName) return;
-        const clean = normalizeCleanId(fileName.replace(/\.[^.]+$/, ''));
-        if (clean && !map.has(clean)) map.set(clean, fileName);
-    });
-    return map;
-};
+        const WAREHOUSES = {
+            jeddah: { key: 'jeddah', label: 'مخزون جدة',    name: 'مستودع جدة' },
+            riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
+        };
 
-/** الحارس على الترويسة الفارغة يمنع TypeError كان يُسقط التطبيق. */
-const parseCategories = (text) => {
-    const obj = {};
-    if (!text) return obj;
-    const rows = text.split('\n').map(r => r.split('\t').map(c => c.trim()));
-    if (rows.length === 0) return obj;
-    const headers = rows[0];
-    headers.forEach(h => { if (h) obj[h] = []; });
-    for (let i = 1; i < rows.length; i++) {
-        for (let j = 0; j < headers.length; j++) {
-            const h = headers[j];
-            if (!h || !obj[h]) continue;
-            const clean = normalizeCleanId(rows[i][j]);
-            if (clean) obj[h].push(clean);
-        }
-    }
-    return obj;
-};
+        const SPECIAL_CATEGORIES = {
+            UNCATEGORIZED : 'بقية الأصناف',
+            MISSING_IMAGES: 'نواقص الصور',
+        };
 
-// ============================================================
-// محرك البحث (رقم + اسم)
-// ============================================================
-const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
-    const cleanQuery = normalizeCleanId(rawQuery);
-    const textQuery  = normalizeText(rawQuery);
-    const nameTokens = textQuery.length >= MIN_NAME_QUERY_LENGTH ? textQuery.split(' ').filter(Boolean) : [];
+        const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 
-    if (!cleanQuery && nameTokens.length === 0) return { visible: [], total: 0, exact: null };
+        const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
 
-    const ranked = [];
-    for (let i = 0; i < activeDb.length; i++) {
-        const item = activeDb[i];
-        if (hideOutOfStock && item.qty <= 0) continue;
+        // ==========================================
+        // دوال التطبيع (Mission Critical)
+        // ==========================================
 
-        let rank = -1;
-        if (cleanQuery && item.cleanId.startsWith(cleanQuery)) {
-            rank = item.cleanId === cleanQuery ? 0 : 1;
-        } else if (nameTokens.length && item.searchName) {
-            let all = true;
-            for (let t = 0; t < nameTokens.length; t++) {
-                if (!item.searchName.includes(nameTokens[t])) { all = false; break; }
-            }
-            if (all) rank = item.searchName.startsWith(nameTokens[0]) ? 2 : 3;
-        }
-        if (rank !== -1) ranked.push({ item, rank });
-    }
+        const ARABIC_INDIC_DIGITS   = '٠١٢٣٤٥٦٧٨٩'; // U+0660 - U+0669
+        const EASTERN_ARABIC_DIGITS = '۰۱۲۳۴۵۶۷۸۹'; // U+06F0 - U+06F9 (فارسي/أردو)
 
-    ranked.sort((a, b) => a.rank - b.rank);
-
-    const sku = [], nm = [];
-    for (let i = 0; i < ranked.length; i++) {
-        const r = ranked[i];
-        if (r.rank <= 1) { if (sku.length < MAX_SKU_RESULTS) sku.push(r.item); }
-        else            { if (nm.length  < MAX_NAME_RESULTS) nm.push(r.item);  }
-    }
-    return {
-        visible: sku.concat(nm),
-        total: ranked.length,
-        exact: ranked.length && ranked[0].rank === 0 ? ranked[0].item : null
-    };
-};
-
-/** لون دلالي للرصيد — الإدراك اللوني أسرع من قراءة الرقم. */
-const stockTone = (qty) => {
-    if (qty <= 0) return { text: 'text-danger',  bg: 'bg-dangerSoft',  label: 'نفد'   };
-    if (qty <= LOW_STOCK_THRESHOLD) return { text: 'text-warn', bg: 'bg-warnSoft', label: 'أوشك' };
-    return { text: 'text-success', bg: 'bg-successSoft', label: 'متوفر' };
-};
-
-// ============================================================
-// الأيقونات (SVG بدل Emoji)
-// ============================================================
-const Icon = {
-    Search: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
-    Grid: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>),
-    List: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>),
-    ImageOff: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M3 3l18 18"/><path d="M21 15V5a2 2 0 00-2-2H9"/><path d="M3 7v12a2 2 0 002 2h12"/><path d="M3 16l4-4 3 3"/></svg>),
-    Expand: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>),
-    Close: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M18 6L6 18M6 6l12 12"/></svg>),
-    Shield: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>),
-    Lock: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 118 0v3"/></svg>),
-    Alert: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M12 9v4M12 17h.01"/><path d="M10.3 4.3L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z"/></svg>),
-};
-
-// ============================================================
-// مكونات العرض
-// ============================================================
-const Quantity = ({ qty, unit, size = 'lg' }) => {
-    const tone = stockTone(qty);
-    return (
-        <div className="flex flex-col items-start">
-            <div className="flex items-baseline gap-4">
-                <span className={`${size === 'lg' ? 'text-[26px]' : 'text-[20px]'} font-bold leading-none ${tone.text}`}>
-                    {NUMBER_FORMATTER.format(qty)}
-                </span>
-                {unit && <span className="text-[13px] text-muted">{unit}</span>}
-            </div>
-            {qty <= LOW_STOCK_THRESHOLD && (
-                <span className={`text-[12px] mt-4 ${tone.text}`}>
-                    {qty <= 0 ? 'نفدت الكمية' : 'كمية محدودة'}
-                </span>
-            )}
-        </div>
-    );
-};
-
-const ProductImage = ({ fileName, alt, className }) => {
-    if (!fileName) return null;
-    return (
-        <img src={`${IMAGES_PATH}${fileName}`} alt={alt} loading="lazy" decoding="async" draggable="false"
-             className={className}
-             onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
-    );
-};
-
-const Lightbox = ({ fileName, title, onClose }) => {
-    useEffect(() => {
-        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-        document.addEventListener('keydown', onKey);
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-    }, [onClose]);
-
-    return (
-        <div className="lightbox-backdrop fixed inset-0 z-50 flex items-center justify-center p-16 animate-flip"
-             role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-            <button onClick={onClose} aria-label="إغلاق"
-                    className="absolute top-16 left-16 w-40 h-40 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
-                <Icon.Close className="w-20 h-20" />
-            </button>
-            <div className="max-w-[860px] w-full flex flex-col items-center gap-16" onClick={(e) => e.stopPropagation()}>
-                <img src={`${IMAGES_PATH}${fileName}`} alt={title}
-                     className="max-h-[74vh] w-auto object-contain rounded-16 bg-white" />
-                <p className="text-white text-[15px] text-center">{title}</p>
-            </div>
-        </div>
-    );
-};
-
-// ---- بطاقات البحث ----
-const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty }) => (
-    <div className="animate-card w-full border border-border rounded-16 shadow-card p-20 bg-bg flex flex-col gap-16">
-        {showImage && imageFileName && (
-            <div className="w-full flex justify-center border-b border-border pb-16">
-                <ProductImage fileName={imageFileName} alt={item.name || item.id}
-                              className="w-full max-w-[220px] aspect-square object-contain rounded-12" />
-            </div>
-        )}
-        <div className="flex justify-between items-start gap-16">
-            <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">رقم الصنف</div>
-                <div className="text-[18px] font-bold text-primary break-words">{item.id}</div>
-            </div>
-            {!hideQty && <Quantity qty={item.qty} unit={item.unit} />}
-        </div>
-        <div>
-            <div className="text-[12px] text-muted mb-2">اسم الصنف</div>
-            <div className="text-[15px] text-primary">{item.name || "---"}</div>
-        </div>
-        <div className="grid grid-cols-3 gap-12 border-t border-border pt-16">
-            <div>
-                <div className="text-[12px] text-muted mb-2">الوحدة</div>
-                <div className="text-[14px] font-semibold text-primary">{item.unit || "---"}</div>
-            </div>
-            <div>
-                <div className="text-[12px] text-muted mb-2">الشد</div>
-                <div className="text-[14px] font-semibold text-primary">{item.pack || "---"}</div>
-            </div>
-            <div>
-                <div className="text-[12px] text-muted mb-2">المستودع</div>
-                <div className="text-[14px] font-semibold text-primary">{warehouseName}</div>
-            </div>
-        </div>
-    </div>
-));
-
-const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty }) => (
-    <div className="animate-card w-full border border-border rounded-12 p-12 bg-bg flex justify-between items-center gap-12 hover:border-muted hover:shadow-card transition-all duration-200">
-        <div className="flex items-center gap-12 overflow-hidden">
-            {showImage && imageFileName && (
-                <ProductImage fileName={imageFileName} alt={item.name || item.id}
-                              className="w-48 h-48 flex-shrink-0 object-contain rounded-10 border border-border bg-surface" />
-            )}
-            <div className="flex flex-col overflow-hidden">
-                <span className="text-[15px] font-semibold text-primary truncate">{item.id}</span>
-                <span className="text-[13px] text-secondary truncate">{item.name || '---'}</span>
-            </div>
-        </div>
-        {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} size="sm" /></div>}
-    </div>
-));
-
-// ---- بطاقة المعرض ثلاثية الطبقات ----
-const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, onZoom, warehouseName }) => {
-    const isDetails  = view === CARD_VIEW.DETAILS;
-    const isQuantity = view === CARD_VIEW.QUANTITY;
-
-    return (
-        <div role="button" tabIndex={0}
-             aria-label={`${item.name || item.id} — نقرتان للكمية، ثلاث نقرات للتفاصيل`}
-             aria-expanded={view !== CARD_VIEW.IMAGE}
-             title="نقرتان: الكمية · ثلاث نقرات: بطاقة المنتج"
-             onClick={() => onTap(item.uid)}
-             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCycle(item.uid); } }}
-             className={`tap-card group relative cursor-pointer border rounded-16 bg-bg flex flex-col transition-all duration-200 ${isDetails ? 'border-accent shadow-lift' : 'border-border hover:shadow-lift hover:-translate-y-2'}`}>
-
-            {isDetails ? (
-                <div className="animate-flip w-full p-16 flex flex-col gap-10">
-                    <div className="flex justify-between items-center border-b border-border pb-8">
-                        <span className="text-[12px] font-semibold text-accent">بطاقة المنتج</span>
-                        <span className="text-[11px] text-muted">نقرتان للعودة</span>
-                    </div>
-                    <div>
-                        <div className="text-[11px] text-muted">رقم الصنف</div>
-                        <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
-                    </div>
-                    <div>
-                        <div className="text-[11px] text-muted">اسم الصنف</div>
-                        <div className="text-[13px] text-primary break-words">{item.name || '---'}</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8">
-                        <div>
-                            <div className="text-[11px] text-muted">الوحدة</div>
-                            <div className="text-[13px] font-semibold text-primary">{item.unit || '---'}</div>
-                        </div>
-                        <div>
-                            <div className="text-[11px] text-muted">الشد</div>
-                            <div className="text-[13px] font-semibold text-primary">{item.pack || '---'}</div>
-                        </div>
-                    </div>
-                    <div className="border-t border-border pt-8">
-                        <div className="text-[11px] text-muted mb-4">{warehouseName}</div>
-                        <Quantity qty={item.qty} unit={item.unit} size="sm" />
-                    </div>
-                </div>
-            ) : (
-                <React.Fragment>
-                    {showImage && (
-                        <div className={`relative w-full ${isGrid ? '' : 'max-w-[380px] mx-auto'}`}>
-                            <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
-                                          className={`object-contain rounded-t-16 pointer-events-none bg-surface w-full ${isGrid ? 'aspect-square' : 'h-auto'}`} />
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onZoom(item); }}
-                                aria-label="تكبير الصورة"
-                                className="absolute top-8 left-8 w-32 h-32 rounded-10 bg-white/85 border border-border text-secondary flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity">
-                                <Icon.Expand className="w-16 h-16" />
-                            </button>
-                        </div>
-                    )}
-                    <div className={`p-12 flex flex-col items-center text-center gap-2 ${!showImage ? 'py-24' : ''}`}>
-                        <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
-                        <div className="text-[13px] text-secondary break-words line-clamp-2">{item.name || '---'}</div>
-                        {isQuantity && (
-                            <div className={`animate-flip text-[13px] font-semibold mt-8 px-12 py-4 rounded-full ${stockTone(item.qty).bg} ${stockTone(item.qty).text}`}>
-                                {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
-                            </div>
-                        )}
-                    </div>
-                </React.Fragment>
-            )}
-        </div>
-    );
-});
-
-// ---- حالات ----
-const SkeletonGrid = () => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-16">
-        {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="border border-border rounded-16 overflow-hidden">
-                <div className="skeleton w-full aspect-square"></div>
-                <div className="p-12 flex flex-col items-center gap-8">
-                    <div className="skeleton h-14 w-[60%] rounded-full"></div>
-                    <div className="skeleton h-12 w-[85%] rounded-full"></div>
-                </div>
-            </div>
-        ))}
-    </div>
-);
-
-const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
-    <div className="animate-card w-full border border-border rounded-16 p-24 bg-surface flex flex-col items-center text-center gap-12">
-        <div className={`w-44 h-44 rounded-full flex items-center justify-center ${tone === 'danger' ? 'bg-dangerSoft text-danger' : 'bg-bg text-muted border border-border'}`}>
-            {icon}
-        </div>
-        <div>
-            <h3 className="text-[15px] font-semibold text-primary mb-4">{title}</h3>
-            {note && <p className="text-[13px] text-secondary">{note}</p>}
-        </div>
-    </div>
-);
-
-// ============================================================
-// شاشة الدخول
-// ============================================================
-const LoginScreen = ({ onLogin }) => {
-    const [name, setName]       = useState('');
-    const [code, setCode]       = useState('');
-    const [needCode, setNeed]   = useState(false);
-    const [error, setError]     = useState('');
-    const [notice, setNotice]   = useState('');
-    const [loading, setLoading] = useState(false);
-    const codeRef = useRef(null);
-
-    useEffect(() => { if (needCode && codeRef.current) codeRef.current.focus(); }, [needCode]);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const trimmed = name.trim();
-        if (!trimmed) return;
-
-        let isAdmin = false;
-
-        if (isProtectedName(trimmed)) {
-            if (!code.trim()) {
-                setNeed(true);
-                setError('هذا الاسم محمي. أدخل رمز الدخول للمتابعة.');
-                return;
-            }
-            if (!verifyCode(trimmed, code.trim())) {
-                setNeed(true);
-                setError('رمز الدخول غير صحيح.');
-                return;
-            }
-            isAdmin = true;
-        }
-
-        setError('');
-        setLoading(true);
-
-        try {
-            const db = await getDb();
-            const userRef = db.collection('users').doc(toSafeDocId(trimmed));
-            const doc = await userRef.get();
-            const info = {
-                userAgent: navigator.userAgent,
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-            };
-            if (doc.exists) {
-                await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
-            } else {
-                await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp() });
-            }
-            await db.collection('login_logs').add({
-                name: trimmed, isAdmin,
-                time: firebase.firestore.FieldValue.serverTimestamp(),
-                userAgent: navigator.userAgent
+        /** تحويل الأرقام العربية والفارسية إلى إنجليزية. */
+        const toEnglishDigits = (str) => {
+            if (!str) return '';
+            return String(str).replace(/[٠-٩۰-۹]/g, (d) => {
+                const arabicIndex = ARABIC_INDIC_DIGITS.indexOf(d);
+                if (arabicIndex > -1) return String(arabicIndex);
+                return String(EASTERN_ARABIC_DIGITS.indexOf(d));
             });
-        } catch (err) {
-            // التسجيل وظيفة تحليلية — لا يجوز أن يمنع تعثر الشبكة الموظفَ من العمل.
-            console.error("Error logging in:", err);
-            setNotice('تعذر الاتصال بسجل الدخول، وتم الدخول بشكل طبيعي.');
-        }
+        };
 
-        localStorage.setItem(STORAGE_KEYS.NAME, trimmed);
-        if (isAdmin) localStorage.setItem(STORAGE_KEYS.TOKEN, hashCode(code.trim()));
-        else localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        const normalizeNumerals = toEnglishDigits; // اسم قديم محفوظ للتوافق
 
-        setLoading(false);
-        onLogin(trimmed, isAdmin);
-    };
+        /**
+         * استخراج "الرقم الصافي" — العمود الفقري للنظام.
+         * AR_13438 -> 13438 | ITEM-00591 -> 591 | ١٣٤٣٨ -> 13438 | ۱۳۴۳۸ -> 13438
+         */
+        const normalizeCleanId = (str) => {
+            if (!str) return "";
+            return toEnglishDigits(str).replace(/\D/g, "");
+        };
 
-    return (
-        <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans">
-            <div className="animate-card w-full max-w-[380px] bg-bg border border-border rounded-20 shadow-lift p-32">
-                <div className="text-center mb-32">
-                    <h1 className="text-[22px] font-bold text-primary mb-4">نظام المخزون</h1>
-                    <p className="text-[13px] text-secondary">شركة بيت الأواني الطيبة</p>
-                </div>
+        /**
+         * تطبيع النص العربي للبحث بالاسم.
+         * بدونه: "أواني" لا تطابق "اواني"، و"مقلاة" لا تطابق "مقلاه".
+         */
+        const normalizeText = (str) => {
+            if (!str) return '';
+            return toEnglishDigits(String(str))
+                .toLowerCase()
+                .replace(/[\u064B-\u065F\u0670]/g, '') // التشكيل
+                .replace(/\u0640/g, '')                // التطويل
+                .replace(/[أإآٱ]/g, 'ا')
+                .replace(/[ىئ]/g, 'ي')
+                .replace(/ؤ/g, 'و')
+                .replace(/ة/g, 'ه')
+                .replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ') // الرموز تصبح فواصل
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-16">
-                    <div>
-                        <label htmlFor="employeeName" className="text-[13px] font-medium text-primary mb-8 block">الاسم الكريم</label>
-                        <input id="employeeName" type="text" required autoComplete="name" value={name}
-                               onChange={(e) => { setName(e.target.value); setError(''); }}
-                               placeholder="اكتب اسمك هنا..."
-                               className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary text-[15px] outline-none transition-colors" />
-                    </div>
+        /** تنظيف الاسم ليصلح كمعرّف مستند في Firestore (الشرطة المائلة تُسقط العملية). */
+        const toSafeDocId = (name) => {
+            const cleaned = String(name || '').replace(/[\/\\\[\]#?]/g, '_').replace(/^\.+|\.+$/g, '').trim();
+            return cleaned.slice(0, 200) || 'unknown';
+        };
 
-                    {needCode && (
-                        <div className="animate-card">
-                            <label htmlFor="accessCode" className="text-[13px] font-medium text-primary mb-8 flex items-center gap-6">
-                                <Icon.Lock className="w-14 h-14 text-accent" /> رمز الدخول
-                            </label>
-                            <input ref={codeRef} id="accessCode" type="password" autoComplete="off" value={code}
-                                   onChange={(e) => { setCode(e.target.value); setError(''); }}
-                                   placeholder="••••••"
-                                   className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary text-[15px] outline-none transition-colors tracking-widest" />
-                        </div>
-                    )}
+        // ==========================================
+        // طبقة تحميل البيانات
+        // ==========================================
 
-                    {error  && <p className="text-[13px] text-danger flex items-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
-                    {notice && <p className="text-[12px] text-secondary">{notice}</p>}
-
-                    <button type="submit" disabled={loading}
-                            className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] hover:opacity-90 disabled:opacity-60 transition-opacity">
-                        {loading ? "جاري الدخول..." : "دخول للنظام"}
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-// ============================================================
-// التطبيق
-// ============================================================
-const App = () => {
-    const [sessionName, setSessionName] = useState(() => localStorage.getItem(STORAGE_KEYS.NAME) || '');
-    const [isAdmin, setIsAdmin] = useState(() => {
-        // إعادة اشتقاق الصلاحية من الاسم المحفوظ + البصمة المحفوظة
-        const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
-        const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
-        return Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
-    });
-
-    const [warehouse, setWarehouse] = useState(null);
-    const [query, setQuery] = useState('');
-    const [showImageInSearch, setShowImageInSearch] = useState(false);
-
-    const [databases, setDatabases]   = useState({ jeddah: [], riyadh: [] });
-    const [imagesList, setImagesList] = useState(new Map());
-    const [categories, setCategories] = useState({});
-
-    const [activeCategory, setActiveCategory] = useState(null);
-    const [galleryView, setGalleryView]       = useState('grid');
-    const [visibleCount, setVisibleCount]     = useState(GALLERY_PAGE_SIZE);
-    const [cardViews, setCardViews]           = useState({});
-    const [zoomItem, setZoomItem]             = useState(null);
-
-    const [loading, setLoading]       = useState(true);
-    const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
-
-    const searchInputRef   = useRef(null);
-    const lastLoggedSearch = useRef('');
-    const tapStateRef      = useRef({ uid: null, count: 0, timer: null });
-
-    // ---------- تحميل البيانات ----------
-    useEffect(() => {
-        let alive = true;
-        (async () => {
+        /** fetch().catch() لا يلتقط أخطاء HTTP مثل 404/403 — فقط أخطاء الشبكة. */
+        const fetchText = async (url) => {
             try {
-                const [jT, rT, iT, cT, vJ] = await Promise.all([
-                    fetchText(`${DATA_PATH}jeddah.tsv`),
-                    fetchText(`${DATA_PATH}riyadh.tsv`),
-                    fetchText(`${DATA_PATH}images_list.txt`),
-                    fetchText(`${DATA_PATH}categories.tsv`),
-                    fetchJson(`${DATA_PATH}version.json`),
-                ]);
-                if (!alive) return;
-
-                const jeddah = parseExcelData(jT, WAREHOUSES.jeddah.key);
-                const riyadh = parseExcelData(rT, WAREHOUSES.riyadh.key);
-                reportCleanIdCollisions(jeddah, WAREHOUSES.jeddah.key);
-                reportCleanIdCollisions(riyadh, WAREHOUSES.riyadh.key);
-
-                setDatabases({ jeddah, riyadh });
-                setImagesList(buildImagesMap(iT));
-                setCategories(parseCategories(cT));
-                setLastUpdate(
-                    vJ && vJ.lastUpdate
-                        ? (typeof dayjs !== 'undefined' ? dayjs(vJ.lastUpdate).fromNow() : vJ.lastUpdate)
-                        : "غير متوفر"
-                );
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.text();
             } catch (err) {
-                console.error('[Boot] فشل غير متوقع:', err);
-                if (alive) setLastUpdate("غير متوفر");
-            } finally {
-                if (alive) setLoading(false);
-            }
-        })();
-        return () => { alive = false; };
-    }, []);
-
-    useEffect(() => () => { if (tapStateRef.current.timer) clearTimeout(tapStateRef.current.timer); }, []);
-
-    // اختصار لوحة المفاتيح: "/" أو Ctrl+K للانتقال للبحث
-    useEffect(() => {
-        const onKey = (e) => {
-            const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
-            if ((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) {
-                e.preventDefault();
-                searchInputRef.current?.focus();
+                console.warn(`[Data] تعذر تحميل ${url}:`, err.message);
+                return "";
             }
         };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, []);
 
-    useEffect(() => { if (warehouse && searchInputRef.current) searchInputRef.current.focus(); }, [warehouse]);
-
-    useEffect(() => { setVisibleCount(GALLERY_PAGE_SIZE); setCardViews({}); }, [activeCategory, warehouse]);
-
-    // حارس صلاحيات: لو فقد المستخدم صفة المسؤول وهو داخل قسم محمي
-    useEffect(() => {
-        if (!isAdmin && activeCategory && ADMIN_ONLY_CATEGORIES.has(activeCategory)) setActiveCategory(null);
-    }, [isAdmin, activeCategory]);
-
-    const isDbEmpty = useMemo(
-        () => databases.jeddah.length === 0 && databases.riyadh.length === 0,
-        [databases]
-    );
-
-    // ---------- آلة حالة النقر ----------
-    const applyTaps = useCallback((uid, taps) => {
-        setCardViews(prev => {
-            const cur = prev[uid] || CARD_VIEW.IMAGE;
-            let next = cur;
-            if (taps >= 3)       next = CARD_VIEW.DETAILS;
-            else if (taps === 2) next = (cur === CARD_VIEW.IMAGE) ? CARD_VIEW.QUANTITY : CARD_VIEW.IMAGE;
-            return next === cur ? prev : { ...prev, [uid]: next };
-        });
-    }, []);
-
-    const handleCardTap = useCallback((uid) => {
-        const s = tapStateRef.current;
-        if (s.uid !== uid) { if (s.timer) clearTimeout(s.timer); s.uid = uid; s.count = 0; }
-        s.count += 1;
-        if (s.timer) clearTimeout(s.timer);
-        s.timer = setTimeout(() => {
-            const taps = s.count;
-            s.count = 0; s.uid = null; s.timer = null;
-            applyTaps(uid, taps);
-        }, MULTI_TAP_WINDOW_MS);
-    }, [applyTaps]);
-
-    const handleCardCycle = useCallback((uid) => {
-        setCardViews(prev => {
-            const cur = prev[uid] || CARD_VIEW.IMAGE;
-            const next = cur === CARD_VIEW.IMAGE ? CARD_VIEW.QUANTITY
-                       : cur === CARD_VIEW.QUANTITY ? CARD_VIEW.DETAILS
-                       : CARD_VIEW.IMAGE;
-            return { ...prev, [uid]: next };
-        });
-    }, []);
-
-    const handleZoom = useCallback((item) => setZoomItem(item), []);
-
-    // ---------- البحث ----------
-    const hideOutOfStockInSearch = showImageInSearch
-        ? VISIBILITY_RULES.hideOutOfStockInSearchWithImage
-        : VISIBILITY_RULES.hideOutOfStockInPlainSearch;
-    const hideQtyInSearch = showImageInSearch && VISIBILITY_RULES.hideQtyInSearchWithImage;
-
-    const search = useMemo(() => {
-        if (!warehouse || !query.trim()) return null;
-        return runSearch(databases[warehouse] || [], query, hideOutOfStockInSearch);
-    }, [query, warehouse, databases, hideOutOfStockInSearch]);
-
-    useEffect(() => {
-        if (!warehouse || !search || search.total === 0) return;
-        const key = `${warehouse}:${normalizeText(query)}`;
-        if (lastLoggedSearch.current === key) return;
-        const t = setTimeout(async () => {
-            lastLoggedSearch.current = key;
+        const fetchJson = async (url) => {
             try {
-                const db = await getDb();
-                await db.collection('search_logs').add({
-                    name: sessionName, warehouse,
-                    rawQuery: query.trim(),
-                    cleanQuery: normalizeCleanId(query),
-                    resultsCount: search.total,
-                    exactMatch: Boolean(search.exact),
-                    time: firebase.firestore.FieldValue.serverTimestamp(),
-                });
-            } catch (err) { console.warn('[Log] تعذر تسجيل البحث:', err.message); }
-        }, SEARCH_LOG_DEBOUNCE_MS);
-        return () => clearTimeout(t);
-    }, [search, warehouse, query, sessionName]);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.warn(`[Data] تعذر تحميل ${url}:`, err.message);
+                return null;
+            }
+        };
 
-    // ---------- المعرض ----------
-    const allCategorizedIds = useMemo(() => new Set(Object.values(categories).flat()), [categories]);
+        /**
+         * محلل بيانات المستودعات (TSV).
+         * warehouseKey يُحقن في كل صنف => الفصل بين جدة والرياض يصبح بنيوياً لا بصرياً:
+         * أي صنف يحمل هويّة مستودعه معه أينما ذهب في التطبيق.
+         */
+        const parseExcelData = (rawText, warehouseKey) => {
+            if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
 
-    const visibleCategories = useMemo(() => {
-        const base = Object.keys(categories);
-        const extras = [SPECIAL_CATEGORIES.UNCATEGORIZED];
-        if (isAdmin) extras.push(SPECIAL_CATEGORIES.MISSING_IMAGES);
-        return { base, extras };
-    }, [categories, isAdmin]);
+            const lines = rawText.trim().split('\n');
+            if (lines.length < 2) return [];
 
-    const galleryResults = useMemo(() => {
-        if (!activeCategory || !warehouse) return [];
-        if (ADMIN_ONLY_CATEGORIES.has(activeCategory) && !isAdmin) return [];
+            const headers = lines[0].split('\t').map(h => h.trim());
+            const idIdx   = headers.findIndex(h => /رقم|كود|sku|item/i.test(h));
+            const nameIdx = headers.findIndex(h => /اسم|وصف|description|name/i.test(h));
+            const qtyIdx  = headers.findIndex(h => /كمية|رصيد|متوفر|qty|quantity/i.test(h));
+            const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
+            const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
-        // نبدأ من أصناف المستودع المختار حصراً => أي صورة بلا صنف مقابل لا تظهر أبداً
-        let pool = databases[warehouse] || [];
-        if (VISIBILITY_RULES.hideOutOfStockInGallery) pool = pool.filter(i => i.qty > 0);
+            if (idIdx === -1) {
+                console.error(`[Parser:${warehouseKey}] لم يُعثر على عمود رقم الصنف في الترويسة:`, headers);
+                return [];
+            }
 
-        if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES)
-            return pool.filter(i => !imagesList.has(i.cleanId));
+            const dataMap = {};
 
-        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)
-            return pool.filter(i => imagesList.has(i.cleanId) && !allCategorizedIds.has(i.cleanId));
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split('\t').map(c => c.trim());
+                if (cols.length === 0 || (!cols[idIdx] && (nameIdx === -1 || !cols[nameIdx]))) continue;
 
-        const ids = new Set(categories[activeCategory] || []);
-        return pool.filter(i => ids.has(i.cleanId) && imagesList.has(i.cleanId));
-    }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, isAdmin]);
+                const rawId    = cols[idIdx] ? cols[idIdx].trim() : '';
+                const searchId = toEnglishDigits(rawId).toLowerCase();
+                if (!searchId) continue;
 
-    const visibleItems = useMemo(() => galleryResults.slice(0, visibleCount), [galleryResults, visibleCount]);
+                const name = nameIdx !== -1 && cols[nameIdx] ? cols[nameIdx].trim() : '';
+                const rawQty = toEnglishDigits(qtyIdx !== -1 ? (cols[qtyIdx] || '0') : '0').replace(/,/g, '');
+                const qty  = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
+                const unit = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
+                const pack = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
 
-    const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
-    const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
+                dataMap[searchId] = {
+                    // معرّف فريد عالمياً: يمنع أي تصادم في مفاتيح React لو عُرض المستودعان معاً مستقبلاً
+                    uid: `${warehouseKey}:${searchId}`,
+                    warehouseKey,
+                    id: rawId,
+                    searchId,
+                    cleanId: normalizeCleanId(rawId),   // محسوب مرة واحدة عند التحميل
+                    name,
+                    searchName: normalizeText(name),    // مُطبَّع مسبقاً للبحث بالاسم
+                    qty,
+                    unit,
+                    pack
+                };
+            }
+            return Object.values(dataMap);
+        };
 
-    // ---------- التصيير ----------
-    if (!sessionName) return <LoginScreen onLogin={(n, admin) => { setSessionName(n); setIsAdmin(admin); }} />;
+        /**
+         * كاشف تصادم الأرقام الصافية.
+         * لأن normalizeCleanId تحذف الحروف، فإن "AR_100" و"100" في نفس الملف
+         * يُنتجان الرقم الصافي 100 => صنفان مختلفان يتقاسمان الصورة والتصنيف نفسه.
+         * هذا لا يُعالَج برمجياً (البيانات مصدر الحقيقة) لكنه يجب أن يكون مرئياً لك.
+         */
+        const reportCleanIdCollisions = (items, warehouseKey) => {
+            const byClean = new Map();
+            items.forEach(it => {
+                if (!it.cleanId) return;
+                if (!byClean.has(it.cleanId)) byClean.set(it.cleanId, []);
+                byClean.get(it.cleanId).push(it.id);
+            });
+            const collisions = [];
+            byClean.forEach((ids, clean) => { if (ids.length > 1) collisions.push({ clean, ids }); });
+            if (collisions.length) {
+                console.warn(
+                    `[Integrity:${warehouseKey}] ${collisions.length} تصادم في الأرقام الصافية — ` +
+                    `أصناف مختلفة ستتقاسم نفس الصورة والتصنيف:`, collisions
+                );
+            }
+            return collisions.length;
+        };
 
-    const chipBase = "px-14 py-8 rounded-full text-[13px] font-medium border transition-all duration-200 whitespace-nowrap";
+        /** خريطة الصور: الرقم الصافي -> اسم الملف الحقيقي (يدعم أي امتداد). */
+        const buildImagesMap = (imagesText) => {
+            const imgMap = new Map();
+            imagesText.split('\n').forEach((line) => {
+                const fileName = line.trim();
+                if (!fileName) return;
+                const cleanName = normalizeCleanId(fileName.replace(/\.[^.]+$/, ''));
+                if (cleanName && !imgMap.has(cleanName)) imgMap.set(cleanName, fileName);
+            });
+            return imgMap;
+        };
 
-    return (
-        <div className="min-h-screen font-sans">
+        /**
+         * تحليل categories.tsv — كل عمود قسم، والصفوف تحته أرقام أصناف.
+         * الحارس على الترويسة الفارغة يمنع TypeError كان يُسقط التطبيق بالكامل.
+         */
+        const parseCategories = (categoriesText) => {
+            const catObj = {};
+            if (!categoriesText) return catObj;
 
-            {/* ===== شريط علوي ثابت ===== */}
-            <div className="sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-border">
-                <div className="max-w-[1120px] mx-auto px-16 h-48 flex items-center justify-between gap-16">
-                    <span className="text-[13px] font-semibold text-primary truncate">بيت الأواني الطيبة</span>
-                    <div className="flex items-center gap-8">
-                        {isAdmin && (
-                            <span className="flex items-center gap-4 text-[11px] font-semibold text-accent bg-accentSoft px-8 py-4 rounded-full">
-                                <Icon.Shield className="w-12 h-12" /> مسؤول
-                            </span>
-                        )}
-                        <span className="text-[12px] text-secondary truncate max-w-[140px]">{sessionName}</span>
-                    </div>
+            const rows = categoriesText.split('\n').map(row => row.split('\t').map(cell => cell.trim()));
+            if (rows.length === 0) return catObj;
+
+            const headers = rows[0];
+            headers.forEach(header => { if (header) catObj[header] = []; });
+
+            for (let i = 1; i < rows.length; i++) {
+                for (let j = 0; j < headers.length; j++) {
+                    const header = headers[j];
+                    if (!header || !catObj[header]) continue;
+                    const cell = rows[i][j];
+                    if (!cell) continue;
+                    const cleanId = normalizeCleanId(cell);
+                    if (cleanId) catObj[header].push(cleanId);
+                }
+            }
+            return catObj;
+        };
+
+        // ==========================================
+        // محرك البحث (رقم الصنف + الاسم)
+        // ==========================================
+
+        /**
+         * البحث الموحّد. لا يُجبر المستخدم على اختيار نمط:
+         *   rank 0 = مطابقة تامة لرقم الصنف
+         *   rank 1 = بادئة رقم الصنف
+         *   rank 2 = الاسم يبدأ بالكلمة الأولى
+         *   rank 3 = الاسم يحتوي كل الكلمات
+         * ثم تُقص نتائج الرقم عند 5 (حسب المواصفة) ونتائج الاسم عند 15.
+         */
+        const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
+            const cleanQuery = normalizeCleanId(rawQuery);
+            const textQuery  = normalizeText(rawQuery);
+            const nameTokens = textQuery.length >= MIN_NAME_QUERY_LENGTH
+                ? textQuery.split(' ').filter(Boolean)
+                : [];
+
+            if (!cleanQuery && nameTokens.length === 0) {
+                return { visible: [], total: 0, exact: null };
+            }
+
+            const ranked = [];
+            for (let i = 0; i < activeDb.length; i++) {
+                const item = activeDb[i];
+                if (hideOutOfStock && item.qty <= 0) continue;
+
+                let rank = -1;
+                if (cleanQuery && item.cleanId.startsWith(cleanQuery)) {
+                    rank = item.cleanId === cleanQuery ? 0 : 1;
+                } else if (nameTokens.length && item.searchName) {
+                    let all = true;
+                    for (let t = 0; t < nameTokens.length; t++) {
+                        if (!item.searchName.includes(nameTokens[t])) { all = false; break; }
+                    }
+                    if (all) rank = item.searchName.startsWith(nameTokens[0]) ? 2 : 3;
+                }
+
+                if (rank !== -1) ranked.push({ item, rank });
+            }
+
+            ranked.sort((a, b) => a.rank - b.rank);
+
+            const skuHits  = [];
+            const nameHits = [];
+            for (let i = 0; i < ranked.length; i++) {
+                const r = ranked[i];
+                if (r.rank <= 1) { if (skuHits.length  < MAX_SKU_RESULTS)  skuHits.push(r.item); }
+                else             { if (nameHits.length < MAX_NAME_RESULTS) nameHits.push(r.item); }
+            }
+
+            const exact = ranked.length && ranked[0].rank === 0 ? ranked[0].item : null;
+            return { visible: skuHits.concat(nameHits), total: ranked.length, exact };
+        };
+
+        // ==========================================
+        // المكونات المشتركة
+        // ==========================================
+
+        const SearchIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        );
+
+        const FormatQuantity = ({ qty, unit }) => (
+            <div className="flex flex-col">
+                <div className="flex items-baseline gap-4">
+                    <span className="text-[24px] md:text-[28px] font-bold text-primary leading-none">{NUMBER_FORMATTER.format(qty)}</span>
+                    {unit && <span className="text-[14px] text-secondary">{unit}</span>}
                 </div>
+                {qty === 0 && <span className="text-[14px] text-secondary mt-4">نفدت الكمية حالياً</span>}
             </div>
+        );
 
-            <div className="max-w-[1120px] mx-auto px-16 pb-64">
+        const ProductImage = ({ fileName, alt, className }) => {
+            if (!fileName) return null;
+            return (
+                <img
+                    src={`${IMAGES_PATH}${fileName}`}
+                    alt={alt}
+                    loading="lazy"
+                    decoding="async"
+                    draggable="false"
+                    className={className}
+                    onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+                />
+            );
+        };
 
-                {/* ===== الترويسة ===== */}
-                <header className="text-center pt-32 pb-24 flex flex-col items-center gap-8">
-                    <h1 className="text-[26px] md:text-[30px] font-bold text-primary leading-tight">
-                        الاستعلام والمعرض الرقمي
-                    </h1>
-                    <p className="text-[13px] text-muted">آخر تحديث للمخزون: {lastUpdate}</p>
-                </header>
+        // ---- بطاقة البحث التفصيلية (مطابقة تامة) ----
+        const FullResultCard = memo(({ item, warehouseName, showImage = false, imageFileName = '', hideQty = false }) => (
+            <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 md:p-24 bg-bg flex flex-col gap-16">
 
-                {isDbEmpty && !loading && (
-                    <div className="max-w-[480px] mx-auto mb-24">
-                        <StateBlock tone="danger" icon={<Icon.Alert className="w-20 h-20" />}
-                            title="تعذر تحميل بيانات المخزون"
-                            note="تحقق من وجود jeddah.tsv و riyadh.tsv في مجلد data ومن صحة ترويسة الأعمدة." />
+                {showImage && imageFileName && (
+                    <div className="w-full flex justify-center border-b border-border pb-16">
+                        <ProductImage fileName={imageFileName} alt={item.name || item.id} className="w-full max-w-[240px] aspect-square object-contain rounded-12" />
                     </div>
                 )}
 
-                {/* ===== لوحة التحكم الثابتة: المستودع + البحث ===== */}
-                <div className="sticky top-48 z-30 bg-bg/95 backdrop-blur -mx-16 px-16 py-12 border-b border-border">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-12">
-
-                        {/* Segmented Control */}
-                        <div className="flex-shrink-0 inline-flex bg-surface border border-border rounded-12 p-4" role="group" aria-label="اختيار المستودع">
-                            {Object.values(WAREHOUSES).map(wh => (
-                                <button key={wh.key} onClick={() => setWarehouse(wh.key)} aria-pressed={warehouse === wh.key}
-                                        className={`px-16 py-8 rounded-10 text-[14px] font-semibold transition-all duration-200 ${warehouse === wh.key ? 'bg-bg text-primary shadow-card' : 'text-secondary hover:text-primary'}`}>
-                                    {wh.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* البحث */}
-                        <div className="relative flex-1">
-                            <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            <input ref={searchInputRef} id="searchInput" type="text" autoComplete="off"
-                                   value={query} onChange={(e) => setQuery(e.target.value)} disabled={!warehouse}
-                                   placeholder={warehouse ? "ابحث برقم الصنف أو اسمه…" : "اختر المستودع أولاً"}
-                                   className={`w-full h-44 pr-40 pl-14 rounded-12 border text-[15px] outline-none transition-colors ${!warehouse ? 'bg-surface border-border text-muted cursor-not-allowed' : 'bg-bg border-border focus:border-accent text-primary'}`} />
-                        </div>
-
-                        {/* وضع العميل */}
-                        <label className="flex items-center gap-8 cursor-pointer flex-shrink-0 self-center">
-                            <span className="text-[12px] text-secondary whitespace-nowrap">مع الصورة</span>
-                            <input type="checkbox" className="sr-only" checked={showImageInSearch}
-                                   onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                            <div className={`w-40 h-24 rounded-full transition-colors relative ${showImageInSearch ? 'bg-accent' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
-                                <div className={`absolute top-2 left-2 w-20 h-20 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-16' : ''}`}></div>
-                            </div>
-                        </label>
-                    </div>
-
-                    {warehouse && showImageInSearch && (
-                        <p className="text-[11px] text-accent mt-8">وضع العرض للعميل — الأصناف المنتهية مخفية</p>
-                    )}
+                <div>
+                    <div className="text-[14px] font-medium text-secondary mb-4">رقم الصنف</div>
+                    <div className="text-[16px] font-bold text-primary">{item.id}</div>
                 </div>
 
-                {/* ===== نتائج البحث ===== */}
-                {query.trim() && search && (
-                    <div className="max-w-[520px] mx-auto mt-24 flex flex-col gap-8">
-                        {search.total === 0 && (
-                            <StateBlock icon={<Icon.Search className="w-20 h-20" />}
-                                title="لم يتم العثور على الصنف"
-                                note="لا يوجد صنف بهذا الرقم أو الاسم في المستودع المحدد." />
-                        )}
+                <div>
+                    <div className="text-[14px] font-medium text-secondary mb-4">اسم الصنف</div>
+                    <div className="text-[16px] text-primary">{item.name || "---"}</div>
+                </div>
 
-                        {search.exact && (
-                            <FullResultCard item={search.exact} warehouseName={activeWarehouseName}
-                                showImage={showImageInSearch && imagesList.has(search.exact.cleanId)}
-                                imageFileName={imagesList.get(search.exact.cleanId)}
-                                hideQty={hideQtyInSearch} />
-                        )}
+                <div>
+                    <div className="text-[14px] font-medium text-secondary mb-4">المستودع</div>
+                    <div className="text-[16px] text-primary">{warehouseName}</div>
+                </div>
 
-                        {search.visible
-                            .filter(i => !search.exact || i.uid !== search.exact.uid)
-                            .map(item => (
-                                <CompactResultCard key={item.uid} item={item}
-                                    showImage={showImageInSearch && imagesList.has(item.cleanId)}
-                                    imageFileName={imagesList.get(item.cleanId)}
-                                    hideQty={hideQtyInSearch} />
-                            ))}
+                <div className="grid grid-cols-2 gap-16 border-t border-border pt-16">
+                    <div>
+                        <div className="text-[14px] font-medium text-secondary mb-4">الوحدة</div>
+                        <div className="text-[16px] font-bold text-primary">{item.unit || "---"}</div>
+                    </div>
+                    <div>
+                        <div className="text-[14px] font-medium text-secondary mb-4">الشد</div>
+                        <div className="text-[16px] font-bold text-primary">{item.pack || "---"}</div>
+                    </div>
+                </div>
 
-                        {search.total > search.visible.length && (
-                            <p className="text-[12px] text-muted text-center pt-8">
-                                {NUMBER_FORMATTER.format(search.total)} نتيجة — أضف تفاصيل لتضييق البحث
-                            </p>
-                        )}
+                {!hideQty && (
+                    <div className="border-t border-border pt-16">
+                        <div className="text-[14px] font-medium text-secondary mb-4">الكمية المتوفرة</div>
+                        <FormatQuantity qty={item.qty} unit={item.unit} />
                     </div>
                 )}
 
-                {/* ===== المعرض الرقمي ===== */}
-                <section className="mt-40">
-                    <div className="flex justify-between items-end gap-16 mb-16">
-                        <div>
-                            <h2 className="text-[18px] font-bold text-primary">المعرض الرقمي</h2>
-                            {warehouse && <p className="text-[12px] text-muted mt-2">{activeWarehouseName}</p>}
-                        </div>
-                        {activeCategory && (
-                            <div className="inline-flex bg-surface border border-border rounded-10 p-2" role="group" aria-label="نمط العرض">
-                                <button onClick={() => setGalleryView('grid')} aria-label="عرض شبكي" aria-pressed={galleryView === 'grid'}
-                                        className={`w-32 h-28 rounded-8 flex items-center justify-center transition-colors ${galleryView === 'grid' ? 'bg-bg text-primary shadow-card' : 'text-muted hover:text-secondary'}`}>
-                                    <Icon.Grid className="w-16 h-16" />
-                                </button>
-                                <button onClick={() => setGalleryView('list')} aria-label="عرض طولي" aria-pressed={galleryView === 'list'}
-                                        className={`w-32 h-28 rounded-8 flex items-center justify-center transition-colors ${galleryView === 'list' ? 'bg-bg text-primary shadow-card' : 'text-muted hover:text-secondary'}`}>
-                                    <Icon.List className="w-16 h-16" />
-                                </button>
+            </div>
+        ));
+
+        // ---- بطاقة البحث المختصرة (مطابقة جزئية) ----
+        const CompactResultCard = memo(({ item, showImage = false, imageFileName = '', hideQty = false }) => (
+            <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 bg-bg flex justify-between items-center gap-16 mb-8 hover:bg-hoverBg transition-colors duration-200">
+                <div className="flex items-center gap-16 overflow-hidden">
+                    {showImage && imageFileName && (
+                        <ProductImage fileName={imageFileName} alt={item.name || item.id} className="w-56 h-56 flex-shrink-0 object-contain rounded-12 border border-border bg-bg" />
+                    )}
+                    <div className="flex flex-col overflow-hidden">
+                        <span className="text-[16px] font-bold text-primary truncate">{item.id}</span>
+                        <span className="text-[14px] text-secondary truncate">{item.name || '---'}</span>
+                    </div>
+                </div>
+                {!hideQty && (
+                    <div className="flex-shrink-0 text-left">
+                        <FormatQuantity qty={item.qty} unit={item.unit} />
+                    </div>
+                )}
+            </div>
+        ));
+
+        // ---- بطاقة المعرض ثلاثية الطبقات ----
+        /**
+         * الطبقات:
+         *   IMAGE    (افتراضي)  — صورة + رقم + اسم. لا شيء يكشف الكمية للعميل.
+         *   QUANTITY (نقرتان)   — تُضاف شارة الكمية. نقرتان مجدداً تُعيدها للصورة.
+         *   DETAILS  (3 نقرات)  — بطاقة تفاصيل كاملة. نقرتان تُعيدان للصورة.
+         * لوحة المفاتيح: Enter/مسافة تتنقل بين الطبقات الثلاث بالترتيب.
+         */
+        const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, warehouseName }) => {
+            const isDetails  = view === CARD_VIEW.DETAILS;
+            const isQuantity = view === CARD_VIEW.QUANTITY;
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onCycle(item.uid);
+                }
+            };
+
+            return (
+                <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${item.name || item.id} — نقرتان لعرض الكمية، ثلاث نقرات لبطاقة التفاصيل`}
+                    title="نقرتان: الكمية · ثلاث نقرات: بطاقة التفاصيل"
+                    onClick={() => onTap(item.uid)}
+                    onKeyDown={handleKeyDown}
+                    className={`tap-card cursor-pointer border rounded-12 p-16 bg-white flex flex-col items-center text-center transition-colors duration-200 ${isDetails ? 'border-primary' : 'border-border hover:bg-gray-50'}`}
+                >
+                    {isDetails ? (
+                        // ---------- الطبقة الثالثة: بطاقة التفاصيل ----------
+                        <div className="animate-flip w-full text-right flex flex-col gap-8">
+                            <div className="flex justify-between items-center border-b border-border pb-8 mb-4">
+                                <span className="text-[13px] font-medium text-secondary">بطاقة المنتج</span>
+                                <span className="text-[12px] text-secondary">نقرتان للعودة</span>
                             </div>
-                        )}
-                    </div>
 
-                    {/* شريط الأقسام — تمرير أفقي بدل جدار أزرار */}
-                    <div className="scroll-x flex gap-8 overflow-x-auto pb-12 mb-16 -mx-16 px-16">
-                        {visibleCategories.base.map(cat => (
-                            <button key={cat} onClick={() => setActiveCategory(cat)} aria-pressed={activeCategory === cat}
-                                    className={`${chipBase} ${activeCategory === cat ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`}>
-                                {cat}
-                            </button>
-                        ))}
-                        <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)}
-                                aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED}
-                                className={`${chipBase} ${activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`}>
-                            {SPECIAL_CATEGORIES.UNCATEGORIZED}
-                        </button>
-                        {isAdmin && (
-                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)}
-                                    aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES}
-                                    className={`${chipBase} flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accentSoft hover:border-accent'}`}>
-                                <Icon.ImageOff className="w-14 h-14" /> {SPECIAL_CATEGORIES.MISSING_IMAGES}
-                            </button>
-                        )}
-                    </div>
+                            <div>
+                                <div className="text-[12px] text-secondary">رقم الصنف</div>
+                                <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
+                            </div>
 
-                    {loading ? (
-                        <SkeletonGrid />
-                    ) : !warehouse ? (
-                        <div className="max-w-[480px] mx-auto">
-                            <StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر المستودع"
-                                        note="حدد جدة أو الرياض من الأعلى لفتح المعرض." />
-                        </div>
-                    ) : !activeCategory ? (
-                        <div className="max-w-[480px] mx-auto">
-                            <StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر قسماً"
-                                        note="حدد قسماً من الشريط أعلاه لاستعراض المنتجات المتوفرة." />
+                            <div>
+                                <div className="text-[12px] text-secondary">اسم الصنف</div>
+                                <div className="text-[14px] text-primary break-words">{item.name || '---'}</div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-8 border-t border-border pt-8">
+                                <div>
+                                    <div className="text-[12px] text-secondary">الوحدة</div>
+                                    <div className="text-[14px] font-bold text-primary">{item.unit || '---'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[12px] text-secondary">الشد</div>
+                                    <div className="text-[14px] font-bold text-primary">{item.pack || '---'}</div>
+                                </div>
+                            </div>
+
+                            <div className="border-t border-border pt-8">
+                                <div className="text-[12px] text-secondary">المستودع</div>
+                                <div className="text-[14px] text-primary">{warehouseName}</div>
+                            </div>
+
+                            <div className="border-t border-border pt-8">
+                                <div className="text-[12px] text-secondary mb-4">الكمية المتوفرة</div>
+                                <FormatQuantity qty={item.qty} unit={item.unit} />
+                            </div>
                         </div>
                     ) : (
-                        <div>
-                            <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
-                                <p className="text-[12px] text-muted">
-                                    {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف متوفر
-                                    {galleryResults.length > visibleItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleItems.length)})`}
-                                </p>
-                                <p className="text-[11px] text-muted">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
+                        // ---------- الطبقة الأولى/الثانية: الصورة (+ الكمية) ----------
+                        <React.Fragment>
+                            {showImage && (
+                                <ProductImage
+                                    fileName={imageFileName}
+                                    alt={item.name || item.searchId}
+                                    className={`object-contain mb-16 rounded-8 pointer-events-none ${isGrid ? 'w-full aspect-square' : 'w-full max-w-[400px] h-auto'}`}
+                                />
+                            )}
+                            <div className="text-[16px] font-bold text-primary break-words">{item.id}</div>
+                            <div className="text-[14px] text-secondary break-words">{item.name || '---'}</div>
+
+                            {isQuantity && (
+                                <div className="animate-flip text-[14px] font-medium mt-8 px-12 py-4 rounded-full text-green-700 bg-green-50">
+                                    الكمية: {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
+                                </div>
+                            )}
+                        </React.Fragment>
+                    )}
+                </div>
+            );
+        });
+
+        const NotFoundState = () => (
+            <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-24 bg-bg flex flex-col items-center justify-center text-center gap-16">
+                <SearchIcon className="w-48 h-48 text-border" />
+                <div>
+                    <h3 className="text-[16px] font-medium text-primary mb-8">لم يتم العثور على الصنف</h3>
+                    <p className="text-[15px] text-secondary">لا يوجد صنف بهذا الرقم أو الاسم داخل المستودع المحدد.</p>
+                </div>
+            </div>
+        );
+
+        const EmptyState = () => (
+            <div className="w-full flex flex-col items-center justify-center py-48 text-center gap-16 opacity-70">
+                <SearchIcon className="w-40 h-40 text-secondary" />
+                <p className="text-[16px] text-secondary">اكتب رقم الصنف أو اسمه لبدء البحث</p>
+            </div>
+        );
+
+        const DatabaseEmptyWarning = () => (
+            <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-24 bg-bg flex flex-col items-center justify-center text-center gap-16">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-48 h-48 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <h3 className="text-[16px] font-medium text-primary mb-8">قاعدة البيانات فارغة</h3>
+                    <p className="text-[15px] text-secondary">تعذر تحميل ملفات المخزون من مجلد data. تحقق من وجود jeddah.tsv و riyadh.tsv ومن صحة ترويسة الأعمدة.</p>
+                </div>
+            </div>
+        );
+
+      // ==========================================
+        // 1. شاشة تسجيل الدخول (مع حماية حساب المدير)
+        // ==========================================
+        const LoginScreen = ({ onLogin }) => {
+            const [name, setName] = useState('');
+            const [pin, setPin] = useState(''); // حالة الرمز السري
+            const [requiresPin, setRequiresPin] = useState(false); // حالة المطالبة بالرمز
+            const [loading, setLoading] = useState(false);
+            const [notice, setNotice] = useState('');
+
+            // إعادة ضبط حقل الرمز السري إذا قام المستخدم بتعديل الاسم
+            useEffect(() => {
+                setRequiresPin(false);
+                setPin('');
+            }, [name]);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                const trimmedName = name.trim();
+                if (!trimmedName) return;
+
+                // --- 🔒 طبقة الحماية لحساب مهند ---
+                if (trimmedName.includes('مهند')) {
+                    if (!requiresPin) {
+                        setRequiresPin(true);
+                        setNotice('مرحباً بك يا مهند، يرجى إدخال رمز الدخول السري.');
+                        return; // إيقاف العملية لانتظار إدخال الرمز
+                    } else if (pin !== '2257') {
+                        setNotice('الرمز السري غير صحيح!');
+                        return; // رفض الدخول إذا كان الرمز خاطئاً
+                    }
+                }
+                // ------------------------------------
+
+                setLoading(true);
+                setNotice('');
+
+                try {
+                    const userRef = db.collection('users').doc(toSafeDocId(trimmedName));
+                    const doc = await userRef.get();
+
+                    const userInfo = {
+                        userAgent: navigator.userAgent,
+                        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                    };
+
+                    if (doc.exists) {
+                        await userRef.update({ ...userInfo, loginCount: firebase.firestore.FieldValue.increment(1) });
+                    } else {
+                        await userRef.set({
+                            name: trimmedName,
+                            ...userInfo,
+                            loginCount: 1,
+                            firstJoined: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+
+                    await db.collection('login_logs').add({
+                        name: trimmedName,
+                        time: firebase.firestore.FieldValue.serverTimestamp(),
+                        userAgent: navigator.userAgent
+                    });
+
+                } catch (error) {
+                    // التسجيل وظيفة تحليلية؛ البحث في المخزون وظيفة أساسية.
+                    // لا يجوز أن يمنع تعثر الشبكة داخل المستودع الموظفَ من العمل.
+                    console.error("Error logging in: ", error);
+                    setNotice('تعذر الاتصال بسجل الدخول، وتم الدخول للنظام بشكل طبيعي.');
+                }
+
+                localStorage.setItem('inventory_user_name', trimmedName);
+                setLoading(false);
+                onLogin(trimmedName);
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center p-16 font-sans">
+                    <div className="animate-card w-full max-w-[400px] bg-white border border-border rounded-12 shadow-card p-32 text-center">
+                        <h1 className="text-[24px] font-bold text-primary mb-8 font-cairo">نظام المخزون</h1>
+                        <p className="text-[14px] text-secondary mb-32 font-cairo">شركة بيت الأواني الطيبة</p>
+
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-16">
+                            <div className="text-right">
+                                <label htmlFor="employeeName" className="text-[14px] font-medium text-primary mb-8 block font-cairo">الإسم الكريم</label>
+                                <input
+                                    id="employeeName"
+                                    type="text"
+                                    required
+                                    autoComplete="name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="اكتب اسمك هنا..."
+                                    disabled={requiresPin}
+                                    className={`w-full h-[48px] px-16 rounded-12 border border-border focus:border-primary focus:ring-1 focus:ring-primary text-primary outline-none transition-all font-cairo ${requiresPin ? 'bg-gray-100 opacity-70 cursor-not-allowed' : ''}`}
+                                />
                             </div>
 
-                            {galleryResults.length === 0 ? (
-                                <div className="max-w-[480px] mx-auto">
-                                    <StateBlock icon={<Icon.ImageOff className="w-20 h-20" />} title="لا توجد أصناف"
-                                                note="لا توجد أصناف متوفرة في هذا القسم داخل المستودع المحدد." />
-                                </div>
-                            ) : (
-                                <div className={galleryView === 'grid'
-                                    ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16"
-                                    : "flex flex-col gap-16"}>
-                                    {visibleItems.map(item => (
-                                        <GalleryCard key={item.uid} item={item}
-                                            imageFileName={imagesList.get(item.cleanId)}
-                                            showImage={!isMissingImagesView}
-                                            isGrid={galleryView === 'grid'}
-                                            view={cardViews[item.uid] || CARD_VIEW.IMAGE}
-                                            onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom}
-                                            warehouseName={activeWarehouseName} />
-                                    ))}
+                            {/* يظهر حقل الرمز السري فقط إذا كان الاسم يحتوي على "مهند" وتم الضغط على زر الدخول */}
+                            {requiresPin && (
+                                <div className="text-right animate-card">
+                                    <label htmlFor="pinCode" className="text-[14px] font-bold text-red-600 mb-8 block font-cairo">الرمز السري للإدارة 🔒</label>
+                                    <input
+                                        id="pinCode"
+                                        type="password"
+                                        inputMode="numeric"
+                                        required
+                                        autoFocus
+                                        value={pin}
+                                        onChange={(e) => setPin(e.target.value)}
+                                        placeholder="أدخل الرمز"
+                                        className="w-full h-[48px] px-16 rounded-12 border border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 text-primary outline-none transition-all font-cairo tracking-widest text-center text-lg"
+                                    />
                                 </div>
                             )}
 
-                            {galleryResults.length > visibleItems.length && (
-                                <div className="flex justify-center mt-24">
-                                    <button onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)}
-                                            className="px-24 py-12 rounded-12 border border-border bg-bg text-primary text-[14px] font-semibold hover:bg-surface transition-colors">
-                                        عرض المزيد
+                            {notice && (
+                                <p className={`text-[13px] text-right font-medium ${requiresPin && pin !== '2257' && notice.includes('غير صحيح') ? 'text-red-500' : 'text-secondary'}`}>
+                                    {notice}
+                                </p>
+                            )}
+
+                            <div className="flex gap-8 mt-8">
+                                {requiresPin && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => { setRequiresPin(false); setName(''); setNotice(''); }} 
+                                        className="w-1/3 h-[48px] bg-gray-100 text-primary rounded-12 font-medium hover:bg-gray-200 transition-colors font-cairo"
+                                    >
+                                        رجوع
                                     </button>
+                                )}
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className={`${requiresPin ? 'w-2/3' : 'w-full'} h-[48px] bg-primary text-white rounded-12 font-medium hover:opacity-90 disabled:opacity-60 transition-opacity flex justify-center items-center font-cairo`}
+                                >
+                                    {loading ? "جاري الدخول..." : (requiresPin ? "تأكيد الدخول" : "دخول للنظام")}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // 2. التطبيق الأساسي
+        // ==========================================
+        const App = () => {
+            const [userName] = useState(localStorage.getItem('inventory_user_name') || '');
+            const [sessionName, setSessionName] = useState(userName);
+
+            const [warehouse, setWarehouse] = useState(null);
+            const [query, setQuery] = useState('');
+            const [showImageInSearch, setShowImageInSearch] = useState(false); // = وضع العميل
+
+            const [databases, setDatabases] = useState({ jeddah: [], riyadh: [] });
+            const [imagesList, setImagesList] = useState(new Map());
+            const [categories, setCategories] = useState({});
+
+            const [activeCategory, setActiveCategory] = useState(null);
+            const [galleryView, setGalleryView] = useState('grid');
+            const [visibleCount, setVisibleCount] = useState(GALLERY_PAGE_SIZE);
+            const [cardViews, setCardViews] = useState({}); // uid -> CARD_VIEW
+
+            const [loading, setLoading] = useState(true);
+            const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
+
+            const searchInputRef  = useRef(null);
+            const lastLoggedSearch = useRef('');
+            const tapStateRef      = useRef({ uid: null, count: 0, timer: null });
+
+            // ------------------------------------------
+            // تحميل كافة البيانات دفعة واحدة
+            // ------------------------------------------
+            useEffect(() => {
+                let isMounted = true;
+
+                const loadAllData = async () => {
+                    try {
+                        const [jeddahText, riyadhText, imagesText, categoriesText, versionData] = await Promise.all([
+                            fetchText(`${DATA_PATH}jeddah.tsv`),
+                            fetchText(`${DATA_PATH}riyadh.tsv`),
+                            fetchText(`${DATA_PATH}images_list.txt`),
+                            fetchText(`${DATA_PATH}categories.tsv`),
+                            fetchJson(`${DATA_PATH}version.json`),
+                        ]);
+
+                        if (!isMounted) return;
+
+                        const jeddah = parseExcelData(jeddahText, WAREHOUSES.jeddah.key);
+                        const riyadh = parseExcelData(riyadhText, WAREHOUSES.riyadh.key);
+
+                        // فحص سلامة لكل مستودع على حدة — لا يُخلط بينهما إطلاقاً
+                        reportCleanIdCollisions(jeddah, WAREHOUSES.jeddah.key);
+                        reportCleanIdCollisions(riyadh, WAREHOUSES.riyadh.key);
+
+                        setDatabases({ jeddah, riyadh });
+                        setImagesList(buildImagesMap(imagesText));
+                        setCategories(parseCategories(categoriesText));
+
+                        if (versionData && versionData.lastUpdate) {
+                            setLastUpdate(typeof dayjs !== 'undefined' ? dayjs(versionData.lastUpdate).fromNow() : versionData.lastUpdate);
+                        } else {
+                            setLastUpdate("غير متوفر");
+                        }
+                    } catch (err) {
+                        console.error('[Boot] فشل غير متوقع أثناء تحميل البيانات:', err);
+                        if (isMounted) setLastUpdate("غير متوفر");
+                    } finally {
+                        if (isMounted) setLoading(false);
+                    }
+                };
+
+                loadAllData();
+                return () => { isMounted = false; };
+            }, []);
+
+            // تنظيف مؤقّت النقرات عند تفكيك المكوّن
+            useEffect(() => () => {
+                if (tapStateRef.current.timer) clearTimeout(tapStateRef.current.timer);
+            }, []);
+
+            const isDbEmpty = useMemo(
+                () => databases.jeddah.length === 0 && databases.riyadh.length === 0,
+                [databases]
+            );
+
+            useEffect(() => {
+                if (warehouse && searchInputRef.current) searchInputRef.current.focus();
+            }, [warehouse]);
+
+            // إعادة ضبط العرض التدريجي وطبقات البطاقات عند تغيير القسم أو المستودع
+            useEffect(() => {
+                setVisibleCount(GALLERY_PAGE_SIZE);
+                setCardViews({});
+            }, [activeCategory, warehouse]);
+
+            // ------------------------------------------
+            // آلة حالة النقر المتعدد
+            // ------------------------------------------
+            const applyTaps = useCallback((uid, taps) => {
+                setCardViews(prev => {
+                    const current = prev[uid] || CARD_VIEW.IMAGE;
+                    let next = current;
+                    if (taps >= 3)      next = CARD_VIEW.DETAILS;
+                    else if (taps === 2) next = (current === CARD_VIEW.IMAGE) ? CARD_VIEW.QUANTITY : CARD_VIEW.IMAGE;
+                    if (next === current) return prev;
+                    return { ...prev, [uid]: next };
+                });
+            }, []);
+
+            const handleCardTap = useCallback((uid) => {
+                const s = tapStateRef.current;
+                if (s.uid !== uid) { // نقرة على بطاقة أخرى => إعادة العد من الصفر
+                    if (s.timer) clearTimeout(s.timer);
+                    s.uid = uid;
+                    s.count = 0;
+                }
+                s.count += 1;
+                if (s.timer) clearTimeout(s.timer);
+                s.timer = setTimeout(() => {
+                    const taps = s.count;
+                    s.count = 0; s.uid = null; s.timer = null;
+                    applyTaps(uid, taps);
+                }, MULTI_TAP_WINDOW_MS);
+            }, [applyTaps]);
+
+            /** مسار لوحة المفاتيح: صورة -> كمية -> تفاصيل -> صورة */
+            const handleCardCycle = useCallback((uid) => {
+                setCardViews(prev => {
+                    const current = prev[uid] || CARD_VIEW.IMAGE;
+                    const next = current === CARD_VIEW.IMAGE ? CARD_VIEW.QUANTITY
+                               : current === CARD_VIEW.QUANTITY ? CARD_VIEW.DETAILS
+                               : CARD_VIEW.IMAGE;
+                    return { ...prev, [uid]: next };
+                });
+            }, []);
+
+            // ------------------------------------------
+            // البحث (فوري — الرقم والاسم معاً)
+            // ------------------------------------------
+            const hideOutOfStockInSearch = showImageInSearch
+                ? VISIBILITY_RULES.hideOutOfStockInSearchWithImage
+                : VISIBILITY_RULES.hideOutOfStockInPlainSearch;
+
+            const hideQtyInSearch = showImageInSearch && VISIBILITY_RULES.hideQtyInSearchWithImage;
+
+            const search = useMemo(() => {
+                if (!warehouse || !query.trim()) return null;
+                // databases[warehouse] فقط — لا يمكن بنيوياً أن تتسرب أصناف المستودع الآخر
+                return runSearch(databases[warehouse] || [], query, hideOutOfStockInSearch);
+            }, [query, warehouse, databases, hideOutOfStockInSearch]);
+
+            // ------------------------------------------
+            // تسجيل عمليات البحث الناجحة بعد 1.5 ثانية من التوقف عن الكتابة
+            // (الـ Debounce على التسجيل فقط — الفلترة تبقى فورية)
+            // ------------------------------------------
+            useEffect(() => {
+                if (!warehouse || !search || search.total === 0) return;
+
+                const logKey = `${warehouse}:${normalizeText(query)}`;
+                if (lastLoggedSearch.current === logKey) return;
+
+                const timer = setTimeout(() => {
+                    lastLoggedSearch.current = logKey;
+                    db.collection('search_logs').add({
+                        name: sessionName,
+                        warehouse,
+                        rawQuery: query.trim(),
+                        cleanQuery: normalizeCleanId(query),
+                        resultsCount: search.total,
+                        exactMatch: Boolean(search.exact),
+                        time: firebase.firestore.FieldValue.serverTimestamp(),
+                    }).catch(err => console.warn('[Log] تعذر تسجيل عملية البحث:', err.message));
+                }, SEARCH_LOG_DEBOUNCE_MS);
+
+                return () => clearTimeout(timer);
+            }, [search, warehouse, query, sessionName]);
+
+            // ------------------------------------------
+            // المعرض الرقمي (واجهة عميل)
+            // ------------------------------------------
+            const allCategorizedIds = useMemo(() => new Set(Object.values(categories).flat()), [categories]);
+
+            const galleryResults = useMemo(() => {
+                if (!activeCategory || !warehouse) return [];
+
+                // نبدأ دائماً من أصناف المستودع المختار حصراً.
+                // نتيجة ذلك: أي صورة في images_list لا يقابلها صنف في هذا المستودع
+                // لا تظهر إطلاقاً — وهو المطلوب (غالباً صنف نفد أو أُلغي).
+                let pool = databases[warehouse] || [];
+
+                if (VISIBILITY_RULES.hideOutOfStockInGallery) {
+                    pool = pool.filter(item => item.qty > 0);
+                }
+
+                if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) {
+                    return pool.filter(item => !imagesList.has(item.cleanId));
+                }
+
+                if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) {
+                    return pool.filter(item => imagesList.has(item.cleanId) && !allCategorizedIds.has(item.cleanId));
+                }
+
+                const categoryIds = new Set(categories[activeCategory] || []);
+                return pool.filter(item => categoryIds.has(item.cleanId) && imagesList.has(item.cleanId));
+            }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds]);
+
+            const visibleGalleryItems = useMemo(
+                () => galleryResults.slice(0, visibleCount),
+                [galleryResults, visibleCount]
+            );
+
+            const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
+            const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
+
+            // ------------------------------------------
+            // التصيير
+            // ------------------------------------------
+            if (!sessionName) return <LoginScreen onLogin={(name) => setSessionName(name)} />;
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center text-xl font-bold" role="status" aria-live="polite">
+                        جاري تحميل بيانات المخزون...
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-[1024px] mx-auto px-16 sm:px-24 py-40 md:py-64 font-sans selection:bg-gray-200 relative">
+
+                    {/* Header */}
+                    <header className="text-center mb-32 flex flex-col items-center gap-8">
+                        <div className="bg-gray-50 border border-border px-16 py-8 rounded-full mb-8">
+                            <span className="text-[13px] font-medium text-secondary">الاسم الكريم: {sessionName}</span>
+                        </div>
+                        <h1 className="text-[28px] md:text-[32px] font-bold text-primary m-0 leading-tight">
+                            مخزون شركة بيت الأواني الطيبة
+                        </h1>
+                        <h2 className="text-[15px] md:text-[16px] text-secondary font-normal m-0">
+                            نظام الاستعلام والمعرض الرقمي
+                        </h2>
+                        <p className="text-[13px] text-secondary">آخر تحديث للمخزون: {lastUpdate}</p>
+                    </header>
+
+                    {isDbEmpty && (
+                        <div className="mb-32">
+                            <DatabaseEmptyWarning />
+                        </div>
+                    )}
+
+                    {/* اختيار المستودع */}
+                    <div className="flex justify-center gap-16 mb-32" role="group" aria-label="اختيار المستودع">
+                        {Object.values(WAREHOUSES).map(wh => (
+                            <button
+                                key={wh.key}
+                                onClick={() => setWarehouse(wh.key)}
+                                aria-pressed={warehouse === wh.key}
+                                className={`px-24 py-16 rounded-12 text-[16px] font-medium transition-all w-[140px] md:w-[160px] ${warehouse === wh.key ? 'bg-primary text-bg shadow-md' : 'bg-bg text-primary border border-primary hover:bg-gray-50'}`}
+                            >
+                                {wh.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* ================= منطقة البحث ================= */}
+                    <div className="w-full max-w-[480px] mx-auto mb-32">
+                        <div className="flex justify-between items-center mb-8">
+                            <label htmlFor="searchInput" className={`text-[14px] font-medium ${warehouse ? 'text-primary' : 'text-secondary'}`}>البحث السريع</label>
+
+                            <label className="flex items-center gap-8 cursor-pointer">
+                                <span className="text-[13px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
+                                <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={showImageInSearch}
+                                    onChange={(e) => setShowImageInSearch(e.target.checked)}
+                                    disabled={!warehouse}
+                                />
+                                <div className={`w-40 h-24 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-gray-300'} ${!warehouse ? 'opacity-50' : ''}`}>
+                                    <div className={`absolute top-2 left-2 w-20 h-20 bg-white rounded-full transition-transform ${showImageInSearch ? 'translate-x-16' : ''}`}></div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div className="relative">
+                            <input
+                                ref={searchInputRef}
+                                id="searchInput"
+                                type="text"
+                                autoComplete="off"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                disabled={!warehouse}
+                                placeholder={warehouse ? "اكتب رقم الصنف أو اسمه..." : "اختر المستودع أولاً"}
+                                className={`w-full h-[56px] px-16 pl-48 rounded-12 border transition-all text-[16px] outline-none ${!warehouse ? 'bg-gray-50 border-border cursor-not-allowed opacity-60' : 'bg-bg border-border focus:border-primary focus:ring-1 text-primary'}`}
+                            />
+                            <SearchIcon className="w-24 h-24 text-secondary absolute left-16 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
+                        {warehouse && showImageInSearch && (
+                            <p className="text-[12px] text-secondary mt-8 text-center"> الأصناف المنتهية مخفية</p>
+                        )}
+
+                        {warehouse && !query.trim() && <EmptyState />}
+
+                        {query.trim() && search && (
+                            <div className="w-full mt-16 min-h-[100px]">
+                                {search.total === 0 && <NotFoundState />}
+
+                                {search.exact && (
+                                    <div className="mb-16">
+                                        <FullResultCard
+                                            item={search.exact}
+                                            warehouseName={activeWarehouseName}
+                                            showImage={showImageInSearch && imagesList.has(search.exact.cleanId)}
+                                            imageFileName={imagesList.get(search.exact.cleanId)}
+                                            hideQty={hideQtyInSearch}
+                                        />
+                                    </div>
+                                )}
+
+                                {search.visible
+                                    .filter(item => !search.exact || item.uid !== search.exact.uid)
+                                    .map(item => (
+                                        <CompactResultCard
+                                            key={item.uid}
+                                            item={item}
+                                            showImage={showImageInSearch && imagesList.has(item.cleanId)}
+                                            imageFileName={imagesList.get(item.cleanId)}
+                                            hideQty={hideQtyInSearch}
+                                        />
+                                    ))
+                                }
+
+                                {search.total > search.visible.length && (
+                                    <p className="text-[13px] text-secondary text-center mt-8">
+                                        يوجد {NUMBER_FORMATTER.format(search.total)} نتيجة — اكتب تفاصيل أكثر لتضييق البحث
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ================= المعرض الرقمي ================= */}
+                    <div className="w-full">
+                        <div className="flex justify-between items-center mb-16">
+                            <div>
+                                <h3 className="text-[20px] font-bold text-primary">المعرض الرقمي</h3>
+                                {warehouse && <p className="text-[13px] text-secondary">{activeWarehouseName}</p>}
+                            </div>
+
+                            {activeCategory && (
+                                <div className="flex gap-8">
+                                    <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`p-8 rounded-8 border text-[14px] ${galleryView === 'grid' ? 'bg-primary text-white border-primary' : 'bg-white text-secondary border-border'}`}>شبكي</button>
+                                    <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'} className={`p-8 rounded-8 border text-[14px] ${galleryView === 'list' ? 'bg-primary text-white border-primary' : 'bg-white text-secondary border-border'}`}>طولي</button>
                                 </div>
                             )}
                         </div>
-                    )}
-                </section>
 
-                <footer className="mt-64 pt-24 border-t border-border text-center">
-                    <p className="text-[11px] text-muted">© 2026 تطوير مهند الحزمي</p>
-                </footer>
-            </div>
+                       {/* أزرار الأقسام */}
+                        <div className="flex flex-wrap gap-8 mb-24">
+                            {Object.keys(categories).map(cat => (
+                                <button key={cat} onClick={() => setActiveCategory(cat)} aria-pressed={activeCategory === cat} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === cat ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-border hover:bg-gray-50'}`}>
+                                    {cat}
+                                </button>
+                            ))}
+                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-800 border-border hover:bg-gray-50'}`}>
+                                {SPECIAL_CATEGORIES.UNCATEGORIZED}
+                            </button>
+                            
+                            {/* 🔒 تمت إضافة الحماية هنا: لن يظهر الزر إلا إذا كان الاسم يحتوي على مهند */}
+                            {sessionName.includes('مهند') && (
+                                <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-border hover:bg-gray-50'}`}>
+                                    📸 {SPECIAL_CATEGORIES.MISSING_IMAGES}
+                                </button>
+                            )}
+                        </div>
 
-            {zoomItem && (
-                <Lightbox fileName={imagesList.get(zoomItem.cleanId)}
-                          title={`${zoomItem.id} — ${zoomItem.name || ''}`}
-                          onClose={() => setZoomItem(null)} />
-            )}
-        </div>
-    );
-};
+                        {!warehouse ? (
+                            <div className="text-center text-secondary py-32 bg-gray-50 rounded-12">يرجى اختيار المستودع (جدة أو الرياض) لفتح المعرض.</div>
+                        ) : activeCategory ? (
+                            <div>
+                                <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
+                                    <p className="text-[13px] text-secondary">
+                                        {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف متوفر
+                                        {galleryResults.length > visibleGalleryItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleGalleryItems.length)})`}
+                                    </p>
+                                    <p className="text-[12px] text-secondary">نقرتان: الكمية · ثلاث نقرات: بطاقة المنتج</p>
+                                </div>
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
+                                <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-16" : "flex flex-col gap-16"}>
+                                    {galleryResults.length === 0 ? (
+                                        <div className="col-span-full text-center text-secondary py-32">لا توجد أصناف متوفرة في هذا القسم.</div>
+                                    ) : (
+                                        visibleGalleryItems.map(item => (
+                                            <GalleryCard
+                                                key={item.uid}
+                                                item={item}
+                                                imageFileName={imagesList.get(item.cleanId)}
+                                                showImage={!isMissingImagesView}
+                                                isGrid={galleryView === 'grid'}
+                                                view={cardViews[item.uid] || CARD_VIEW.IMAGE}
+                                                onTap={handleCardTap}
+                                                onCycle={handleCardCycle}
+                                                warehouseName={activeWarehouseName}
+                                            />
+                                        ))
+                                    )}
+                                </div>
 
-<!--
-  تسجيل Service Worker معطّل حتى يُرفع ملف /sw.js فعلياً.
-<script>
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(e => console.warn("SW skipped:", e.message));
-}
-</script>
--->
+                                {galleryResults.length > visibleGalleryItems.length && (
+                                    <div className="flex justify-center mt-24">
+                                        <button
+                                            onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)}
+                                            className="px-24 py-16 rounded-12 border border-primary text-primary text-[15px] font-medium hover:bg-gray-50 transition-colors"
+                                        >
+                                            عرض المزيد
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center text-secondary py-32 bg-gray-50 rounded-12 border border-dashed border-gray-300">
+                                اختر قسماً من الأعلى لاستعراض المنتجات المتوفرة.
+                            </div>
+                        )}
+                    </div>
+
+                    <footer className="mt-64 pt-24 border-t border-border text-center">
+                        <p className="text-[12px] text-secondary">© 2026 تطوير مهند الحزمي</p>
+                    </footer>
+
+                </div>
+            );
+        };
+	   
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+
+    <!--
+      تسجيل Service Worker معطّل حتى يُرفع ملف /sw.js فعلياً.
+
+    <script>
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js")
+            .catch(err => console.warn("SW registration skipped:", err.message));
+    }
+    </script>
+    -->
 
 </body>
 </html>
