@@ -131,9 +131,14 @@
     <meta name="theme-color" content="#FFFFFF">
 
     <!--
-      لتفعيل PWA: ارفع manifest.json إلى public/ وأضف الأيقونات ثم أزل التعليق.
-    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+      <!-- أيقونة المتصفح (Favicon) -->
+    <link rel="icon" href="./icons/icon-192.png" type="image/png">
+    
+    <!-- أيقونة الإضافة للشاشة الرئيسية في أجهزة آيفون (Apple Touch Icon) -->
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    
+    <!-- ملف إعدادات التطبيق لأجهزة أندرويد (PWA Manifest) -->
+    <link rel="manifest" href="./manifest.json">
     -->
 
     <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
@@ -997,10 +1002,16 @@ const App = () => {
                 <div className="max-w-[1024px] mx-auto px-16 h-44 flex items-center justify-between gap-12">
                     <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
                     
-                    {/* تمت إزالة شارة مسؤول وإضافة حقوق التطوير في أقصى اليسار */}
-                    <span className="text-[11px] text-muted flex-shrink-0">
+                    {/* رابط الواتساب العلوي */}
+                    <a 
+                        href="https://wa.me/966506762257" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-muted hover:text-accent transition-colors flex-shrink-0 cursor-pointer"
+                        title="تواصل مع المطور عبر واتساب"
+                    >
                         © 2026 تطوير مهند الحزمي
-                    </span>
+                    </a>
                 </div>
             </div>
             
@@ -1202,9 +1213,18 @@ const App = () => {
                     )}
                 </section>
 
-                <footer className="mt-64 pt-24 border-t border-border text-center">
-                    <p className="text-[11px] text-muted">© 2026 تطوير مهند الحزمي</p>
-                </footer>
+                <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
+                        {/* رابط الواتساب السفلي */}
+                        <a 
+                            href="https://wa.me/966506762257" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer"
+                            title="تواصل مع المطور عبر واتساب"
+                        >
+                            © 2026 تطوير مهند الحزمي
+                        </a>
+                    </footer>
             </div>
 
             {zoomItem && (
