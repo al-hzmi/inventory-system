@@ -39,6 +39,8 @@
                 extend: {
                     fontFamily: {
                         sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', '"Cairo"', 'system-ui', 'sans-serif'],
+                        // [إصلاح] فئة font-cairo كانت مستخدمة في LoginScreen لكنها غير معرّفة => كانت بلا أي أثر
+                        cairo: ['"Cairo"', '"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
                     },
                     colors: {
                         primary: '#111111',
@@ -47,16 +49,30 @@
                         hoverBg: '#F3F4F6',
                         bg: '#FFFFFF'
                     },
+                    /*
+                     * ملاحظة معمارية مهمة:
+                     * مقياس spacing هنا بالبكسل وليس بالـ rem (خلافاً لـ Tailwind الافتراضي).
+                     * أي مفتاح غير مذكور في هذه القائمة يعود للقيمة الافتراضية بالـ rem،
+                     * وهذا كان مصدر عدة أخطاء بصرية (w-20 => 80px بدل 20px، px-12 => 48px بدل 12px).
+                     * [إصلاح] تم استكمال المفاتيح الناقصة لتوحيد المقياس بالكامل.
+                     */
                     spacing: {
+                        '2': '2px',
+                        '4': '4px',
                         '8': '8px',
+                        '12': '12px',
                         '16': '16px',
+                        '20': '20px',
                         '24': '24px',
                         '32': '32px',
                         '40': '40px',
                         '48': '48px',
+                        '56': '56px',
                         '64': '64px',
+                        '120': '120px',
                     },
                     borderRadius: {
+                        '8': '8px',   // [إصلاح] rounded-8 كانت مستخدمة وغير معرّفة
                         '12': '12px',
                     },
                     boxShadow: {
@@ -75,7 +91,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <script>
-        // إعدادات مشروعك الحقيقية التي نسختها للتو
+        // إعدادات مشروعك الحقيقية
         const firebaseConfig = {
             apiKey: "AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw",
             authDomain: "inventory-system-ca3dc.firebaseapp.com",
@@ -85,12 +101,12 @@
             appId: "1:139575913885:web:110648e07345b36da15374",
             measurementId: "G-ZGF5DT9D0K"
         };
-        
+
         // تهيئة قاعدة البيانات
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
-	
+
     <style>
         body {
             background-color: #FFFFFF;
@@ -128,18 +144,31 @@
         }
     </style>
 
-	<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#111111">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <meta name="theme-color" content="#111111">
 
-<script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
+    <!--
+      [قرار DevOps بخصوص خطأ 403 على manifest.json]
+      الرمز 403 (وليس 404) يشير غالباً إلى Vercel Deployment Protection:
+      طلب الـ manifest يُرسَل بدون كوكيز الجلسة فتُرفض المصادقة.
+      الحل المزدوج: (1) رفع ملف manifest.json المرفق إلى مجلد public/
+                    (2) إبقاء crossorigin="use-credentials" أدناه.
+      حتى ترفع الملف والأيقونات، أبقِ السطرين معطلين حتى لا يظهر أي خطأ في الكونسول.
 
-<script>
-    dayjs.extend(dayjs_plugin_relativeTime);
-    dayjs.locale("ar");
-</script>
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    -->
+
+    <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
+
+    <script>
+        // [تحصين] dayjs يُحمَّل من CDN خارجي؛ حماية من فشل التحميل حتى لا ينهار السكربت
+        if (typeof dayjs !== 'undefined') {
+            if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime);
+            dayjs.locale("ar");
+        }
+    </script>
 
 </head>
 <body class="min-h-screen">
@@ -147,24 +176,110 @@
 
    <script type="text/babel">
 
-const LAST_UPDATE = "23 يوليو 2026 - 9:15 مساءً";
-
-let RAW_JEDDAH_DATA = "";
-let RAW_RIYADH_DATA = "";
-		
         // ==========================================
-        // نهاية منطقة إدخال البيانات
+        // الثوابت المركزية (لا قيم سحرية داخل المكونات)
         // ==========================================
+        const DATA_PATH   = "./data/";
+        const IMAGES_PATH = "./images/";
 
-        const { useState, useEffect, useRef, useMemo } = React;
+        /** مهلة تسجيل البحث في Firestore. الفلترة تبقى فورية — التأخير للتسجيل فقط. */
+        const SEARCH_LOG_DEBOUNCE_MS = 1500;
+        /** أقصى عدد بطاقات مختصرة تُعرض للمطابقة الجزئية. */
+        const MAX_PARTIAL_RESULTS = 5;
+        /** حجم دفعة العرض في المعرض (منع تصيير آلاف العناصر دفعة واحدة). */
+        const GALLERY_PAGE_SIZE = 60;
 
-        // Normalize Arabic numerals to English numerals for search consistency
-        const normalizeNumerals = (str) => {
-            if (!str) return '';
-            return str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+        const WAREHOUSES = {
+            jeddah: { key: 'jeddah', label: 'مخزون جدة',    name: 'مستودع جدة' },
+            riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
         };
 
-        // Parser function for pasted Excel (TSV) data
+        /** الأقسام الافتراضية المولّدة بالمقاطعة (ليست من categories.tsv). */
+        const SPECIAL_CATEGORIES = {
+            UNCATEGORIZED : 'بقية الأصناف',
+            MISSING_IMAGES: 'نواقص الصور',
+        };
+
+        const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
+
+        // منسّق أرقام وحيد على مستوى الوحدة (بدل إنشاء Intl.NumberFormat لكل بطاقة)
+        const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
+
+        // ==========================================
+        // دوال التطبيع (Mission Critical)
+        // ==========================================
+
+        const ARABIC_INDIC_DIGITS  = '٠١٢٣٤٥٦٧٨٩'; // U+0660 - U+0669
+        const EASTERN_ARABIC_DIGITS = '۰۱۲۳۴۵۶۷۸۹'; // U+06F0 - U+06F9 (فارسي/أردو)
+
+        /**
+         * تحويل الأرقام العربية والفارسية إلى أرقام إنجليزية.
+         * [إصلاح] النسخة السابقة كانت تغطي [٠-٩] فقط وتتجاهل النطاق الفارسي [۰-۹] بالكامل.
+         */
+        const toEnglishDigits = (str) => {
+            if (!str) return '';
+            return String(str).replace(/[٠-٩۰-۹]/g, (d) => {
+                const arabicIndex = ARABIC_INDIC_DIGITS.indexOf(d);
+                if (arabicIndex > -1) return String(arabicIndex);
+                return String(EASTERN_ARABIC_DIGITS.indexOf(d));
+            });
+        };
+
+        // الاسم القديم محفوظ للتوافق مع أي استدعاء قائم
+        const normalizeNumerals = toEnglishDigits;
+
+        /**
+         * استخراج "الرقم الصافي" — العمود الفقري للنظام كله.
+         * يُستخدم في: البحث، مطابقة الصور، التصنيفات، والمقاطعة بين الملفات.
+         * أمثلة: AR_13438 -> 13438 | ITEM-00591 -> 591 | ١٣٤٣٨ -> 13438 | ۱۳۴۳۸ -> 13438
+         *
+         * [نقل معماري] رُفعت من داخل App إلى نطاق الوحدة لسببين:
+         *   1) لا يُعاد إنشاؤها في كل Render.
+         *   2) تصبح متاحة داخل parseExcelData لحساب cleanId مرة واحدة عند التحميل.
+         */
+        const normalizeCleanId = (str) => {
+            if (!str) return "";
+            return toEnglishDigits(str).replace(/\D/g, ""); // الإبقاء على الأرقام فقط
+        };
+
+        /** تنظيف الاسم ليصلح كمعرّف مستند في Firestore (الشرطة المائلة تُسقط العملية). */
+        const toSafeDocId = (name) => {
+            const cleaned = String(name || '').replace(/[\/\\\[\]#?]/g, '_').replace(/^\.+|\.+$/g, '').trim();
+            return cleaned.slice(0, 200) || 'unknown';
+        };
+
+        // ==========================================
+        // طبقة تحميل البيانات
+        // ==========================================
+
+        /**
+         * جلب نص بأمان.
+         * [إصلاح] fetch().catch() لا يلتقط أخطاء HTTP مثل 404/403 — فقط أخطاء الشبكة.
+         * النسخة السابقة كانت تُمرّر محتوى صفحة الخطأ كأنه بيانات صحيحة.
+         */
+        const fetchText = async (url) => {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.text();
+            } catch (err) {
+                console.warn(`[Data] تعذر تحميل ${url}:`, err.message);
+                return "";
+            }
+        };
+
+        const fetchJson = async (url) => {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.warn(`[Data] تعذر تحميل ${url}:`, err.message);
+                return null;
+            }
+        };
+
+        /** محلل بيانات المستودعات (TSV). */
         const parseExcelData = (rawText) => {
             if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
 
@@ -172,43 +287,101 @@ let RAW_RIYADH_DATA = "";
             if (lines.length < 2) return [];
 
             const headers = lines[0].split('\t').map(h => h.trim());
-            const idIdx = headers.findIndex(h => /رقم|كود|sku|item/i.test(h));
+            const idIdx   = headers.findIndex(h => /رقم|كود|sku|item/i.test(h));
             const nameIdx = headers.findIndex(h => /اسم|وصف|description|name/i.test(h));
-            const qtyIdx = headers.findIndex(h => /كمية|رصيد|متوفر|qty|quantity/i.test(h));
+            const qtyIdx  = headers.findIndex(h => /كمية|رصيد|متوفر|qty|quantity/i.test(h));
             const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
-const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
+            const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
+
+            // [إصلاح] بدون عمود المعرّف كان idIdx = -1 و cols[-1] = undefined
+            // => كل الصفوف تُتخطى بصمت وتظهر قاعدة بيانات فارغة بلا سبب واضح.
+            if (idIdx === -1) {
+                console.error('[Parser] لم يُعثر على عمود رقم الصنف في الترويسة:', headers);
+                return [];
+            }
 
             const dataMap = {};
 
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split('\t').map(c => c.trim());
-                if (cols.length === 0 || (!cols[idIdx] && !cols[nameIdx])) continue;
+                if (cols.length === 0 || (!cols[idIdx] && (nameIdx === -1 || !cols[nameIdx]))) continue;
 
-                const rawId = cols[idIdx] ? cols[idIdx].trim() : '';
-                const searchId = normalizeNumerals(rawId).toLowerCase();
-
+                const rawId    = cols[idIdx] ? cols[idIdx].trim() : '';
+                const searchId = toEnglishDigits(rawId).toLowerCase();
                 if (!searchId) continue;
 
-                const name = cols[nameIdx] ? cols[nameIdx].trim() : '';
-                const rawQty = normalizeNumerals(cols[qtyIdx] || '0').replace(/,/g, ''); // Remove commas if any
-                const qty = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
-                const unit = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
-                const pack = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
+                const name    = nameIdx !== -1 && cols[nameIdx] ? cols[nameIdx].trim() : '';
+                const rawQty  = toEnglishDigits(qtyIdx !== -1 ? (cols[qtyIdx] || '0') : '0').replace(/,/g, '');
+                const qty     = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
+                const unit    = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
+                const pack    = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
 
                 // Overwrites if duplicate, keeping the last valid row per instructions
-                dataMap[searchId] = { 
-                    id: rawId, 
-                    searchId: searchId, 
-                    name, 
-                    qty, 
-                    unit, 
+                dataMap[searchId] = {
+                    id: rawId,
+                    searchId: searchId,
+                    // [تحسين أداء] الرقم الصافي يُحسب مرة واحدة هنا بدل حسابه
+                    // لكل صنف في كل ضغطة مفتاح داخل حلقات الفلترة.
+                    cleanId: normalizeCleanId(rawId),
+                    name,
+                    qty,
+                    unit,
                     pack
                 };
             }
             return Object.values(dataMap);
         };
 
-        // Icons components
+        /**
+         * بناء خريطة الصور: الرقم الصافي -> اسم الملف الحقيقي.
+         * [إصلاح] النسخة السابقة كانت تُخزّن الأرقام فقط ثم تُعيد تركيب الاسم بافتراض ".webp"،
+         * فأي صورة بامتداد آخر (jpg/png) كانت تُنتج 404 — وهو بالضبط ما وُجد images_list.txt لمنعه.
+         * Map يوفّر نفس واجهة .has() الخاصة بـ Set، لذا كل الشروط القائمة تعمل دون تعديل.
+         */
+        const buildImagesMap = (imagesText) => {
+            const imgMap = new Map();
+            imagesText.split('\n').forEach((line) => {
+                const fileName = line.trim();
+                if (!fileName) return;
+                // إزالة الامتداد الأخير فقط (أدق من split('.')[0] مع أسماء مثل 13438.v2.webp)
+                const cleanName = normalizeCleanId(fileName.replace(/\.[^.]+$/, ''));
+                if (cleanName && !imgMap.has(cleanName)) imgMap.set(cleanName, fileName);
+            });
+            return imgMap;
+        };
+
+        /**
+         * تحليل categories.tsv — كل عمود قسم، والصفوف تحته أرقام أصناف.
+         * [إصلاح حرج] أي عمود بترويسة فارغة (Tab زائد في نهاية الصف — شائع جداً)
+         * كان يجعل catObj[headers[j]] غير معرّف ثم .push() عليه => TypeError يُسقط التطبيق.
+         */
+        const parseCategories = (categoriesText) => {
+            const catObj = {};
+            if (!categoriesText) return catObj;
+
+            const rows = categoriesText.split('\n').map(row => row.split('\t').map(cell => cell.trim()));
+            if (rows.length === 0) return catObj;
+
+            const headers = rows[0];
+            headers.forEach(header => { if (header) catObj[header] = []; });
+
+            for (let i = 1; i < rows.length; i++) {
+                for (let j = 0; j < headers.length; j++) {
+                    const header = headers[j];
+                    if (!header || !catObj[header]) continue; // الحارس الذي كان مفقوداً
+                    const cell = rows[i][j];
+                    if (!cell) continue;
+                    const cleanId = normalizeCleanId(cell);
+                    if (cleanId) catObj[header].push(cleanId);
+                }
+            }
+            return catObj;
+        };
+
+        // ==========================================
+        // المكونات المشتركة
+        // ==========================================
+
         const SearchIcon = ({ className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -216,77 +389,133 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
         );
 
         const FormatQuantity = ({ qty, unit }) => {
-            const formattedQty = new Intl.NumberFormat('en-US').format(qty);
+            const formattedQty = NUMBER_FORMATTER.format(qty);
             return (
                 <div className="flex flex-col">
-                    <div className="flex items-baseline gap-1">
+                    <div className="flex items-baseline gap-4">
                         <span className="text-[24px] md:text-[28px] font-bold text-primary leading-none">{formattedQty}</span>
                         {unit && <span className="text-[14px] text-secondary">{unit}</span>}
                     </div>
                     {qty === 0 && (
-                        <span className="text-[14px] text-secondary mt-1">نفدت الكمية حالياً</span>
+                        <span className="text-[14px] text-secondary mt-4">نفدت الكمية حالياً</span>
                     )}
                 </div>
             );
         };
 
+        /** صورة صنف مع إخفاء تلقائي عند فشل التحميل (شبكة ضعيفة / ملف تالف). */
+        const ProductImage = ({ fileName, alt, className }) => {
+            if (!fileName) return null;
+            return (
+                <img
+                    src={`${IMAGES_PATH}${fileName}`}
+                    alt={alt}
+                    loading="lazy"
+                    decoding="async"
+                    className={className}
+                    onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+                />
+            );
+        };
+
         // Full Detailed Card (Exact Match)
-       const FullResultCard = ({ item, warehouseName }) => (
-    <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 md:p-24 bg-bg flex flex-col gap-16">
+        const FullResultCard = memo(({ item, warehouseName, showImage = false, imageFileName = '' }) => (
+            <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 md:p-24 bg-bg flex flex-col gap-16">
 
-        <div>
-            <div className="text-[14px] font-medium text-secondary mb-1">رقم الصنف</div>
-            <div className="text-[16px] font-bold text-primary">{item.id}</div>
-        </div>
+                {showImage && imageFileName && (
+                    <div className="w-full flex justify-center border-b border-border pb-16">
+                        <ProductImage
+                            fileName={imageFileName}
+                            alt={item.name || item.id}
+                            className="w-full max-w-[240px] aspect-square object-contain rounded-12"
+                        />
+                    </div>
+                )}
 
-        <div>
-            <div className="text-[14px] font-medium text-secondary mb-1">اسم الصنف</div>
-            <div className="text-[16px] text-primary">{item.name || "---"}</div>
-        </div>
-
-        <div>
-            <div className="text-[14px] font-medium text-secondary mb-1">المستودع</div>
-            <div className="text-[16px] text-primary">{warehouseName}</div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
-            <div>
-                <div className="text-[14px] font-medium text-secondary mb-1">الوحدة</div>
-                <div className="text-[16px] font-bold text-primary">
-                    {item.unit || "---"}
+                <div>
+                    <div className="text-[14px] font-medium text-secondary mb-4">رقم الصنف</div>
+                    <div className="text-[16px] font-bold text-primary">{item.id}</div>
                 </div>
-            </div>
 
-            <div>
-                <div className="text-[14px] font-medium text-secondary mb-1">الشد</div>
-                <div className="text-[16px] font-bold text-primary">
-                    {item.pack || "---"}
+                <div>
+                    <div className="text-[14px] font-medium text-secondary mb-4">اسم الصنف</div>
+                    <div className="text-[16px] text-primary">{item.name || "---"}</div>
                 </div>
-            </div>
-        </div>
 
-        <div className="border-t border-border pt-4">
-            <div className="text-[14px] font-medium text-secondary mb-1">
-                الكمية المتوفرة
-            </div>
-            <FormatQuantity qty={item.qty} unit={item.unit} />
-        </div>
+                <div>
+                    <div className="text-[14px] font-medium text-secondary mb-4">المستودع</div>
+                    <div className="text-[16px] text-primary">{warehouseName}</div>
+                </div>
 
-    </div>
-);
+                <div className="grid grid-cols-2 gap-16 border-t border-border pt-16">
+                    <div>
+                        <div className="text-[14px] font-medium text-secondary mb-4">الوحدة</div>
+                        <div className="text-[16px] font-bold text-primary">
+                            {item.unit || "---"}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="text-[14px] font-medium text-secondary mb-4">الشد</div>
+                        <div className="text-[16px] font-bold text-primary">
+                            {item.pack || "---"}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="border-t border-border pt-16">
+                    <div className="text-[14px] font-medium text-secondary mb-4">
+                        الكمية المتوفرة
+                    </div>
+                    <FormatQuantity qty={item.qty} unit={item.unit} />
+                </div>
+
+            </div>
+        ));
 
         // Compact Card (Partial Match - max 5)
-        const CompactResultCard = ({ item, warehouseName }) => (
+        // [إصلاح] كانت App تمرّر showImage/imageCleanId لمكوّن لا يستقبلهما ولا يعرض أي صورة،
+        // أي أن مفتاح "عرض مع الصورة" كان معطلاً بالكامل وبصمت.
+        const CompactResultCard = memo(({ item, showImage = false, imageFileName = '' }) => (
             <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 bg-bg flex justify-between items-center gap-16 mb-8 hover:bg-hoverBg transition-colors duration-200">
-                <div className="flex flex-col overflow-hidden">
-                    <span className="text-[16px] font-bold text-primary truncate">{item.id}</span>
-                    <span className="text-[14px] text-secondary truncate">{item.name || '---'}</span>
+                <div className="flex items-center gap-16 overflow-hidden">
+                    {showImage && imageFileName && (
+                        <ProductImage
+                            fileName={imageFileName}
+                            alt={item.name || item.id}
+                            className="w-56 h-56 flex-shrink-0 object-contain rounded-12 border border-border bg-bg"
+                        />
+                    )}
+                    <div className="flex flex-col overflow-hidden">
+                        <span className="text-[16px] font-bold text-primary truncate">{item.id}</span>
+                        <span className="text-[14px] text-secondary truncate">{item.name || '---'}</span>
+                    </div>
                 </div>
                 <div className="flex-shrink-0 text-left">
                     <FormatQuantity qty={item.qty} unit={item.unit} />
                 </div>
             </div>
-        );
+        ));
+
+        /** بطاقة المعرض. memo يمنع إعادة تصيير الشبكة كاملة عند تغيير حالة غير مرتبطة. */
+        const GalleryCard = memo(({ item, imageFileName, showImage, isGrid }) => (
+            <div className="border border-border rounded-12 p-16 bg-white flex flex-col items-center text-center">
+                {showImage && (
+                    <ProductImage
+                        fileName={imageFileName}
+                        alt={item.name || item.searchId}
+                        className={`object-contain mb-16 rounded-8 ${isGrid ? 'w-full aspect-square' : 'w-full max-w-[400px] h-auto'}`}
+                    />
+                )}
+                <div className="text-[16px] font-bold text-primary">{item.id}</div>
+                <div className="text-[14px] text-secondary">{item.name || '---'}</div>
+                {/* [إصلاح] الحقل الصحيح هو qty — الكود السابق كان يقرأ item.quantity غير الموجود
+                    فتظهر "الكمية: undefined" لكل صنف في المعرض. */}
+                <div className={`text-[14px] font-medium mt-8 px-12 py-4 rounded-full ${item.qty > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'}`}>
+                    الكمية: {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
+                </div>
+            </div>
+        ));
 
         const NotFoundState = () => (
             <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-24 bg-bg flex flex-col items-center justify-center text-center gap-16">
@@ -304,35 +533,43 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                 <p className="text-[16px] text-secondary">ابدأ الكتابة لعرض بيانات الصنف</p>
             </div>
         );
-        
+
         const DatabaseEmptyWarning = () => (
             <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-24 bg-bg flex flex-col items-center justify-center text-center gap-16">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-48 h-48 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-48 h-48 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
                     <h3 className="text-[16px] font-medium text-primary mb-8">قاعدة البيانات فارغة</h3>
-                    <p className="text-[15px] text-secondary">يرجى لصق بيانات الإكسل في الكود المصدري لكي تتمكن من البحث.</p>
+                    {/* [تحديث نص] الرسالة القديمة كانت تطلب لصق بيانات إكسل في الكود المصدري،
+                        وهذا لم يعد صحيحاً بعد الانتقال لملفات TSV الثابتة. */}
+                    <p className="text-[15px] text-secondary">تعذر تحميل ملفات المخزون من مجلد data. تحقق من وجود jeddah.tsv و riyadh.tsv ومن صحة ترويسة الأعمدة.</p>
                 </div>
             </div>
         );
 
-// ==========================================
+        // ==========================================
         // 1. مكون شاشة تسجيل الدخول
         // ==========================================
         const LoginScreen = ({ onLogin }) => {
             const [name, setName] = useState('');
             const [loading, setLoading] = useState(false);
+            const [notice, setNotice] = useState('');
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                if (!name.trim()) return;
-                
+                const trimmedName = name.trim();
+                if (!trimmedName) return;
+
                 setLoading(true);
+                setNotice('');
+
                 try {
-                    const userRef = db.collection('users').doc(name.trim());
+                    // [إصلاح] الاسم كان يُستخدم كمعرّف مستند مباشرةً؛
+                    // أي اسم يحتوي "/" كان يُطلق استثناءً ويمنع الدخول نهائياً.
+                    const userRef = db.collection('users').doc(toSafeDocId(trimmedName));
                     const doc = await userRef.get();
-                    
+
                     const userInfo = {
                         userAgent: navigator.userAgent,
                         lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
@@ -345,7 +582,7 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                         });
                     } else {
                         await userRef.set({
-                            name: name.trim(),
+                            name: trimmedName,
                             ...userInfo,
                             loginCount: 1,
                             firstJoined: firebase.firestore.FieldValue.serverTimestamp()
@@ -353,19 +590,21 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                     }
 
                     await db.collection('login_logs').add({
-                        name: name.trim(),
+                        name: trimmedName,
                         time: firebase.firestore.FieldValue.serverTimestamp(),
                         userAgent: navigator.userAgent
                     });
 
-                    localStorage.setItem('inventory_user_name', name.trim());
-                    onLogin(name.trim());
-
                 } catch (error) {
+                    // [قرار توفّر] التسجيل في Firestore وظيفة تحليلية، والبحث في المخزون وظيفة أساسية.
+                    // النسخة السابقة كانت تمنع الموظف من الدخول كلياً عند تعثر الشبكة داخل المستودع.
                     console.error("Error logging in: ", error);
-                    alert("حدث خطأ أثناء الاتصال بقاعدة البيانات. تأكد من إعدادات Firebase.");
+                    setNotice('تعذر الاتصال بسجل الدخول، وتم الدخول للنظام بشكل طبيعي.');
                 }
+
+                localStorage.setItem('inventory_user_name', trimmedName);
                 setLoading(false);
+                onLogin(trimmedName);
             };
 
             return (
@@ -373,26 +612,32 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                     <div className="animate-card w-full max-w-[400px] bg-white border border-border rounded-12 shadow-card p-32 text-center">
                         <h1 className="text-[24px] font-bold text-primary mb-8 font-cairo">نظام المخزون</h1>
                         <p className="text-[14px] text-secondary mb-32 font-cairo">شركة بيت الأواني الطيبة</p>
-                        
+
                         <form onSubmit={handleSubmit} className="flex flex-col gap-16">
                             <div className="text-right">
-                                <label className="text-[14px] font-medium text-primary mb-8 block font-cairo">
+                                <label htmlFor="employeeName" className="text-[14px] font-medium text-primary mb-8 block font-cairo">
                                     الإسم الكريم
                                 </label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    id="employeeName"
+                                    type="text"
                                     required
+                                    autoComplete="name"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="اكتب اسمك هنا..."
                                     className="w-full h-[48px] px-16 rounded-12 border border-border focus:border-primary focus:ring-1 focus:ring-primary text-primary outline-none transition-all font-cairo"
                                 />
                             </div>
-                            
-                            <button 
-                                type="submit" 
+
+                            {notice && (
+                                <p className="text-[13px] text-secondary text-right">{notice}</p>
+                            )}
+
+                            <button
+                                type="submit"
                                 disabled={loading}
-                                className="w-full h-[48px] bg-primary text-white rounded-12 font-medium hover:opacity-90 transition-opacity flex justify-center items-center font-cairo"
+                                className="w-full h-[48px] bg-primary text-white rounded-12 font-medium hover:opacity-90 disabled:opacity-60 transition-opacity flex justify-center items-center font-cairo"
                             >
                                 {loading ? "جاري الدخول..." : "دخول للنظام"}
                             </button>
@@ -402,12 +647,12 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
             );
         };
 
-       // ==========================================
+        // ==========================================
         // 2. التطبيق الأساسي (نظام المخزون والمعرض)
         // ==========================================
         const App = () => {
             const [userName, setUserName] = useState(localStorage.getItem('inventory_user_name') || '');
-            
+
             // حالات البحث والمستودع
             const [warehouse, setWarehouse] = useState(null);
             const [query, setQuery] = useState('');
@@ -415,162 +660,211 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
             // حالات البيانات
             const [databases, setDatabases] = useState({ jeddah: [], riyadh: [] });
-            const [imagesList, setImagesList] = useState(new Set());
+            const [imagesList, setImagesList] = useState(new Map()); // cleanId -> اسم الملف الحقيقي
             const [categories, setCategories] = useState({});
-            
+
             // حالات المعرض (Gallery)
             const [activeCategory, setActiveCategory] = useState(null);
             const [galleryView, setGalleryView] = useState('grid'); // 'grid' أو 'list'
+            const [visibleCount, setVisibleCount] = useState(GALLERY_PAGE_SIZE);
 
             const [loading, setLoading] = useState(true);
             const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
-            const searchInputRef = useRef(null);
 
-            const handleLogout = () => {
+            const searchInputRef = useRef(null);
+            const lastLoggedSearch = useRef(''); // منع تكرار تسجيل نفس عملية البحث
+
+            const handleLogout = useCallback(() => {
                 localStorage.removeItem('inventory_user_name');
                 setUserName('');
-            };
-
-// دالة تحويل الأرقام واستخراج الرقم الصافي فقط (تتجاهل الحروف تماماً)
-            const normalizeCleanId = (str) => {
-                if (!str) return "";
-                let englishNumbers = str.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-                return englishNumbers.replace(/\D/g, ""); // الإبقاء على الأرقام فقط وحذف أي حروف أو مسافات
-            };
-			
-            // قراءة آخر تحديث
-            useEffect(() => {
-                fetch("./data/version.json")
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.lastUpdate) return setLastUpdate("غير متوفر");
-                    setLastUpdate(typeof dayjs !== 'undefined' ? dayjs(data.lastUpdate).fromNow() : data.lastUpdate);
-                })
-                .catch(() => setLastUpdate("غير متوفر"));
+                setWarehouse(null);
+                setQuery('');
+                setActiveCategory(null);
             }, []);
 
-            // تحميل كافة البيانات (المستودعات، التصنيفات، وقائمة الصور)
-            useEffect(() => {        
+            // ------------------------------------------
+            // تحميل كافة البيانات دفعة واحدة (المستودعات، التصنيفات، الصور، الإصدار)
+            // [توحيد] version.json كان يُجلب في useEffect منفصل خارج Promise.all.
+            // ------------------------------------------
+            useEffect(() => {
+                let isMounted = true;
+
                 const loadAllData = async () => {
                     try {
-                        const [jeddahRes, riyadhRes, imagesRes, categoriesRes] = await Promise.all([
-                            fetch("./data/jeddah.tsv"),
-                            fetch("./data/riyadh.tsv"),
-                            fetch("./data/images_list.txt").catch(() => ({ text: () => "" })), // تجاوز الخطأ لو لم يوجد الملف
-                            fetch("./data/categories.tsv").catch(() => ({ text: () => "" }))
+                        const [jeddahText, riyadhText, imagesText, categoriesText, versionData] = await Promise.all([
+                            fetchText(`${DATA_PATH}jeddah.tsv`),
+                            fetchText(`${DATA_PATH}riyadh.tsv`),
+                            fetchText(`${DATA_PATH}images_list.txt`),
+                            fetchText(`${DATA_PATH}categories.tsv`),
+                            fetchJson(`${DATA_PATH}version.json`),
                         ]);
 
-                        const jeddahText = await jeddahRes.text();
-                        const riyadhText = await riyadhRes.text();
-                        const imagesText = (await imagesRes.text()) || "";
-                        const categoriesText = (await categoriesRes.text()) || "";
+                        if (!isMounted) return;
 
-                        // معالجة المخزون
                         setDatabases({
                             jeddah: parseExcelData(jeddahText),
                             riyadh: parseExcelData(riyadhText)
                         });
+                        setImagesList(buildImagesMap(imagesText));
+                        setCategories(parseCategories(categoriesText));
 
-                        // معالجة قائمة الصور
-                        const imgSet = new Set();
-                        imagesText.split('\n').forEach(line => {
-                            if (line.trim()) {
-                                // استخراج الرقم أو الاسم الصافي بدون الامتداد
-                                const cleanName = normalizeCleanId(line.split('.')[0]);
-                                if(cleanName) imgSet.add(cleanName);
-                            }
-                        });
-                        setImagesList(imgSet);
-
-                        // معالجة التصنيفات (بافتراض أن كل عمود هو قسم)
-                        const catObj = {};
-                        if (categoriesText) {
-                            const rows = categoriesText.split('\n').map(row => row.split('\t').map(cell => cell.trim()));
-                            if (rows.length > 0) {
-                                const headers = rows[0];
-                                headers.forEach(header => { if(header) catObj[header] = []; });
-                                
-                                for (let i = 1; i < rows.length; i++) {
-                                    for (let j = 0; j < headers.length; j++) {
-                                        if (rows[i][j]) {
-                                            catObj[headers[j]].push(normalizeCleanId(rows[i][j]));
-                                        }
-                                    }
-                                }
-                            }
+                        if (versionData && versionData.lastUpdate) {
+                            setLastUpdate(
+                                typeof dayjs !== 'undefined'
+                                    ? dayjs(versionData.lastUpdate).fromNow()
+                                    : versionData.lastUpdate
+                            );
+                        } else {
+                            setLastUpdate("غير متوفر");
                         }
-                        setCategories(catObj);
-
                     } catch (err) {
-                        console.error(err);
+                        console.error('[Boot] فشل غير متوقع أثناء تحميل البيانات:', err);
+                        if (isMounted) setLastUpdate("غير متوفر");
                     } finally {
-                        setLoading(false);
+                        if (isMounted) setLoading(false);
                     }
                 };
+
                 loadAllData();
+                // [تحصين] حارس ضد تحديث حالة مكوّن مُفكَّك (StrictMode / خروج مبكر)
+                return () => { isMounted = false; };
             }, []);
-            
-            const isDbEmpty = useMemo(() => databases.jeddah.length === 0 && databases.riyadh.length === 0, [databases]);
+
+            const isDbEmpty = useMemo(
+                () => databases.jeddah.length === 0 && databases.riyadh.length === 0,
+                [databases]
+            );
 
             useEffect(() => {
                 if (warehouse && searchInputRef.current) searchInputRef.current.focus();
             }, [warehouse]);
 
-            // فلترة نتائج البحث
-            const searchResults = useMemo(() => {
-                if (!warehouse || !query.trim()) return null; 
-                
-                const normalizedQuery = normalizeCleanId(query);
-                const activeDb = databases[warehouse] || [];
-                
-                return activeDb.filter(item => {
-                    const sku = normalizeCleanId(item.searchId);
-                    if (/^\d+$/.test(normalizedQuery)) {
-                        const numericSku = sku.replace(/^[a-z_]+/i, "");
-                        return numericSku.startsWith(normalizedQuery);
-                    }
-                    return sku.startsWith(normalizedQuery);
-                });
-            }, [query, warehouse, databases]);
+            // إعادة ضبط دفعة العرض عند تغيير القسم أو المستودع
+            useEffect(() => {
+                setVisibleCount(GALLERY_PAGE_SIZE);
+            }, [activeCategory, warehouse]);
 
+            // ------------------------------------------
+            // فلترة نتائج البحث (فورية — بدون أي تأخير)
+            // ------------------------------------------
+            const normalizedQuery = useMemo(() => normalizeCleanId(query), [query]);
+
+            const searchResults = useMemo(() => {
+                if (!warehouse || !query.trim()) return null;
+                // [إصلاح] استعلام بحروف فقط كان يُنتج "" ثم startsWith("") = true
+                // => التطبيق يعرض كامل قاعدة البيانات بدل رسالة "غير موجود".
+                if (!normalizedQuery) return [];
+
+                const activeDb = databases[warehouse] || [];
+                // [تحسين أداء] cleanId محسوب مسبقاً عند التحميل — لا regex داخل الحلقة.
+                // كما أن الفرعين في النسخة السابقة كانا متطابقين منطقياً (فرع ميت).
+                return activeDb.filter(item => item.cleanId.startsWith(normalizedQuery));
+            }, [normalizedQuery, query, warehouse, databases]);
+
+            /** المطابقة التامة تستحق البطاقة التفصيلية (الوحدة/الشد/الكمية). */
+            const exactMatch = useMemo(() => {
+                if (!searchResults || searchResults.length === 0 || !normalizedQuery) return null;
+                return searchResults.find(item => item.cleanId === normalizedQuery) || null;
+            }, [searchResults, normalizedQuery]);
+
+            // ------------------------------------------
+            // تسجيل عمليات البحث الناجحة في Firestore بعد 1.5 ثانية من التوقف عن الكتابة
+            // [ملاحظة هندسية] الـ Debounce مطبّق على التسجيل فقط وليس على الفلترة،
+            // حفاظاً على "الفلترة الفورية" التي هي أكبر نقاط قوة التطبيق.
+            // ------------------------------------------
+            useEffect(() => {
+                if (!warehouse || !normalizedQuery) return;
+                if (!searchResults || searchResults.length === 0) return; // الناجحة فقط
+
+                const logKey = `${warehouse}:${normalizedQuery}`;
+                if (lastLoggedSearch.current === logKey) return;
+
+                const timer = setTimeout(() => {
+                    lastLoggedSearch.current = logKey;
+                    db.collection('search_logs').add({
+                        name: userName,
+                        warehouse: warehouse,
+                        rawQuery: query.trim(),
+                        cleanQuery: normalizedQuery,
+                        resultsCount: searchResults.length,
+                        exactMatch: Boolean(exactMatch),
+                        time: firebase.firestore.FieldValue.serverTimestamp(),
+                    }).catch(err => console.warn('[Log] تعذر تسجيل عملية البحث:', err.message));
+                }, SEARCH_LOG_DEBOUNCE_MS);
+
+                return () => clearTimeout(timer);
+            }, [normalizedQuery, warehouse, searchResults, exactMatch, userName, query]);
+
+            // ------------------------------------------
             // فلترة بيانات المعرض بناءً على القسم المختار
+            // ------------------------------------------
+            const allCategorizedIds = useMemo(
+                () => new Set(Object.values(categories).flat()),
+                [categories]
+            );
+
             const galleryResults = useMemo(() => {
                 if (!activeCategory || !warehouse) return [];
                 const activeDb = databases[warehouse] || [];
 
-                if (activeCategory === 'نواقص الصور') {
+                if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) {
                     // منتجات متوفرة بالمستودع ولكن ليس لها صورة
-                    return activeDb.filter(item => !imagesList.has(normalizeCleanId(item.searchId)));
+                    return activeDb.filter(item => !imagesList.has(item.cleanId));
                 }
 
-                if (activeCategory === 'بقية الأصناف') {
+                if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) {
                     // منتجات لها صورة، ومتوفرة، ولكن غير مصنفة في أي قسم
-                    const allCategorizedIds = new Set(Object.values(categories).flat());
-                    return activeDb.filter(item => {
-                        const cleanId = normalizeCleanId(item.searchId);
-                        return imagesList.has(cleanId) && !allCategorizedIds.has(cleanId);
-                    });
+                    return activeDb.filter(item =>
+                        imagesList.has(item.cleanId) && !allCategorizedIds.has(item.cleanId)
+                    );
                 }
 
                 // عرض منتجات القسم المختار (بشرط توفرها بالمستودع ووجود صورة لها)
                 const categoryIds = new Set(categories[activeCategory] || []);
-                return activeDb.filter(item => {
-                    const cleanId = normalizeCleanId(item.searchId);
-                    return categoryIds.has(cleanId) && imagesList.has(cleanId);
-                });
+                return activeDb.filter(item =>
+                    categoryIds.has(item.cleanId) && imagesList.has(item.cleanId)
+                );
+            }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds]);
 
-            }, [activeCategory, warehouse, databases, imagesList, categories]);
+            // [تحسين أداء] عرض تدريجي — قسم "نواقص الصور" قد يحوي آلاف الأصناف،
+            // وتصييرها دفعة واحدة كان يُجمّد الواجهة على أجهزة المستودع.
+            const visibleGalleryItems = useMemo(
+                () => galleryResults.slice(0, visibleCount),
+                [galleryResults, visibleCount]
+            );
 
+            const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
+            const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
+
+            // ------------------------------------------
+            // التصيير
+            // ------------------------------------------
             if (!userName) return <LoginScreen onLogin={(name) => setUserName(name)} />;
-            if (loading) return <div className="min-h-screen flex items-center justify-center text-xl font-bold">جاري تحميل بيانات المخزون...</div>;
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center text-xl font-bold" role="status" aria-live="polite">
+                        جاري تحميل بيانات المخزون...
+                    </div>
+                );
+            }
 
             return (
                 <div className="max-w-[1024px] mx-auto px-16 sm:px-24 py-40 md:py-64 font-sans selection:bg-gray-200 relative">
-                    
+
                     {/* Header */}
                     <header className="text-center mb-32 flex flex-col items-center gap-8">
-                        <div className="bg-gray-50 border border-border px-16 py-8 rounded-full mb-8">
-                            <span className="text-[13px] font-medium text-secondary">الاسم الكريم: {userName}</span>
+                        <div className="flex items-center gap-8 mb-8">
+                            <div className="bg-gray-50 border border-border px-16 py-8 rounded-full">
+                                <span className="text-[13px] font-medium text-secondary">الاسم الكريم: {userName}</span>
+                            </div>
+                            {/* [استعادة] handleLogout كانت معرّفة بلا أي زر يستدعيها */}
+                            <button
+                                onClick={handleLogout}
+                                className="text-[13px] text-secondary hover:text-primary underline underline-offset-4 transition-colors"
+                            >
+                                خروج
+                            </button>
                         </div>
                         <h1 className="text-[28px] md:text-[32px] font-bold text-primary m-0 leading-tight">
                             مخزون شركة بيت الأواني الطيبة
@@ -580,59 +874,117 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                         </h2>
                         <p className="text-[13px] text-secondary">آخر تحديث للمخزون: {lastUpdate}</p>
                     </header>
-                                        
+
+                    {/* تحذير فشل تحميل قاعدة البيانات */}
+                    {isDbEmpty && (
+                        <div className="mb-32">
+                            <DatabaseEmptyWarning />
+                        </div>
+                    )}
+
                     {/* اختيار المستودع الأساسي */}
-                    <div className="flex justify-center gap-16 mb-32" role="group">
-                        <button onClick={() => setWarehouse('jeddah')} className={`px-24 py-16 rounded-12 text-[16px] font-medium transition-all w-[140px] md:w-[160px] ${warehouse === 'jeddah' ? 'bg-primary text-bg shadow-md' : 'bg-bg text-primary border border-primary hover:bg-gray-50'}`}>مخزون جدة</button>
-                        <button onClick={() => setWarehouse('riyadh')} className={`px-24 py-16 rounded-12 text-[16px] font-medium transition-all w-[140px] md:w-[160px] ${warehouse === 'riyadh' ? 'bg-primary text-bg shadow-md' : 'bg-bg text-primary border border-primary hover:bg-gray-50'}`}>مخزون الرياض</button>
+                    <div className="flex justify-center gap-16 mb-32" role="group" aria-label="اختيار المستودع">
+                        {Object.values(WAREHOUSES).map(wh => (
+                            <button
+                                key={wh.key}
+                                onClick={() => setWarehouse(wh.key)}
+                                aria-pressed={warehouse === wh.key}
+                                className={`px-24 py-16 rounded-12 text-[16px] font-medium transition-all w-[140px] md:w-[160px] ${warehouse === wh.key ? 'bg-primary text-bg shadow-md' : 'bg-bg text-primary border border-primary hover:bg-gray-50'}`}
+                            >
+                                {wh.label}
+                            </button>
+                        ))}
                     </div>
 
-                    {/* منطقة البحث */}
-                   <div className="flex justify-between items-center mb-8">
+                    {/* ================= منطقة البحث ================= */}
+                    {/* [P0 — الإصلاح الحرج] هذه الحاوية كانت محذوفة بينما بقي وسم إغلاقها،
+                        فانكسرت شجرة JSX وتوقف Babel عن التحليل => شاشة بيضاء كاملة. */}
+                    <div className="w-full max-w-[480px] mx-auto mb-32">
+                        <div className="flex justify-between items-center mb-8">
                             <label htmlFor="searchInput" className={`text-[14px] font-medium ${warehouse ? 'text-primary' : 'text-secondary'}`}>البحث السريع</label>
-                            
+
                             {/* مفتاح (Toggle) عرض الصور في البحث */}
                             <label className="flex items-center gap-8 cursor-pointer">
                                 <span className="text-[13px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
-                                <input type="checkbox" className="hidden" checked={showImageInSearch} onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                                <div className={`w-40 h-24 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-gray-300'}`}>
-                                    <div className={`absolute top-2 w-20 h-20 bg-white rounded-full transition-transform ${showImageInSearch ? 'left-2 translate-x-16' : 'left-2'}`}></div>
+                                {/* [a11y] sr-only بدل hidden — العنصر المخفي بـ hidden لا يقبل التركيز إطلاقاً */}
+                                <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={showImageInSearch}
+                                    onChange={(e) => setShowImageInSearch(e.target.checked)}
+                                    disabled={!warehouse}
+                                />
+                                {/* [إصلاح] top-2/left-2 كانتا 8px، و w-20 h-20 كانت 80px (خارج مقياس spacing)
+                                    فكان المقبض يخرج تماماً من حدود المسار. */}
+                                <div className={`w-40 h-24 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-gray-300'} ${!warehouse ? 'opacity-50' : ''}`}>
+                                    <div className={`absolute top-2 left-2 w-20 h-20 bg-white rounded-full transition-transform ${showImageInSearch ? 'translate-x-16' : ''}`}></div>
                                 </div>
                             </label>
                         </div>
 
                         <div className="relative">
                             <input
-                                ref={searchInputRef} id="searchInput" type="text" value={query} onChange={(e) => setQuery(e.target.value)} disabled={!warehouse}
+                                ref={searchInputRef}
+                                id="searchInput"
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                disabled={!warehouse}
                                 placeholder={warehouse ? "اكتب رقم الصنف..." : "اختر المستودع أولاً"}
-                                className={`w-full h-[56px] px-16 pl-48 rounded-12 border transition-all text-[16px] outline-none ${!warehouse ? 'bg-gray-50 border-border cursor-not-allowed opacity-60' : 'bg-bg focus:border-primary focus:ring-1 text-primary'}`}
+                                className={`w-full h-[56px] px-16 pl-48 rounded-12 border transition-all text-[16px] outline-none ${!warehouse ? 'bg-gray-50 border-border cursor-not-allowed opacity-60' : 'bg-bg border-border focus:border-primary focus:ring-1 text-primary'}`}
                             />
+                            {/* [استعادة] الحاوية relative و pl-48 كانتا تحجزان مكاناً لأيقونة غير مُصيَّرة */}
+                            <SearchIcon className="w-24 h-24 text-secondary absolute left-16 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
 
-                        {/* نتائج البحث (تظهر فقط إذا كان هناك بحث) */}
+                        {/* نتائج البحث */}
+                        {warehouse && !query.trim() && <EmptyState />}
+
                         {query.trim() && (
                             <div className="w-full mt-16 min-h-[100px]">
-                                {searchResults && searchResults.length === 0 ? <NotFoundState /> : 
-                                 searchResults && searchResults.slice(0, 5).map(item => (
-                                     <div key={item.id} className="mb-8">
-                                         {/* تمرير خاصية showImageInSearch للمكون ليعرض الصورة أم لا */}
-                                         <CompactResultCard item={item} showImage={showImageInSearch} imageCleanId={normalizeCleanId(item.searchId)} />
-                                     </div>
-                                 ))}
+                                {searchResults && searchResults.length === 0 && <NotFoundState />}
+
+                                {/* مطابقة تامة => البطاقة التفصيلية */}
+                                {exactMatch && (
+                                    <div className="mb-16">
+                                        <FullResultCard
+                                            item={exactMatch}
+                                            warehouseName={activeWarehouseName}
+                                            showImage={showImageInSearch && imagesList.has(exactMatch.cleanId)}
+                                            imageFileName={imagesList.get(exactMatch.cleanId)}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* بقية المطابقات الجزئية => بطاقات مختصرة */}
+                                {searchResults && searchResults
+                                    .filter(item => !exactMatch || item.searchId !== exactMatch.searchId)
+                                    .slice(0, MAX_PARTIAL_RESULTS)
+                                    .map(item => (
+                                        <CompactResultCard
+                                            key={item.searchId}
+                                            item={item}
+                                            showImage={showImageInSearch && imagesList.has(item.cleanId)}
+                                            imageFileName={imagesList.get(item.cleanId)}
+                                        />
+                                    ))
+                                }
                             </div>
                         )}
                     </div>
 
-                    {/* منطقة المعرض (Gallery) */}
+                    {/* ================= منطقة المعرض (Gallery) ================= */}
                     <div className="w-full">
                         <div className="flex justify-between items-center mb-16">
                             <h3 className="text-[20px] font-bold text-primary">المعرض الرقمي</h3>
-                            
+
                             {/* أزرار العرض الشبكي/الطولي */}
                             {activeCategory && (
                                 <div className="flex gap-8">
-                                    <button onClick={() => setGalleryView('grid')} className={`p-8 rounded-8 border ${galleryView === 'grid' ? 'bg-primary text-white' : 'bg-white text-secondary'}`}>🔲 شبكي</button>
-                                    <button onClick={() => setGalleryView('list')} className={`p-8 rounded-8 border ${galleryView === 'list' ? 'bg-primary text-white' : 'bg-white text-secondary'}`}>🔤 طولي</button>
+                                    <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`p-8 rounded-8 border text-[14px] ${galleryView === 'grid' ? 'bg-primary text-white border-primary' : 'bg-white text-secondary border-border'}`}>شبكي</button>
+                                    <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'} className={`p-8 rounded-8 border text-[14px] ${galleryView === 'list' ? 'bg-primary text-white border-primary' : 'bg-white text-secondary border-border'}`}>طولي</button>
                                 </div>
                             )}
                         </div>
@@ -640,32 +992,53 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                         {/* أزرار الأقسام */}
                         <div className="flex flex-wrap gap-8 mb-24">
                             {Object.keys(categories).map(cat => (
-                                <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === cat ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-border hover:bg-gray-50'}`}>
+                                <button key={cat} onClick={() => setActiveCategory(cat)} aria-pressed={activeCategory === cat} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === cat ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-border hover:bg-gray-50'}`}>
                                     {cat}
                                 </button>
                             ))}
-                            <button onClick={() => setActiveCategory('بقية الأصناف')} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === 'بقية الأصناف' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-800 border-border hover:bg-gray-50'}`}>بقية الأصناف</button>
-                            <button onClick={() => setActiveCategory('نواقص الصور')} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === 'نواقص الصور' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-border hover:bg-gray-50'}`}>📸 نواقص الصور</button>
+                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-800 border-border hover:bg-gray-50'}`}>
+                                {SPECIAL_CATEGORIES.UNCATEGORIZED}
+                            </button>
+                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-border hover:bg-gray-50'}`}>
+                                📸 {SPECIAL_CATEGORIES.MISSING_IMAGES}
+                            </button>
                         </div>
 
                         {/* عرض نتائج المعرض للقسم المختار */}
                         {!warehouse ? (
                             <div className="text-center text-secondary py-32 bg-gray-50 rounded-12">يرجى اختيار المستودع (جدة أو الرياض) لفتح المعرض.</div>
                         ) : activeCategory ? (
-                            <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-16" : "flex flex-col gap-16"}>
-                                {galleryResults.length === 0 ? (
-                                    <div className="col-span-full text-center text-secondary py-32">لا توجد أصناف متوفرة في هذا القسم.</div>
-                                ) : (
-                                    galleryResults.map(item => (
-                                        <div key={item.id} className="border border-border rounded-12 p-16 bg-white flex flex-col items-center">
-                                            {activeCategory !== 'نواقص الصور' && (
-                                                <img src={`./images/${normalizeCleanId(item.searchId)}.webp`} alt={item.searchId} className={`object-contain mb-16 rounded-8 ${galleryView === 'grid' ? 'w-full h-120' : 'w-full max-w-[400px] h-auto'}`} loading="lazy" />
-                                            )}
-                                            <div className="text-[16px] font-bold text-primary">{item.searchId}</div>
-                                            <div className="text-[14px] text-secondary">{item.name}</div>
-                                            <div className="text-[14px] font-medium mt-8 text-green-700 bg-green-50 px-12 py-4 rounded-full">الكمية: {item.quantity}</div>
-                                        </div>
-                                    ))
+                            <div>
+                                <p className="text-[13px] text-secondary mb-16">
+                                    {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف
+                                    {galleryResults.length > visibleGalleryItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleGalleryItems.length)})`}
+                                </p>
+
+                                <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-16" : "flex flex-col gap-16"}>
+                                    {galleryResults.length === 0 ? (
+                                        <div className="col-span-full text-center text-secondary py-32">لا توجد أصناف متوفرة في هذا القسم.</div>
+                                    ) : (
+                                        visibleGalleryItems.map(item => (
+                                            <GalleryCard
+                                                key={item.searchId}
+                                                item={item}
+                                                imageFileName={imagesList.get(item.cleanId)}
+                                                showImage={!isMissingImagesView}
+                                                isGrid={galleryView === 'grid'}
+                                            />
+                                        ))
+                                    )}
+                                </div>
+
+                                {galleryResults.length > visibleGalleryItems.length && (
+                                    <div className="flex justify-center mt-24">
+                                        <button
+                                            onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)}
+                                            className="px-24 py-16 rounded-12 border border-primary text-primary text-[15px] font-medium hover:bg-gray-50 transition-colors"
+                                        >
+                                            عرض المزيد
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         ) : (
@@ -674,11 +1047,11 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
                             </div>
                         )}
                     </div>
-                            
+
                     <footer className="mt-64 pt-24 border-t border-border text-center">
                         <p className="text-[12px] text-secondary">© 2026 تطوير مهند الحزمي</p>
                     </footer>
-                            
+
                 </div>
             );
         };
@@ -687,11 +1060,18 @@ const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
         root.render(<App />);
     </script>
 
+    <!--
+      [قرار DevOps] تسجيل Service Worker معطّل حتى يُرفع ملف /sw.js فعلياً.
+      النسخة السابقة كانت تُسجّله بلا .catch() فتُنتج Unhandled Promise Rejection
+      في كل تحميل صفحة عندما يكون الملف مفقوداً.
+
     <script>
     if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js");
+        navigator.serviceWorker.register("/sw.js")
+            .catch(err => console.warn("SW registration skipped:", err.message));
     }
     </script>
-    
+    -->
+
 </body>
 </html>
