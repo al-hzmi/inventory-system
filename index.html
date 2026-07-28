@@ -642,9 +642,9 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                         <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
                                           className={`object-contain pointer-events-none w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
-                            {/* دائم الظهور على اللمس (لا يوجد hover على الجوال) وخفي حتى التمرير على سطح المكتب */}
+{/* دائم الظهور على اللمس (لا يوجد hover على الجوال) وخفي حتى التمرير على سطح المكتب */}
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
-                                    className="absolute top-8 left-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                    className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <Icon.Expand className="w-16 h-16" />
                             </button>
                         </div>
