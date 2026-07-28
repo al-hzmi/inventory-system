@@ -1182,7 +1182,7 @@
                             )}
                         </div>
 
-                        {/* أزرار الأقسام */}
+                       {/* أزرار الأقسام */}
                         <div className="flex flex-wrap gap-8 mb-24">
                             {Object.keys(categories).map(cat => (
                                 <button key={cat} onClick={() => setActiveCategory(cat)} aria-pressed={activeCategory === cat} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === cat ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-border hover:bg-gray-50'}`}>
@@ -1192,9 +1192,13 @@
                             <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-800 border-border hover:bg-gray-50'}`}>
                                 {SPECIAL_CATEGORIES.UNCATEGORIZED}
                             </button>
-                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-border hover:bg-gray-50'}`}>
-                                📸 {SPECIAL_CATEGORIES.MISSING_IMAGES}
-                            </button>
+                            
+                            {/* 🔒 تمت إضافة الحماية هنا: لن يظهر الزر إلا إذا كان الاسم يحتوي على مهند */}
+                            {sessionName.includes('مهند') && (
+                                <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-16 py-8 rounded-full text-[14px] transition-colors border ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-border hover:bg-gray-50'}`}>
+                                    📸 {SPECIAL_CATEGORIES.MISSING_IMAGES}
+                                </button>
+                            )}
                         </div>
 
                         {!warehouse ? (
@@ -1254,6 +1258,7 @@
                 </div>
             );
         };
+	   
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
