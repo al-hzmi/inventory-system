@@ -39,7 +39,6 @@
                 extend: {
                     fontFamily: {
                         sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', '"Cairo"', 'system-ui', 'sans-serif'],
-                        // [إصلاح] فئة font-cairo كانت مستخدمة في LoginScreen لكنها غير معرّفة => كانت بلا أي أثر
                         cairo: ['"Cairo"', '"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
                     },
                     colors: {
@@ -50,37 +49,17 @@
                         bg: '#FFFFFF'
                     },
                     /*
-                     * ملاحظة معمارية مهمة:
                      * مقياس spacing هنا بالبكسل وليس بالـ rem (خلافاً لـ Tailwind الافتراضي).
-                     * أي مفتاح غير مذكور في هذه القائمة يعود للقيمة الافتراضية بالـ rem،
-                     * وهذا كان مصدر عدة أخطاء بصرية (w-20 => 80px بدل 20px، px-12 => 48px بدل 12px).
-                     * [إصلاح] تم استكمال المفاتيح الناقصة لتوحيد المقياس بالكامل.
+                     * أي مفتاح غير مذكور يعود للقيمة الافتراضية بالـ rem — وهذا كان مصدر عدة أخطاء بصرية.
                      */
                     spacing: {
-                        '2': '2px',
-                        '4': '4px',
-                        '8': '8px',
-                        '12': '12px',
-                        '16': '16px',
-                        '20': '20px',
-                        '24': '24px',
-                        '32': '32px',
-                        '40': '40px',
-                        '48': '48px',
-                        '56': '56px',
-                        '64': '64px',
-                        '120': '120px',
+                        '2': '2px',  '4': '4px',  '8': '8px',  '12': '12px',
+                        '16': '16px','20': '20px','24': '24px','32': '32px',
+                        '40': '40px','48': '48px','56': '56px','64': '64px','120': '120px',
                     },
-                    borderRadius: {
-                        '8': '8px',   // [إصلاح] rounded-8 كانت مستخدمة وغير معرّفة
-                        '12': '12px',
-                    },
-                    boxShadow: {
-                        'card': '0 1px 3px rgba(0,0,0,0.06)',
-                    },
-                    transitionDuration: {
-                        '200': '200ms',
-                    }
+                    borderRadius: { '8': '8px', '12': '12px' },
+                    boxShadow: { 'card': '0 1px 3px rgba(0,0,0,0.06)' },
+                    transitionDuration: { '200': '200ms' }
                 }
             }
         }
@@ -91,7 +70,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <script>
-        // إعدادات مشروعك الحقيقية
         const firebaseConfig = {
             apiKey: "AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw",
             authDomain: "inventory-system-ca3dc.firebaseapp.com",
@@ -102,7 +80,6 @@
             measurementId: "G-ZGF5DT9D0K"
         };
 
-        // تهيئة قاعدة البيانات
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
@@ -114,12 +91,8 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        /* Focus styles for accessibility */
-        *:focus-visible {
-            outline: 2px solid #111111;
-            outline-offset: 2px;
-        }
-        /* Respect prefers-reduced-motion */
+        *:focus-visible { outline: 2px solid #111111; outline-offset: 2px; }
+
         @media (prefers-reduced-motion: reduce) {
             * {
                 animation-duration: 0.01ms !important;
@@ -128,19 +101,30 @@
                 scroll-behavior: auto !important;
             }
         }
-        /* Smooth card entrance */
+
         @keyframes slideUpFade {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .animate-card {
-            animation: slideUpFade 200ms ease-in-out forwards;
+        .animate-card { animation: slideUpFade 200ms ease-in-out forwards; }
+
+        @keyframes flipIn {
+            from { opacity: 0; transform: scale(0.97); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .animate-flip { animation: flipIn 180ms ease-out forwards; }
+
+        /*
+         * بطاقة المعرض تعتمد النقر المزدوج والثلاثي.
+         * بدون هذين السطرين: النقر الثلاثي يُظلّل الفقرة على سطح المكتب،
+         * والنقر المزدوج يُفعّل تكبير الصفحة على الجوال.
+         */
+        .tap-card {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
         }
     </style>
 
@@ -150,9 +134,7 @@
       [قرار DevOps بخصوص خطأ 403 على manifest.json]
       الرمز 403 (وليس 404) يشير غالباً إلى Vercel Deployment Protection:
       طلب الـ manifest يُرسَل بدون كوكيز الجلسة فتُرفض المصادقة.
-      الحل المزدوج: (1) رفع ملف manifest.json المرفق إلى مجلد public/
-                    (2) إبقاء crossorigin="use-credentials" أدناه.
-      حتى ترفع الملف والأيقونات، أبقِ السطرين معطلين حتى لا يظهر أي خطأ في الكونسول.
+      لتفعيل PWA: ارفع manifest.json إلى public/ وأضف الأيقونات، ثم أزل التعليق.
 
     <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -163,7 +145,6 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
 
     <script>
-        // [تحصين] dayjs يُحمَّل من CDN خارجي؛ حماية من فشل التحميل حتى لا ينهار السكربت
         if (typeof dayjs !== 'undefined') {
             if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime);
             dayjs.locale("ar");
@@ -184,17 +165,35 @@
 
         /** مهلة تسجيل البحث في Firestore. الفلترة تبقى فورية — التأخير للتسجيل فقط. */
         const SEARCH_LOG_DEBOUNCE_MS = 1500;
-        /** أقصى عدد بطاقات مختصرة تُعرض للمطابقة الجزئية. */
-        const MAX_PARTIAL_RESULTS = 5;
-        /** حجم دفعة العرض في المعرض (منع تصيير آلاف العناصر دفعة واحدة). */
+
+        /** نافذة تجميع النقرات لتمييز المزدوج عن الثلاثي. */
+        const MULTI_TAP_WINDOW_MS = 300;
+
+        const MAX_SKU_RESULTS  = 5;   // مطابقات رقم الصنف (حسب المواصفة الأصلية)
+        const MAX_NAME_RESULTS = 15;  // مطابقات الاسم تحتاج مجالاً أوسع
+        const MIN_NAME_QUERY_LENGTH = 2;
+
         const GALLERY_PAGE_SIZE = 60;
+
+        /**
+         * سياسة الإظهار — مركزية في مكان واحد لتغييرها بسطر واحد.
+         * مفتاح "عرض مع الصورة" يُعامَل كـ "وضع العميل": الواجهة تصبح معروضة لطرف خارجي.
+         */
+        const VISIBILITY_RULES = {
+            hideOutOfStockInGallery         : true,   // المعرض واجهة عميل => لا تُعرض الأصناف المنتهية إطلاقاً
+            hideOutOfStockInSearchWithImage : true,   // وضع العميل داخل البحث
+            hideOutOfStockInPlainSearch     : false,  // بحث الموظف يعرض المنتهي مع وسم واضح
+            hideQtyInSearchWithImage        : false,  // اقلبها true لإخفاء الكمية في البحث عند تفعيل الصور
+        };
+
+        /** طبقات عرض بطاقة المعرض. */
+        const CARD_VIEW = { IMAGE: 0, QUANTITY: 1, DETAILS: 2 };
 
         const WAREHOUSES = {
             jeddah: { key: 'jeddah', label: 'مخزون جدة',    name: 'مستودع جدة' },
             riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
         };
 
-        /** الأقسام الافتراضية المولّدة بالمقاطعة (ليست من categories.tsv). */
         const SPECIAL_CATEGORIES = {
             UNCATEGORIZED : 'بقية الأصناف',
             MISSING_IMAGES: 'نواقص الصور',
@@ -202,20 +201,16 @@
 
         const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 
-        // منسّق أرقام وحيد على مستوى الوحدة (بدل إنشاء Intl.NumberFormat لكل بطاقة)
         const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
 
         // ==========================================
         // دوال التطبيع (Mission Critical)
         // ==========================================
 
-        const ARABIC_INDIC_DIGITS  = '٠١٢٣٤٥٦٧٨٩'; // U+0660 - U+0669
+        const ARABIC_INDIC_DIGITS   = '٠١٢٣٤٥٦٧٨٩'; // U+0660 - U+0669
         const EASTERN_ARABIC_DIGITS = '۰۱۲۳۴۵۶۷۸۹'; // U+06F0 - U+06F9 (فارسي/أردو)
 
-        /**
-         * تحويل الأرقام العربية والفارسية إلى أرقام إنجليزية.
-         * [إصلاح] النسخة السابقة كانت تغطي [٠-٩] فقط وتتجاهل النطاق الفارسي [۰-۹] بالكامل.
-         */
+        /** تحويل الأرقام العربية والفارسية إلى إنجليزية. */
         const toEnglishDigits = (str) => {
             if (!str) return '';
             return String(str).replace(/[٠-٩۰-۹]/g, (d) => {
@@ -225,21 +220,34 @@
             });
         };
 
-        // الاسم القديم محفوظ للتوافق مع أي استدعاء قائم
-        const normalizeNumerals = toEnglishDigits;
+        const normalizeNumerals = toEnglishDigits; // اسم قديم محفوظ للتوافق
 
         /**
-         * استخراج "الرقم الصافي" — العمود الفقري للنظام كله.
-         * يُستخدم في: البحث، مطابقة الصور، التصنيفات، والمقاطعة بين الملفات.
-         * أمثلة: AR_13438 -> 13438 | ITEM-00591 -> 591 | ١٣٤٣٨ -> 13438 | ۱۳۴۳۸ -> 13438
-         *
-         * [نقل معماري] رُفعت من داخل App إلى نطاق الوحدة لسببين:
-         *   1) لا يُعاد إنشاؤها في كل Render.
-         *   2) تصبح متاحة داخل parseExcelData لحساب cleanId مرة واحدة عند التحميل.
+         * استخراج "الرقم الصافي" — العمود الفقري للنظام.
+         * AR_13438 -> 13438 | ITEM-00591 -> 591 | ١٣٤٣٨ -> 13438 | ۱۳۴۳۸ -> 13438
          */
         const normalizeCleanId = (str) => {
             if (!str) return "";
-            return toEnglishDigits(str).replace(/\D/g, ""); // الإبقاء على الأرقام فقط
+            return toEnglishDigits(str).replace(/\D/g, "");
+        };
+
+        /**
+         * تطبيع النص العربي للبحث بالاسم.
+         * بدونه: "أواني" لا تطابق "اواني"، و"مقلاة" لا تطابق "مقلاه".
+         */
+        const normalizeText = (str) => {
+            if (!str) return '';
+            return toEnglishDigits(String(str))
+                .toLowerCase()
+                .replace(/[\u064B-\u065F\u0670]/g, '') // التشكيل
+                .replace(/\u0640/g, '')                // التطويل
+                .replace(/[أإآٱ]/g, 'ا')
+                .replace(/[ىئ]/g, 'ي')
+                .replace(/ؤ/g, 'و')
+                .replace(/ة/g, 'ه')
+                .replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ') // الرموز تصبح فواصل
+                .replace(/\s+/g, ' ')
+                .trim();
         };
 
         /** تنظيف الاسم ليصلح كمعرّف مستند في Firestore (الشرطة المائلة تُسقط العملية). */
@@ -252,11 +260,7 @@
         // طبقة تحميل البيانات
         // ==========================================
 
-        /**
-         * جلب نص بأمان.
-         * [إصلاح] fetch().catch() لا يلتقط أخطاء HTTP مثل 404/403 — فقط أخطاء الشبكة.
-         * النسخة السابقة كانت تُمرّر محتوى صفحة الخطأ كأنه بيانات صحيحة.
-         */
+        /** fetch().catch() لا يلتقط أخطاء HTTP مثل 404/403 — فقط أخطاء الشبكة. */
         const fetchText = async (url) => {
             try {
                 const res = await fetch(url);
@@ -279,8 +283,12 @@
             }
         };
 
-        /** محلل بيانات المستودعات (TSV). */
-        const parseExcelData = (rawText) => {
+        /**
+         * محلل بيانات المستودعات (TSV).
+         * warehouseKey يُحقن في كل صنف => الفصل بين جدة والرياض يصبح بنيوياً لا بصرياً:
+         * أي صنف يحمل هويّة مستودعه معه أينما ذهب في التطبيق.
+         */
+        const parseExcelData = (rawText, warehouseKey) => {
             if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
 
             const lines = rawText.trim().split('\n');
@@ -293,10 +301,8 @@
             const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
             const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
-            // [إصلاح] بدون عمود المعرّف كان idIdx = -1 و cols[-1] = undefined
-            // => كل الصفوف تُتخطى بصمت وتظهر قاعدة بيانات فارغة بلا سبب واضح.
             if (idIdx === -1) {
-                console.error('[Parser] لم يُعثر على عمود رقم الصنف في الترويسة:', headers);
+                console.error(`[Parser:${warehouseKey}] لم يُعثر على عمود رقم الصنف في الترويسة:`, headers);
                 return [];
             }
 
@@ -310,20 +316,21 @@
                 const searchId = toEnglishDigits(rawId).toLowerCase();
                 if (!searchId) continue;
 
-                const name    = nameIdx !== -1 && cols[nameIdx] ? cols[nameIdx].trim() : '';
-                const rawQty  = toEnglishDigits(qtyIdx !== -1 ? (cols[qtyIdx] || '0') : '0').replace(/,/g, '');
-                const qty     = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
-                const unit    = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
-                const pack    = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
+                const name = nameIdx !== -1 && cols[nameIdx] ? cols[nameIdx].trim() : '';
+                const rawQty = toEnglishDigits(qtyIdx !== -1 ? (cols[qtyIdx] || '0') : '0').replace(/,/g, '');
+                const qty  = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
+                const unit = unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '';
+                const pack = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
 
-                // Overwrites if duplicate, keeping the last valid row per instructions
                 dataMap[searchId] = {
+                    // معرّف فريد عالمياً: يمنع أي تصادم في مفاتيح React لو عُرض المستودعان معاً مستقبلاً
+                    uid: `${warehouseKey}:${searchId}`,
+                    warehouseKey,
                     id: rawId,
-                    searchId: searchId,
-                    // [تحسين أداء] الرقم الصافي يُحسب مرة واحدة هنا بدل حسابه
-                    // لكل صنف في كل ضغطة مفتاح داخل حلقات الفلترة.
-                    cleanId: normalizeCleanId(rawId),
+                    searchId,
+                    cleanId: normalizeCleanId(rawId),   // محسوب مرة واحدة عند التحميل
                     name,
+                    searchName: normalizeText(name),    // مُطبَّع مسبقاً للبحث بالاسم
                     qty,
                     unit,
                     pack
@@ -333,17 +340,35 @@
         };
 
         /**
-         * بناء خريطة الصور: الرقم الصافي -> اسم الملف الحقيقي.
-         * [إصلاح] النسخة السابقة كانت تُخزّن الأرقام فقط ثم تُعيد تركيب الاسم بافتراض ".webp"،
-         * فأي صورة بامتداد آخر (jpg/png) كانت تُنتج 404 — وهو بالضبط ما وُجد images_list.txt لمنعه.
-         * Map يوفّر نفس واجهة .has() الخاصة بـ Set، لذا كل الشروط القائمة تعمل دون تعديل.
+         * كاشف تصادم الأرقام الصافية.
+         * لأن normalizeCleanId تحذف الحروف، فإن "AR_100" و"100" في نفس الملف
+         * يُنتجان الرقم الصافي 100 => صنفان مختلفان يتقاسمان الصورة والتصنيف نفسه.
+         * هذا لا يُعالَج برمجياً (البيانات مصدر الحقيقة) لكنه يجب أن يكون مرئياً لك.
          */
+        const reportCleanIdCollisions = (items, warehouseKey) => {
+            const byClean = new Map();
+            items.forEach(it => {
+                if (!it.cleanId) return;
+                if (!byClean.has(it.cleanId)) byClean.set(it.cleanId, []);
+                byClean.get(it.cleanId).push(it.id);
+            });
+            const collisions = [];
+            byClean.forEach((ids, clean) => { if (ids.length > 1) collisions.push({ clean, ids }); });
+            if (collisions.length) {
+                console.warn(
+                    `[Integrity:${warehouseKey}] ${collisions.length} تصادم في الأرقام الصافية — ` +
+                    `أصناف مختلفة ستتقاسم نفس الصورة والتصنيف:`, collisions
+                );
+            }
+            return collisions.length;
+        };
+
+        /** خريطة الصور: الرقم الصافي -> اسم الملف الحقيقي (يدعم أي امتداد). */
         const buildImagesMap = (imagesText) => {
             const imgMap = new Map();
             imagesText.split('\n').forEach((line) => {
                 const fileName = line.trim();
                 if (!fileName) return;
-                // إزالة الامتداد الأخير فقط (أدق من split('.')[0] مع أسماء مثل 13438.v2.webp)
                 const cleanName = normalizeCleanId(fileName.replace(/\.[^.]+$/, ''));
                 if (cleanName && !imgMap.has(cleanName)) imgMap.set(cleanName, fileName);
             });
@@ -352,8 +377,7 @@
 
         /**
          * تحليل categories.tsv — كل عمود قسم، والصفوف تحته أرقام أصناف.
-         * [إصلاح حرج] أي عمود بترويسة فارغة (Tab زائد في نهاية الصف — شائع جداً)
-         * كان يجعل catObj[headers[j]] غير معرّف ثم .push() عليه => TypeError يُسقط التطبيق.
+         * الحارس على الترويسة الفارغة يمنع TypeError كان يُسقط التطبيق بالكامل.
          */
         const parseCategories = (categoriesText) => {
             const catObj = {};
@@ -368,7 +392,7 @@
             for (let i = 1; i < rows.length; i++) {
                 for (let j = 0; j < headers.length; j++) {
                     const header = headers[j];
-                    if (!header || !catObj[header]) continue; // الحارس الذي كان مفقوداً
+                    if (!header || !catObj[header]) continue;
                     const cell = rows[i][j];
                     if (!cell) continue;
                     const cleanId = normalizeCleanId(cell);
@@ -376,6 +400,62 @@
                 }
             }
             return catObj;
+        };
+
+        // ==========================================
+        // محرك البحث (رقم الصنف + الاسم)
+        // ==========================================
+
+        /**
+         * البحث الموحّد. لا يُجبر المستخدم على اختيار نمط:
+         *   rank 0 = مطابقة تامة لرقم الصنف
+         *   rank 1 = بادئة رقم الصنف
+         *   rank 2 = الاسم يبدأ بالكلمة الأولى
+         *   rank 3 = الاسم يحتوي كل الكلمات
+         * ثم تُقص نتائج الرقم عند 5 (حسب المواصفة) ونتائج الاسم عند 15.
+         */
+        const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
+            const cleanQuery = normalizeCleanId(rawQuery);
+            const textQuery  = normalizeText(rawQuery);
+            const nameTokens = textQuery.length >= MIN_NAME_QUERY_LENGTH
+                ? textQuery.split(' ').filter(Boolean)
+                : [];
+
+            if (!cleanQuery && nameTokens.length === 0) {
+                return { visible: [], total: 0, exact: null };
+            }
+
+            const ranked = [];
+            for (let i = 0; i < activeDb.length; i++) {
+                const item = activeDb[i];
+                if (hideOutOfStock && item.qty <= 0) continue;
+
+                let rank = -1;
+                if (cleanQuery && item.cleanId.startsWith(cleanQuery)) {
+                    rank = item.cleanId === cleanQuery ? 0 : 1;
+                } else if (nameTokens.length && item.searchName) {
+                    let all = true;
+                    for (let t = 0; t < nameTokens.length; t++) {
+                        if (!item.searchName.includes(nameTokens[t])) { all = false; break; }
+                    }
+                    if (all) rank = item.searchName.startsWith(nameTokens[0]) ? 2 : 3;
+                }
+
+                if (rank !== -1) ranked.push({ item, rank });
+            }
+
+            ranked.sort((a, b) => a.rank - b.rank);
+
+            const skuHits  = [];
+            const nameHits = [];
+            for (let i = 0; i < ranked.length; i++) {
+                const r = ranked[i];
+                if (r.rank <= 1) { if (skuHits.length  < MAX_SKU_RESULTS)  skuHits.push(r.item); }
+                else             { if (nameHits.length < MAX_NAME_RESULTS) nameHits.push(r.item); }
+            }
+
+            const exact = ranked.length && ranked[0].rank === 0 ? ranked[0].item : null;
+            return { visible: skuHits.concat(nameHits), total: ranked.length, exact };
         };
 
         // ==========================================
@@ -388,22 +468,16 @@
             </svg>
         );
 
-        const FormatQuantity = ({ qty, unit }) => {
-            const formattedQty = NUMBER_FORMATTER.format(qty);
-            return (
-                <div className="flex flex-col">
-                    <div className="flex items-baseline gap-4">
-                        <span className="text-[24px] md:text-[28px] font-bold text-primary leading-none">{formattedQty}</span>
-                        {unit && <span className="text-[14px] text-secondary">{unit}</span>}
-                    </div>
-                    {qty === 0 && (
-                        <span className="text-[14px] text-secondary mt-4">نفدت الكمية حالياً</span>
-                    )}
+        const FormatQuantity = ({ qty, unit }) => (
+            <div className="flex flex-col">
+                <div className="flex items-baseline gap-4">
+                    <span className="text-[24px] md:text-[28px] font-bold text-primary leading-none">{NUMBER_FORMATTER.format(qty)}</span>
+                    {unit && <span className="text-[14px] text-secondary">{unit}</span>}
                 </div>
-            );
-        };
+                {qty === 0 && <span className="text-[14px] text-secondary mt-4">نفدت الكمية حالياً</span>}
+            </div>
+        );
 
-        /** صورة صنف مع إخفاء تلقائي عند فشل التحميل (شبكة ضعيفة / ملف تالف). */
         const ProductImage = ({ fileName, alt, className }) => {
             if (!fileName) return null;
             return (
@@ -412,23 +486,20 @@
                     alt={alt}
                     loading="lazy"
                     decoding="async"
+                    draggable="false"
                     className={className}
                     onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                 />
             );
         };
 
-        // Full Detailed Card (Exact Match)
-        const FullResultCard = memo(({ item, warehouseName, showImage = false, imageFileName = '' }) => (
+        // ---- بطاقة البحث التفصيلية (مطابقة تامة) ----
+        const FullResultCard = memo(({ item, warehouseName, showImage = false, imageFileName = '', hideQty = false }) => (
             <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 md:p-24 bg-bg flex flex-col gap-16">
 
                 {showImage && imageFileName && (
                     <div className="w-full flex justify-center border-b border-border pb-16">
-                        <ProductImage
-                            fileName={imageFileName}
-                            alt={item.name || item.id}
-                            className="w-full max-w-[240px] aspect-square object-contain rounded-12"
-                        />
+                        <ProductImage fileName={imageFileName} alt={item.name || item.id} className="w-full max-w-[240px] aspect-square object-contain rounded-12" />
                     </div>
                 )}
 
@@ -450,79 +521,142 @@
                 <div className="grid grid-cols-2 gap-16 border-t border-border pt-16">
                     <div>
                         <div className="text-[14px] font-medium text-secondary mb-4">الوحدة</div>
-                        <div className="text-[16px] font-bold text-primary">
-                            {item.unit || "---"}
-                        </div>
+                        <div className="text-[16px] font-bold text-primary">{item.unit || "---"}</div>
                     </div>
-
                     <div>
                         <div className="text-[14px] font-medium text-secondary mb-4">الشد</div>
-                        <div className="text-[16px] font-bold text-primary">
-                            {item.pack || "---"}
-                        </div>
+                        <div className="text-[16px] font-bold text-primary">{item.pack || "---"}</div>
                     </div>
                 </div>
 
-                <div className="border-t border-border pt-16">
-                    <div className="text-[14px] font-medium text-secondary mb-4">
-                        الكمية المتوفرة
+                {!hideQty && (
+                    <div className="border-t border-border pt-16">
+                        <div className="text-[14px] font-medium text-secondary mb-4">الكمية المتوفرة</div>
+                        <FormatQuantity qty={item.qty} unit={item.unit} />
                     </div>
-                    <FormatQuantity qty={item.qty} unit={item.unit} />
-                </div>
+                )}
 
             </div>
         ));
 
-        // Compact Card (Partial Match - max 5)
-        // [إصلاح] كانت App تمرّر showImage/imageCleanId لمكوّن لا يستقبلهما ولا يعرض أي صورة،
-        // أي أن مفتاح "عرض مع الصورة" كان معطلاً بالكامل وبصمت.
-        const CompactResultCard = memo(({ item, showImage = false, imageFileName = '' }) => (
+        // ---- بطاقة البحث المختصرة (مطابقة جزئية) ----
+        const CompactResultCard = memo(({ item, showImage = false, imageFileName = '', hideQty = false }) => (
             <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-16 bg-bg flex justify-between items-center gap-16 mb-8 hover:bg-hoverBg transition-colors duration-200">
                 <div className="flex items-center gap-16 overflow-hidden">
                     {showImage && imageFileName && (
-                        <ProductImage
-                            fileName={imageFileName}
-                            alt={item.name || item.id}
-                            className="w-56 h-56 flex-shrink-0 object-contain rounded-12 border border-border bg-bg"
-                        />
+                        <ProductImage fileName={imageFileName} alt={item.name || item.id} className="w-56 h-56 flex-shrink-0 object-contain rounded-12 border border-border bg-bg" />
                     )}
                     <div className="flex flex-col overflow-hidden">
                         <span className="text-[16px] font-bold text-primary truncate">{item.id}</span>
                         <span className="text-[14px] text-secondary truncate">{item.name || '---'}</span>
                     </div>
                 </div>
-                <div className="flex-shrink-0 text-left">
-                    <FormatQuantity qty={item.qty} unit={item.unit} />
-                </div>
+                {!hideQty && (
+                    <div className="flex-shrink-0 text-left">
+                        <FormatQuantity qty={item.qty} unit={item.unit} />
+                    </div>
+                )}
             </div>
         ));
 
-        /** بطاقة المعرض. memo يمنع إعادة تصيير الشبكة كاملة عند تغيير حالة غير مرتبطة. */
-        const GalleryCard = memo(({ item, imageFileName, showImage, isGrid }) => (
-            <div className="border border-border rounded-12 p-16 bg-white flex flex-col items-center text-center">
-                {showImage && (
-                    <ProductImage
-                        fileName={imageFileName}
-                        alt={item.name || item.searchId}
-                        className={`object-contain mb-16 rounded-8 ${isGrid ? 'w-full aspect-square' : 'w-full max-w-[400px] h-auto'}`}
-                    />
-                )}
-                <div className="text-[16px] font-bold text-primary">{item.id}</div>
-                <div className="text-[14px] text-secondary">{item.name || '---'}</div>
-                {/* [إصلاح] الحقل الصحيح هو qty — الكود السابق كان يقرأ item.quantity غير الموجود
-                    فتظهر "الكمية: undefined" لكل صنف في المعرض. */}
-                <div className={`text-[14px] font-medium mt-8 px-12 py-4 rounded-full ${item.qty > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'}`}>
-                    الكمية: {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
+        // ---- بطاقة المعرض ثلاثية الطبقات ----
+        /**
+         * الطبقات:
+         *   IMAGE    (افتراضي)  — صورة + رقم + اسم. لا شيء يكشف الكمية للعميل.
+         *   QUANTITY (نقرتان)   — تُضاف شارة الكمية. نقرتان مجدداً تُعيدها للصورة.
+         *   DETAILS  (3 نقرات)  — بطاقة تفاصيل كاملة. نقرتان تُعيدان للصورة.
+         * لوحة المفاتيح: Enter/مسافة تتنقل بين الطبقات الثلاث بالترتيب.
+         */
+        const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, warehouseName }) => {
+            const isDetails  = view === CARD_VIEW.DETAILS;
+            const isQuantity = view === CARD_VIEW.QUANTITY;
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onCycle(item.uid);
+                }
+            };
+
+            return (
+                <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${item.name || item.id} — نقرتان لعرض الكمية، ثلاث نقرات لبطاقة التفاصيل`}
+                    title="نقرتان: الكمية · ثلاث نقرات: بطاقة التفاصيل"
+                    onClick={() => onTap(item.uid)}
+                    onKeyDown={handleKeyDown}
+                    className={`tap-card cursor-pointer border rounded-12 p-16 bg-white flex flex-col items-center text-center transition-colors duration-200 ${isDetails ? 'border-primary' : 'border-border hover:bg-gray-50'}`}
+                >
+                    {isDetails ? (
+                        // ---------- الطبقة الثالثة: بطاقة التفاصيل ----------
+                        <div className="animate-flip w-full text-right flex flex-col gap-8">
+                            <div className="flex justify-between items-center border-b border-border pb-8 mb-4">
+                                <span className="text-[13px] font-medium text-secondary">بطاقة المنتج</span>
+                                <span className="text-[12px] text-secondary">نقرتان للعودة</span>
+                            </div>
+
+                            <div>
+                                <div className="text-[12px] text-secondary">رقم الصنف</div>
+                                <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
+                            </div>
+
+                            <div>
+                                <div className="text-[12px] text-secondary">اسم الصنف</div>
+                                <div className="text-[14px] text-primary break-words">{item.name || '---'}</div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-8 border-t border-border pt-8">
+                                <div>
+                                    <div className="text-[12px] text-secondary">الوحدة</div>
+                                    <div className="text-[14px] font-bold text-primary">{item.unit || '---'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[12px] text-secondary">الشد</div>
+                                    <div className="text-[14px] font-bold text-primary">{item.pack || '---'}</div>
+                                </div>
+                            </div>
+
+                            <div className="border-t border-border pt-8">
+                                <div className="text-[12px] text-secondary">المستودع</div>
+                                <div className="text-[14px] text-primary">{warehouseName}</div>
+                            </div>
+
+                            <div className="border-t border-border pt-8">
+                                <div className="text-[12px] text-secondary mb-4">الكمية المتوفرة</div>
+                                <FormatQuantity qty={item.qty} unit={item.unit} />
+                            </div>
+                        </div>
+                    ) : (
+                        // ---------- الطبقة الأولى/الثانية: الصورة (+ الكمية) ----------
+                        <React.Fragment>
+                            {showImage && (
+                                <ProductImage
+                                    fileName={imageFileName}
+                                    alt={item.name || item.searchId}
+                                    className={`object-contain mb-16 rounded-8 pointer-events-none ${isGrid ? 'w-full aspect-square' : 'w-full max-w-[400px] h-auto'}`}
+                                />
+                            )}
+                            <div className="text-[16px] font-bold text-primary break-words">{item.id}</div>
+                            <div className="text-[14px] text-secondary break-words">{item.name || '---'}</div>
+
+                            {isQuantity && (
+                                <div className="animate-flip text-[14px] font-medium mt-8 px-12 py-4 rounded-full text-green-700 bg-green-50">
+                                    الكمية: {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
+                                </div>
+                            )}
+                        </React.Fragment>
+                    )}
                 </div>
-            </div>
-        ));
+            );
+        });
 
         const NotFoundState = () => (
             <div className="animate-card w-full max-w-[480px] mx-auto border border-border rounded-12 shadow-card p-24 bg-bg flex flex-col items-center justify-center text-center gap-16">
                 <SearchIcon className="w-48 h-48 text-border" />
                 <div>
                     <h3 className="text-[16px] font-medium text-primary mb-8">لم يتم العثور على الصنف</h3>
-                    <p className="text-[15px] text-secondary">لا يوجد هذا الصنف داخل المستودع المحدد.</p>
+                    <p className="text-[15px] text-secondary">لا يوجد صنف بهذا الرقم أو الاسم داخل المستودع المحدد.</p>
                 </div>
             </div>
         );
@@ -530,7 +664,7 @@
         const EmptyState = () => (
             <div className="w-full flex flex-col items-center justify-center py-48 text-center gap-16 opacity-70">
                 <SearchIcon className="w-40 h-40 text-secondary" />
-                <p className="text-[16px] text-secondary">ابدأ الكتابة لعرض بيانات الصنف</p>
+                <p className="text-[16px] text-secondary">اكتب رقم الصنف أو اسمه لبدء البحث</p>
             </div>
         );
 
@@ -541,15 +675,13 @@
                 </svg>
                 <div>
                     <h3 className="text-[16px] font-medium text-primary mb-8">قاعدة البيانات فارغة</h3>
-                    {/* [تحديث نص] الرسالة القديمة كانت تطلب لصق بيانات إكسل في الكود المصدري،
-                        وهذا لم يعد صحيحاً بعد الانتقال لملفات TSV الثابتة. */}
                     <p className="text-[15px] text-secondary">تعذر تحميل ملفات المخزون من مجلد data. تحقق من وجود jeddah.tsv و riyadh.tsv ومن صحة ترويسة الأعمدة.</p>
                 </div>
             </div>
         );
 
         // ==========================================
-        // 1. مكون شاشة تسجيل الدخول
+        // 1. شاشة تسجيل الدخول
         // ==========================================
         const LoginScreen = ({ onLogin }) => {
             const [name, setName] = useState('');
@@ -565,8 +697,6 @@
                 setNotice('');
 
                 try {
-                    // [إصلاح] الاسم كان يُستخدم كمعرّف مستند مباشرةً؛
-                    // أي اسم يحتوي "/" كان يُطلق استثناءً ويمنع الدخول نهائياً.
                     const userRef = db.collection('users').doc(toSafeDocId(trimmedName));
                     const doc = await userRef.get();
 
@@ -576,10 +706,7 @@
                     };
 
                     if (doc.exists) {
-                        await userRef.update({
-                            ...userInfo,
-                            loginCount: firebase.firestore.FieldValue.increment(1)
-                        });
+                        await userRef.update({ ...userInfo, loginCount: firebase.firestore.FieldValue.increment(1) });
                     } else {
                         await userRef.set({
                             name: trimmedName,
@@ -596,8 +723,8 @@
                     });
 
                 } catch (error) {
-                    // [قرار توفّر] التسجيل في Firestore وظيفة تحليلية، والبحث في المخزون وظيفة أساسية.
-                    // النسخة السابقة كانت تمنع الموظف من الدخول كلياً عند تعثر الشبكة داخل المستودع.
+                    // التسجيل وظيفة تحليلية؛ البحث في المخزون وظيفة أساسية.
+                    // لا يجوز أن يمنع تعثر الشبكة داخل المستودع الموظفَ من العمل.
                     console.error("Error logging in: ", error);
                     setNotice('تعذر الاتصال بسجل الدخول، وتم الدخول للنظام بشكل طبيعي.');
                 }
@@ -615,9 +742,7 @@
 
                         <form onSubmit={handleSubmit} className="flex flex-col gap-16">
                             <div className="text-right">
-                                <label htmlFor="employeeName" className="text-[14px] font-medium text-primary mb-8 block font-cairo">
-                                    الإسم الكريم
-                                </label>
+                                <label htmlFor="employeeName" className="text-[14px] font-medium text-primary mb-8 block font-cairo">الإسم الكريم</label>
                                 <input
                                     id="employeeName"
                                     type="text"
@@ -630,9 +755,7 @@
                                 />
                             </div>
 
-                            {notice && (
-                                <p className="text-[13px] text-secondary text-right">{notice}</p>
-                            )}
+                            {notice && <p className="text-[13px] text-secondary text-right">{notice}</p>}
 
                             <button
                                 type="submit"
@@ -648,43 +771,34 @@
         };
 
         // ==========================================
-        // 2. التطبيق الأساسي (نظام المخزون والمعرض)
+        // 2. التطبيق الأساسي
         // ==========================================
         const App = () => {
-            const [userName, setUserName] = useState(localStorage.getItem('inventory_user_name') || '');
+            const [userName] = useState(localStorage.getItem('inventory_user_name') || '');
+            const [sessionName, setSessionName] = useState(userName);
 
-            // حالات البحث والمستودع
             const [warehouse, setWarehouse] = useState(null);
             const [query, setQuery] = useState('');
-            const [showImageInSearch, setShowImageInSearch] = useState(false); // مفتاح عرض الصورة في البحث
+            const [showImageInSearch, setShowImageInSearch] = useState(false); // = وضع العميل
 
-            // حالات البيانات
             const [databases, setDatabases] = useState({ jeddah: [], riyadh: [] });
-            const [imagesList, setImagesList] = useState(new Map()); // cleanId -> اسم الملف الحقيقي
+            const [imagesList, setImagesList] = useState(new Map());
             const [categories, setCategories] = useState({});
 
-            // حالات المعرض (Gallery)
             const [activeCategory, setActiveCategory] = useState(null);
-            const [galleryView, setGalleryView] = useState('grid'); // 'grid' أو 'list'
+            const [galleryView, setGalleryView] = useState('grid');
             const [visibleCount, setVisibleCount] = useState(GALLERY_PAGE_SIZE);
+            const [cardViews, setCardViews] = useState({}); // uid -> CARD_VIEW
 
             const [loading, setLoading] = useState(true);
             const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
 
-            const searchInputRef = useRef(null);
-            const lastLoggedSearch = useRef(''); // منع تكرار تسجيل نفس عملية البحث
-
-            const handleLogout = useCallback(() => {
-                localStorage.removeItem('inventory_user_name');
-                setUserName('');
-                setWarehouse(null);
-                setQuery('');
-                setActiveCategory(null);
-            }, []);
+            const searchInputRef  = useRef(null);
+            const lastLoggedSearch = useRef('');
+            const tapStateRef      = useRef({ uid: null, count: 0, timer: null });
 
             // ------------------------------------------
-            // تحميل كافة البيانات دفعة واحدة (المستودعات، التصنيفات، الصور، الإصدار)
-            // [توحيد] version.json كان يُجلب في useEffect منفصل خارج Promise.all.
+            // تحميل كافة البيانات دفعة واحدة
             // ------------------------------------------
             useEffect(() => {
                 let isMounted = true;
@@ -701,19 +815,19 @@
 
                         if (!isMounted) return;
 
-                        setDatabases({
-                            jeddah: parseExcelData(jeddahText),
-                            riyadh: parseExcelData(riyadhText)
-                        });
+                        const jeddah = parseExcelData(jeddahText, WAREHOUSES.jeddah.key);
+                        const riyadh = parseExcelData(riyadhText, WAREHOUSES.riyadh.key);
+
+                        // فحص سلامة لكل مستودع على حدة — لا يُخلط بينهما إطلاقاً
+                        reportCleanIdCollisions(jeddah, WAREHOUSES.jeddah.key);
+                        reportCleanIdCollisions(riyadh, WAREHOUSES.riyadh.key);
+
+                        setDatabases({ jeddah, riyadh });
                         setImagesList(buildImagesMap(imagesText));
                         setCategories(parseCategories(categoriesText));
 
                         if (versionData && versionData.lastUpdate) {
-                            setLastUpdate(
-                                typeof dayjs !== 'undefined'
-                                    ? dayjs(versionData.lastUpdate).fromNow()
-                                    : versionData.lastUpdate
-                            );
+                            setLastUpdate(typeof dayjs !== 'undefined' ? dayjs(versionData.lastUpdate).fromNow() : versionData.lastUpdate);
                         } else {
                             setLastUpdate("غير متوفر");
                         }
@@ -726,8 +840,12 @@
                 };
 
                 loadAllData();
-                // [تحصين] حارس ضد تحديث حالة مكوّن مُفكَّك (StrictMode / خروج مبكر)
                 return () => { isMounted = false; };
+            }, []);
+
+            // تنظيف مؤقّت النقرات عند تفكيك المكوّن
+            useEffect(() => () => {
+                if (tapStateRef.current.timer) clearTimeout(tapStateRef.current.timer);
             }, []);
 
             const isDbEmpty = useMemo(
@@ -739,95 +857,123 @@
                 if (warehouse && searchInputRef.current) searchInputRef.current.focus();
             }, [warehouse]);
 
-            // إعادة ضبط دفعة العرض عند تغيير القسم أو المستودع
+            // إعادة ضبط العرض التدريجي وطبقات البطاقات عند تغيير القسم أو المستودع
             useEffect(() => {
                 setVisibleCount(GALLERY_PAGE_SIZE);
+                setCardViews({});
             }, [activeCategory, warehouse]);
 
             // ------------------------------------------
-            // فلترة نتائج البحث (فورية — بدون أي تأخير)
+            // آلة حالة النقر المتعدد
             // ------------------------------------------
-            const normalizedQuery = useMemo(() => normalizeCleanId(query), [query]);
+            const applyTaps = useCallback((uid, taps) => {
+                setCardViews(prev => {
+                    const current = prev[uid] || CARD_VIEW.IMAGE;
+                    let next = current;
+                    if (taps >= 3)      next = CARD_VIEW.DETAILS;
+                    else if (taps === 2) next = (current === CARD_VIEW.IMAGE) ? CARD_VIEW.QUANTITY : CARD_VIEW.IMAGE;
+                    if (next === current) return prev;
+                    return { ...prev, [uid]: next };
+                });
+            }, []);
 
-            const searchResults = useMemo(() => {
+            const handleCardTap = useCallback((uid) => {
+                const s = tapStateRef.current;
+                if (s.uid !== uid) { // نقرة على بطاقة أخرى => إعادة العد من الصفر
+                    if (s.timer) clearTimeout(s.timer);
+                    s.uid = uid;
+                    s.count = 0;
+                }
+                s.count += 1;
+                if (s.timer) clearTimeout(s.timer);
+                s.timer = setTimeout(() => {
+                    const taps = s.count;
+                    s.count = 0; s.uid = null; s.timer = null;
+                    applyTaps(uid, taps);
+                }, MULTI_TAP_WINDOW_MS);
+            }, [applyTaps]);
+
+            /** مسار لوحة المفاتيح: صورة -> كمية -> تفاصيل -> صورة */
+            const handleCardCycle = useCallback((uid) => {
+                setCardViews(prev => {
+                    const current = prev[uid] || CARD_VIEW.IMAGE;
+                    const next = current === CARD_VIEW.IMAGE ? CARD_VIEW.QUANTITY
+                               : current === CARD_VIEW.QUANTITY ? CARD_VIEW.DETAILS
+                               : CARD_VIEW.IMAGE;
+                    return { ...prev, [uid]: next };
+                });
+            }, []);
+
+            // ------------------------------------------
+            // البحث (فوري — الرقم والاسم معاً)
+            // ------------------------------------------
+            const hideOutOfStockInSearch = showImageInSearch
+                ? VISIBILITY_RULES.hideOutOfStockInSearchWithImage
+                : VISIBILITY_RULES.hideOutOfStockInPlainSearch;
+
+            const hideQtyInSearch = showImageInSearch && VISIBILITY_RULES.hideQtyInSearchWithImage;
+
+            const search = useMemo(() => {
                 if (!warehouse || !query.trim()) return null;
-                // [إصلاح] استعلام بحروف فقط كان يُنتج "" ثم startsWith("") = true
-                // => التطبيق يعرض كامل قاعدة البيانات بدل رسالة "غير موجود".
-                if (!normalizedQuery) return [];
-
-                const activeDb = databases[warehouse] || [];
-                // [تحسين أداء] cleanId محسوب مسبقاً عند التحميل — لا regex داخل الحلقة.
-                // كما أن الفرعين في النسخة السابقة كانا متطابقين منطقياً (فرع ميت).
-                return activeDb.filter(item => item.cleanId.startsWith(normalizedQuery));
-            }, [normalizedQuery, query, warehouse, databases]);
-
-            /** المطابقة التامة تستحق البطاقة التفصيلية (الوحدة/الشد/الكمية). */
-            const exactMatch = useMemo(() => {
-                if (!searchResults || searchResults.length === 0 || !normalizedQuery) return null;
-                return searchResults.find(item => item.cleanId === normalizedQuery) || null;
-            }, [searchResults, normalizedQuery]);
+                // databases[warehouse] فقط — لا يمكن بنيوياً أن تتسرب أصناف المستودع الآخر
+                return runSearch(databases[warehouse] || [], query, hideOutOfStockInSearch);
+            }, [query, warehouse, databases, hideOutOfStockInSearch]);
 
             // ------------------------------------------
-            // تسجيل عمليات البحث الناجحة في Firestore بعد 1.5 ثانية من التوقف عن الكتابة
-            // [ملاحظة هندسية] الـ Debounce مطبّق على التسجيل فقط وليس على الفلترة،
-            // حفاظاً على "الفلترة الفورية" التي هي أكبر نقاط قوة التطبيق.
+            // تسجيل عمليات البحث الناجحة بعد 1.5 ثانية من التوقف عن الكتابة
+            // (الـ Debounce على التسجيل فقط — الفلترة تبقى فورية)
             // ------------------------------------------
             useEffect(() => {
-                if (!warehouse || !normalizedQuery) return;
-                if (!searchResults || searchResults.length === 0) return; // الناجحة فقط
+                if (!warehouse || !search || search.total === 0) return;
 
-                const logKey = `${warehouse}:${normalizedQuery}`;
+                const logKey = `${warehouse}:${normalizeText(query)}`;
                 if (lastLoggedSearch.current === logKey) return;
 
                 const timer = setTimeout(() => {
                     lastLoggedSearch.current = logKey;
                     db.collection('search_logs').add({
-                        name: userName,
-                        warehouse: warehouse,
+                        name: sessionName,
+                        warehouse,
                         rawQuery: query.trim(),
-                        cleanQuery: normalizedQuery,
-                        resultsCount: searchResults.length,
-                        exactMatch: Boolean(exactMatch),
+                        cleanQuery: normalizeCleanId(query),
+                        resultsCount: search.total,
+                        exactMatch: Boolean(search.exact),
                         time: firebase.firestore.FieldValue.serverTimestamp(),
                     }).catch(err => console.warn('[Log] تعذر تسجيل عملية البحث:', err.message));
                 }, SEARCH_LOG_DEBOUNCE_MS);
 
                 return () => clearTimeout(timer);
-            }, [normalizedQuery, warehouse, searchResults, exactMatch, userName, query]);
+            }, [search, warehouse, query, sessionName]);
 
             // ------------------------------------------
-            // فلترة بيانات المعرض بناءً على القسم المختار
+            // المعرض الرقمي (واجهة عميل)
             // ------------------------------------------
-            const allCategorizedIds = useMemo(
-                () => new Set(Object.values(categories).flat()),
-                [categories]
-            );
+            const allCategorizedIds = useMemo(() => new Set(Object.values(categories).flat()), [categories]);
 
             const galleryResults = useMemo(() => {
                 if (!activeCategory || !warehouse) return [];
-                const activeDb = databases[warehouse] || [];
+
+                // نبدأ دائماً من أصناف المستودع المختار حصراً.
+                // نتيجة ذلك: أي صورة في images_list لا يقابلها صنف في هذا المستودع
+                // لا تظهر إطلاقاً — وهو المطلوب (غالباً صنف نفد أو أُلغي).
+                let pool = databases[warehouse] || [];
+
+                if (VISIBILITY_RULES.hideOutOfStockInGallery) {
+                    pool = pool.filter(item => item.qty > 0);
+                }
 
                 if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) {
-                    // منتجات متوفرة بالمستودع ولكن ليس لها صورة
-                    return activeDb.filter(item => !imagesList.has(item.cleanId));
+                    return pool.filter(item => !imagesList.has(item.cleanId));
                 }
 
                 if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) {
-                    // منتجات لها صورة، ومتوفرة، ولكن غير مصنفة في أي قسم
-                    return activeDb.filter(item =>
-                        imagesList.has(item.cleanId) && !allCategorizedIds.has(item.cleanId)
-                    );
+                    return pool.filter(item => imagesList.has(item.cleanId) && !allCategorizedIds.has(item.cleanId));
                 }
 
-                // عرض منتجات القسم المختار (بشرط توفرها بالمستودع ووجود صورة لها)
                 const categoryIds = new Set(categories[activeCategory] || []);
-                return activeDb.filter(item =>
-                    categoryIds.has(item.cleanId) && imagesList.has(item.cleanId)
-                );
+                return pool.filter(item => categoryIds.has(item.cleanId) && imagesList.has(item.cleanId));
             }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds]);
 
-            // [تحسين أداء] عرض تدريجي — قسم "نواقص الصور" قد يحوي آلاف الأصناف،
-            // وتصييرها دفعة واحدة كان يُجمّد الواجهة على أجهزة المستودع.
             const visibleGalleryItems = useMemo(
                 () => galleryResults.slice(0, visibleCount),
                 [galleryResults, visibleCount]
@@ -839,7 +985,7 @@
             // ------------------------------------------
             // التصيير
             // ------------------------------------------
-            if (!userName) return <LoginScreen onLogin={(name) => setUserName(name)} />;
+            if (!sessionName) return <LoginScreen onLogin={(name) => setSessionName(name)} />;
 
             if (loading) {
                 return (
@@ -854,17 +1000,8 @@
 
                     {/* Header */}
                     <header className="text-center mb-32 flex flex-col items-center gap-8">
-                        <div className="flex items-center gap-8 mb-8">
-                            <div className="bg-gray-50 border border-border px-16 py-8 rounded-full">
-                                <span className="text-[13px] font-medium text-secondary">الاسم الكريم: {userName}</span>
-                            </div>
-                            {/* [استعادة] handleLogout كانت معرّفة بلا أي زر يستدعيها */}
-                            <button
-                                onClick={handleLogout}
-                                className="text-[13px] text-secondary hover:text-primary underline underline-offset-4 transition-colors"
-                            >
-                                خروج
-                            </button>
+                        <div className="bg-gray-50 border border-border px-16 py-8 rounded-full mb-8">
+                            <span className="text-[13px] font-medium text-secondary">الاسم الكريم: {sessionName}</span>
                         </div>
                         <h1 className="text-[28px] md:text-[32px] font-bold text-primary m-0 leading-tight">
                             مخزون شركة بيت الأواني الطيبة
@@ -875,14 +1012,13 @@
                         <p className="text-[13px] text-secondary">آخر تحديث للمخزون: {lastUpdate}</p>
                     </header>
 
-                    {/* تحذير فشل تحميل قاعدة البيانات */}
                     {isDbEmpty && (
                         <div className="mb-32">
                             <DatabaseEmptyWarning />
                         </div>
                     )}
 
-                    {/* اختيار المستودع الأساسي */}
+                    {/* اختيار المستودع */}
                     <div className="flex justify-center gap-16 mb-32" role="group" aria-label="اختيار المستودع">
                         {Object.values(WAREHOUSES).map(wh => (
                             <button
@@ -897,16 +1033,12 @@
                     </div>
 
                     {/* ================= منطقة البحث ================= */}
-                    {/* [P0 — الإصلاح الحرج] هذه الحاوية كانت محذوفة بينما بقي وسم إغلاقها،
-                        فانكسرت شجرة JSX وتوقف Babel عن التحليل => شاشة بيضاء كاملة. */}
                     <div className="w-full max-w-[480px] mx-auto mb-32">
                         <div className="flex justify-between items-center mb-8">
                             <label htmlFor="searchInput" className={`text-[14px] font-medium ${warehouse ? 'text-primary' : 'text-secondary'}`}>البحث السريع</label>
 
-                            {/* مفتاح (Toggle) عرض الصور في البحث */}
                             <label className="flex items-center gap-8 cursor-pointer">
                                 <span className="text-[13px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
-                                {/* [a11y] sr-only بدل hidden — العنصر المخفي بـ hidden لا يقبل التركيز إطلاقاً */}
                                 <input
                                     type="checkbox"
                                     className="sr-only"
@@ -914,8 +1046,6 @@
                                     onChange={(e) => setShowImageInSearch(e.target.checked)}
                                     disabled={!warehouse}
                                 />
-                                {/* [إصلاح] top-2/left-2 كانتا 8px، و w-20 h-20 كانت 80px (خارج مقياس spacing)
-                                    فكان المقبض يخرج تماماً من حدود المسار. */}
                                 <div className={`w-40 h-24 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-gray-300'} ${!warehouse ? 'opacity-50' : ''}`}>
                                     <div className={`absolute top-2 left-2 w-20 h-20 bg-white rounded-full transition-transform ${showImageInSearch ? 'translate-x-16' : ''}`}></div>
                                 </div>
@@ -927,60 +1057,68 @@
                                 ref={searchInputRef}
                                 id="searchInput"
                                 type="text"
-                                inputMode="numeric"
                                 autoComplete="off"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 disabled={!warehouse}
-                                placeholder={warehouse ? "اكتب رقم الصنف..." : "اختر المستودع أولاً"}
+                                placeholder={warehouse ? "اكتب رقم الصنف أو اسمه..." : "اختر المستودع أولاً"}
                                 className={`w-full h-[56px] px-16 pl-48 rounded-12 border transition-all text-[16px] outline-none ${!warehouse ? 'bg-gray-50 border-border cursor-not-allowed opacity-60' : 'bg-bg border-border focus:border-primary focus:ring-1 text-primary'}`}
                             />
-                            {/* [استعادة] الحاوية relative و pl-48 كانتا تحجزان مكاناً لأيقونة غير مُصيَّرة */}
                             <SearchIcon className="w-24 h-24 text-secondary absolute left-16 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
 
-                        {/* نتائج البحث */}
+                        {warehouse && showImageInSearch && (
+                            <p className="text-[12px] text-secondary mt-8 text-center">وضع العرض للعميل — الأصناف المنتهية مخفية</p>
+                        )}
+
                         {warehouse && !query.trim() && <EmptyState />}
 
-                        {query.trim() && (
+                        {query.trim() && search && (
                             <div className="w-full mt-16 min-h-[100px]">
-                                {searchResults && searchResults.length === 0 && <NotFoundState />}
+                                {search.total === 0 && <NotFoundState />}
 
-                                {/* مطابقة تامة => البطاقة التفصيلية */}
-                                {exactMatch && (
+                                {search.exact && (
                                     <div className="mb-16">
                                         <FullResultCard
-                                            item={exactMatch}
+                                            item={search.exact}
                                             warehouseName={activeWarehouseName}
-                                            showImage={showImageInSearch && imagesList.has(exactMatch.cleanId)}
-                                            imageFileName={imagesList.get(exactMatch.cleanId)}
+                                            showImage={showImageInSearch && imagesList.has(search.exact.cleanId)}
+                                            imageFileName={imagesList.get(search.exact.cleanId)}
+                                            hideQty={hideQtyInSearch}
                                         />
                                     </div>
                                 )}
 
-                                {/* بقية المطابقات الجزئية => بطاقات مختصرة */}
-                                {searchResults && searchResults
-                                    .filter(item => !exactMatch || item.searchId !== exactMatch.searchId)
-                                    .slice(0, MAX_PARTIAL_RESULTS)
+                                {search.visible
+                                    .filter(item => !search.exact || item.uid !== search.exact.uid)
                                     .map(item => (
                                         <CompactResultCard
-                                            key={item.searchId}
+                                            key={item.uid}
                                             item={item}
                                             showImage={showImageInSearch && imagesList.has(item.cleanId)}
                                             imageFileName={imagesList.get(item.cleanId)}
+                                            hideQty={hideQtyInSearch}
                                         />
                                     ))
                                 }
+
+                                {search.total > search.visible.length && (
+                                    <p className="text-[13px] text-secondary text-center mt-8">
+                                        يوجد {NUMBER_FORMATTER.format(search.total)} نتيجة — اكتب تفاصيل أكثر لتضييق البحث
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
 
-                    {/* ================= منطقة المعرض (Gallery) ================= */}
+                    {/* ================= المعرض الرقمي ================= */}
                     <div className="w-full">
                         <div className="flex justify-between items-center mb-16">
-                            <h3 className="text-[20px] font-bold text-primary">المعرض الرقمي</h3>
+                            <div>
+                                <h3 className="text-[20px] font-bold text-primary">المعرض الرقمي</h3>
+                                {warehouse && <p className="text-[13px] text-secondary">{activeWarehouseName}</p>}
+                            </div>
 
-                            {/* أزرار العرض الشبكي/الطولي */}
                             {activeCategory && (
                                 <div className="flex gap-8">
                                     <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`p-8 rounded-8 border text-[14px] ${galleryView === 'grid' ? 'bg-primary text-white border-primary' : 'bg-white text-secondary border-border'}`}>شبكي</button>
@@ -1004,15 +1142,17 @@
                             </button>
                         </div>
 
-                        {/* عرض نتائج المعرض للقسم المختار */}
                         {!warehouse ? (
                             <div className="text-center text-secondary py-32 bg-gray-50 rounded-12">يرجى اختيار المستودع (جدة أو الرياض) لفتح المعرض.</div>
                         ) : activeCategory ? (
                             <div>
-                                <p className="text-[13px] text-secondary mb-16">
-                                    {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف
-                                    {galleryResults.length > visibleGalleryItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleGalleryItems.length)})`}
-                                </p>
+                                <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
+                                    <p className="text-[13px] text-secondary">
+                                        {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف متوفر
+                                        {galleryResults.length > visibleGalleryItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleGalleryItems.length)})`}
+                                    </p>
+                                    <p className="text-[12px] text-secondary">نقرتان: الكمية · ثلاث نقرات: بطاقة المنتج</p>
+                                </div>
 
                                 <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-16" : "flex flex-col gap-16"}>
                                     {galleryResults.length === 0 ? (
@@ -1020,11 +1160,15 @@
                                     ) : (
                                         visibleGalleryItems.map(item => (
                                             <GalleryCard
-                                                key={item.searchId}
+                                                key={item.uid}
                                                 item={item}
                                                 imageFileName={imagesList.get(item.cleanId)}
                                                 showImage={!isMissingImagesView}
                                                 isGrid={galleryView === 'grid'}
+                                                view={cardViews[item.uid] || CARD_VIEW.IMAGE}
+                                                onTap={handleCardTap}
+                                                onCycle={handleCardCycle}
+                                                warehouseName={activeWarehouseName}
                                             />
                                         ))
                                     )}
@@ -1061,9 +1205,7 @@
     </script>
 
     <!--
-      [قرار DevOps] تسجيل Service Worker معطّل حتى يُرفع ملف /sw.js فعلياً.
-      النسخة السابقة كانت تُسجّله بلا .catch() فتُنتج Unhandled Promise Rejection
-      في كل تحميل صفحة عندما يكون الملف مفقوداً.
+      تسجيل Service Worker معطّل حتى يُرفع ملف /sw.js فعلياً.
 
     <script>
     if ("serviceWorker" in navigator) {
