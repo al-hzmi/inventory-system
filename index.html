@@ -602,7 +602,7 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
         {/*  لوحة التسعيرة الجديدة */}
         <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">التكلفة (الكرتون/الأساس)</div>
+                <div className="text-[12px] text-muted mb-2">السعر (الكرتون)</div>
                 <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
             </div>
             <div className="min-w-0">
