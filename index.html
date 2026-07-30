@@ -675,7 +675,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                     {/*  لوحة التسعيرة المصغرة في بطاقة المعرض */}
                     <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted mb-2">التكلفة الإجمالية</div>
+                            <div className="text-[11px] text-muted mb-2"> السعر (الكرتون)</div>
                             <div className="text-[13px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
                         </div>
                         <div className="min-w-0">
