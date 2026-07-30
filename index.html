@@ -330,6 +330,10 @@ const fetchJson = async (url) => {
 };
 
 /** warehouseKey يُحقن في كل صنف => الفصل بين المستودعين بنيوي لا بصري. */
+// ============================================================
+// تحميل البيانات (تم تحديثه لدعم التسعيرة)
+// ============================================================
+/** warehouseKey يُحقن في كل صنف => الفصل بين المستودعين بنيوي لا بصري. */
 const parseExcelData = (rawText, warehouseKey) => {
     if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
     const lines = rawText.trim().split('\n');
@@ -341,6 +345,8 @@ const parseExcelData = (rawText, warehouseKey) => {
     const qtyIdx  = headers.findIndex(h => /كمية|رصيد|متوفر|qty|quantity/i.test(h));
     const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
     const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
+    //  الكشف التلقائي عن عمود التكلفة/السعر
+    const priceIdx= headers.findIndex(h => /سعر|تكلفة|cost|price/i.test(h));
 
     if (idIdx === -1) {
         console.error(`[Parser:${warehouseKey}] لم يُعثر على عمود رقم الصنف:`, headers);
@@ -360,6 +366,22 @@ const parseExcelData = (rawText, warehouseKey) => {
         const rawQty = toEnglishDigits(qtyIdx !== -1 ? (cols[qtyIdx] || '0') : '0').replace(/,/g, '');
         const qty    = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
 
+        //  معالجة التسعيرة والشد رياضياً
+        const packStr = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
+        const rawPrice = priceIdx !== -1 ? toEnglishDigits(cols[priceIdx] || '0').replace(/,/g, '') : '0';
+        const price = isNaN(parseFloat(rawPrice)) ? 0 : parseFloat(rawPrice);
+
+        let approxPrice = 0;
+        if (price > 0) {
+            // استخراج الرقم الصافي من الشد (مثلاً لو كان مكتوب "12 حبة" يستخرج 12 فقط) للتمكن من إجراء القسمة
+            const packNum = parseFloat(toEnglishDigits(packStr).replace(/[^0-9.]/g, ''));
+            if (!isNaN(packNum) && packNum > 0) {
+                approxPrice = price / packNum;
+            } else {
+                approxPrice = price; // إذا لم يكن هناك شد سليم، السعر التقريبي هو نفسه الإجمالي
+            }
+        }
+
         dataMap[searchId] = {
             uid: `${warehouseKey}:${searchId}`,
             warehouseKey,
@@ -370,7 +392,9 @@ const parseExcelData = (rawText, warehouseKey) => {
             searchName: normalizeText(name),
             qty,
             unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
-            pack: packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '',
+            pack: packStr,
+            price: price,             //  التكلفة الإجمالية
+            approxPrice: approxPrice  //  السعر التقريبي للحبة
         };
     }
     return Object.values(dataMap);
@@ -574,6 +598,18 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
                 <div className="text-[14px] font-semibold text-primary break-words">{warehouseName}</div>
             </div>
         </div>
+        
+        {/*  لوحة التسعيرة الجديدة */}
+        <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
+            <div className="min-w-0">
+                <div className="text-[12px] text-muted mb-2">التكلفة (الكرتون/الأساس)</div>
+                <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
+            </div>
+            <div className="min-w-0">
+                <div className="text-[12px] text-muted mb-2">السعر التقريبي للحبة</div>
+                <div className="text-[15px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
+            </div>
+        </div>
     </div>
 ));
 
@@ -634,6 +670,18 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                     <div className="border-t border-border pt-8">
                         <div className="text-[11px] text-muted mb-4">{warehouseName}</div>
                         <Quantity qty={item.qty} unit={item.unit} size="sm" />
+                    </div>
+
+                    {/*  لوحة التسعيرة المصغرة في بطاقة المعرض */}
+                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
+                        <div className="min-w-0">
+                            <div className="text-[11px] text-muted mb-2">التكلفة الإجمالية</div>
+                            <div className="text-[13px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
+                        </div>
+                        <div className="min-w-0">
+                            <div className="text-[11px] text-muted mb-2">تقريبي للحبة</div>
+                            <div className="text-[13px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
+                        </div>
                     </div>
                 </div>
             ) : (
