@@ -634,10 +634,10 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
             </div>
         </div>
         
-       {/*  لوحة التسعيرة */}
+        {/* ✨ لوحة التسعيرة */}
         <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">سعر (الكرتون)</div>
+                <div className="text-[12px] text-muted mb-2">سعر الأساس (الكرتون)</div>
                 <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
             </div>
             <div className="min-w-0">
@@ -645,6 +645,7 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
                 <div className="text-[15px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
             </div>
         </div>
+    </div>
 ));
 
 const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty }) => (
@@ -706,10 +707,10 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                         <Quantity qty={item.qty} unit={item.unit} size="sm" />
                     </div>
 
-                    {/*  لوحة التسعيرة المصغرة في بطاقة المعرض */}
+                    {/* ✨ لوحة التسعيرة المصغرة في بطاقة المعرض */}
                     <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted mb-2"> السعر (الكرتون)</div>
+                            <div className="text-[11px] text-muted mb-2">سعر الأساس</div>
                             <div className="text-[13px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
                         </div>
                         <div className="min-w-0">
@@ -724,7 +725,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                         <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
                                           className={`object-contain pointer-events-none w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
-{/* دائم الظهور على اللمس (لا يوجد hover على الجوال) وخفي حتى التمرير على سطح المكتب */}
+                            {/* تم تعديل مكان الزر ليكون في اليمين (right-8) */}
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
                                     className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <Icon.Expand className="w-16 h-16" />
@@ -745,7 +746,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
         </div>
     );
 });
-
+    
 const SkeletonGrid = () => (
     <div className="flex flex-col gap-16">
         {Array.from({ length: 3 }).map((_, i) => (
