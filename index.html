@@ -331,10 +331,48 @@ const fetchJson = async (url) => {
 
 /** warehouseKey يُحقن في كل صنف => الفصل بين المستودعين بنيوي لا بصري. */
 // ============================================================
-// تحميل البيانات (تم تحديثه لدعم التسعيرة)
+// تحميل البيانات والتسعيرة
 // ============================================================
-/** warehouseKey يُحقن في كل صنف => الفصل بين المستودعين بنيوي لا بصري. */
-const parseExcelData = (rawText, warehouseKey) => {
+
+/** 
+ * دالة جديدة: قراءة ملف pricing.tsv السري الخاص بالتسعيرة
+ * تعتمد على ترتيب الأعمدة في الصورة: 0:رقم الصنف، 2:كمية جدة، 3:تكلفة جدة، 4:كمية الرياض، 5:تكلفة الرياض
+ */
+const parsePricingMap = (rawText) => {
+    const map = {};
+    if (!rawText) return map;
+    const lines = rawText.trim().split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+        const cols = lines[i].split('\t').map(c => c.trim());
+        if (cols.length < 4) continue; // تخطي الصفوف الفارغة أو الترويسات الناقصة
+
+        const cleanId = normalizeCleanId(cols[0]);
+        if (!cleanId || cleanId === '1') continue; // تخطي الترويسة
+
+        const qtyJ   = parseFloat(toEnglishDigits(cols[2]).replace(/,/g, '')) || 0;
+        const costJ  = parseFloat(toEnglishDigits(cols[3]).replace(/,/g, '')) || 0;
+        const qtyR   = parseFloat(toEnglishDigits(cols[4] || '0').replace(/,/g, '')) || 0;
+        const costR  = parseFloat(toEnglishDigits(cols[5] || '0').replace(/,/g, '')) || 0;
+
+        let cartonPrice = 0;
+        // حساب سعر الكرتون (التكلفة مقسومة على الكمية)
+        if (qtyJ > 0 && costJ > 0) {
+            cartonPrice = costJ / qtyJ;
+        } else if (qtyR > 0 && costR > 0) {
+            cartonPrice = costR / qtyR;
+        }
+
+        if (cartonPrice > 0) {
+            // التقريب لأقرب عدد صحيح (مثلاً 143.75 تصبح 144) كما طلب المدير
+            map[cleanId] = Math.round(cartonPrice);
+        }
+    }
+    return map;
+};
+
+/** قارئ المخزون (تم تحديثه ليدمج خريطة التسعيرة) */
+const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
     const lines = rawText.trim().split('\n');
     if (lines.length < 2) return [];
@@ -345,8 +383,6 @@ const parseExcelData = (rawText, warehouseKey) => {
     const qtyIdx  = headers.findIndex(h => /كمية|رصيد|متوفر|qty|quantity/i.test(h));
     const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
     const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
-    //  الكشف التلقائي عن عمود التكلفة/السعر
-    const priceIdx= headers.findIndex(h => /سعر|تكلفة|cost|price/i.test(h));
 
     if (idIdx === -1) {
         console.error(`[Parser:${warehouseKey}] لم يُعثر على عمود رقم الصنف:`, headers);
@@ -366,19 +402,18 @@ const parseExcelData = (rawText, warehouseKey) => {
         const rawQty = toEnglishDigits(qtyIdx !== -1 ? (cols[qtyIdx] || '0') : '0').replace(/,/g, '');
         const qty    = isNaN(parseFloat(rawQty)) ? 0 : parseFloat(rawQty);
 
-        //  معالجة التسعيرة والشد رياضياً
         const packStr = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
-        const rawPrice = priceIdx !== -1 ? toEnglishDigits(cols[priceIdx] || '0').replace(/,/g, '') : '0';
-        const price = isNaN(parseFloat(rawPrice)) ? 0 : parseFloat(rawPrice);
+        const cleanId = normalizeCleanId(rawId);
+        
+        // جلب سعر الكرتون المقرب من خريطة التسعيرة
+        const pricePerCarton = pricingMap[cleanId] || 0;
+        let approxPiecePrice = 0;
 
-        let approxPrice = 0;
-        if (price > 0) {
-            // استخراج الرقم الصافي من الشد (مثلاً لو كان مكتوب "12 حبة" يستخرج 12 فقط) للتمكن من إجراء القسمة
+        // حساب السعر التقريبي للحبة بناءً على الشد
+        if (pricePerCarton > 0) {
             const packNum = parseFloat(toEnglishDigits(packStr).replace(/[^0-9.]/g, ''));
             if (!isNaN(packNum) && packNum > 0) {
-                approxPrice = price / packNum;
-            } else {
-                approxPrice = price; // إذا لم يكن هناك شد سليم، السعر التقريبي هو نفسه الإجمالي
+                approxPiecePrice = pricePerCarton / packNum;
             }
         }
 
@@ -387,19 +422,19 @@ const parseExcelData = (rawText, warehouseKey) => {
             warehouseKey,
             id: rawId,
             searchId,
-            cleanId: normalizeCleanId(rawId),
+            cleanId: cleanId,
             name,
             searchName: normalizeText(name),
             qty,
             unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
             pack: packStr,
-            price: price,             //  التكلفة الإجمالية
-            approxPrice: approxPrice  //  السعر التقريبي للحبة
+            price: pricePerCarton,       // السعر المقرب للكرتون
+            approxPrice: approxPiecePrice // السعر التقريبي للحبة
         };
     }
     return Object.values(dataMap);
 };
-
+    
 /** AR_100 و 100 يُنتجان الرقم الصافي 100 => صنفان يتقاسمان صورة واحدة. */
 const reportCleanIdCollisions = (items, warehouseKey) => {
     const byClean = new Map();
@@ -599,10 +634,10 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
             </div>
         </div>
         
-        {/*  لوحة التسعيرة الجديدة */}
+       {/*  لوحة التسعيرة */}
         <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">السعر (الكرتون)</div>
+                <div className="text-[12px] text-muted mb-2">سعر (الكرتون)</div>
                 <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
             </div>
             <div className="min-w-0">
@@ -610,7 +645,6 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
                 <div className="text-[15px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
             </div>
         </div>
-    </div>
 ));
 
 const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty }) => (
@@ -882,17 +916,24 @@ const App = () => {
         let alive = true;
         (async () => {
             try {
-                const [jT, rT, iT, cT, vJ] = await Promise.all([
+                // إضافة pricing.tsv إلى قائمة التحميل
+                const [jT, rT, iT, cT, vJ, pT] = await Promise.all([
                     fetchText(`${DATA_PATH}jeddah.tsv`),
                     fetchText(`${DATA_PATH}riyadh.tsv`),
                     fetchText(`${DATA_PATH}images_list.txt`),
                     fetchText(`${DATA_PATH}categories.tsv`),
                     fetchJson(`${DATA_PATH}version.json`),
+                    fetchText(`${DATA_PATH}pricing.tsv`) // الملف الجديد
                 ]);
                 if (!alive) return;
 
-                const jeddah = parseExcelData(jT, WAREHOUSES.jeddah.key);
-                const riyadh = parseExcelData(rT, WAREHOUSES.riyadh.key);
+                // قراءة خريطة التسعيرة أولاً
+                const pricingMap = parsePricingMap(pT);
+
+                // تمرير خريطة التسعيرة لملفات المخزون لدمج البيانات
+                const jeddah = parseExcelData(jT, WAREHOUSES.jeddah.key, pricingMap);
+                const riyadh = parseExcelData(rT, WAREHOUSES.riyadh.key, pricingMap);
+                
                 reportCleanIdCollisions(jeddah, WAREHOUSES.jeddah.key);
                 reportCleanIdCollisions(riyadh, WAREHOUSES.riyadh.key);
 
