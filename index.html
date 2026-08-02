@@ -331,47 +331,63 @@ const fetchJson = async (url) => {
 
 /** warehouseKey يُحقن في كل صنف => الفصل بين المستودعين بنيوي لا بصري. */
 // ============================================================
-// تحميل البيانات والتسعيرة
+// تحميل البيانات والتسعيرة (بالطريقة المباشرة والذكية)
 // ============================================================
 
 /** 
- * دالة جديدة: قراءة ملف pricing.tsv السري الخاص بالتسعيرة
- * تعتمد على ترتيب الأعمدة في الصورة: 0:رقم الصنف، 2:كمية جدة، 3:تكلفة جدة، 4:كمية الرياض، 5:تكلفة الرياض
+ * المُحلل الذكي لملف pricing.tsv 
+ * يبحث تلقائياً عن أعمدة "رقم الصنف" و "سعر البيع" مهما كان مكانها في الإكسل
  */
 const parsePricingMap = (rawText) => {
     const map = {};
     if (!rawText) return map;
     const lines = rawText.trim().split('\n');
-    
-    for (let i = 0; i < lines.length; i++) {
+    if (lines.length < 2) return map;
+
+    // 1. البحث عن صف الترويسة (الذي يحتوي على الكلمات المفتاحية)
+    let headerRowIdx = -1;
+    for (let i = 0; i < Math.min(lines.length, 5); i++) {
+        if (lines[i] && lines[i].includes('سعر') && (lines[i].includes('رقم') || lines[i].includes('صنف'))) {
+            headerRowIdx = i;
+            break;
+        }
+    }
+    if (headerRowIdx === -1) return map;
+
+    const headers = lines[headerRowIdx].split('\t').map(h => h.trim());
+    const pairs = []; // لتخزين أماكن الأعمدة المترابطة
+
+    // 2. ربط عمود "رقم الصنف" بعمود "سعر البيع" المجاور له تلقائياً
+    for (let i = 0; i < headers.length; i++) {
+        if (/رقم|كود|صنف/i.test(headers[i])) {
+            if (i > 0 && /سعر|بيع/i.test(headers[i - 1])) {
+                pairs.push({ skuIdx: i, priceIdx: i - 1 });
+            } else if (i < headers.length - 1 && /سعر|بيع/i.test(headers[i + 1])) {
+                pairs.push({ skuIdx: i, priceIdx: i + 1 });
+            }
+        }
+    }
+
+    // 3. قراءة البيانات وحفظها في الذاكرة
+    for (let i = headerRowIdx + 1; i < lines.length; i++) {
         const cols = lines[i].split('\t').map(c => c.trim());
-        if (cols.length < 4) continue; // تخطي الصفوف الفارغة أو الترويسات الناقصة
-
-        const cleanId = normalizeCleanId(cols[0]);
-        if (!cleanId || cleanId === '1') continue; // تخطي الترويسة
-
-        const qtyJ   = parseFloat(toEnglishDigits(cols[2]).replace(/,/g, '')) || 0;
-        const costJ  = parseFloat(toEnglishDigits(cols[3]).replace(/,/g, '')) || 0;
-        const qtyR   = parseFloat(toEnglishDigits(cols[4] || '0').replace(/,/g, '')) || 0;
-        const costR  = parseFloat(toEnglishDigits(cols[5] || '0').replace(/,/g, '')) || 0;
-
-        let cartonPrice = 0;
-        // حساب سعر الكرتون (التكلفة مقسومة على الكمية)
-        if (qtyJ > 0 && costJ > 0) {
-            cartonPrice = costJ / qtyJ;
-        } else if (qtyR > 0 && costR > 0) {
-            cartonPrice = costR / qtyR;
-        }
-
-        if (cartonPrice > 0) {
-            // التقريب لأقرب عدد صحيح (مثلاً 143.75 تصبح 144) كما طلب المدير
-            map[cleanId] = Math.round(cartonPrice);
-        }
+        pairs.forEach(pair => {
+            const rawSku = cols[pair.skuIdx];
+            const rawPrice = cols[pair.priceIdx];
+            
+            if (rawSku && rawPrice) {
+                const cleanId = normalizeCleanId(rawSku);
+                const price = parseFloat(toEnglishDigits(rawPrice).replace(/,/g, ''));
+                if (cleanId && !isNaN(price) && price > 0) {
+                    map[cleanId] = price; // تخزين سعر البيع المباشر للصنف
+                }
+            }
+        });
     }
     return map;
 };
 
-/** قارئ المخزون (تم تحديثه ليدمج خريطة التسعيرة) */
+/** قارئ المخزون الرئيسي */
 const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
     const lines = rawText.trim().split('\n');
@@ -405,15 +421,18 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
         const packStr = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
         const cleanId = normalizeCleanId(rawId);
         
-        // جلب سعر الكرتون المقرب من خريطة التسعيرة
-        const pricePerCarton = pricingMap[cleanId] || 0;
+        // ----------------------------------------------------
+        // الحسبة الجديدة: سحب السعر المباشر + استخراج سعر الحبة
+        // ----------------------------------------------------
+        const cartonPrice = pricingMap[cleanId] || 0; // جلب سعر البيع الصريح من ملف التسعيرة
         let approxPiecePrice = 0;
 
-        // حساب السعر التقريبي للحبة بناءً على الشد
-        if (pricePerCarton > 0) {
+        if (cartonPrice > 0) {
+            // استخراج الرقم من حقل الشد (مثلاً "72 حبة" يستخرج منها الرقم 72)
             const packNum = parseFloat(toEnglishDigits(packStr).replace(/[^0-9.]/g, ''));
+            // قسمة سعر البيع الإجمالي على رقم الشد
             if (!isNaN(packNum) && packNum > 0) {
-                approxPiecePrice = pricePerCarton / packNum;
+                approxPiecePrice = cartonPrice / packNum;
             }
         }
 
@@ -428,7 +447,7 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
             qty,
             unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
             pack: packStr,
-            price: pricePerCarton,       // السعر المقرب للكرتون
+            price: cartonPrice,           // سعر البيع الإجمالي
             approxPrice: approxPiecePrice // السعر التقريبي للحبة
         };
     }
