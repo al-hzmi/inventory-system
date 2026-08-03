@@ -852,36 +852,41 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 // ============================================================
-// ماسح الباركود بالكاميرا (تم التحديث للتشغيل التلقائي المباشر)
+// ماسح الباركود بالكاميرا (نسخة الـ Turbo السريعة والقياسية)
 // ============================================================
 const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     useEffect(() => {
         let isMounted = true;
-        // استخدام المحرك الأساسي بدلاً من الواجهة الجاهزة لتخطي شاشة الاختيار
         const html5QrCode = new Html5Qrcode("reader");
 
-        // إجبار النظام على فتح الكاميرا الخلفية فوراً
+        // إعدادات محسنة لتسريع اللقطة (لقط بلمح البصر) وتقصير الشاشة
+        const config = {
+            fps: 30, // زيادة سرعة التقاط الفريمات 3 أضعاف (سريع جداً)
+            qrbox: { width: 280, height: 100 }, // التركيز على شكل مستطيل ضيق فقط (يزيد السرعة لأن المعالجة تصبح أقل)
+            aspectRatio: 1.0, // تقصير طول الكاميرا لتكون مربعة/قياسية بدل ملء الشاشة
+        };
+
+        const videoConstraints = {
+            facingMode: "environment",
+            // إجبار عدسة جوال المستخدم على التركيز التلقائي المستمر (يمنع الغباش)
+            advanced: [{ focusMode: "continuous" }] 
+        };
+
         html5QrCode.start(
-            { facingMode: "environment" }, 
-            { fps: 10, qrbox: { width: 250, height: 120 } },
+            videoConstraints, 
+            config,
             (decodedText) => {
                 if (isMounted) {
-                    // إيقاف الكاميرا فور التقاط الباركود لمنع التكرار
-                    html5QrCode.stop().then(() => {
-                        onScan(decodedText);
-                    }).catch(() => {
-                        onScan(decodedText);
-                    });
+                    html5QrCode.stop().then(() => onScan(decodedText)).catch(() => onScan(decodedText));
                 }
             },
-            (errorMessage) => {
+            (errorMessage) => { 
                 // تجاهل أخطاء القراءة اللحظية أثناء توجيه الكاميرا
             }
         ).catch((err) => {
-            console.error("تعذر فتح الكاميرا تلقائياً:", err);
+            console.error("تعذر فتح الكاميرا:", err);
         });
 
-        // تنظيف الكاميرا وإغلاقها عند خروج المستخدم من النافذة
         return () => {
             isMounted = false;
             if (html5QrCode.isScanning) {
@@ -891,8 +896,9 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     }, [onScan]);
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center p-16 animate-card">
-            <div className="w-full max-w-[400px] bg-bg rounded-16 overflow-hidden shadow-lift flex flex-col">
+        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-16 animate-card">
+            {/* تم تعديل التصميم ليكون مضغوطاً وأشبه بتطبيقات الباركود الحقيقية */}
+            <div className="w-full max-w-[360px] bg-bg rounded-16 overflow-hidden shadow-lift flex flex-col">
                 <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
                     <h3 className="font-bold text-primary flex items-center gap-8">
                         <Icon.Scan className="w-20 h-20 text-accent"/> مسح الباركود
@@ -901,18 +907,22 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
                         <Icon.Close className="w-16 h-16 text-secondary"/>
                     </button>
                 </div>
-                {/* مساحة سوداء مجهزة بانتظار تحميل الكاميرا (ثانية واحدة) */}
-                <div id="reader" className="w-full bg-black min-h-[300px] flex items-center justify-center">
-                    <span className="text-white/50 text-[12px] animate-pulse">جاري فتح الكاميرا...</span>
+                
+                {/* الحاوية هنا ستأخذ شكل مربع وستكون أقصر بكثير من السابق */}
+                <div id="reader" className="w-full bg-black min-h-[360px] flex items-center justify-center relative">
+                    <span className="text-white/50 text-[12px] animate-pulse absolute">جاري فتح العدسة...</span>
                 </div>
-                <div className="p-12 text-center text-[12px] text-muted">
-                    وجّه الكاميرا نحو باركود المنتج لقرائته تلقائياً
+                
+                <div className="p-16 text-center text-[13px] font-medium text-primary bg-surface border-t border-border">
+                    وجّه الكاميرا نحو الباركود
+                    <p className="text-[11px] text-muted font-normal mt-4">سيتم الالتقاط تلقائياً</p>
                 </div>
             </div>
         </div>
     );
 });
-// ============================================================
+    
+    // ============================================================
 // التطبيق
 // ============================================================
 const App = () => {
