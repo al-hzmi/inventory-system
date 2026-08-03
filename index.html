@@ -852,7 +852,7 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 // ============================================================
-// ماسح الباركود بالكاميرا (النسخة الاحترافية - Native Accelerated)
+// ماسح الباركود بالكاميرا (نسخة الخبير - Ultra Fast Native)
 // ============================================================
 const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     const [camError, setCamError] = useState("");
@@ -861,29 +861,91 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
         let isMounted = true;
         const html5QrCode = new Html5Qrcode("reader");
 
-        // إعدادات النظام الحديثة والاحترافية
+        // 1. إعدادات الخبير: تقليل الإطارات للمعالجة الأسرع، وتحديد صيغ الباركود بدقة
         const config = {
-            fps: 30, // أعلى سرعة التقاط ممكنة
-            qrbox: 250, // 🔲 تم تحويله إلى مربع بحجم 250x250 بكسل كما طلبت
-            useBarCodeDetectorIfSupported: true, // 🚀 تفعيل محرك قراءة الباركود المدمج في نظام تشغيل الجوال لسرعة خيالية
-            aspectRatio: 1.0 // جعل شاشة الكاميرا مربعة لتتناسب مع المربع
+            fps: 15, 
+            qrbox: { width: 260, height: 260 },
+            aspectRatio: 1,
+            disableFlip: true, // إيقاف عكس الكاميرا لأنه يستهلك المعالج
+            useBarCodeDetectorIfSupported: true, // استخدام الـ API الأصلي للجوال
+            formatsToSupport: [
+                window.Html5QrcodeSupportedFormats.CODE_128,
+                window.Html5QrcodeSupportedFormats.CODE_39,
+                window.Html5QrcodeSupportedFormats.EAN_13,
+                window.Html5QrcodeSupportedFormats.EAN_8,
+                window.Html5QrcodeSupportedFormats.UPC_A,
+                window.Html5QrcodeSupportedFormats.UPC_E
+            ]
         };
 
-        html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            (decodedText) => {
-                if (isMounted) {
-                    html5QrCode.stop().then(() => onScan(decodedText)).catch(() => onScan(decodedText));
-                }
-            },
-            (errorMessage) => { 
-                // نتجاهل الأخطاء اللحظية أثناء تحريك الكاميرا
+        // 2. منع التكرار (Debounce) لمنع تشغيل الكود مرتين في نفس اللحظة
+        let lastCode = "";
+        let lastTime = 0;
+
+        const onScanSuccess = (decodedText) => {
+            const now = performance.now();
+            if (decodedText === lastCode && (now - lastTime) < 1000) return;
+            lastCode = decodedText;
+            lastTime = now;
+
+            if (isMounted) {
+                // 3. الإغلاق السلس باستخدام إطارات الشاشة (يمنع تجميد المتصفح)
+                requestAnimationFrame(() => {
+                    html5QrCode.stop()
+                        .then(() => onScan(decodedText))
+                        .catch(() => onScan(decodedText));
+                });
             }
-        ).catch((err) => {
+        };
+
+        // تشغيل الكاميرا مع فرض الكاميرا الخلفية الأصلية
+        html5QrCode.start(
+            { facingMode: { exact: "environment" } },
+            config,
+            onScanSuccess,
+            (errorMessage) => { /* تجاهل الأخطاء اللحظية */ }
+        ).then(() => {
+            // 4. تطبيق القيود المتقدمة (الفوكس والزوم) فور اشتغال الكاميرا
+            try {
+                // محاولة جلب التراك (Track) سواء بالطريقة الحديثة أو الكلاسيكية
+                const track = html5QrCode.getRunningTrack 
+                    ? html5QrCode.getRunningTrack() 
+                    : document.querySelector("#reader video")?.srcObject?.getVideoTracks()[0];
+                
+                if (track && track.getCapabilities) {
+                    const capabilities = track.getCapabilities();
+                    const advancedConstraints = [];
+
+                    // تفعيل التركيز المستمر (الفوكس)
+                    if (capabilities.focusMode) {
+                        advancedConstraints.push({ focusMode: "continuous" });
+                    }
+                    // تفعيل تقريب خفيف (Zoom) لتسهيل قراءة الباركودات الصغيرة 
+                    // (استخدمنا تقريب 2x كحد أقصى لكي لا تغبش الكاميرا على أجهزة سامسونج/آيفون برو)
+                    if (capabilities.zoom) {
+                        const optimalZoom = Math.min(capabilities.zoom.max, 2);
+                        advancedConstraints.push({ zoom: optimalZoom });
+                    }
+
+                    if (advancedConstraints.length > 0) {
+                        track.applyConstraints({ advanced: advancedConstraints }).catch(() => {});
+                    }
+                }
+            } catch (e) {
+                console.warn("تطبيق القيود المتقدمة غير مدعوم في هذا المتصفح:", e);
+            }
+        }).catch((err) => {
             console.error("خطأ الكاميرا:", err);
             if (isMounted) {
-                setCamError("تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح من إعدادات الجوال، ثم حدّث الصفحة.");
+                // إذا فشل exact environment (في بعض الأجهزة القديمة)، نحاول التشغيل العادي
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    () => {}
+                ).catch(() => {
+                    if (isMounted) setCamError("تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.");
+                });
             }
         });
 
@@ -907,21 +969,20 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
                     </button>
                 </div>
                 
-                {/* مساحة الكاميرا أصبحت مربعة ومناسبة */}
-                <div className="w-full bg-black min-h-[300px] relative flex items-center justify-center">
+                <div className="w-full bg-black min-h-[300px] relative flex items-center justify-center overflow-hidden">
                     {camError ? (
                         <div className="text-danger text-center p-24 text-[13px] font-medium leading-relaxed">
                             <Icon.Alert className="w-24 h-24 mx-auto mb-8 text-danger" />
                             {camError}
                         </div>
                     ) : (
-                        <div id="reader" className="w-full"></div>
+                        <div id="reader" className="w-full h-full object-cover"></div>
                     )}
                 </div>
                 
                 <div className="p-16 text-center text-[13px] font-medium text-primary bg-surface border-t border-border">
                     وجّه الكاميرا نحو الباركود
-                    <p className="text-[11px] text-muted font-normal mt-4">المربع يضمن قراءة سريعة ودقيقة</p>
+                    <p className="text-[11px] text-muted font-normal mt-4">مدعوم بتقنية التسريع العتادي ⚡️</p>
                 </div>
             </div>
         </div>
@@ -1026,23 +1087,41 @@ const App = () => {
         [databases]
     );
 
-    // -----------------------------------------------------------------
-    // المحلل الذكي للباركود (يعمل مع الكاميرا ومع الماسح الليزري)
+// -----------------------------------------------------------------
+    // المحلل الذكي للباركود (النسخة المتقدمة - صائد الأصناف من أي مكان)
     // -----------------------------------------------------------------
     useEffect(() => {
         const cleanQ = normalizeCleanId(query);
-        if (cleanQ.length >= 11 && /^\d+$/.test(cleanQ)) {
-            const cleanBarcode = cleanQ.slice(0, -1); 
+        
+        // هل المدخل يشبه الباركود؟ (طويل ويحتوي على أرقام فقط)
+        if (cleanQ.length >= 8 && /^\d+$/.test(cleanQ)) {
             const pool = databases[warehouse] || [];
             
-            const matchedItem = pool.find(item => item.cleanId && cleanBarcode.endsWith(item.cleanId));
-            
-            if (matchedItem && matchedItem.id !== query) {
-                setQuery(matchedItem.id); 
+            // 1. هل يوجد تطابق تام للباركود؟ (إذا كان الباركود مسجلاً كنفسه)
+            const exactMatch = pool.find(item => item.cleanId === cleanQ);
+            if (exactMatch) return; // لا تفعل شيئاً، محرك البحث العادي سيتكفل به
+
+            // 2. البحث المتداخل: نبحث عن أي صنف يقع رقمه "داخل" الباركود الممسوح
+            // وضعنا شرط أن يكون طول الصنف 3 أرقام فأكثر لمنع التطابقات العشوائية
+            const possibleMatches = pool.filter(item => 
+                item.cleanId && 
+                item.cleanId.length >= 3 && 
+                cleanQ.includes(item.cleanId)
+            );
+
+            if (possibleMatches.length > 0) {
+                // 3. ترتيب النتائج من الأطول للأقصر لضمان دقة الالتقاط
+                // مثلاً لو الباركود فيه "26251" وصنفنا الأول "262" والثاني "26251"، سيختار الأطول
+                possibleMatches.sort((a, b) => b.cleanId.length - a.cleanId.length);
+                
+                const bestMatch = possibleMatches[0];
+                if (bestMatch.id !== query) {
+                    setQuery(bestMatch.id); // استبدال الباركود الطويل برقم الصنف المستخرج
+                }
             }
         }
     }, [query, warehouse, databases]);
-
+    
     // ---------- آلة حالة النقر ----------
     const applyTaps = useCallback((uid, taps) => {
         setCardViews(prev => {
