@@ -26,8 +26,10 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<!-- مكتبة قراءة الباركود عبر الكاميرا -->
+    
+    <!-- مكتبة قراءة الباركود عبر الكاميرا -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
     <script>
         tailwind.config = {
             theme: {
@@ -51,10 +53,6 @@
                         danger     : '#B91C1C',
                         dangerSoft : '#FEF2F2',
                     },
-                    /*
-                     * مقياس المسافات بالبكسل. أي مفتاح غير مذكور هنا يعود
-                     * لقيمة Tailwind الافتراضية بالـ rem — وهذا كان مصدر أخطاء بصرية سابقة.
-                     */
                     spacing: {
                         '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px',
                         '14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px',
@@ -73,12 +71,6 @@
     </script>
 
     <style>
-        /*
-         * ===== حارس التمرير الأفقي =====
-         * سبب "الزوم الخفيف" الذي يجبرك على السحب بالإصبع على الجوال:
-         * أي عنصر يتجاوز عرض الشاشة ولو ببكسل واحد يجعل المتصفح يوسّع
-         * منطقة العرض بالكامل. هذه الأسطر تجعل التجاوز مستحيلاً بنيوياً.
-         */
         html, body {
             overflow-x: hidden;
             width: 100%;
@@ -87,7 +79,7 @@
             color: #1C1917;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            -webkit-text-size-adjust: 100%;   /* يمنع تكبير iOS التلقائي للخط */
+            -webkit-text-size-adjust: 100%;
         }
         *, *::before, *::after { box-sizing: border-box; }
         img, svg, video { max-width: 100%; height: auto; }
@@ -116,8 +108,6 @@
             animation: shimmer 1.4s ease-in-out infinite;
         }
 
-        /* بطاقة المعرض تعتمد النقر المزدوج والثلاثي:
-           بدون هذين المنعين يُظلّل النقر الثلاثي الفقرة ويُكبّر المزدوج الصفحة. */
         .tap-card {
             -webkit-user-select:none; -moz-user-select:none; user-select:none;
             -webkit-touch-callout:none; touch-action: manipulation;
@@ -125,14 +115,12 @@
 
         .lightbox-backdrop { background: rgba(28,25,23,0.9); backdrop-filter: blur(4px); }
 
-        /* حقول الإدخال بحجم 16px فأكثر — أقل من ذلك يُجبر iOS على تكبير الصفحة عند التركيز */
         input[type="text"], input[type="password"] { font-size: 16px; }
     </style>
 
     <meta name="theme-color" content="#FFFFFF">
 
-    <!--
-      <!-- أيقونة المتصفح (Favicon) -->
+    <!-- أيقونة المتصفح (Favicon) -->
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     
     <!-- أيقونة الإضافة للشاشة الرئيسية في أجهزة آيفون (Apple Touch Icon) -->
@@ -140,7 +128,6 @@
     
     <!-- ملف إعدادات التطبيق لأجهزة أندرويد (PWA Manifest) -->
     <link rel="manifest" href="./manifest.json">
-    
 
     <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
@@ -152,7 +139,7 @@
         }
     </script>
 
-    <!-- Firebase يُحمَّل عند أول حاجة فعلية فقط (~330KB خارج المسار الحرج) -->
+    <!-- Firebase -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw",
@@ -200,7 +187,6 @@ const MIN_NAME_QUERY_LENGTH  = 2;
 const GALLERY_PAGE_SIZE      = 60;
 const LOW_STOCK_THRESHOLD    = 10;
 
-/** نمط العرض الافتراضي عند فتح المعرض. */
 const DEFAULT_GALLERY_VIEW = 'list';
 
 const STORAGE_KEYS = { NAME: 'inventory_user_name', TOKEN: 'inventory_admin_token' };
@@ -214,7 +200,6 @@ const VISIBILITY_RULES = {
 
 const CARD_VIEW = { IMAGE: 0, QUANTITY: 1, DETAILS: 2 };
 
-/** المسميات كما هي في النظام — لا تُختصر. */
 const WAREHOUSES = {
     jeddah: { key: 'jeddah', label: 'مخزون جدة',   name: 'مستودع جدة'   },
     riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
@@ -225,7 +210,6 @@ const SPECIAL_CATEGORIES = {
     MISSING_IMAGES: 'نواقص الصور',
 };
 
-/** أقسام لا تظهر إلا للمسؤول. */
 const ADMIN_ONLY_CATEGORIES = new Set([SPECIAL_CATEGORIES.MISSING_IMAGES]);
 
 const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
@@ -245,13 +229,11 @@ const toEnglishDigits = (str) => {
     });
 };
 
-/** AR_13438 -> 13438 | ITEM-00591 -> 591 | ١٣٤٣٨ -> 13438 | ۱۳۴۳۸ -> 13438 */
 const normalizeCleanId = (str) => {
     if (!str) return "";
     return toEnglishDigits(str).replace(/\D/g, "");
 };
 
-/** بدونه "أواني" لا تطابق "اواني" و"مقلاة" لا تطابق "مقلاه". */
 const normalizeText = (str) => {
     if (!str) return '';
     return toEnglishDigits(String(str))
@@ -275,14 +257,6 @@ const toSafeDocId = (name) => {
 // ============================================================
 // الصلاحيات
 // ============================================================
-/*
- * ⚠️ هذا ملف ثابت يُسلَّم كاملاً لمتصفح المستخدم.
- * التجزئة تمنع قراءة الرمز مباشرة من "عرض المصدر"، لكنها ردع لا أمان:
- * رمز من 4 أرقام يمكن تخمينه آلياً في أجزاء من الثانية لمن يقرأ الكود.
- * الأمان الحقيقي = قواعد Firestore + Vercel Deployment Protection.
- *
- * لتوليد بصمة رمز جديد: افتح الكونسول واكتب __genCode("رمزك")
- */
 const CODE_SALT = 'bayt-awani::v5::';
 
 const hashCode = (str) => {
@@ -297,7 +271,6 @@ const hashCode = (str) => {
 };
 window.__genCode = (code) => hashCode(code);
 
-/** الاسم (مُطبَّعاً) -> بصمة رمز الدخول. البصمة أدناه تقابل الرمز 2257. */
 const PROTECTED_ACCOUNTS = {
     'مهند': '1jh297-spgf2z',
 };
@@ -307,7 +280,6 @@ const isProtectedName = (name) =>
 
 const verifyCode = (name, code) => {
     const expected = PROTECTED_ACCOUNTS[normalizeText(name)];
-    // الرمز يُطبَّع رقمياً حتى يُقبل ٢٢٥٧ و 2257 على حد سواء
     return Boolean(expected) && hashCode(toEnglishDigits(String(code)).trim()) === expected;
 };
 
@@ -330,22 +302,12 @@ const fetchJson = async (url) => {
     } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return null; }
 };
 
-/** warehouseKey يُحقن في كل صنف => الفصل بين المستودعين بنيوي لا بصري. */
-// ============================================================
-// تحميل البيانات والتسعيرة (بالطريقة المباشرة والذكية)
-// ============================================================
-
-/** 
- * المُحلل الذكي لملف pricing.tsv 
- * يبحث تلقائياً عن أعمدة "رقم الصنف" و "سعر البيع" مهما كان مكانها في الإكسل
- */
 const parsePricingMap = (rawText) => {
     const map = {};
     if (!rawText) return map;
     const lines = rawText.trim().split('\n');
     if (lines.length < 2) return map;
 
-    // 1. البحث عن صف الترويسة (الذي يحتوي على الكلمات المفتاحية)
     let headerRowIdx = -1;
     for (let i = 0; i < Math.min(lines.length, 5); i++) {
         if (lines[i] && lines[i].includes('سعر') && (lines[i].includes('رقم') || lines[i].includes('صنف'))) {
@@ -356,9 +318,8 @@ const parsePricingMap = (rawText) => {
     if (headerRowIdx === -1) return map;
 
     const headers = lines[headerRowIdx].split('\t').map(h => h.trim());
-    const pairs = []; // لتخزين أماكن الأعمدة المترابطة
+    const pairs = [];
 
-    // 2. ربط عمود "رقم الصنف" بعمود "سعر البيع" المجاور له تلقائياً
     for (let i = 0; i < headers.length; i++) {
         if (/رقم|كود|صنف/i.test(headers[i])) {
             if (i > 0 && /سعر|بيع/i.test(headers[i - 1])) {
@@ -369,7 +330,6 @@ const parsePricingMap = (rawText) => {
         }
     }
 
-    // 3. قراءة البيانات وحفظها في الذاكرة
     for (let i = headerRowIdx + 1; i < lines.length; i++) {
         const cols = lines[i].split('\t').map(c => c.trim());
         pairs.forEach(pair => {
@@ -380,7 +340,7 @@ const parsePricingMap = (rawText) => {
                 const cleanId = normalizeCleanId(rawSku);
                 const price = parseFloat(toEnglishDigits(rawPrice).replace(/,/g, ''));
                 if (cleanId && !isNaN(price) && price > 0) {
-                    map[cleanId] = price; // تخزين سعر البيع المباشر للصنف
+                    map[cleanId] = price;
                 }
             }
         });
@@ -388,7 +348,6 @@ const parsePricingMap = (rawText) => {
     return map;
 };
 
-/** قارئ المخزون الرئيسي */
 const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
     const lines = rawText.trim().split('\n');
@@ -422,16 +381,11 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
         const packStr = packIdx !== -1 ? (cols[packIdx] ? cols[packIdx].trim() : '') : '';
         const cleanId = normalizeCleanId(rawId);
         
-        // ----------------------------------------------------
-        // الحسبة الجديدة: سحب السعر المباشر + استخراج سعر الحبة
-        // ----------------------------------------------------
-        const cartonPrice = pricingMap[cleanId] || 0; // جلب سعر البيع الصريح من ملف التسعيرة
+        const cartonPrice = pricingMap[cleanId] || 0;
         let approxPiecePrice = 0;
 
         if (cartonPrice > 0) {
-            // استخراج الرقم من حقل الشد (مثلاً "72 حبة" يستخرج منها الرقم 72)
             const packNum = parseFloat(toEnglishDigits(packStr).replace(/[^0-9.]/g, ''));
-            // قسمة سعر البيع الإجمالي على رقم الشد
             if (!isNaN(packNum) && packNum > 0) {
                 approxPiecePrice = cartonPrice / packNum;
             }
@@ -448,14 +402,13 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
             qty,
             unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
             pack: packStr,
-            price: cartonPrice,           // سعر البيع الإجمالي
-            approxPrice: approxPiecePrice // السعر التقريبي للحبة
+            price: cartonPrice,
+            approxPrice: approxPiecePrice
         };
     }
     return Object.values(dataMap);
 };
     
-/** AR_100 و 100 يُنتجان الرقم الصافي 100 => صنفان يتقاسمان صورة واحدة. */
 const reportCleanIdCollisions = (items, warehouseKey) => {
     const byClean = new Map();
     items.forEach(it => {
@@ -470,7 +423,6 @@ const reportCleanIdCollisions = (items, warehouseKey) => {
     }
 };
 
-/** Map يحفظ اسم الملف الحقيقي — يدعم أي امتداد ويمنع افتراض .webp. */
 const buildImagesMap = (imagesText) => {
     const map = new Map();
     imagesText.split('\n').forEach((line) => {
@@ -482,7 +434,6 @@ const buildImagesMap = (imagesText) => {
     return map;
 };
 
-/** الحارس على الترويسة الفارغة يمنع TypeError كان يُسقط التطبيق. */
 const parseCategories = (text) => {
     const obj = {};
     if (!text) return obj;
@@ -535,7 +486,7 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
     for (let i = 0; i < ranked.length; i++) {
         const r = ranked[i];
         if (r.rank <= 1) { if (sku.length < MAX_SKU_RESULTS) sku.push(r.item); }
-        else            { if (nm.length  < MAX_NAME_RESULTS) nm.push(r.item);  }
+        else             { if (nm.length  < MAX_NAME_RESULTS) nm.push(r.item);  }
     }
     return {
         visible: sku.concat(nm),
@@ -554,8 +505,9 @@ const stockTone = (qty) => {
 // الأيقونات
 // ============================================================
 const Icon = {
-Search:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
-    Scan:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 12h8M12 8v8"/></svg>),    Grid:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>),
+    Search:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
+    Scan:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 12h8M12 8v8"/></svg>),
+    Grid:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>),
     List:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>),
     ImageOff:(p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M3 3l18 18"/><path d="M21 15V5a2 2 0 00-2-2H9"/><path d="M3 7v12a2 2 0 002 2h12"/><path d="M3 16l4-4 3 3"/></svg>),
     Expand:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>),
@@ -745,7 +697,6 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                         <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
                                           className={`object-contain pointer-events-none w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
-                            {/* تم تعديل مكان الزر ليكون في اليمين (right-8) */}
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
                                     className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <Icon.Expand className="w-16 h-16" />
@@ -846,7 +797,6 @@ const LoginScreen = ({ onLogin }) => {
                 userAgent: navigator.userAgent
             });
         } catch (err) {
-            // التسجيل وظيفة تحليلية — لا يجوز أن يمنع تعثر الشبكة الموظفَ من العمل.
             console.error("Error logging in:", err);
             setNotice('تعذر الاتصال بسجل الدخول، وتم الدخول بشكل طبيعي.');
         }
@@ -900,6 +850,7 @@ const LoginScreen = ({ onLogin }) => {
         </div>
     );
 };
+
 // ============================================================
 // ماسح الباركود بالكاميرا
 // ============================================================
@@ -936,6 +887,7 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
         </div>
     );
 });
+
 // ============================================================
 // التطبيق
 // ============================================================
@@ -950,7 +902,7 @@ const App = () => {
     const [warehouse, setWarehouse] = useState(null);
     const [query, setQuery] = useState('');
     const [showImageInSearch, setShowImageInSearch] = useState(false);
-const [showScanner, setShowScanner] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
     
     const [databases, setDatabases]   = useState({ jeddah: [], riyadh: [] });
     const [imagesList, setImagesList] = useState(new Map());
@@ -973,21 +925,18 @@ const [showScanner, setShowScanner] = useState(false);
         let alive = true;
         (async () => {
             try {
-                // إضافة pricing.tsv إلى قائمة التحميل
                 const [jT, rT, iT, cT, vJ, pT] = await Promise.all([
                     fetchText(`${DATA_PATH}jeddah.tsv`),
                     fetchText(`${DATA_PATH}riyadh.tsv`),
                     fetchText(`${DATA_PATH}images_list.txt`),
                     fetchText(`${DATA_PATH}categories.tsv`),
                     fetchJson(`${DATA_PATH}version.json`),
-                    fetchText(`${DATA_PATH}pricing.tsv`) // الملف الجديد
+                    fetchText(`${DATA_PATH}pricing.tsv`)
                 ]);
                 if (!alive) return;
 
-                // قراءة خريطة التسعيرة أولاً
                 const pricingMap = parsePricingMap(pT);
 
-                // تمرير خريطة التسعيرة لملفات المخزون لدمج البيانات
                 const jeddah = parseExcelData(jT, WAREHOUSES.jeddah.key, pricingMap);
                 const riyadh = parseExcelData(rT, WAREHOUSES.riyadh.key, pricingMap);
                 
@@ -1012,7 +961,6 @@ const [showScanner, setShowScanner] = useState(false);
 
     useEffect(() => () => { if (tapStateRef.current.timer) clearTimeout(tapStateRef.current.timer); }, []);
 
-    // اختصار: "/" أو Ctrl+K للانتقال إلى البحث
     useEffect(() => {
         const onKey = (e) => {
             const el = document.activeElement;
@@ -1029,7 +977,6 @@ const [showScanner, setShowScanner] = useState(false);
     useEffect(() => { if (warehouse && searchInputRef.current) searchInputRef.current.focus(); }, [warehouse]);
     useEffect(() => { setVisibleCount(GALLERY_PAGE_SIZE); setCardViews({}); }, [activeCategory, warehouse]);
 
-// حارس صلاحيات: من ليس مسؤولاً لا يبقى داخل قسم محمي
     useEffect(() => {
         if (!isAdmin && activeCategory && ADMIN_ONLY_CATEGORIES.has(activeCategory)) setActiveCategory(null);
     }, [isAdmin, activeCategory]);
@@ -1044,16 +991,12 @@ const [showScanner, setShowScanner] = useState(false);
     // -----------------------------------------------------------------
     useEffect(() => {
         const cleanQ = normalizeCleanId(query);
-        // إذا كان الإدخال أرقاماً فقط وتجاوز 11 رقماً (طول الباركود القياسي)
         if (cleanQ.length >= 11 && /^\d+$/.test(cleanQ)) {
-            // الاستخراج الذكي: قطع الرقم الأخير (رقم التحقق)
             const cleanBarcode = cleanQ.slice(0, -1); 
             const pool = databases[warehouse] || [];
             
-            // البحث عن الصنف الذي تتطابق نهايته مع الباركود المقطوع
             const matchedItem = pool.find(item => item.cleanId && cleanBarcode.endsWith(item.cleanId));
             
-            // إذا وجدناه، نستبدل الباركود الطويل برقم الصنف فوراً
             if (matchedItem && matchedItem.id !== query) {
                 setQuery(matchedItem.id); 
             }
@@ -1135,7 +1078,6 @@ const [showScanner, setShowScanner] = useState(false);
         if (!activeCategory || !warehouse) return [];
         if (ADMIN_ONLY_CATEGORIES.has(activeCategory) && !isAdmin) return [];
 
-        // نبدأ من أصناف المستودع المختار حصراً => أي صورة بلا صنف مقابل لا تظهر أبداً
         let pool = databases[warehouse] || [];
         if (VISIBILITY_RULES.hideOutOfStockInGallery) pool = pool.filter(i => i.qty > 0);
 
@@ -1164,7 +1106,7 @@ const [showScanner, setShowScanner] = useState(false);
     return (
         <div className="min-h-screen font-sans">
 
-{/* ===== شريط الهوية (يمرر مع الصفحة) ===== */}
+            {/* ===== شريط الهوية (يمرر مع الصفحة) ===== */}
             <div className="border-b border-border bg-surface">
                 <div className="max-w-[1024px] mx-auto px-16 h-44 flex items-center justify-between gap-12">
                     <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
@@ -1195,15 +1137,11 @@ const [showScanner, setShowScanner] = useState(false);
                 </header>
             </div>
 
-            {/*
-              ===== لوحة التحكم الثابتة =====
-              شريط بعرض الصفحة كاملاً وبداخله حاوية محدودة العرض.
-              (النسخة السابقة استخدمت هوامش سالبة -mx-16 وكانت سبب التمرير الأفقي على الجوال)
-            */}
+            {/* ===== لوحة التحكم الثابتة ===== */}
             <div className="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-border">
                 <div className="max-w-[1024px] mx-auto px-16 py-12 flex flex-col gap-10">
 
-                    {/* اختيار المستودع — بعرض الشاشة كاملاً على الجوال */}
+                    {/* اختيار المستودع */}
                     <div className="flex w-full sm:w-auto sm:self-start bg-surface border border-border rounded-12 p-4 gap-4"
                          role="group" aria-label="اختيار المستودع">
                         {Object.values(WAREHOUSES).map(wh => (
@@ -1214,7 +1152,7 @@ const [showScanner, setShowScanner] = useState(false);
                         ))}
                     </div>
 
-                <div className="flex items-center gap-12">
+                    <div className="flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
                             <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
                             
@@ -1246,18 +1184,8 @@ const [showScanner, setShowScanner] = useState(false);
                         </label>
                     </div>
 
-                        <label className="flex items-center gap-8 cursor-pointer flex-shrink-0">
-                            <span className="hidden sm:inline text-[12px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
-                            <input type="checkbox" className="sr-only" checked={showImageInSearch}
-                                   onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                            <div className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-accent' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
-                                <div className={`absolute top-2 left-2 w-22 h-22 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
-                            </div>
-                        </label>
-                    </div>
-
                     {warehouse && showImageInSearch && (
-                        <p className="text-[11px] text-accent">عرض مع الصورة</p>
+                        <p className="text-[11px] text-accent">وضع العرض للعميل — الأصناف المنتهية مخفية</p>
                     )}
                 </div>
             </div>
@@ -1271,16 +1199,7 @@ const [showScanner, setShowScanner] = useState(false);
                             note="تحقق من وجود jeddah.tsv و riyadh.tsv في مجلد data ومن صحة ترويسة الأعمدة." />
                     </div>
                 )}
-{/* نافذة ماسح الباركود */}
-            {showScanner && (
-                <BarcodeScannerModal 
-                    onClose={() => setShowScanner(false)} 
-                    onScan={(scannedText) => {
-                        setShowScanner(false);
-                        setQuery(scannedText); // سيقوم الـ useEffect الذكي باختصار هذا الباركود فوراً
-                    }} 
-                />
-            )}
+
                 {/* ===== نتائج البحث ===== */}
                 {query.trim() && search && (
                     <div className="max-w-[520px] mx-auto mt-24 flex flex-col gap-8">
@@ -1332,10 +1251,6 @@ const [showScanner, setShowScanner] = useState(false);
                         )}
                     </div>
 
-                    {/*
-                      الأقسام تلتف على عدة صفوف — كلها ظاهرة دفعة واحدة.
-                      (التمرير الأفقي في النسخة السابقة أخفى وجود أقسام إضافية)
-                    */}
                     <p className="text-[12px] text-muted mb-8">الأقسام ({NUMBER_FORMATTER.format(totalCategoryCount)})</p>
                     <div className="flex flex-wrap gap-8 mb-20">
                         {categoryNames.map(cat => (
@@ -1413,18 +1328,29 @@ const [showScanner, setShowScanner] = useState(false);
                 </section>
 
                 <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
-                        {/* رابط الواتساب السفلي */}
-                        <a 
-                            href="https://wa.me/966506762257" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer"
-                            title="تواصل مع المطور عبر واتساب"
-                        >
-                            © 2026 تطوير مهند الحزمي
-                        </a>
-                    </footer>
+                    {/* رابط الواتساب السفلي */}
+                    <a 
+                        href="https://wa.me/966506762257" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer"
+                        title="تواصل مع المطور عبر واتساب"
+                    >
+                        © 2026 تطوير مهند الحزمي
+                    </a>
+                </footer>
             </div>
+
+            {/* نافذة ماسح الباركود المنبثقة */}
+            {showScanner && (
+                <BarcodeScannerModal 
+                    onClose={() => setShowScanner(false)} 
+                    onScan={(scannedText) => {
+                        setShowScanner(false);
+                        setQuery(scannedText); // الخوارزمية الذكية ستتولى أمر الرقم الطويل!
+                    }} 
+                />
+            )}
 
             {zoomItem && (
                 <Lightbox fileName={imagesList.get(zoomItem.cleanId)}
@@ -1437,15 +1363,6 @@ const [showScanner, setShowScanner] = useState(false);
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
-
-<!--
-  تسجيل Service Worker معطّل حتى يُرفع ملف /sw.js فعلياً.
-<script>
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(e => console.warn("SW skipped:", e.message));
-}
-</script>
--->
 
 </body>
 </html>
