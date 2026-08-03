@@ -852,7 +852,7 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 // ============================================================
-// ماسح الباركود بالكاميرا (نسخة الخبير - Ultra Fast Native)
+// ماسح الباركود بالكاميرا (نسخة الخبير النهائية - توافق وسرعة قصوى)
 // ============================================================
 const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     const [camError, setCamError] = useState("");
@@ -861,13 +861,19 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
         let isMounted = true;
         const html5QrCode = new Html5Qrcode("reader");
 
-        // 1. إعدادات الخبير: تقليل الإطارات للمعالجة الأسرع، وتحديد صيغ الباركود بدقة
+        // 1. تطبيق إعدادات الخبير (المربع الديناميكي، تقليل الإطارات للمعالجة، وتحديد الصيغ)
         const config = {
-            fps: 15, 
-            qrbox: { width: 260, height: 260 },
+            fps: 10, 
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+                const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.72;
+                return { width: size, height: size };
+            },
             aspectRatio: 1,
-            disableFlip: true, // إيقاف عكس الكاميرا لأنه يستهلك المعالج
-            useBarCodeDetectorIfSupported: true, // استخدام الـ API الأصلي للجوال
+            disableFlip: true,
+            useBarCodeDetectorIfSupported: true,
+            rememberLastUsedCamera: true,
+            showTorchButtonIfSupported: true,
+            supportedScanTypes: [window.Html5QrcodeScanType?.SCAN_TYPE_CAMERA || 0],
             formatsToSupport: [
                 window.Html5QrcodeSupportedFormats.CODE_128,
                 window.Html5QrcodeSupportedFormats.CODE_39,
@@ -878,36 +884,42 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
             ]
         };
 
-        // 2. منع التكرار (Debounce) لمنع تشغيل الكود مرتين في نفس اللحظة
         let lastCode = "";
         let lastTime = 0;
 
         const onScanSuccess = (decodedText) => {
-            const now = performance.now();
-            if (decodedText === lastCode && (now - lastTime) < 1000) return;
-            lastCode = decodedText;
+            // 2. تنظيف الباركود كما أشار الخبير
+            const code = decodedText.trim();
+            if (!code) return; 
+
+            // 3. استخدام Date.now() للسرعة والتوافقية
+            const now = Date.now();
+            if (code === lastCode && (now - lastTime) < 1000) return;
+            lastCode = code;
             lastTime = now;
 
             if (isMounted) {
-                // 3. الإغلاق السلس باستخدام إطارات الشاشة (يمنع تجميد المتصفح)
-                requestAnimationFrame(() => {
-                    html5QrCode.stop()
-                        .then(() => onScan(decodedText))
-                        .catch(() => onScan(decodedText));
+                requestAnimationFrame(async () => {
+                    // 4. الإغلاق والتنظيف العميق للذاكرة (يمنع تعليق الكاميرا في الآيفون)
+                    try {
+                        await html5QrCode.stop();
+                        await html5QrCode.clear(); 
+                    } catch (e) {}
+                    
+                    onScan(code);
                 });
             }
         };
 
-        // تشغيل الكاميرا مع فرض الكاميرا الخلفية الأصلية
+        // 5. التخلي عن exact لتجنب تأخير الآيفون (كما نصح الخبير)
         html5QrCode.start(
-            { facingMode: { exact: "environment" } },
+            { facingMode: "environment" },
             config,
             onScanSuccess,
-            (errorMessage) => { /* تجاهل الأخطاء اللحظية */ }
+            (errorMessage) => { /* نتجاهل أخطاء عدم العثور على باركود اللحظية */ }
         ).then(() => {
-            // 4. تطبيق القيود المتقدمة (الفوكس والزوم) فور اشتغال الكاميرا
+            // نطبق الفوكس والزوم في وضع الـ Try/Catch حتى لا يكسر النظام إذا رفضها الآيفون
             try {
-                // محاولة جلب التراك (Track) سواء بالطريقة الحديثة أو الكلاسيكية
                 const track = html5QrCode.getRunningTrack 
                     ? html5QrCode.getRunningTrack() 
                     : document.querySelector("#reader video")?.srcObject?.getVideoTracks()[0];
@@ -916,43 +928,24 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
                     const capabilities = track.getCapabilities();
                     const advancedConstraints = [];
 
-                    // تفعيل التركيز المستمر (الفوكس)
-                    if (capabilities.focusMode) {
-                        advancedConstraints.push({ focusMode: "continuous" });
-                    }
-                    // تفعيل تقريب خفيف (Zoom) لتسهيل قراءة الباركودات الصغيرة 
-                    // (استخدمنا تقريب 2x كحد أقصى لكي لا تغبش الكاميرا على أجهزة سامسونج/آيفون برو)
-                    if (capabilities.zoom) {
-                        const optimalZoom = Math.min(capabilities.zoom.max, 2);
-                        advancedConstraints.push({ zoom: optimalZoom });
-                    }
+                    if (capabilities.focusMode) advancedConstraints.push({ focusMode: "continuous" });
+                    if (capabilities.zoom) advancedConstraints.push({ zoom: Math.min(capabilities.zoom.max, 2) });
 
                     if (advancedConstraints.length > 0) {
                         track.applyConstraints({ advanced: advancedConstraints }).catch(() => {});
                     }
                 }
-            } catch (e) {
-                console.warn("تطبيق القيود المتقدمة غير مدعوم في هذا المتصفح:", e);
-            }
+            } catch (e) {}
         }).catch((err) => {
             console.error("خطأ الكاميرا:", err);
-            if (isMounted) {
-                // إذا فشل exact environment (في بعض الأجهزة القديمة)، نحاول التشغيل العادي
-                html5QrCode.start(
-                    { facingMode: "environment" },
-                    config,
-                    onScanSuccess,
-                    () => {}
-                ).catch(() => {
-                    if (isMounted) setCamError("تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.");
-                });
-            }
+            if (isMounted) setCamError("تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.");
         });
 
         return () => {
             isMounted = false;
             if (html5QrCode.isScanning) {
-                html5QrCode.stop().catch(() => {});
+                // تنظيف الذاكرة عند إغلاق النافذة يدوياً
+                html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
             }
         };
     }, [onScan]);
