@@ -852,20 +852,42 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 // ============================================================
-// ماسح الباركود بالكاميرا
+// ماسح الباركود بالكاميرا (تم التحديث للتشغيل التلقائي المباشر)
 // ============================================================
 const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     useEffect(() => {
-        const scanner = new Html5QrcodeScanner("reader", { 
-            fps: 10, 
-            qrbox: { width: 250, height: 120 },
-            showTorchButtonIfSupported: true
+        let isMounted = true;
+        // استخدام المحرك الأساسي بدلاً من الواجهة الجاهزة لتخطي شاشة الاختيار
+        const html5QrCode = new Html5Qrcode("reader");
+
+        // إجبار النظام على فتح الكاميرا الخلفية فوراً
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { fps: 10, qrbox: { width: 250, height: 120 } },
+            (decodedText) => {
+                if (isMounted) {
+                    // إيقاف الكاميرا فور التقاط الباركود لمنع التكرار
+                    html5QrCode.stop().then(() => {
+                        onScan(decodedText);
+                    }).catch(() => {
+                        onScan(decodedText);
+                    });
+                }
+            },
+            (errorMessage) => {
+                // تجاهل أخطاء القراءة اللحظية أثناء توجيه الكاميرا
+            }
+        ).catch((err) => {
+            console.error("تعذر فتح الكاميرا تلقائياً:", err);
         });
-        scanner.render((text) => {
-            scanner.clear();
-            onScan(text);
-        }, () => {});
-        return () => { scanner.clear().catch(e => {}); };
+
+        // تنظيف الكاميرا وإغلاقها عند خروج المستخدم من النافذة
+        return () => {
+            isMounted = false;
+            if (html5QrCode.isScanning) {
+                html5QrCode.stop().catch(() => {});
+            }
+        };
     }, [onScan]);
 
     return (
@@ -879,7 +901,10 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
                         <Icon.Close className="w-16 h-16 text-secondary"/>
                     </button>
                 </div>
-                <div id="reader" className="w-full bg-black"></div>
+                {/* مساحة سوداء مجهزة بانتظار تحميل الكاميرا (ثانية واحدة) */}
+                <div id="reader" className="w-full bg-black min-h-[300px] flex items-center justify-center">
+                    <span className="text-white/50 text-[12px] animate-pulse">جاري فتح الكاميرا...</span>
+                </div>
                 <div className="p-12 text-center text-[12px] text-muted">
                     وجّه الكاميرا نحو باركود المنتج لقرائته تلقائياً
                 </div>
@@ -887,7 +912,6 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
         </div>
     );
 });
-
 // ============================================================
 // التطبيق
 // ============================================================
