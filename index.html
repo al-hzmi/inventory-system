@@ -852,28 +852,23 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 // ============================================================
-// ماسح الباركود بالكاميرا (نسخة الـ Turbo السريعة والقياسية)
+// ماسح الباركود بالكاميرا (النسخة القياسية المستقرة لجميع الأجهزة)
 // ============================================================
 const BarcodeScannerModal = memo(({ onClose, onScan }) => {
+    const [camError, setCamError] = useState("");
+
     useEffect(() => {
         let isMounted = true;
         const html5QrCode = new Html5Qrcode("reader");
 
-        // إعدادات محسنة لتسريع اللقطة (لقط بلمح البصر) وتقصير الشاشة
+        // إعدادات مستقرة تدعم الآيفون: سرعة جيدة + مستطيل القراءة فقط بدون قيود معقدة
         const config = {
-            fps: 30, // زيادة سرعة التقاط الفريمات 3 أضعاف (سريع جداً)
-            qrbox: { width: 280, height: 100 }, // التركيز على شكل مستطيل ضيق فقط (يزيد السرعة لأن المعالجة تصبح أقل)
-            aspectRatio: 1.0, // تقصير طول الكاميرا لتكون مربعة/قياسية بدل ملء الشاشة
-        };
-
-        const videoConstraints = {
-            facingMode: "environment",
-            // إجبار عدسة جوال المستخدم على التركيز التلقائي المستمر (يمنع الغباش)
-            advanced: [{ focusMode: "continuous" }] 
+            fps: 15, 
+            qrbox: { width: 260, height: 120 } // المستطيل الذي يعزل الخلفية ويركز على الباركود
         };
 
         html5QrCode.start(
-            videoConstraints, 
+            { facingMode: "environment" }, // الكاميرا الخلفية دائماً
             config,
             (decodedText) => {
                 if (isMounted) {
@@ -881,10 +876,14 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
                 }
             },
             (errorMessage) => { 
-                // تجاهل أخطاء القراءة اللحظية أثناء توجيه الكاميرا
+                // تجاهل أخطاء عدم العثور على باركود اللحظية
             }
         ).catch((err) => {
-            console.error("تعذر فتح الكاميرا:", err);
+            console.error("خطأ الكاميرا:", err);
+            if (isMounted) {
+                // هذا التنبيه سيظهر بدلاً من الشاشة السوداء إذا رفض الآيفون التشغيل
+                setCamError("تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح من إعدادات الجوال، ثم حدّث الصفحة.");
+            }
         });
 
         return () => {
@@ -897,7 +896,6 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-16 animate-card">
-            {/* تم تعديل التصميم ليكون مضغوطاً وأشبه بتطبيقات الباركود الحقيقية */}
             <div className="w-full max-w-[360px] bg-bg rounded-16 overflow-hidden shadow-lift flex flex-col">
                 <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
                     <h3 className="font-bold text-primary flex items-center gap-8">
@@ -908,9 +906,15 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
                     </button>
                 </div>
                 
-                {/* الحاوية هنا ستأخذ شكل مربع وستكون أقصر بكثير من السابق */}
-                <div id="reader" className="w-full bg-black min-h-[360px] flex items-center justify-center relative">
-                    <span className="text-white/50 text-[12px] animate-pulse absolute">جاري فتح العدسة...</span>
+                <div className="w-full bg-black min-h-[250px] relative flex items-center justify-center">
+                    {camError ? (
+                        <div className="text-danger text-center p-24 text-[13px] font-medium leading-relaxed">
+                            <Icon.Alert className="w-24 h-24 mx-auto mb-8 text-danger" />
+                            {camError}
+                        </div>
+                    ) : (
+                        <div id="reader" className="w-full"></div>
+                    )}
                 </div>
                 
                 <div className="p-16 text-center text-[13px] font-medium text-primary bg-surface border-t border-border">
