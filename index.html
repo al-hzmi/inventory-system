@@ -636,29 +636,40 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
     const handleSubmit = () => {
         if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
         
-        // 1. تجهيز الرسالة
-        let msg = `*طلب مبيعات جديد*\n`;
-        msg += `──────────────\n`;
-        msg += `المندوب: ${sessionName}\n`;
-        msg += `العميل: ${customer.trim()}\n`;
-        msg += `المستودع: ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
-        msg += `التاريخ: ${new Date().toLocaleDateString('ar-SA')}\n`;
-        if (notes.trim()) msg += `الملاحظات: ${notes.trim()}\n`;
-        msg += `──────────────\n`;
-        items.forEach((it, idx) => {
-            msg += `${idx + 1}. [${it.id}]\n   الكمية: *${it.cartQty}* | السعر: ${it.price || 0} ر.س\n`;
-        });
-        msg += `──────────────\n`;
-        msg += `الإجمالي التقديري: ${NUMBER_FORMATTER.format(totalAmount)} ر.س\n`;
+        // استخراج التاريخ الميلادي حصراً بتنسيق (يوم/شهر/سنة)
+        const gregorianDate = new Date().toLocaleDateString('en-GB');
 
-        // 2. فتح الواتساب فوراً (بدون انتظار لحماية الكود من حظر المتصفح)
+        // 1. تجهيز الرسالة بتنسيق احترافي جداً للواتساب
+        let msg = `*🛒 طلب مبيعات جديد*\n`;
+        msg += `════════════════\n`;
+        msg += `👤 *المندوب:* ${sessionName}\n`;
+        msg += `🏢 *العميل:* ${customer.trim()}\n`;
+        msg += `📦 *المستودع:* ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
+        msg += `📅 *التاريخ:* ${gregorianDate}\n`;
+        if (notes.trim()) msg += `📝 *الملاحظات:* ${notes.trim()}\n`;
+        msg += `════════════════\n\n`;
+
+        items.forEach((it, idx) => {
+            msg += `▪️ *[ ${it.id} ]*\n`;
+            msg += `   الكمية: *${it.cartQty}* |  الإجمالي: *${NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}* ر.س\n`;
+            
+            // إضافة فاصل بين الأصناف (ما عدا الصنف الأخير)
+            if (idx < items.length - 1) {
+                msg += `  ╌╌╌╌╌╌╌╌╌╌╌╌\n`;
+            }
+        });
+
+        msg += `\n════════════════\n`;
+        msg += `💰 *الإجمالي النهائي: ${NUMBER_FORMATTER.format(totalAmount)} ر.س*\n`;
+
+        // 2. فتح الواتساب فوراً
         const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
         window.open(waUrl, '_blank');
 
-        // 3. الحفظ في السجل المحلي للمندوب (كي لا تضيع الفاتورة)
+        // 3. الحفظ في السجل المحلي للمندوب
         const newOrder = {
             id: Date.now(),
-            date: new Date().toLocaleString('ar-SA'),
+            date: gregorianDate,
             customer: customer.trim(),
             warehouse: warehouse,
             totalAmount: totalAmount,
@@ -668,7 +679,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
         const existingHistory = JSON.parse(localStorage.getItem(historyKey)) || [];
         localStorage.setItem(historyKey, JSON.stringify([newOrder, ...existingHistory]));
 
-        // 4. الحفظ الصامت في فايربيس (بالخلفية بدون تأخير المندوب)
+        // 4. الحفظ الصامت في فايربيس
         getDb().then(db => {
             db.collection('orders').add({
                 repName: sessionName, customerName: customer.trim(), warehouse: warehouse, notes: notes.trim(), 
@@ -695,13 +706,13 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                 <div className="p-16 overflow-y-auto flex-1 bg-surface">
                     <div className="mb-16">
                         <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
-                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="اسم العميل ..."
+                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="اسم العميل..."
                                className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
                     </div>
 
                     <div className="mb-16">
                         <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم، شحن، أو ملاحظة أخرى ..."
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم، شحن، أو ملاحظة إضافية..."
                                className="w-full h-64 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
                     </div>
 
@@ -739,7 +750,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
         </div>
     );
 });
-
+    
     // نافذة سجل الطلبات (Order History) للمندوب
 const OrderHistoryModal = memo(({ onClose, sessionName }) => {
     const historyKey = `b2b_history_${sessionName}`;
