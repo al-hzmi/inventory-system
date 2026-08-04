@@ -698,13 +698,13 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                 <div className="p-16 overflow-y-auto flex-1 bg-surface">
                     <div className="mb-16">
                         <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
-                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="مثال: مؤسسة الأواني الكبرى..."
+                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="إسم العميل ..."
                                className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
                     </div>
 
                     <div className="mb-16">
                         <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم خاص، شحن سريع، أو ملاحظة للمحاسب..."
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم، شحن، أو ملاحظة أخرى ..."
                                className="w-full h-64 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
                     </div>
 
@@ -782,7 +782,7 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
         
         <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">سعر الأساس (الكرتون)</div>
+                <div className="text-[12px] text-muted mb-2">سعر (الكرتون)</div>
                 <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
             </div>
             <div className="min-w-0">
@@ -863,7 +863,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
 
                     <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted mb-2">سعر الأساس</div>
+                            <div className="text-[11px] text-muted mb-2">سعر (الكرتون)</div>
                             <div className="text-[13px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
                         </div>
                         <div className="min-w-0">
@@ -1321,7 +1321,7 @@ const App = () => {
                         </label>
                     </div>
 
-                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
+                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> عرض صورة المنتج</p>}
                 </div>
             </div>
 
