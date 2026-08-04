@@ -1132,6 +1132,7 @@ const App = () => {
     });
     
     const [showCart, setShowCart] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
     
     useEffect(() => {
         if (sessionName) {
@@ -1337,16 +1338,23 @@ const App = () => {
                         </div>
                         
                         {warehouse && (
-                            <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors flex-shrink-0">
-                                <Icon.Cart className="w-20 h-20" />
-                                {Object.keys(cart).length > 0 && (
-                                    <span className="absolute -top-4 -right-4 w-20 h-20 bg-danger text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-flip">
-                                        {Object.keys(cart).length}
-                                    </span>
-                                )}
-                            </button>
+                            <div className="flex items-center gap-8 flex-shrink-0">
+                                {/* ✨ زر سجل الطلبات */}
+                                <button onClick={() => setShowHistory(true)} title="سجل الطلبات" className="flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
+                                    <Icon.List className="w-20 h-20" />
+                                </button>
+                                
+                                {/* زر السلة */}
+                                <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
+                                    <Icon.Cart className="w-20 h-20" />
+                                    {Object.keys(cart).length > 0 && (
+                                        <span className="absolute -top-4 -right-4 w-20 h-20 bg-danger text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-flip">
+                                            {Object.keys(cart).length}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
                         )}
-                    </div>
 
                     <div className="flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
@@ -1464,6 +1472,7 @@ const App = () => {
 
             {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} onScan={(scannedText) => { setShowScanner(false); setQuery(scannedText); }} />}
             {showCart && <OrderInvoiceModal cart={cart} setCart={setCart} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />}
+            {showHistory && <OrderHistoryModal onClose={() => setShowHistory(false)} sessionName={sessionName} />}
             {zoomItem && <Lightbox fileName={imagesList.get(zoomItem.cleanId)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />}
         </div>
     );
