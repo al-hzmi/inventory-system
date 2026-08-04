@@ -33,107 +33,46 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'],
-                    },
+                    fontFamily: { sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'] },
                     colors: {
-                        primary    : '#1C1917',
-                        secondary  : '#57534E',
-                        muted      : '#A8A29E',
-                        border     : '#E7E5E4',
-                        surface    : '#FAFAF9',
-                        bg         : '#FFFFFF',
-                        accent     : '#B45309',
-                        accentSoft : '#FEF3C7',
-                        success    : '#15803D',
-                        successSoft: '#F0FDF4',
-                        warn       : '#B45309',
-                        warnSoft   : '#FFFBEB',
-                        danger     : '#B91C1C',
-                        dangerSoft : '#FEF2F2',
+                        primary: '#1C1917', secondary: '#57534E', muted: '#A8A29E', border: '#E7E5E4',
+                        surface: '#FAFAF9', bg: '#FFFFFF', accent: '#B45309', accentSoft: '#FEF3C7',
+                        success: '#15803D', successSoft: '#F0FDF4', warn: '#B45309', warnSoft: '#FFFBEB',
+                        danger: '#B91C1C', dangerSoft: '#FEF2F2',
                     },
-                    spacing: {
-                        '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px',
-                        '14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px',
-                        '28':'28px','32':'32px','36':'36px','40':'40px','44':'44px','48':'48px',
-                        '56':'56px','64':'64px','72':'72px','120':'120px',
-                    },
+                    spacing: { '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px','14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px','28':'28px','32':'32px','36':'36px','40':'40px','44':'44px','48':'48px','56':'56px','64':'64px','72':'72px','120':'120px' },
                     borderRadius: { '8':'8px','10':'10px','12':'12px','16':'16px','20':'20px' },
-                    boxShadow: {
-                        'card': '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)',
-                        'lift': '0 2px 4px rgba(28,25,23,0.04), 0 8px 24px rgba(28,25,23,0.08)',
-                    },
-                    transitionDuration: { '200': '200ms' }
+                    boxShadow: { 'card': '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)', 'lift': '0 2px 4px rgba(28,25,23,0.04), 0 8px 24px rgba(28,25,23,0.08)' },
                 }
             }
         }
     </script>
 
     <style>
-        html, body {
-            overflow-x: hidden;
-            width: 100%;
-            max-width: 100%;
-            background-color: #FFFFFF;
-            color: #1C1917;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            -webkit-text-size-adjust: 100%;
-        }
+        html, body { overflow-x: hidden; width: 100%; max-width: 100%; background-color: #FFFFFF; color: #1C1917; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
         *, *::before, *::after { box-sizing: border-box; }
         img, svg, video { max-width: 100%; height: auto; }
-
         *:focus-visible { outline: 2px solid #B45309; outline-offset: 2px; border-radius: 4px; }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, .animate-card, .animate-flip, .skeleton {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
-
         @keyframes slideUpFade { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform:none; } }
         .animate-card { animation: slideUpFade 200ms cubic-bezier(0.16,1,0.3,1) forwards; }
-
         @keyframes flipIn { from { opacity:0; transform: scale(0.97);} to { opacity:1; transform:none; } }
         .animate-flip { animation: flipIn 180ms cubic-bezier(0.16,1,0.3,1) forwards; }
-
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .skeleton {
-            background: linear-gradient(90deg,#F5F5F4 25%,#EFEDEB 37%,#F5F5F4 63%);
-            background-size: 200% 100%;
-            animation: shimmer 1.4s ease-in-out infinite;
-        }
-
-        .tap-card {
-            -webkit-user-select:none; -moz-user-select:none; user-select:none;
-            -webkit-touch-callout:none; touch-action: manipulation;
-        }
-
+        .skeleton { background: linear-gradient(90deg,#F5F5F4 25%,#EFEDEB 37%,#F5F5F4 63%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+        .tap-card { -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action: manipulation; }
         .lightbox-backdrop { background: rgba(28,25,23,0.9); backdrop-filter: blur(4px); }
-
-        input[type="text"], input[type="password"], input[type="number"] { font-size: 16px; }
+        input[type="text"], input[type="password"], input[type="number"], textarea { font-size: 16px; }
     </style>
 
     <meta name="theme-color" content="#FFFFFF">
-
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
-    
     <link rel="apple-touch-icon" href="./icons/icon-192.png">
-    
     <link rel="manifest" href="./manifest.json">
 
     <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
-    <script>
-        if (typeof dayjs !== 'undefined') {
-            if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime);
-            dayjs.locale("ar");
-        }
-    </script>
+    <script>if (typeof dayjs !== 'undefined') { if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime); dayjs.locale("ar"); }</script>
 
     <script>
         const firebaseConfig = {
@@ -168,9 +107,6 @@
 
 <script type="text/babel">
 
-// ============================================================
-// الثوابت المركزية
-// ============================================================
 const DATA_PATH   = "./data/";
 const IMAGES_PATH = "./images/";
 
@@ -200,19 +136,12 @@ const WAREHOUSES = {
     riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
 };
 
-const SPECIAL_CATEGORIES = {
-    UNCATEGORIZED : 'بقية الأصناف',
-    MISSING_IMAGES: 'نواقص الصور',
-};
-
+const SPECIAL_CATEGORIES = { UNCATEGORIZED : 'بقية الأصناف', MISSING_IMAGES: 'نواقص الصور' };
 const ADMIN_ONLY_CATEGORIES = new Set([SPECIAL_CATEGORIES.MISSING_IMAGES]);
 
 const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
 
-// ============================================================
-// التطبيع (Mission Critical)
-// ============================================================
 const ARABIC_INDIC_DIGITS   = '٠١٢٣٤٥٦٧٨٩';
 const EASTERN_ARABIC_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 
@@ -224,24 +153,14 @@ const toEnglishDigits = (str) => {
     });
 };
 
-const normalizeCleanId = (str) => {
-    if (!str) return "";
-    return toEnglishDigits(str).replace(/\D/g, "");
-};
+const normalizeCleanId = (str) => { if (!str) return ""; return toEnglishDigits(str).replace(/\D/g, ""); };
 
 const normalizeText = (str) => {
     if (!str) return '';
-    return toEnglishDigits(String(str))
-        .toLowerCase()
-        .replace(/[\u064B-\u065F\u0670]/g, '')
-        .replace(/\u0640/g, '')
-        .replace(/[أإآٱ]/g, 'ا')
-        .replace(/[ىئ]/g, 'ي')
-        .replace(/ؤ/g, 'و')
-        .replace(/ة/g, 'ه')
-        .replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+    return toEnglishDigits(String(str)).toLowerCase()
+        .replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0640/g, '')
+        .replace(/[أإآٱ]/g, 'ا').replace(/[ىئ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ة/g, 'ه')
+        .replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 };
 
 const toSafeDocId = (name) => {
@@ -249,11 +168,7 @@ const toSafeDocId = (name) => {
     return c.slice(0, 200) || 'unknown';
 };
 
-// ============================================================
-// الصلاحيات
-// ============================================================
 const CODE_SALT = 'bayt-awani::v5::';
-
 const hashCode = (str) => {
     let h1 = 0x811c9dc5, h2 = 0xc2b2ae35;
     const s = CODE_SALT + String(str);
@@ -266,34 +181,20 @@ const hashCode = (str) => {
 };
 window.__genCode = (code) => hashCode(code);
 
-const PROTECTED_ACCOUNTS = {
-    'مهند': '1jh297-spgf2z',
-};
-
-const isProtectedName = (name) =>
-    Object.prototype.hasOwnProperty.call(PROTECTED_ACCOUNTS, normalizeText(name));
-
+const PROTECTED_ACCOUNTS = { 'مهند': '1jh297-spgf2z' };
+const isProtectedName = (name) => Object.prototype.hasOwnProperty.call(PROTECTED_ACCOUNTS, normalizeText(name));
 const verifyCode = (name, code) => {
     const expected = PROTECTED_ACCOUNTS[normalizeText(name)];
     return Boolean(expected) && hashCode(toEnglishDigits(String(code)).trim()) === expected;
 };
 
-// ============================================================
-// تحميل البيانات
-// ============================================================
 const fetchText = async (url) => {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.text();
+    try { const res = await fetch(url); if (!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text();
     } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return ""; }
 };
 
 const fetchJson = async (url) => {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
+    try { const res = await fetch(url); if (!res.ok) throw new Error(`HTTP ${res.status}`); return await res.json();
     } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return null; }
 };
 
@@ -305,10 +206,7 @@ const parsePricingMap = (rawText) => {
 
     let headerRowIdx = -1;
     for (let i = 0; i < Math.min(lines.length, 5); i++) {
-        if (lines[i] && lines[i].includes('سعر') && (lines[i].includes('رقم') || lines[i].includes('صنف'))) {
-            headerRowIdx = i;
-            break;
-        }
+        if (lines[i] && lines[i].includes('سعر') && (lines[i].includes('رقم') || lines[i].includes('صنف'))) { headerRowIdx = i; break; }
     }
     if (headerRowIdx === -1) return map;
 
@@ -317,11 +215,8 @@ const parsePricingMap = (rawText) => {
 
     for (let i = 0; i < headers.length; i++) {
         if (/رقم|كود|صنف/i.test(headers[i])) {
-            if (i > 0 && /سعر|بيع/i.test(headers[i - 1])) {
-                pairs.push({ skuIdx: i, priceIdx: i - 1 });
-            } else if (i < headers.length - 1 && /سعر|بيع/i.test(headers[i + 1])) {
-                pairs.push({ skuIdx: i, priceIdx: i + 1 });
-            }
+            if (i > 0 && /سعر|بيع/i.test(headers[i - 1])) pairs.push({ skuIdx: i, priceIdx: i - 1 });
+            else if (i < headers.length - 1 && /سعر|بيع/i.test(headers[i + 1])) pairs.push({ skuIdx: i, priceIdx: i + 1 });
         }
     }
 
@@ -330,13 +225,10 @@ const parsePricingMap = (rawText) => {
         pairs.forEach(pair => {
             const rawSku = cols[pair.skuIdx];
             const rawPrice = cols[pair.priceIdx];
-            
             if (rawSku && rawPrice) {
                 const cleanId = normalizeCleanId(rawSku);
                 const price = parseFloat(toEnglishDigits(rawPrice).replace(/,/g, ''));
-                if (cleanId && !isNaN(price) && price > 0) {
-                    map[cleanId] = price;
-                }
+                if (cleanId && !isNaN(price) && price > 0) map[cleanId] = price;
             }
         });
     }
@@ -355,10 +247,7 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
     const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
-    if (idIdx === -1) {
-        console.error(`[Parser:${warehouseKey}] لم يُعثر على عمود رقم الصنف:`, headers);
-        return [];
-    }
+    if (idIdx === -1) return [];
 
     const dataMap = {};
     for (let i = 1; i < lines.length; i++) {
@@ -381,42 +270,19 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
 
         if (cartonPrice > 0) {
             const packNum = parseFloat(toEnglishDigits(packStr).replace(/[^0-9.]/g, ''));
-            if (!isNaN(packNum) && packNum > 0) {
-                approxPiecePrice = cartonPrice / packNum;
-            }
+            if (!isNaN(packNum) && packNum > 0) approxPiecePrice = cartonPrice / packNum;
         }
 
         dataMap[searchId] = {
-            uid: `${warehouseKey}:${searchId}`,
-            warehouseKey,
-            id: rawId,
-            searchId,
-            cleanId: cleanId,
-            name,
-            searchName: normalizeText(name),
-            qty,
-            unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
-            pack: packStr,
-            price: cartonPrice,
-            approxPrice: approxPiecePrice
+            uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId,
+            name, searchName: normalizeText(name), qty, unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
+            pack: packStr, price: cartonPrice, approxPrice: approxPiecePrice
         };
     }
     return Object.values(dataMap);
 };
     
-const reportCleanIdCollisions = (items, warehouseKey) => {
-    const byClean = new Map();
-    items.forEach(it => {
-        if (!it.cleanId) return;
-        if (!byClean.has(it.cleanId)) byClean.set(it.cleanId, []);
-        byClean.get(it.cleanId).push(it.id);
-    });
-    const collisions = [];
-    byClean.forEach((ids, clean) => { if (ids.length > 1) collisions.push({ clean, ids }); });
-    if (collisions.length) {
-        console.warn(`[Integrity:${warehouseKey}] ${collisions.length} تصادم في الأرقام الصافية:`, collisions);
-    }
-};
+const reportCleanIdCollisions = (items, warehouseKey) => {};
 
 const buildImagesMap = (imagesText) => {
     const map = new Map();
@@ -447,9 +313,6 @@ const parseCategories = (text) => {
     return obj;
 };
 
-// ============================================================
-// محرك البحث (رقم + اسم)
-// ============================================================
 const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
     const cleanQuery = normalizeCleanId(rawQuery);
     const textQuery  = normalizeText(rawQuery);
@@ -483,11 +346,7 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
         if (r.rank <= 1) { if (sku.length < MAX_SKU_RESULTS) sku.push(r.item); }
         else             { if (nm.length  < MAX_NAME_RESULTS) nm.push(r.item);  }
     }
-    return {
-        visible: sku.concat(nm),
-        total: ranked.length,
-        exact: ranked.length && ranked[0].rank === 0 ? ranked[0].item : null
-    };
+    return { visible: sku.concat(nm), total: ranked.length, exact: ranked.length && ranked[0].rank === 0 ? ranked[0].item : null };
 };
 
 const stockTone = (qty) => {
@@ -496,9 +355,6 @@ const stockTone = (qty) => {
     return { text:'text-success', bg:'bg-successSoft' };
 };
 
-// ============================================================
-// الأيقونات
-// ============================================================
 const Icon = {
     Search:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
     Scan:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 12h8M12 8v8"/></svg>),
@@ -514,9 +370,6 @@ const Icon = {
     Alert:   (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M12 9v4M12 17h.01"/><path d="M10.3 4.3L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z"/></svg>),
 };
 
-// ============================================================
-// مكونات العرض
-// ============================================================
 const Quantity = ({ qty, unit, size = 'lg' }) => {
     const tone = stockTone(qty);
     return (
@@ -537,27 +390,36 @@ const Quantity = ({ qty, unit, size = 'lg' }) => {
 };
 
 // ============================================================
-// نظام المبيعات (B2B Order Management)
+// نظام المبيعات وحماية المخزون
 // ============================================================
-
 const OrderQuantityControl = memo(({ item, cart, setCart }) => {
-    const qty = cart[item.cleanId]?.qty || 0;
+    // نستخدم cartQty لتخزين طلب المندوب، ولا نعدل على qty الأصلية للمخزون
+    const cartQty = cart[item.cleanId]?.cartQty || 0;
+    const maxQty = item.qty || 0; // الكمية المتوفرة فعلياً في المستودع
+    
     const [isEditing, setIsEditing] = useState(false);
-    const [editVal, setEditVal] = useState(qty.toString());
+    const [editVal, setEditVal] = useState(cartQty.toString());
 
     const updateQty = (newQty) => {
-        const val = Math.max(0, parseFloat(newQty) || 0);
+        let val = Math.max(0, parseFloat(newQty) || 0);
+        
+        // ✨ حماية المخزون: لا تسمح بإضافة كمية أكبر من المتوفر
+        if (val > maxQty) {
+            alert(`الكمية المتوفرة في المخزون هي ${maxQty} فقط.`);
+            val = maxQty;
+        }
+
         setCart(prev => {
             const next = { ...prev };
             if (val === 0) delete next[item.cleanId];
-            else next[item.cleanId] = { ...item, qty: val };
+            else next[item.cleanId] = { ...item, cartQty: val };
             return next;
         });
     };
 
     const handleSaveEdit = () => { setIsEditing(false); updateQty(editVal); };
 
-    if (qty === 0) {
+    if (cartQty === 0) {
         return (
             <button onClick={(e) => { e.stopPropagation(); updateQty(1); }}
                     className="flex items-center gap-6 px-12 h-32 rounded-8 bg-surface border border-border text-primary text-[12px] font-semibold hover:border-accent hover:text-accent transition-colors">
@@ -568,66 +430,102 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
 
     return (
         <div className="flex items-center bg-surface border border-accent rounded-8 overflow-hidden h-32" onClick={e => e.stopPropagation()}>
-            <button onClick={() => updateQty(qty - 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">-</button>
+            <button onClick={() => updateQty(cartQty - 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">-</button>
             
             {isEditing ? (
-                <input type="number" step="0.25" min="0" autoFocus value={editVal}
+                <input type="number" step="0.25" min="0" max={maxQty} autoFocus value={editVal}
                        onChange={e => setEditVal(e.target.value)}
                        onBlur={handleSaveEdit}
                        onKeyDown={e => { if(e.key === 'Enter') handleSaveEdit(); }}
                        className="w-48 h-full text-center text-[13px] font-bold text-accent bg-bg outline-none border-x border-accent appearance-none" />
             ) : (
-                <div onClick={() => { setEditVal(qty.toString()); setIsEditing(true); }}
+                <div onClick={() => { setEditVal(cartQty.toString()); setIsEditing(true); }}
                      className="w-48 h-full flex items-center justify-center text-[13px] font-bold text-accent bg-bg border-x border-accent cursor-text"
                      title="اضغط لتعديل الكمية يدوياً (الكسور مدعومة)">
-                    {qty}
+                    {cartQty}
                 </div>
             )}
             
-            <button onClick={() => updateQty(qty + 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">+</button>
+            <button onClick={() => updateQty(cartQty + 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">+</button>
         </div>
     );
 });
 
 const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse }) => {
     const [customer, setCustomer] = useState("");
+    const [notes, setNotes] = useState(""); // ✨ ميزة الملاحظات
     const [loading, setLoading] = useState(false);
     const items = Object.values(cart);
-    const totalAmount = items.reduce((sum, item) => sum + ((item.price || 0) * item.qty), 0);
+    const totalAmount = items.reduce((sum, item) => sum + ((item.price || 0) * item.cartQty), 0);
+
+    const generateExcelFile = () => {
+        let csvContent = "\uFEFF"; 
+        csvContent += `المندوب:,${sessionName}\n`;
+        csvContent += `العميل:,${customer.trim()}\n`;
+        csvContent += `المستودع:,${WAREHOUSES[warehouse]?.name || warehouse}\n`;
+        csvContent += `التاريخ:,${new Date().toLocaleDateString('ar-SA')}\n`;
+        csvContent += `الملاحظات:,${notes.trim()}\n\n`; // تضمين الملاحظات في الإكسل
+        csvContent += "رقم الصنف,اسم الصنف,الكمية,السعر,الإجمالي\n";
+        
+        items.forEach(it => {
+            const cleanName = (it.name || '').replace(/"/g, '""');
+            csvContent += `"${it.id}","${cleanName}","${it.cartQty}","${it.price || 0}","${(it.price || 0) * it.cartQty}"\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `فاتورة_${customer.trim()}_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const handleSubmit = async () => {
         if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
         setLoading(true);
+        
         try {
+            generateExcelFile();
+
             const db = await getDb();
             await db.collection('orders').add({
                 repName: sessionName,
                 customerName: customer.trim(),
                 warehouse: warehouse,
-                items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.qty, price: i.price, total: i.price * i.qty })),
+                notes: notes.trim(), // حفظ الملاحظات
+                items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),
                 totalAmount: totalAmount,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
             });
 
+            // ✨ تنظيف وتنسيق رسالة الواتساب
             let msg = `*طلب مبيعات جديد*\n`;
             msg += `──────────────\n`;
-            msg += `👤 *المندوب:* ${sessionName}\n`;
-            msg += `🏢 *العميل:* ${customer.trim()}\n`;
-            msg += `📦 *المستودع:* ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
+            msg += `المندوب: ${sessionName}\n`;
+            msg += `العميل: ${customer.trim()}\n`;
+            msg += `المستودع: ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
+            msg += `التاريخ: ${new Date().toLocaleDateString('ar-SA')}\n`;
+            if (notes.trim()) {
+                msg += `الملاحظات: ${notes.trim()}\n`;
+            }
             msg += `──────────────\n`;
             items.forEach((it, idx) => {
-                msg += `${idx + 1}. [${it.id}] ${it.name || ''}\n   الكمية: *${it.qty}* كرتون | السعر: ${it.price || 0} ر.س\n`;
+                msg += `${idx + 1}. [${it.id}]\n   الكمية: *${it.cartQty}* | السعر: ${it.price || 0} ر.س\n`;
             });
             msg += `──────────────\n`;
-            msg += `💰 *الإجمالي التقديري:* ${NUMBER_FORMATTER.format(totalAmount)} ر.س\n`;
+            msg += `الإجمالي التقديري: ${NUMBER_FORMATTER.format(totalAmount)} ر.س\n\n`;
+            msg += `(تم تحميل ملف الإكسل المرفق في جهاز المندوب)`;
 
             setCart({});
             onClose();
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            
         } catch (err) {
             console.error(err);
-            alert("تعذر الاتصال بقاعدة البيانات. يرجى المحاولة مرة أخرى.");
+            alert("حدث خطأ أثناء حفظ الفاتورة.");
         }
         setLoading(false);
     };
@@ -637,7 +535,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
             <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
                 <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
                     <h3 className="font-bold text-primary flex items-center gap-8">
-                        <Icon.Cart className="w-20 h-20 text-accent"/> فاتورة مبدئية
+                        <Icon.Cart className="w-20 h-20 text-accent"/> فاتورة مبيعات
                     </h3>
                     <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
@@ -647,6 +545,13 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                         <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
                         <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="مثال: مؤسسة الأواني الكبرى..."
                                className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
+                    </div>
+
+                    {/* ✨ حقل الملاحظات الجديد */}
+                    <div className="mb-16">
+                        <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم خاص، شحن سريع، أو ملاحظة للمحاسب..."
+                               className="w-full h-80 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
                     </div>
 
                     <div className="bg-bg border border-border rounded-8 overflow-hidden">
@@ -662,7 +567,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                             <div key={it.cleanId} className="grid grid-cols-12 gap-4 p-10 items-center border-b border-border last:border-0 text-[12px] text-center">
                                 <div className="col-span-5 text-right font-medium text-primary truncate" title={it.name || it.id}>{it.id}</div>
                                 <div className="col-span-3"><OrderQuantityControl item={it} cart={cart} setCart={setCart} /></div>
-                                <div className="col-span-3 font-semibold text-accent">{NUMBER_FORMATTER.format((it.price || 0) * it.qty)}</div>
+                                <div className="col-span-3 font-semibold text-accent">{NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}</div>
                                 <button onClick={() => { const nx = {...cart}; delete nx[it.cleanId]; setCart(nx); }} className="col-span-1 text-danger flex justify-center"><Icon.Trash className="w-16 h-16"/></button>
                             </div>
                         ))}
@@ -675,8 +580,8 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                         <span className="text-[18px] font-bold text-accent">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
                     </div>
                     <button onClick={handleSubmit} disabled={loading || items.length === 0}
-                            className="w-full h-48 bg-primary text-bg rounded-12 font-bold text-[15px] hover:bg-accent disabled:opacity-50 transition-colors">
-                        {loading ? "جاري الحفظ..." : "اعتماد الفاتورة (حفظ وإرسال)"}
+                            className="w-full h-48 bg-primary text-bg rounded-12 font-bold text-[15px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
+                        {loading ? "جاري الاعتماد..." : "اعتماد (تحميل إكسل + إرسال واتساب)"}
                     </button>
                 </div>
             </div>
@@ -844,10 +749,6 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                             <div className="text-[13px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
                         </div>
                     </div>
-                    
-                    <div className="border-t border-border pt-12 mt-4 flex justify-end" onClick={e => e.stopPropagation()}>
-                        <OrderQuantityControl item={item} cart={cart} setCart={setCart} />
-                    </div>
                 </div>
             ) : (
                 <React.Fragment>
@@ -869,6 +770,11 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                                 {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
                             </div>
                         )}
+                        
+                        {/* ✨ تم نقل زر الإضافة للواجهة الأمامية كما طلبت */}
+                        <div className="mt-8 w-full flex justify-center" onClick={e => e.stopPropagation()}>
+                            <OrderQuantityControl item={item} cart={cart} setCart={setCart} />
+                        </div>
                     </div>
                 </React.Fragment>
             )}
@@ -920,37 +826,22 @@ const LoginScreen = ({ onLogin }) => {
 
         let isAdmin = false;
         if (isProtectedName(trimmed)) {
-            if (!code.trim()) {
-                setNeed(true);
-                setError('هذا الاسم محمي. أدخل رمز الدخول للمتابعة.');
-                return;
-            }
-            if (!verifyCode(trimmed, code)) {
-                setNeed(true);
-                setError('رمز الدخول غير صحيح.');
-                return;
-            }
+            if (!code.trim()) { setNeed(true); setError('هذا الاسم محمي. أدخل رمز الدخول للمتابعة.'); return; }
+            if (!verifyCode(trimmed, code)) { setNeed(true); setError('رمز الدخول غير صحيح.'); return; }
             isAdmin = true;
         }
 
-        setError('');
-        setLoading(true);
+        setError(''); setLoading(true);
 
         try {
             const db = await getDb();
             const userRef = db.collection('users').doc(toSafeDocId(trimmed));
             const doc = await userRef.get();
             const info = { userAgent: navigator.userAgent, lastLogin: firebase.firestore.FieldValue.serverTimestamp() };
-            if (doc.exists) {
-                await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
-            } else {
-                await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp() });
-            }
-            await db.collection('login_logs').add({
-                name: trimmed, isAdmin,
-                time: firebase.firestore.FieldValue.serverTimestamp(),
-                userAgent: navigator.userAgent
-            });
+            if (doc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
+            else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp() });
+            
+            await db.collection('login_logs').add({ name: trimmed, isAdmin, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
         } catch (err) {
             console.error("Error logging in:", err);
             setNotice('تعذر الاتصال بسجل الدخول، وتم الدخول بشكل طبيعي.');
@@ -971,33 +862,24 @@ const LoginScreen = ({ onLogin }) => {
                     <h1 className="text-[22px] font-bold text-primary mb-4">نظام المخزون</h1>
                     <p className="text-[13px] text-secondary">شركة بيت الأواني الطيبة</p>
                 </div>
-
                 <form onSubmit={handleSubmit} className="flex flex-col gap-16">
                     <div>
                         <label htmlFor="employeeName" className="text-[13px] font-medium text-primary mb-8 block">الإسم الكريم</label>
                         <input id="employeeName" type="text" required autoComplete="name" value={name}
-                               onChange={(e) => { setName(e.target.value); setError(''); }}
-                               placeholder="اكتب اسمك هنا..."
+                               onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="اكتب اسمك هنا..."
                                className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none transition-colors" />
                     </div>
-
                     {needCode && (
                         <div className="animate-card">
-                            <label htmlFor="accessCode" className="text-[13px] font-medium text-primary mb-8 flex items-center gap-6">
-                                <Icon.Lock className="w-14 h-14 text-accent flex-shrink-0" /> رمز الدخول
-                            </label>
+                            <label htmlFor="accessCode" className="text-[13px] font-medium text-primary mb-8 flex items-center gap-6"><Icon.Lock className="w-14 h-14 text-accent flex-shrink-0" /> رمز الدخول</label>
                             <input ref={codeRef} id="accessCode" type="password" inputMode="numeric" autoComplete="off" value={code}
-                                   onChange={(e) => { setCode(e.target.value); setError(''); }}
-                                   placeholder="••••"
+                                   onChange={(e) => { setCode(e.target.value); setError(''); }} placeholder="••••"
                                    className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none transition-colors tracking-widest" />
                         </div>
                     )}
-
                     {error  && <p className="text-[13px] text-danger flex items-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
                     {notice && <p className="text-[12px] text-secondary">{notice}</p>}
-
-                    <button type="submit" disabled={loading}
-                            className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] hover:opacity-90 disabled:opacity-60 transition-opacity">
+                    <button type="submit" disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] hover:opacity-90 disabled:opacity-60 transition-opacity">
                         {loading ? "جاري الدخول..." : "دخول للنظام"}
                     </button>
                 </form>
@@ -1008,78 +890,36 @@ const LoginScreen = ({ onLogin }) => {
 
 const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     const [camError, setCamError] = useState("");
-
     useEffect(() => {
         let isMounted = true;
         const html5QrCode = new Html5Qrcode("reader");
-
         const config = {
             fps: 10, 
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-                const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.72;
-                return { width: size, height: size };
-            },
-            aspectRatio: 1,
-            disableFlip: true,
-            useBarCodeDetectorIfSupported: true,
-            rememberLastUsedCamera: true,
-            showTorchButtonIfSupported: true,
+            qrbox: (viewfinderWidth, viewfinderHeight) => { const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.72; return { width: size, height: size }; },
+            aspectRatio: 1, disableFlip: true, useBarCodeDetectorIfSupported: true, rememberLastUsedCamera: true, showTorchButtonIfSupported: true,
             supportedScanTypes: [window.Html5QrcodeScanType?.SCAN_TYPE_CAMERA || 0],
-            formatsToSupport: [
-                window.Html5QrcodeSupportedFormats.CODE_128,
-                window.Html5QrcodeSupportedFormats.CODE_39,
-                window.Html5QrcodeSupportedFormats.EAN_13,
-                window.Html5QrcodeSupportedFormats.EAN_8,
-                window.Html5QrcodeSupportedFormats.UPC_A,
-                window.Html5QrcodeSupportedFormats.UPC_E
-            ]
+            formatsToSupport: [ window.Html5QrcodeSupportedFormats.CODE_128, window.Html5QrcodeSupportedFormats.CODE_39, window.Html5QrcodeSupportedFormats.EAN_13, window.Html5QrcodeSupportedFormats.EAN_8, window.Html5QrcodeSupportedFormats.UPC_A, window.Html5QrcodeSupportedFormats.UPC_E ]
         };
 
-        let lastCode = "";
-        let lastTime = 0;
-
+        let lastCode = ""; let lastTime = 0;
         const onScanSuccess = (decodedText) => {
             const code = decodedText.trim();
             if (!code) return; 
-
             const now = Date.now();
             if (code === lastCode && (now - lastTime) < 1000) return;
-            lastCode = code;
-            lastTime = now;
-
-            if (isMounted) {
-                requestAnimationFrame(async () => {
-                    try {
-                        await html5QrCode.stop();
-                        await html5QrCode.clear(); 
-                    } catch (e) {}
-                    
-                    onScan(code);
-                });
-            }
+            lastCode = code; lastTime = now;
+            if (isMounted) { requestAnimationFrame(async () => { try { await html5QrCode.stop(); await html5QrCode.clear(); } catch (e) {} onScan(code); }); }
         };
 
-        html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            onScanSuccess,
-            (errorMessage) => { }
+        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (errorMessage) => { }
         ).then(() => {
             try {
-                const track = html5QrCode.getRunningTrack 
-                    ? html5QrCode.getRunningTrack() 
-                    : document.querySelector("#reader video")?.srcObject?.getVideoTracks()[0];
-                
+                const track = html5QrCode.getRunningTrack ? html5QrCode.getRunningTrack() : document.querySelector("#reader video")?.srcObject?.getVideoTracks()[0];
                 if (track && track.getCapabilities) {
-                    const capabilities = track.getCapabilities();
-                    const advancedConstraints = [];
-
+                    const capabilities = track.getCapabilities(); const advancedConstraints = [];
                     if (capabilities.focusMode) advancedConstraints.push({ focusMode: "continuous" });
                     if (capabilities.zoom) advancedConstraints.push({ zoom: Math.min(capabilities.zoom.max, 2) });
-
-                    if (advancedConstraints.length > 0) {
-                        track.applyConstraints({ advanced: advancedConstraints }).catch(() => {});
-                    }
+                    if (advancedConstraints.length > 0) track.applyConstraints({ advanced: advancedConstraints }).catch(() => {});
                 }
             } catch (e) {}
         }).catch((err) => {
@@ -1087,41 +927,20 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
             if (isMounted) setCamError("تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.");
         });
 
-        return () => {
-            isMounted = false;
-            if (html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
-            }
-        };
+        return () => { isMounted = false; if (html5QrCode.isScanning) html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {}); };
     }, [onScan]);
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-16 animate-card">
             <div className="w-full max-w-[380px] bg-bg rounded-16 overflow-hidden shadow-lift flex flex-col">
                 <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
-                    <h3 className="font-bold text-primary flex items-center gap-8">
-                        <Icon.Scan className="w-20 h-20 text-accent"/> مسح الباركود
-                    </h3>
-                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border">
-                        <Icon.Close className="w-16 h-16 text-secondary"/>
-                    </button>
+                    <h3 className="font-bold text-primary flex items-center gap-8"><Icon.Scan className="w-20 h-20 text-accent"/> مسح الباركود</h3>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
-                
                 <div className="w-full bg-black min-h-[300px] relative flex items-center justify-center overflow-hidden">
-                    {camError ? (
-                        <div className="text-danger text-center p-24 text-[13px] font-medium leading-relaxed">
-                            <Icon.Alert className="w-24 h-24 mx-auto mb-8 text-danger" />
-                            {camError}
-                        </div>
-                    ) : (
-                        <div id="reader" className="w-full h-full object-cover"></div>
-                    )}
+                    {camError ? <div className="text-danger text-center p-24 text-[13px] font-medium leading-relaxed"><Icon.Alert className="w-24 h-24 mx-auto mb-8 text-danger" />{camError}</div> : <div id="reader" className="w-full h-full object-cover"></div>}
                 </div>
-                
-                <div className="p-16 text-center text-[13px] font-medium text-primary bg-surface border-t border-border">
-                    وجّه الكاميرا نحو الباركود
-                    <p className="text-[11px] text-muted font-normal mt-4">مدعوم بتقنية التسريع العتادي ⚡️</p>
-                </div>
+                <div className="p-16 text-center text-[13px] font-medium text-primary bg-surface border-t border-border">وجّه الكاميرا نحو الباركود<p className="text-[11px] text-muted font-normal mt-4">مدعوم بتقنية التسريع العتادي ⚡️</p></div>
             </div>
         </div>
     );
@@ -1131,11 +950,31 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
 // التطبيق الرئيسي
 // ============================================================
 const App = () => {
-    const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('b2b_cart')) || {});
-    const [showCart, setShowCart] = useState(false);
-    useEffect(() => localStorage.setItem('b2b_cart', JSON.stringify(cart)), [cart]);
-    
     const [sessionName, setSessionName] = useState(() => localStorage.getItem(STORAGE_KEYS.NAME) || '');
+    
+    // ✨ حفظ السلة بناءً على حساب المستخدم (لكي يرجع لها أي وقت ولا تتداخل مع مستخدمين آخرين)
+    const [cart, setCart] = useState(() => {
+        const name = localStorage.getItem(STORAGE_KEYS.NAME) || '';
+        return name ? (JSON.parse(localStorage.getItem(`b2b_cart_${name}`)) || {}) : {};
+    });
+    
+    const [showCart, setShowCart] = useState(false);
+    
+    // تحديث السلة عند تسجيل الدخول أو التغيير
+    useEffect(() => {
+        if (sessionName) {
+            localStorage.setItem(`b2b_cart_${sessionName}`, JSON.stringify(cart));
+        }
+    }, [cart, sessionName]);
+
+    // جلب سلة المستخدم عند تسجيل الدخول لأول مرة في الجلسة
+    useEffect(() => {
+        if (sessionName) {
+            const savedCart = JSON.parse(localStorage.getItem(`b2b_cart_${sessionName}`)) || {};
+            setCart(savedCart);
+        }
+    }, [sessionName]);
+
     const [isAdmin, setIsAdmin] = useState(() => {
         const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
         const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
@@ -1169,17 +1008,11 @@ const App = () => {
         (async () => {
             try {
                 const [jT, rT, iT, cT, vJ, pT] = await Promise.all([
-                    fetchText(`${DATA_PATH}jeddah.tsv`),
-                    fetchText(`${DATA_PATH}riyadh.tsv`),
-                    fetchText(`${DATA_PATH}images_list.txt`),
-                    fetchText(`${DATA_PATH}categories.tsv`),
-                    fetchJson(`${DATA_PATH}version.json`),
-                    fetchText(`${DATA_PATH}pricing.tsv`)
+                    fetchText(`${DATA_PATH}jeddah.tsv`), fetchText(`${DATA_PATH}riyadh.tsv`), fetchText(`${DATA_PATH}images_list.txt`), fetchText(`${DATA_PATH}categories.tsv`), fetchJson(`${DATA_PATH}version.json`), fetchText(`${DATA_PATH}pricing.tsv`)
                 ]);
                 if (!alive) return;
 
                 const pricingMap = parsePricingMap(pT);
-
                 const jeddah = parseExcelData(jT, WAREHOUSES.jeddah.key, pricingMap);
                 const riyadh = parseExcelData(rT, WAREHOUSES.riyadh.key, pricingMap);
                 
@@ -1189,9 +1022,7 @@ const App = () => {
                 setDatabases({ jeddah, riyadh });
                 setImagesList(buildImagesMap(iT));
                 setCategories(parseCategories(cT));
-                setLastUpdate(vJ && vJ.lastUpdate
-                    ? (typeof dayjs !== 'undefined' ? dayjs(vJ.lastUpdate).fromNow() : vJ.lastUpdate)
-                    : "غير متوفر");
+                setLastUpdate(vJ && vJ.lastUpdate ? (typeof dayjs !== 'undefined' ? dayjs(vJ.lastUpdate).fromNow() : vJ.lastUpdate) : "غير متوفر");
             } catch (err) {
                 console.error('[Boot] فشل غير متوقع:', err);
                 if (alive) setLastUpdate("غير متوفر");
@@ -1208,10 +1039,7 @@ const App = () => {
         const onKey = (e) => {
             const el = document.activeElement;
             const typing = el && /^(INPUT|TEXTAREA)$/.test(el.tagName);
-            if ((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) {
-                e.preventDefault();
-                if (searchInputRef.current) searchInputRef.current.focus();
-            }
+            if ((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); if (searchInputRef.current) searchInputRef.current.focus(); }
         };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
@@ -1220,46 +1048,30 @@ const App = () => {
     useEffect(() => { if (warehouse && searchInputRef.current) searchInputRef.current.focus(); }, [warehouse]);
     useEffect(() => { setVisibleCount(GALLERY_PAGE_SIZE); setCardViews({}); }, [activeCategory, warehouse]);
 
-    useEffect(() => {
-        if (!isAdmin && activeCategory && ADMIN_ONLY_CATEGORIES.has(activeCategory)) setActiveCategory(null);
-    }, [isAdmin, activeCategory]);
+    useEffect(() => { if (!isAdmin && activeCategory && ADMIN_ONLY_CATEGORIES.has(activeCategory)) setActiveCategory(null); }, [isAdmin, activeCategory]);
 
-    const isDbEmpty = useMemo(
-        () => databases.jeddah.length === 0 && databases.riyadh.length === 0,
-        [databases]
-    );
+    const isDbEmpty = useMemo(() => databases.jeddah.length === 0 && databases.riyadh.length === 0, [databases]);
 
-    // المحلل الذكي للباركود
     useEffect(() => {
         const cleanQ = normalizeCleanId(query);
         if (cleanQ.length >= 8 && /^\d+$/.test(cleanQ)) {
             const pool = databases[warehouse] || [];
-            
             const exactMatch = pool.find(item => item.cleanId === cleanQ);
             if (exactMatch) return; 
 
-            const possibleMatches = pool.filter(item => 
-                item.cleanId && 
-                item.cleanId.length >= 3 && 
-                cleanQ.includes(item.cleanId)
-            );
-
+            const possibleMatches = pool.filter(item => item.cleanId && item.cleanId.length >= 3 && cleanQ.includes(item.cleanId));
             if (possibleMatches.length > 0) {
                 possibleMatches.sort((a, b) => b.cleanId.length - a.cleanId.length);
                 const bestMatch = possibleMatches[0];
-                if (bestMatch.id !== query) {
-                    setQuery(bestMatch.id); 
-                }
+                if (bestMatch.id !== query) setQuery(bestMatch.id); 
             }
         }
     }, [query, warehouse, databases]);
     
     const applyTaps = useCallback((uid, taps) => {
         setCardViews(prev => {
-            const cur = prev[uid] || CARD_VIEW.IMAGE;
-            let next = cur;
-            if (taps >= 3)       next = CARD_VIEW.DETAILS;
-            else if (taps === 2) next = (cur === CARD_VIEW.IMAGE) ? CARD_VIEW.QUANTITY : CARD_VIEW.IMAGE;
+            const cur = prev[uid] || CARD_VIEW.IMAGE; let next = cur;
+            if (taps >= 3) next = CARD_VIEW.DETAILS; else if (taps === 2) next = (cur === CARD_VIEW.IMAGE) ? CARD_VIEW.QUANTITY : CARD_VIEW.IMAGE;
             return next === cur ? prev : { ...prev, [uid]: next };
         });
     }, []);
@@ -1269,28 +1081,16 @@ const App = () => {
         if (s.uid !== uid) { if (s.timer) clearTimeout(s.timer); s.uid = uid; s.count = 0; }
         s.count += 1;
         if (s.timer) clearTimeout(s.timer);
-        s.timer = setTimeout(() => {
-            const taps = s.count;
-            s.count = 0; s.uid = null; s.timer = null;
-            applyTaps(uid, taps);
-        }, MULTI_TAP_WINDOW_MS);
+        s.timer = setTimeout(() => { const taps = s.count; s.count = 0; s.uid = null; s.timer = null; applyTaps(uid, taps); }, MULTI_TAP_WINDOW_MS);
     }, [applyTaps]);
 
     const handleCardCycle = useCallback((uid) => {
-        setCardViews(prev => {
-            const cur = prev[uid] || CARD_VIEW.IMAGE;
-            const next = cur === CARD_VIEW.IMAGE ? CARD_VIEW.QUANTITY
-                       : cur === CARD_VIEW.QUANTITY ? CARD_VIEW.DETAILS
-                       : CARD_VIEW.IMAGE;
-            return { ...prev, [uid]: next };
-        });
+        setCardViews(prev => { const cur = prev[uid] || CARD_VIEW.IMAGE; const next = cur === CARD_VIEW.IMAGE ? CARD_VIEW.QUANTITY : cur === CARD_VIEW.QUANTITY ? CARD_VIEW.DETAILS : CARD_VIEW.IMAGE; return { ...prev, [uid]: next }; });
     }, []);
 
     const handleZoom = useCallback((item) => setZoomItem(item), []);
 
-    const hideOutOfStockInSearch = showImageInSearch
-        ? VISIBILITY_RULES.hideOutOfStockInSearchWithImage
-        : VISIBILITY_RULES.hideOutOfStockInPlainSearch;
+    const hideOutOfStockInSearch = showImageInSearch ? VISIBILITY_RULES.hideOutOfStockInSearchWithImage : VISIBILITY_RULES.hideOutOfStockInPlainSearch;
     const hideQtyInSearch = showImageInSearch && VISIBILITY_RULES.hideQtyInSearchWithImage;
 
     const search = useMemo(() => {
@@ -1304,16 +1104,7 @@ const App = () => {
         if (lastLoggedSearch.current === key) return;
         const t = setTimeout(async () => {
             lastLoggedSearch.current = key;
-            try {
-                const db = await getDb();
-                await db.collection('search_logs').add({
-                    name: sessionName, warehouse,
-                    rawQuery: query.trim(),
-                    cleanQuery: normalizeCleanId(query),
-                    resultsCount: search.total,
-                    exactMatch: Boolean(search.exact),
-                    time: firebase.firestore.FieldValue.serverTimestamp(),
-                });
+            try { const db = await getDb(); await db.collection('search_logs').add({ name: sessionName, warehouse, rawQuery: query.trim(), cleanQuery: normalizeCleanId(query), resultsCount: search.total, exactMatch: Boolean(search.exact), time: firebase.firestore.FieldValue.serverTimestamp() });
             } catch (err) { console.warn('[Log] تعذر تسجيل البحث:', err.message); }
         }, SEARCH_LOG_DEBOUNCE_MS);
         return () => clearTimeout(t);
@@ -1329,38 +1120,28 @@ const App = () => {
         let pool = databases[warehouse] || [];
         if (VISIBILITY_RULES.hideOutOfStockInGallery) pool = pool.filter(i => i.qty > 0);
 
-        if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES)
-            return pool.filter(i => !imagesList.has(i.cleanId));
-        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)
-            return pool.filter(i => imagesList.has(i.cleanId) && !allCategorizedIds.has(i.cleanId));
+        if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) return pool.filter(i => !imagesList.has(i.cleanId));
+        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => imagesList.has(i.cleanId) && !allCategorizedIds.has(i.cleanId));
 
         const ids = new Set(categories[activeCategory] || []);
         return pool.filter(i => ids.has(i.cleanId) && imagesList.has(i.cleanId));
     }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, isAdmin]);
 
     const visibleItems = useMemo(() => galleryResults.slice(0, visibleCount), [galleryResults, visibleCount]);
-
     const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
     const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
     const totalCategoryCount  = categoryNames.length + 1 + (isAdmin ? 1 : 0);
 
     if (!sessionName) return <LoginScreen onLogin={(n, admin) => { setSessionName(n); setIsAdmin(admin); }} />;
 
-    const chip = (active) =>
-        `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active
-            ? 'bg-primary text-bg border-primary'
-            : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`;
+    const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`;
 
     return (
         <div className="min-h-screen font-sans">
-
             <div className="border-b border-border bg-surface">
                 <div className="max-w-[1024px] mx-auto px-16 h-44 flex items-center justify-between gap-12">
                     <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
-                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer"
-                        className="text-[11px] text-muted hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">
-                        © 2026 تطوير مهند الحزمي
-                    </a>
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[11px] text-muted hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
                 </div>
             </div>
             
@@ -1374,7 +1155,6 @@ const App = () => {
 
             <div className="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-border">
                 <div className="max-w-[1024px] mx-auto px-16 py-12 flex flex-col gap-10">
-
                     <div className="flex justify-between items-center w-full sm:w-auto gap-16">
                         <div className="flex flex-1 sm:flex-none sm:self-start bg-surface border border-border rounded-12 p-4 gap-4" role="group" aria-label="اختيار المستودع">
                             {Object.values(WAREHOUSES).map(wh => (
@@ -1423,9 +1203,7 @@ const App = () => {
                         </label>
                     </div>
 
-                    {warehouse && showImageInSearch && (
-                        <p className="text-[11px] text-accent"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>
-                    )}
+                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
                 </div>
             </div>
 
@@ -1433,29 +1211,18 @@ const App = () => {
 
                 {isDbEmpty && !loading && (
                     <div className="max-w-[480px] mx-auto mt-24">
-                        <StateBlock tone="danger" icon={<Icon.Alert className="w-20 h-20" />}
-                            title="تعذر تحميل بيانات المخزون" note="تحقق من وجود jeddah.tsv و riyadh.tsv في مجلد data ومن صحة ترويسة الأعمدة." />
+                        <StateBlock tone="danger" icon={<Icon.Alert className="w-20 h-20" />} title="تعذر تحميل بيانات المخزون" note="تحقق من وجود jeddah.tsv و riyadh.tsv في مجلد data ومن صحة ترويسة الأعمدة." />
                     </div>
                 )}
 
                 {query.trim() && search && (
                     <div className="max-w-[520px] mx-auto mt-24 flex flex-col gap-8">
-                        {search.total === 0 && (
-                            <StateBlock icon={<Icon.Search className="w-20 h-20" />} title="لم يتم العثور على الصنف" note="لا يوجد صنف بهذا الرقم أو الاسم في المستودع المحدد." />
-                        )}
-                        {search.exact && (
-                            <FullResultCard item={search.exact} warehouseName={activeWarehouseName}
-                                showImage={showImageInSearch && imagesList.has(search.exact.cleanId)}
-                                imageFileName={imagesList.get(search.exact.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />
-                        )}
+                        {search.total === 0 && <StateBlock icon={<Icon.Search className="w-20 h-20" />} title="لم يتم العثور على الصنف" note="لا يوجد صنف بهذا الرقم أو الاسم في المستودع المحدد." />}
+                        {search.exact && <FullResultCard item={search.exact} warehouseName={activeWarehouseName} showImage={showImageInSearch && imagesList.has(search.exact.cleanId)} imageFileName={imagesList.get(search.exact.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />}
                         {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
-                            <CompactResultCard key={item.uid} item={item}
-                                showImage={showImageInSearch && imagesList.has(item.cleanId)}
-                                imageFileName={imagesList.get(item.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />
+                            <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && imagesList.has(item.cleanId)} imageFileName={imagesList.get(item.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />
                         ))}
-                        {search.total > search.visible.length && (
-                            <p className="text-[12px] text-muted text-center pt-8">{NUMBER_FORMATTER.format(search.total)} نتيجة — أضف تفاصيل لتضييق البحث</p>
-                        )}
+                        {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8">{NUMBER_FORMATTER.format(search.total)} نتيجة — أضف تفاصيل لتضييق البحث</p>}
                     </div>
                 )}
 
@@ -1467,14 +1234,8 @@ const App = () => {
                         </div>
                         {activeCategory && (
                             <div className="flex bg-surface border border-border rounded-10 p-4 gap-4 flex-shrink-0" role="group" aria-label="نمط العرض">
-                                <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'}
-                                        className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'list' ? 'bg-primary text-bg' : 'text-secondary'}`}>
-                                    <Icon.List className="w-16 h-16" /> طولي
-                                </button>
-                                <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'}
-                                        className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'grid' ? 'bg-primary text-bg' : 'text-secondary'}`}>
-                                    <Icon.Grid className="w-16 h-16" /> شبكي
-                                </button>
+                                <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'} className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'list' ? 'bg-primary text-bg' : 'text-secondary'}`}><Icon.List className="w-16 h-16" /> طولي</button>
+                                <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'grid' ? 'bg-primary text-bg' : 'text-secondary'}`}><Icon.Grid className="w-16 h-16" /> شبكي</button>
                             </div>
                         )}
                     </div>
@@ -1484,23 +1245,17 @@ const App = () => {
                         {categoryNames.map(cat => (
                             <button key={cat} onClick={() => setActiveCategory(cat)} aria-pressed={activeCategory === cat} className={chip(activeCategory === cat)}>{cat}</button>
                         ))}
-                        <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={chip(activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)}>
-                            {SPECIAL_CATEGORIES.UNCATEGORIZED}
-                        </button>
+                        <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={chip(activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)}>{SPECIAL_CATEGORIES.UNCATEGORIZED}</button>
                         {isAdmin && (
-                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES}
-                                    className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accentSoft hover:border-accent'}`}>
+                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accentSoft hover:border-accent'}`}>
                                 <Icon.ImageOff className="w-14 h-14 flex-shrink-0" /> {SPECIAL_CATEGORIES.MISSING_IMAGES}
                             </button>
                         )}
                     </div>
 
-                    {loading ? (
-                        <SkeletonGrid />
-                    ) : !warehouse ? (
-                        <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر المستودع" note="حدد مخزون جدة أو مخزون الرياض من الأعلى لفتح المعرض." /></div>
-                    ) : !activeCategory ? (
-                        <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر قسماً" note="حدد قسماً من الأعلى لاستعراض المنتجات المتوفرة." /></div>
+                    {loading ? ( <SkeletonGrid />
+                    ) : !warehouse ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر المستودع" note="حدد مخزون جدة أو مخزون الرياض من الأعلى لفتح المعرض." /></div>
+                    ) : !activeCategory ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر قسماً" note="حدد قسماً من الأعلى لاستعراض المنتجات المتوفرة." /></div>
                     ) : (
                         <div>
                             <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
@@ -1536,24 +1291,14 @@ const App = () => {
                 </footer>
             </div>
 
-            {/* النوافذ المنبثقة (Modals) */}
-            {showScanner && (
-                <BarcodeScannerModal onClose={() => setShowScanner(false)} onScan={(scannedText) => { setShowScanner(false); setQuery(scannedText); }} />
-            )}
-
-            {showCart && (
-                <OrderInvoiceModal cart={cart} setCart={setCart} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />
-            )}
-
-            {zoomItem && (
-                <Lightbox fileName={imagesList.get(zoomItem.cleanId)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />
-            )}
+            {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} onScan={(scannedText) => { setShowScanner(false); setQuery(scannedText); }} />}
+            {showCart && <OrderInvoiceModal cart={cart} setCart={setCart} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />}
+            {zoomItem && <Lightbox fileName={imagesList.get(zoomItem.cleanId)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />}
         </div>
     );
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
-
 </body>
 </html>
