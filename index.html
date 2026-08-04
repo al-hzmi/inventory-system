@@ -994,6 +994,7 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
         </div>
     );
 });
+
 // ============================================================
 // لوحة تحكم الإدارة (خاصة بالمدير فقط - مهند)
 // ============================================================
@@ -1014,7 +1015,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
         setLoading(true);
         getDb().then(db => {
             let query = db.collection(activeTab);
-            // ترتيب البيانات من الأحدث للأقدم
             if (activeTab === 'users') {
                 query = query.orderBy('lastLogin', 'desc');
             } else {
@@ -1045,7 +1045,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
     return (
         <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-card">
             <div className="w-full max-w-[900px] h-[90vh] sm:h-[85vh] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col">
-                {/* الترويسة */}
                 <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
                     <h3 className="font-bold text-primary flex items-center gap-8">
                         <Icon.Dashboard className="w-20 h-20 text-accent"/> لوحة تحكم الإدارة (سجلات النظام)
@@ -1055,7 +1054,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
                     </button>
                 </div>
                 
-                {/* شريط التبويبات */}
                 <div className="flex overflow-x-auto border-b border-border bg-surface no-scrollbar">
                     {tabs.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -1065,7 +1063,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
                     ))}
                 </div>
 
-                {/* المحتوى */}
                 <div className="flex-1 overflow-y-auto p-16 bg-surface">
                     {loading ? (
                         <div className="flex justify-center items-center h-full text-muted text-[14px]">جاري جلب البيانات من السيرفر...</div>
@@ -1137,7 +1134,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
         </div>
     );
 });
-    
+
 // ============================================================
 // التطبيق الرئيسي
 // ============================================================
@@ -1149,9 +1146,10 @@ const App = () => {
         return name ? (JSON.parse(localStorage.getItem(`b2b_cart_${name}`)) || {}) : {};
     });
     
-   const [showCart, setShowCart] = useState(false);
+    const [showCart, setShowCart] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [showAdmin, setShowAdmin] = useState(false); // ✨ زر الإدارة
+
     useEffect(() => {
         if (sessionName) {
             localStorage.setItem(`b2b_cart_${sessionName}`, JSON.stringify(cart));
@@ -1186,8 +1184,8 @@ const App = () => {
     const [cardViews, setCardViews]           = useState({});
     const [zoomItem, setZoomItem]             = useState(null);
 
-    const [loading, setLoading]       = useState(true);
-    const [lastUpdate, setLastUpdate] = useState("جاري التحقق...");
+    const [loading,       setLoading]       = useState(true);
+    const [lastUpdate,    setLastUpdate]    = useState("جاري التحقق...");
 
     const searchInputRef   = useRef(null);
     const lastLoggedSearch = useRef('');
@@ -1380,6 +1378,7 @@ const App = () => {
                                 </button>
                             </div>
                         )}
+                    </div>
 
                     <div className="flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
