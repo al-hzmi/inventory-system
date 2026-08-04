@@ -33,92 +33,38 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'],
-                    },
+                    fontFamily: { sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'] },
                     colors: {
-                        primary    : '#1C1917',
-                        secondary  : '#57534E',
-                        muted      : '#A8A29E',
-                        border     : '#E7E5E4',
-                        surface    : '#FAFAF9',
-                        bg         : '#FFFFFF',
-                        accent     : '#B45309',
-                        accentSoft : '#FEF3C7',
-                        success    : '#15803D',
-                        successSoft: '#F0FDF4',
-                        warn       : '#B45309',
-                        warnSoft   : '#FFFBEB',
-                        danger     : '#B91C1C',
-                        dangerSoft : '#FEF2F2',
+                        primary: '#1C1917', secondary: '#57534E', muted: '#A8A29E', border: '#E7E5E4',
+                        surface: '#FAFAF9', bg: '#FFFFFF', accent: '#B45309', accentSoft: '#FEF3C7',
+                        success: '#15803D', successSoft: '#F0FDF4', warn: '#B45309', warnSoft: '#FFFBEB',
+                        danger: '#B91C1C', dangerSoft: '#FEF2F2',
                     },
-                    spacing: {
-                        '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px',
-                        '14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px',
-                        '28':'28px','32':'32px','36':'36px','40':'40px','44':'44px','48':'48px',
-                        '56':'56px','64':'64px','72':'72px','120':'120px',
-                    },
+                    spacing: { '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px','14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px','28':'28px','32':'32px','36':'36px','40':'40px','44':'44px','48':'48px','56':'56px','64':'64px','72':'72px','120':'120px' },
                     borderRadius: { '8':'8px','10':'10px','12':'12px','16':'16px','20':'20px' },
-                    boxShadow: {
-                        'card': '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)',
-                        'lift': '0 2px 4px rgba(28,25,23,0.04), 0 8px 24px rgba(28,25,23,0.08)',
-                    },
-                    transitionDuration: { '200': '200ms' }
+                    boxShadow: { 'card': '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)', 'lift': '0 2px 4px rgba(28,25,23,0.04), 0 8px 24px rgba(28,25,23,0.08)' },
                 }
             }
         }
     </script>
 
     <style>
-        html, body {
-            overflow-x: hidden;
-            width: 100%;
-            max-width: 100%;
-            background-color: #FFFFFF;
-            color: #1C1917;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            -webkit-text-size-adjust: 100%;
-        }
+        html, body { overflow-x: hidden; width: 100%; max-width: 100%; background-color: #FFFFFF; color: #1C1917; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
         *, *::before, *::after { box-sizing: border-box; }
         img, svg, video { max-width: 100%; height: auto; }
-
         *:focus-visible { outline: 2px solid #B45309; outline-offset: 2px; border-radius: 4px; }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, .animate-card, .animate-flip, .skeleton {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
-
         @keyframes slideUpFade { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform:none; } }
         .animate-card { animation: slideUpFade 200ms cubic-bezier(0.16,1,0.3,1) forwards; }
-
         @keyframes flipIn { from { opacity:0; transform: scale(0.97);} to { opacity:1; transform:none; } }
         .animate-flip { animation: flipIn 180ms cubic-bezier(0.16,1,0.3,1) forwards; }
-
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .skeleton {
-            background: linear-gradient(90deg,#F5F5F4 25%,#EFEDEB 37%,#F5F5F4 63%);
-            background-size: 200% 100%;
-            animation: shimmer 1.4s ease-in-out infinite;
-        }
-
-        .tap-card {
-            -webkit-user-select:none; -moz-user-select:none; user-select:none;
-            -webkit-touch-callout:none; touch-action: manipulation;
-        }
-
+        .skeleton { background: linear-gradient(90deg,#F5F5F4 25%,#EFEDEB 37%,#F5F5F4 63%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+        .tap-card { -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action: manipulation; }
         .lightbox-backdrop { background: rgba(28,25,23,0.9); backdrop-filter: blur(4px); }
-
         input[type="text"], input[type="password"], input[type="number"], textarea { font-size: 16px; }
     </style>
 
     <meta name="theme-color" content="#FFFFFF">
-
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/icon-192.png">
     <link rel="manifest" href="./manifest.json">
@@ -126,12 +72,7 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs/plugin/relativeTime.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs/locale/ar.js"></script>
-    <script>
-        if (typeof dayjs !== 'undefined') {
-            if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime);
-            dayjs.locale("ar");
-        }
-    </script>
+    <script>if (typeof dayjs !== 'undefined') { if (typeof dayjs_plugin_relativeTime !== 'undefined') dayjs.extend(dayjs_plugin_relativeTime); dayjs.locale("ar"); }</script>
 
     <script>
         const firebaseConfig = {
@@ -166,9 +107,6 @@
 
 <script type="text/babel">
 
-// ============================================================
-// الثوابت المركزية
-// ============================================================
 const DATA_PATH   = "./data/";
 const IMAGES_PATH = "./images/";
 
@@ -198,19 +136,12 @@ const WAREHOUSES = {
     riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
 };
 
-const SPECIAL_CATEGORIES = {
-    UNCATEGORIZED : 'بقية الأصناف',
-    MISSING_IMAGES: 'نواقص الصور',
-};
-
+const SPECIAL_CATEGORIES = { UNCATEGORIZED : 'بقية الأصناف', MISSING_IMAGES: 'نواقص الصور' };
 const ADMIN_ONLY_CATEGORIES = new Set([SPECIAL_CATEGORIES.MISSING_IMAGES]);
 
 const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
 
-// ============================================================
-// التطبيع 
-// ============================================================
 const ARABIC_INDIC_DIGITS   = '٠١٢٣٤٥٦٧٨٩';
 const EASTERN_ARABIC_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 
@@ -222,24 +153,14 @@ const toEnglishDigits = (str) => {
     });
 };
 
-const normalizeCleanId = (str) => {
-    if (!str) return "";
-    return toEnglishDigits(str).replace(/\D/g, "");
-};
+const normalizeCleanId = (str) => { if (!str) return ""; return toEnglishDigits(str).replace(/\D/g, ""); };
 
 const normalizeText = (str) => {
     if (!str) return '';
-    return toEnglishDigits(String(str))
-        .toLowerCase()
-        .replace(/[\u064B-\u065F\u0670]/g, '')
-        .replace(/\u0640/g, '')
-        .replace(/[أإآٱ]/g, 'ا')
-        .replace(/[ىئ]/g, 'ي')
-        .replace(/ؤ/g, 'و')
-        .replace(/ة/g, 'ه')
-        .replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+    return toEnglishDigits(String(str)).toLowerCase()
+        .replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0640/g, '')
+        .replace(/[أإآٱ]/g, 'ا').replace(/[ىئ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ة/g, 'ه')
+        .replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 };
 
 const toSafeDocId = (name) => {
@@ -247,11 +168,7 @@ const toSafeDocId = (name) => {
     return c.slice(0, 200) || 'unknown';
 };
 
-// ============================================================
-// الصلاحيات
-// ============================================================
 const CODE_SALT = 'bayt-awani::v5::';
-
 const hashCode = (str) => {
     let h1 = 0x811c9dc5, h2 = 0xc2b2ae35;
     const s = CODE_SALT + String(str);
@@ -264,34 +181,20 @@ const hashCode = (str) => {
 };
 window.__genCode = (code) => hashCode(code);
 
-const PROTECTED_ACCOUNTS = {
-    'مهند': '1jh297-spgf2z',
-};
-
-const isProtectedName = (name) =>
-    Object.prototype.hasOwnProperty.call(PROTECTED_ACCOUNTS, normalizeText(name));
-
+const PROTECTED_ACCOUNTS = { 'مهند': '1jh297-spgf2z' };
+const isProtectedName = (name) => Object.prototype.hasOwnProperty.call(PROTECTED_ACCOUNTS, normalizeText(name));
 const verifyCode = (name, code) => {
     const expected = PROTECTED_ACCOUNTS[normalizeText(name)];
     return Boolean(expected) && hashCode(toEnglishDigits(String(code)).trim()) === expected;
 };
 
-// ============================================================
-// تحميل البيانات
-// ============================================================
 const fetchText = async (url) => {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.text();
+    try { const res = await fetch(url); if (!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text();
     } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return ""; }
 };
 
 const fetchJson = async (url) => {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
+    try { const res = await fetch(url); if (!res.ok) throw new Error(`HTTP ${res.status}`); return await res.json();
     } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return null; }
 };
 
@@ -303,10 +206,7 @@ const parsePricingMap = (rawText) => {
 
     let headerRowIdx = -1;
     for (let i = 0; i < Math.min(lines.length, 5); i++) {
-        if (lines[i] && lines[i].includes('سعر') && (lines[i].includes('رقم') || lines[i].includes('صنف'))) {
-            headerRowIdx = i;
-            break;
-        }
+        if (lines[i] && lines[i].includes('سعر') && (lines[i].includes('رقم') || lines[i].includes('صنف'))) { headerRowIdx = i; break; }
     }
     if (headerRowIdx === -1) return map;
 
@@ -315,11 +215,8 @@ const parsePricingMap = (rawText) => {
 
     for (let i = 0; i < headers.length; i++) {
         if (/رقم|كود|صنف/i.test(headers[i])) {
-            if (i > 0 && /سعر|بيع/i.test(headers[i - 1])) {
-                pairs.push({ skuIdx: i, priceIdx: i - 1 });
-            } else if (i < headers.length - 1 && /سعر|بيع/i.test(headers[i + 1])) {
-                pairs.push({ skuIdx: i, priceIdx: i + 1 });
-            }
+            if (i > 0 && /سعر|بيع/i.test(headers[i - 1])) pairs.push({ skuIdx: i, priceIdx: i - 1 });
+            else if (i < headers.length - 1 && /سعر|بيع/i.test(headers[i + 1])) pairs.push({ skuIdx: i, priceIdx: i + 1 });
         }
     }
 
@@ -328,13 +225,10 @@ const parsePricingMap = (rawText) => {
         pairs.forEach(pair => {
             const rawSku = cols[pair.skuIdx];
             const rawPrice = cols[pair.priceIdx];
-            
             if (rawSku && rawPrice) {
                 const cleanId = normalizeCleanId(rawSku);
                 const price = parseFloat(toEnglishDigits(rawPrice).replace(/,/g, ''));
-                if (cleanId && !isNaN(price) && price > 0) {
-                    map[cleanId] = price;
-                }
+                if (cleanId && !isNaN(price) && price > 0) map[cleanId] = price;
             }
         });
     }
@@ -353,10 +247,7 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
     const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
-    if (idIdx === -1) {
-        console.error(`[Parser:${warehouseKey}] لم يُعثر على عمود رقم الصنف:`, headers);
-        return [];
-    }
+    if (idIdx === -1) return [];
 
     const dataMap = {};
     for (let i = 1; i < lines.length; i++) {
@@ -379,42 +270,19 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
 
         if (cartonPrice > 0) {
             const packNum = parseFloat(toEnglishDigits(packStr).replace(/[^0-9.]/g, ''));
-            if (!isNaN(packNum) && packNum > 0) {
-                approxPiecePrice = cartonPrice / packNum;
-            }
+            if (!isNaN(packNum) && packNum > 0) approxPiecePrice = cartonPrice / packNum;
         }
 
         dataMap[searchId] = {
-            uid: `${warehouseKey}:${searchId}`,
-            warehouseKey,
-            id: rawId,
-            searchId,
-            cleanId: cleanId,
-            name,
-            searchName: normalizeText(name),
-            qty,
-            unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
-            pack: packStr,
-            price: cartonPrice,
-            approxPrice: approxPiecePrice
+            uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId,
+            name, searchName: normalizeText(name), qty, unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
+            pack: packStr, price: cartonPrice, approxPrice: approxPiecePrice
         };
     }
     return Object.values(dataMap);
 };
     
-const reportCleanIdCollisions = (items, warehouseKey) => {
-    const byClean = new Map();
-    items.forEach(it => {
-        if (!it.cleanId) return;
-        if (!byClean.has(it.cleanId)) byClean.set(it.cleanId, []);
-        byClean.get(it.cleanId).push(it.id);
-    });
-    const collisions = [];
-    byClean.forEach((ids, clean) => { if (ids.length > 1) collisions.push({ clean, ids }); });
-    if (collisions.length) {
-        console.warn(`[Integrity:${warehouseKey}] ${collisions.length} تصادم في الأرقام الصافية:`, collisions);
-    }
-};
+const reportCleanIdCollisions = (items, warehouseKey) => {};
 
 const buildImagesMap = (imagesText) => {
     const map = new Map();
@@ -445,9 +313,6 @@ const parseCategories = (text) => {
     return obj;
 };
 
-// ============================================================
-// محرك البحث
-// ============================================================
 const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
     const cleanQuery = normalizeCleanId(rawQuery);
     const textQuery  = normalizeText(rawQuery);
@@ -481,11 +346,7 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
         if (r.rank <= 1) { if (sku.length < MAX_SKU_RESULTS) sku.push(r.item); }
         else             { if (nm.length  < MAX_NAME_RESULTS) nm.push(r.item);  }
     }
-    return {
-        visible: sku.concat(nm),
-        total: ranked.length,
-        exact: ranked.length && ranked[0].rank === 0 ? ranked[0].item : null
-    };
+    return { visible: sku.concat(nm), total: ranked.length, exact: ranked.length && ranked[0].rank === 0 ? ranked[0].item : null };
 };
 
 const stockTone = (qty) => {
@@ -494,9 +355,6 @@ const stockTone = (qty) => {
     return { text:'text-success', bg:'bg-successSoft' };
 };
 
-// ============================================================
-// الأيقونات
-// ============================================================
 const Icon = {
     Search:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
     Scan:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 12h8M12 8v8"/></svg>),
@@ -512,9 +370,6 @@ const Icon = {
     Alert:   (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M12 9v4M12 17h.01"/><path d="M10.3 4.3L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z"/></svg>),
 };
 
-// ============================================================
-// مكونات العرض الأساسية
-// ============================================================
 const Quantity = ({ qty, unit, size = 'lg' }) => {
     const tone = stockTone(qty);
     return (
@@ -534,40 +389,8 @@ const Quantity = ({ qty, unit, size = 'lg' }) => {
     );
 };
 
-const ProductImage = ({ fileName, alt, className }) => {
-    if (!fileName) return null;
-    return (
-        <img src={`${IMAGES_PATH}${fileName}`} alt={alt} loading="lazy" decoding="async" draggable="false"
-             className={className} onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
-    );
-};
-
-const Lightbox = ({ fileName, title, onClose }) => {
-    useEffect(() => {
-        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-        document.addEventListener('keydown', onKey);
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-    }, [onClose]);
-
-    return (
-        <div className="lightbox-backdrop fixed inset-0 z-50 flex items-center justify-center p-16 animate-flip"
-             role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-            <button onClick={onClose} aria-label="إغلاق"
-                    className="absolute top-16 left-16 w-44 h-44 rounded-full bg-white/10 text-white flex items-center justify-center">
-                <Icon.Close className="w-20 h-20" />
-            </button>
-            <div className="max-w-[860px] w-full flex flex-col items-center gap-16" onClick={(e) => e.stopPropagation()}>
-                <img src={`${IMAGES_PATH}${fileName}`} alt={title} className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
-                <p className="text-white text-[15px] text-center px-16">{title}</p>
-            </div>
-        </div>
-    );
-};
-
 // ============================================================
-// نظام المبيعات (B2B Order Management)
+// نظام المبيعات وحماية المخزون
 // ============================================================
 const OrderQuantityControl = memo(({ item, cart, setCart }) => {
     const cartQty = cart[item.cleanId]?.cartQty || 0;
@@ -626,132 +449,7 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
     );
 });
 
-// نافذة الفاتورة الرسمية (تفتح الواتساب فوراً وتحفظ الطلب في السجل)
-const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse }) => {
-    const [customer, setCustomer] = useState("");
-    const [notes, setNotes] = useState(""); 
-    const items = Object.values(cart);
-    const totalAmount = items.reduce((sum, item) => sum + ((item.price || 0) * item.cartQty), 0);
-
-    const handleSubmit = () => {
-        if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
-        
-        // استخراج التاريخ الميلادي حصراً بتنسيق (يوم/شهر/سنة)
-        const gregorianDate = new Date().toLocaleDateString('en-GB');
-
-        // 1. تجهيز الرسالة بتنسيق احترافي جداً للواتساب
-        let msg = `*🛒 طلب مبيعات جديد*\n`;
-        msg += `════════════════\n`;
-        msg += `👤 *المندوب:* ${sessionName}\n`;
-        msg += `🏢 *العميل:* ${customer.trim()}\n`;
-        msg += `📦 *المستودع:* ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
-        msg += `📅 *التاريخ:* ${gregorianDate}\n`;
-        if (notes.trim()) msg += `📝 *الملاحظات:* ${notes.trim()}\n`;
-        msg += `════════════════\n\n`;
-
-        items.forEach((it, idx) => {
-            msg += `▪️ *[ ${it.id} ]*\n`;
-            msg += `   الكمية: *${it.cartQty}* |  الإجمالي: *${NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}* ر.س\n`;
-            
-            // إضافة فاصل بين الأصناف (ما عدا الصنف الأخير)
-            if (idx < items.length - 1) {
-                msg += `  ╌╌╌╌╌╌╌╌╌╌╌╌\n`;
-            }
-        });
-
-        msg += `\n════════════════\n`;
-        msg += `💰 *الإجمالي النهائي: ${NUMBER_FORMATTER.format(totalAmount)} ر.س*\n`;
-
-        // 2. فتح الواتساب فوراً
-        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-        window.open(waUrl, '_blank');
-
-        // 3. الحفظ في السجل المحلي للمندوب
-        const newOrder = {
-            id: Date.now(),
-            date: gregorianDate,
-            customer: customer.trim(),
-            warehouse: warehouse,
-            totalAmount: totalAmount,
-            msg: msg // حفظ الرسالة الجاهزة لإعادة الإرسال
-        };
-        const historyKey = `b2b_history_${sessionName}`;
-        const existingHistory = JSON.parse(localStorage.getItem(historyKey)) || [];
-        localStorage.setItem(historyKey, JSON.stringify([newOrder, ...existingHistory]));
-
-        // 4. الحفظ الصامت في فايربيس
-        getDb().then(db => {
-            db.collection('orders').add({
-                repName: sessionName, customerName: customer.trim(), warehouse: warehouse, notes: notes.trim(), 
-                items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),
-                totalAmount: totalAmount, timestamp: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent
-            });
-        }).catch(()=>{});
-
-        // 5. تفريغ السلة والإغلاق
-        setCart({});
-        onClose();
-    };
-
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
-                    <h3 className="font-bold text-primary flex items-center gap-8">
-                        <Icon.Cart className="w-20 h-20 text-accent"/> فاتورة مبيعات
-                    </h3>
-                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
-                </div>
-                
-                <div className="p-16 overflow-y-auto flex-1 bg-surface">
-                    <div className="mb-16">
-                        <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
-                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="اسم العميل..."
-                               className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
-                    </div>
-
-                    <div className="mb-16">
-                        <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم، شحن، أو ملاحظة إضافية..."
-                               className="w-full h-64 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
-                    </div>
-
-                    <div className="bg-bg border border-border rounded-8 overflow-hidden">
-                        <div className="grid grid-cols-12 gap-4 p-10 bg-surface border-b border-border text-[11px] font-semibold text-muted text-center">
-                            <div className="col-span-5 text-right">الصنف</div>
-                            <div className="col-span-3">الكمية</div>
-                            <div className="col-span-3">الإجمالي</div>
-                            <div className="col-span-1"></div>
-                        </div>
-                        {items.length === 0 ? (
-                            <p className="p-24 text-center text-[13px] text-muted">الفاتورة فارغة</p>
-                        ) : items.map(it => (
-                            <div key={it.cleanId} className="grid grid-cols-12 gap-4 p-10 items-center border-b border-border last:border-0 text-[12px] text-center">
-                                <div className="col-span-5 text-right font-medium text-primary truncate" title={it.name || it.id}>{it.id}</div>
-                                <div className="col-span-3"><OrderQuantityControl item={it} cart={cart} setCart={setCart} /></div>
-                                <div className="col-span-3 font-semibold text-accent">{NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}</div>
-                                <button onClick={() => { const nx = {...cart}; delete nx[it.cleanId]; setCart(nx); }} className="col-span-1 text-danger flex justify-center"><Icon.Trash className="w-16 h-16"/></button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="p-16 border-t border-border bg-bg flex flex-col gap-12">
-                    <div className="flex justify-between items-center px-8">
-                        <span className="text-[14px] font-semibold text-primary">الإجمالي التقديري:</span>
-                        <span className="text-[18px] font-bold text-accent">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
-                    </div>
-                    <button onClick={handleSubmit} disabled={items.length === 0}
-                            className="w-full h-48 bg-primary text-bg rounded-12 font-bold text-[15px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
-                        اعتماد وإرسال الطلب (واتساب)
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-});
-    
-    // نافذة سجل الطلبات (Order History) للمندوب
+// نافذة سجل الطلبات
 const OrderHistoryModal = memo(({ onClose, sessionName }) => {
     const historyKey = `b2b_history_${sessionName}`;
     const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem(historyKey)) || []);
@@ -789,7 +487,7 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                                         </div>
                                         <div className="text-[15px] font-bold text-accent">{NUMBER_FORMATTER.format(order.totalAmount)} ر.س</div>
                                     </div>
-                                    <div className="flex gap-8">
+                                    <div className="flex gap-8 mt-8">
                                         <button onClick={() => resendWhatsApp(order.msg)} className="flex-1 h-36 bg-successSoft text-success rounded-8 font-semibold text-[13px] hover:bg-success hover:text-white transition-colors flex items-center justify-center gap-6">
                                             إعادة إرسال واتساب
                                         </button>
@@ -806,9 +504,155 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
         </div>
     );
 });
-    
+
+const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse }) => {
+    const [customer, setCustomer] = useState("");
+    const [notes, setNotes] = useState(""); 
+    const items = Object.values(cart);
+    const totalAmount = items.reduce((sum, item) => sum + ((item.price || 0) * item.cartQty), 0);
+
+    const handleSubmit = () => {
+        if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
+        
+        const gregorianDate = new Date().toLocaleDateString('en-GB');
+
+        let msg = `*🛒 طلب مبيعات جديد*\n`;
+        msg += `════════════════\n`;
+        msg += `👤 *المندوب:* ${sessionName}\n`;
+        msg += `🏢 *العميل:* ${customer.trim()}\n`;
+        msg += `📦 *المستودع:* ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
+        msg += `📅 *التاريخ:* ${gregorianDate}\n`;
+        if (notes.trim()) msg += `📝 *الملاحظات:* ${notes.trim()}\n`;
+        msg += `════════════════\n\n`;
+
+        items.forEach((it, idx) => {
+            msg += `▪️ *[ ${it.id} ]*\n`;
+            msg += `   الكمية: *${it.cartQty}* | الإجمالي: *${NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}* ر.س\n`;
+            if (idx < items.length - 1) msg += `  ╌╌╌╌╌╌╌╌╌╌╌╌\n`;
+        });
+
+        msg += `\n════════════════\n`;
+        msg += `💰 *الإجمالي النهائي: ${NUMBER_FORMATTER.format(totalAmount)} ر.س*\n`;
+
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+        window.open(waUrl, '_blank');
+
+        const newOrder = {
+            id: Date.now(),
+            date: gregorianDate,
+            customer: customer.trim(),
+            warehouse: warehouse,
+            totalAmount: totalAmount,
+            msg: msg 
+        };
+        const historyKey = `b2b_history_${sessionName}`;
+        const existingHistory = JSON.parse(localStorage.getItem(historyKey)) || [];
+        localStorage.setItem(historyKey, JSON.stringify([newOrder, ...existingHistory]));
+
+        getDb().then(db => {
+            db.collection('orders').add({
+                repName: sessionName, customerName: customer.trim(), warehouse: warehouse, notes: notes.trim(), 
+                items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),
+                totalAmount: totalAmount, timestamp: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent
+            });
+        }).catch(()=>{});
+
+        setCart({});
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
+            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.Cart className="w-20 h-20 text-accent"/> فاتورة مبيعات
+                    </h3>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
+                </div>
+                
+                <div className="p-16 overflow-y-auto flex-1 bg-surface">
+                    <div className="mb-16">
+                        <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
+                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="مثال: مؤسسة الأواني الكبرى..."
+                               className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
+                    </div>
+
+                    <div className="mb-16">
+                        <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم خاص، شحن سريع، أو ملاحظة للمحاسب..."
+                               className="w-full h-64 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
+                    </div>
+
+                    <div className="bg-bg border border-border rounded-8 overflow-hidden">
+                        <div className="grid grid-cols-12 gap-4 p-10 bg-surface border-b border-border text-[11px] font-semibold text-muted text-center">
+                            <div className="col-span-5 text-right">الصنف</div>
+                            <div className="col-span-3">الكمية</div>
+                            <div className="col-span-3">الإجمالي</div>
+                            <div className="col-span-1"></div>
+                        </div>
+                        {items.length === 0 ? (
+                            <p className="p-24 text-center text-[13px] text-muted">الفاتورة فارغة</p>
+                        ) : items.map(it => (
+                            <div key={it.cleanId} className="grid grid-cols-12 gap-4 p-10 items-center border-b border-border last:border-0 text-[12px] text-center">
+                                <div className="col-span-5 text-right font-medium text-primary truncate" title={it.name || it.id}>{it.id}</div>
+                                <div className="col-span-3"><OrderQuantityControl item={it} cart={cart} setCart={setCart} /></div>
+                                <div className="col-span-3 font-semibold text-accent">{NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}</div>
+                                <button onClick={() => { const nx = {...cart}; delete nx[it.cleanId]; setCart(nx); }} className="col-span-1 text-danger flex justify-center"><Icon.Trash className="w-16 h-16"/></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-16 border-t border-border bg-bg flex flex-col gap-12">
+                    <div className="flex justify-between items-center px-8">
+                        <span className="text-[14px] font-semibold text-primary">الإجمالي التقديري:</span>
+                        <span className="text-[18px] font-bold text-accent">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
+                    </div>
+                    <button onClick={handleSubmit} disabled={items.length === 0}
+                            className="w-full h-48 bg-primary text-bg rounded-12 font-bold text-[15px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
+                        اعتماد وإرسال الطلب (واتساب)
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+const ProductImage = ({ fileName, alt, className }) => {
+    if (!fileName) return null;
+    return (
+        <img src={`${IMAGES_PATH}${fileName}`} alt={alt} loading="lazy" decoding="async" draggable="false"
+             className={className} onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+    );
+};
+
+const Lightbox = ({ fileName, title, onClose }) => {
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+    }, [onClose]);
+
+    return (
+        <div className="lightbox-backdrop fixed inset-0 z-50 flex items-center justify-center p-16 animate-flip"
+             role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+            <button onClick={onClose} aria-label="إغلاق"
+                    className="absolute top-16 left-16 w-44 h-44 rounded-full bg-white/10 text-white flex items-center justify-center">
+                <Icon.Close className="w-20 h-20" />
+            </button>
+            <div className="max-w-[860px] w-full flex flex-col items-center gap-16" onClick={(e) => e.stopPropagation()}>
+                <img src={`${IMAGES_PATH}${fileName}`} alt={title} className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
+                <p className="text-white text-[15px] text-center px-16">{title}</p>
+            </div>
+        </div>
+    );
+};
+
 // ============================================================
-// بطاقات المنتجات
+// بطاقات العرض
 // ============================================================
 const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty, cart, setCart }) => (
     <div className="animate-card w-full border border-border rounded-16 shadow-card p-16 sm:p-20 bg-bg flex flex-col gap-16">
@@ -846,7 +690,7 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
         
         <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">سعر (الكرتون)</div>
+                <div className="text-[12px] text-muted mb-2">سعر الأساس (الكرتون)</div>
                 <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
             </div>
             <div className="min-w-0">
@@ -927,7 +771,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
 
                     <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted mb-2">سعر (الكرتون)</div>
+                            <div className="text-[11px] text-muted mb-2">سعر الأساس</div>
                             <div className="text-[13px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
                         </div>
                         <div className="min-w-0">
@@ -1350,12 +1194,10 @@ const App = () => {
                         
                         {warehouse && (
                             <div className="flex items-center gap-8 flex-shrink-0">
-                                {/* ✨ زر سجل الطلبات */}
                                 <button onClick={() => setShowHistory(true)} title="سجل الطلبات" className="flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                     <Icon.List className="w-20 h-20" />
                                 </button>
                                 
-                                {/* زر السلة */}
                                 <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                     <Icon.Cart className="w-20 h-20" />
                                     {Object.keys(cart).length > 0 && (
@@ -1366,6 +1208,7 @@ const App = () => {
                                 </button>
                             </div>
                         )}
+                    </div>
 
                     <div className="flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
@@ -1393,7 +1236,7 @@ const App = () => {
                         </label>
                     </div>
 
-                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> عرض صورة المنتج</p>}
+                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
                 </div>
             </div>
 
