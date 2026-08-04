@@ -727,7 +727,7 @@ const Lightbox = ({ fileName, title, onClose }) => {
 };
 
 // ---- بطاقات البحث ----
-const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty }) => (
+const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty, cart, setCart }) => (
     <div className="animate-card w-full border border-border rounded-16 shadow-card p-16 sm:p-20 bg-bg flex flex-col gap-16">
         {showImage && imageFileName && (
             <div className="w-full flex justify-center border-b border-border pb-16">
@@ -761,10 +761,10 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
             </div>
         </div>
         
-        {/* ✨ لوحة التسعيرة */}
+        {/* لوحة التسعيرة */}
         <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">سعر (الكرتون)</div>
+                <div className="text-[12px] text-muted mb-2">سعر الأساس (الكرتون)</div>
                 <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
             </div>
             <div className="min-w-0">
@@ -772,8 +772,122 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
                 <div className="text-[15px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
             </div>
         </div>
+
+        {/* ✨ زر الإضافة للفاتورة */}
+        <div className="border-t border-border pt-16 mt-8 flex justify-end">
+            <OrderQuantityControl item={item} cart={cart} setCart={setCart} />
+        </div>
     </div>
 ));
+
+const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart, setCart }) => (
+    <div className="animate-card w-full border border-border rounded-12 p-12 bg-bg flex flex-col gap-12 hover:border-muted transition-colors duration-200">
+        <div className="flex justify-between items-center gap-12">
+            <div className="flex items-center gap-12 min-w-0 flex-1">
+                {showImage && imageFileName && (
+                    <ProductImage fileName={imageFileName} alt={item.name || item.id}
+                                  className="w-48 h-48 flex-shrink-0 object-contain rounded-10 border border-border bg-surface" />
+                )}
+                <div className="flex flex-col min-w-0">
+                    <span className="text-[15px] font-semibold text-primary truncate">{item.id}</span>
+                    <span className="text-[13px] text-secondary truncate">{item.name || '---'}</span>
+                </div>
+            </div>
+            {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} size="sm" /></div>}
+        </div>
+        
+        {/* ✨ زر الإضافة للفاتورة */}
+        <div className="border-t border-border pt-12 flex justify-end">
+            <OrderQuantityControl item={item} cart={cart} setCart={setCart} />
+        </div>
+    </div>
+));
+
+// ---- بطاقة المعرض ثلاثية الطبقات ----
+const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, onZoom, warehouseName, cart, setCart }) => {
+    const isDetails  = view === CARD_VIEW.DETAILS;
+    const isQuantity = view === CARD_VIEW.QUANTITY;
+
+    return (
+        <div role="button" tabIndex={0}
+             aria-label={`${item.name || item.id} — نقرتان للكمية، ثلاث نقرات للتفاصيل`}
+             aria-expanded={view !== CARD_VIEW.IMAGE}
+             title="نقرتان: الكمية · ثلاث نقرات: بطاقة المنتج"
+             onClick={() => onTap(item.uid)}
+             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCycle(item.uid); } }}
+             className={`tap-card group relative cursor-pointer border rounded-16 bg-bg overflow-hidden flex flex-col transition-colors duration-200 ${isDetails ? 'border-accent' : 'border-border'}`}>
+
+            {isDetails ? (
+                <div className="animate-flip w-full p-16 flex flex-col gap-10">
+                    <div className="flex justify-between items-center border-b border-border pb-8">
+                        <span className="text-[12px] font-semibold text-accent">بطاقة المنتج</span>
+                        <span className="text-[11px] text-muted">نقرتان للعودة</span>
+                    </div>
+                    <div>
+                        <div className="text-[11px] text-muted">رقم الصنف</div>
+                        <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
+                    </div>
+                    <div>
+                        <div className="text-[11px] text-muted">اسم الصنف</div>
+                        <div className="text-[13px] text-primary break-words">{item.name || '---'}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8">
+                        <div className="min-w-0">
+                            <div className="text-[11px] text-muted">الوحدة</div>
+                            <div className="text-[13px] font-semibold text-primary break-words">{item.unit || '---'}</div>
+                        </div>
+                        <div className="min-w-0">
+                            <div className="text-[11px] text-muted">الشد</div>
+                            <div className="text-[13px] font-semibold text-primary break-words">{item.pack || '---'}</div>
+                        </div>
+                    </div>
+                    <div className="border-t border-border pt-8">
+                        <div className="text-[11px] text-muted mb-4">{warehouseName}</div>
+                        <Quantity qty={item.qty} unit={item.unit} size="sm" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
+                        <div className="min-w-0">
+                            <div className="text-[11px] text-muted mb-2">سعر الأساس</div>
+                            <div className="text-[13px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
+                        </div>
+                        <div className="min-w-0">
+                            <div className="text-[11px] text-muted mb-2">تقريبي للحبة</div>
+                            <div className="text-[13px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
+                        </div>
+                    </div>
+                    
+                    {/* ✨ زر الإضافة للفاتورة في المعرض */}
+                    <div className="border-t border-border pt-12 mt-4 flex justify-end" onClick={e => e.stopPropagation()}>
+                        <OrderQuantityControl item={item} cart={cart} setCart={setCart} />
+                    </div>
+                </div>
+            ) : (
+                <React.Fragment>
+                    {showImage && (
+                        <div className="relative w-full bg-surface">
+                            <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
+                                          className={`object-contain pointer-events-none w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
+                            <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
+                                    className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                <Icon.Expand className="w-16 h-16" />
+                            </button>
+                        </div>
+                    )}
+                    <div className={`p-12 flex flex-col items-center text-center gap-2 ${!showImage ? 'py-24' : ''}`}>
+                        <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
+                        <div className="text-[13px] text-secondary break-words">{item.name || '---'}</div>
+                        {isQuantity && (
+                            <div className={`animate-flip text-[13px] font-semibold mt-8 px-12 py-4 rounded-full ${stockTone(item.qty).bg} ${stockTone(item.qty).text}`}>
+                                {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
+                            </div>
+                        )}
+                    </div>
+                </React.Fragment>
+            )}
+        </div>
+    );
+});
 
 const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty }) => (
     <div className="animate-card w-full border border-border rounded-12 p-12 bg-bg flex justify-between items-center gap-12 hover:border-muted transition-colors duration-200">
