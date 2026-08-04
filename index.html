@@ -1278,7 +1278,8 @@ const App = () => {
                     </div>
                 )}
 
-                <section className="mt-40">
+                {/* ===== المعرض الرقمي ===== */}
+                <section className="mt-40" id="gallery-section">
                     <div className="flex justify-between items-end gap-12 mb-12">
                         <div className="min-w-0">
                             <h2 className="text-[18px] font-bold text-primary">المعرض الرقمي</h2>
@@ -1292,50 +1293,84 @@ const App = () => {
                         )}
                     </div>
 
-                    <p className="text-[12px] text-muted mb-8">الأقسام ({NUMBER_FORMATTER.format(totalCategoryCount)})</p>
-                    <div className="flex flex-wrap gap-8 mb-20">
-                        {categoryNames.map(cat => (
-                            <button key={cat} onClick={() => setActiveCategory(cat)} aria-pressed={activeCategory === cat} className={chip(activeCategory === cat)}>{cat}</button>
-                        ))}
-                        <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={chip(activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)}>{SPECIAL_CATEGORIES.UNCATEGORIZED}</button>
-                        {isAdmin && (
-                            <button onClick={() => setActiveCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accentSoft hover:border-accent'}`}>
-                                <Icon.ImageOff className="w-14 h-14 flex-shrink-0" /> {SPECIAL_CATEGORIES.MISSING_IMAGES}
-                            </button>
-                        )}
-                    </div>
+                    {/* دالة احترافية لجمع أزرار الأقسام وإعادة استخدامها فوق وتحت */}
+                    {(() => {
+                        // دالة ذكية: تغيير القسم + رفع الشاشة لأعلى المعرض تلقائياً بنعومة
+                        const changeCategory = (cat) => {
+                            setActiveCategory(cat);
+                            const el = document.getElementById('gallery-section');
+                            if (el) {
+                                // رفع الشاشة مع حساب مسافة الشريط العلوي (80 بكسل) لكي لا يغطي العنوان
+                                const y = el.getBoundingClientRect().top + window.scrollY - 80;
+                                window.scrollTo({ top: y, behavior: 'smooth' });
+                            }
+                        };
 
-                    {loading ? ( <SkeletonGrid />
-                    ) : !warehouse ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر المستودع" note="حدد مخزون جدة أو مخزون الرياض من الأعلى لفتح المعرض." /></div>
-                    ) : !activeCategory ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر قسماً" note="حدد قسماً من الأعلى لاستعراض المنتجات المتوفرة." /></div>
-                    ) : (
-                        <div>
-                            <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
-                                <p className="text-[12px] text-muted">
-                                    {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف متوفر
-                                    {galleryResults.length > visibleItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleItems.length)})`}
-                                </p>
-                                <p className="text-[11px] text-muted">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
+                        // تصميم شريط الأقسام ليوضع مرة بالعلوي ومرة بالسفلي
+                        const categoryButtons = (
+                            <div className="flex flex-wrap gap-8">
+                                {categoryNames.map(cat => (
+                                    <button key={cat} onClick={() => changeCategory(cat)} aria-pressed={activeCategory === cat} className={chip(activeCategory === cat)}>{cat}</button>
+                                ))}
+                                <button onClick={() => changeCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={chip(activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)}>{SPECIAL_CATEGORIES.UNCATEGORIZED}</button>
+                                {isAdmin && (
+                                    <button onClick={() => changeCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accentSoft hover:border-accent'}`}>
+                                        <Icon.ImageOff className="w-14 h-14 flex-shrink-0" /> {SPECIAL_CATEGORIES.MISSING_IMAGES}
+                                    </button>
+                                )}
                             </div>
+                        );
 
-                            {galleryResults.length === 0 ? (
-                                <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.ImageOff className="w-20 h-20" />} title="لا توجد أصناف" note="لا توجد أصناف متوفرة في هذا القسم داخل المستودع المحدد." /></div>
-                            ) : (
-                                <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16" : "flex flex-col gap-16 max-w-[520px] mx-auto"}>
-                                    {visibleItems.map(item => (
-                                        <GalleryCard key={item.uid} item={item} imageFileName={imagesList.get(item.cleanId)} showImage={!isMissingImagesView} isGrid={galleryView === 'grid'}
-                                            view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} warehouseName={activeWarehouseName} cart={cart} setCart={setCart} />
-                                    ))}
+                        return (
+                            <React.Fragment>
+                                {/* ✨ شريط الأقسام العلوي الأساسي */}
+                                <p className="text-[12px] text-muted mb-8">الأقسام ({NUMBER_FORMATTER.format(totalCategoryCount)})</p>
+                                <div className="mb-20">
+                                    {categoryButtons}
                                 </div>
-                            )}
 
-                            {galleryResults.length > visibleItems.length && (
-                                <div className="flex justify-center mt-24">
-                                    <button onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)} className="px-24 h-48 rounded-12 border border-border bg-bg text-primary text-[14px] font-semibold hover:bg-surface transition-colors">عرض المزيد</button>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                {loading ? ( <SkeletonGrid />
+                                ) : !warehouse ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر المستودع" note="حدد مخزون جدة أو مخزون الرياض من الأعلى لفتح المعرض." /></div>
+                                ) : !activeCategory ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر قسماً" note="حدد قسماً من الأعلى لاستعراض المنتجات المتوفرة." /></div>
+                                ) : (
+                                    <div>
+                                        <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
+                                            <p className="text-[12px] text-muted">
+                                                {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف متوفر
+                                                {galleryResults.length > visibleItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleItems.length)})`}
+                                            </p>
+                                            <p className="text-[11px] text-muted">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
+                                        </div>
+
+                                        {galleryResults.length === 0 ? (
+                                            <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.ImageOff className="w-20 h-20" />} title="لا توجد أصناف" note="لا توجد أصناف متوفرة في هذا القسم داخل المستودع المحدد." /></div>
+                                        ) : (
+                                            <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16" : "flex flex-col gap-16 max-w-[520px] mx-auto"}>
+                                                {visibleItems.map(item => (
+                                                    <GalleryCard key={item.uid} item={item} imageFileName={imagesList.get(item.cleanId)} showImage={!isMissingImagesView} isGrid={galleryView === 'grid'}
+                                                        view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} warehouseName={activeWarehouseName} cart={cart} setCart={setCart} />
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {galleryResults.length > visibleItems.length && (
+                                            <div className="flex justify-center mt-24">
+                                                <button onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)} className="px-24 h-48 rounded-12 border border-border bg-bg text-primary text-[14px] font-semibold hover:bg-surface transition-colors">عرض المزيد</button>
+                                            </div>
+                                        )}
+
+                                        {/* ✨ شريط الأقسام السفلي المكرر ✨ */}
+                                        {galleryResults.length > 0 && (
+                                            <div className="mt-32 pt-24 border-t border-border">
+                                                <p className="text-[12px] text-muted mb-8">انتقال سريع لقسم آخر:</p>
+                                                {categoryButtons}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </React.Fragment>
+                        );
+                    })()}
                 </section>
 
                 <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
