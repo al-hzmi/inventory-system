@@ -626,6 +626,7 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
     );
 });
 
+// نافذة الفاتورة الرسمية (الرفع لـ Firebase + فتح الواتساب الإجباري)
 const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse }) => {
     const [customer, setCustomer] = useState("");
     const [notes, setNotes] = useState(""); 
@@ -637,7 +638,27 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
         if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
         setLoading(true);
         
+        // 1. تجهيز رسالة الواتساب أولاً
+        let msg = `*طلب مبيعات جديد*\n`;
+        msg += `──────────────\n`;
+        msg += `المندوب: ${sessionName}\n`;
+        msg += `العميل: ${customer.trim()}\n`;
+        msg += `المستودع: ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
+        msg += `التاريخ: ${new Date().toLocaleDateString('ar-SA')}\n`;
+        if (notes.trim()) {
+            msg += `الملاحظات: ${notes.trim()}\n`;
+        }
+        msg += `──────────────\n`;
+        items.forEach((it, idx) => {
+            msg += `${idx + 1}. [${it.id}]\n   الكمية: *${it.cartQty}* | السعر: ${it.price || 0} ر.س\n`;
+        });
+        msg += `──────────────\n`;
+        msg += `الإجمالي التقديري: ${NUMBER_FORMATTER.format(totalAmount)} ر.س\n`;
+
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
         try {
+            // 2. محاولة الحفظ في فايربيس (في الخلفية)
             const db = await getDb();
             await db.collection('orders').add({
                 repName: sessionName,
@@ -649,32 +670,18 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
             });
-
-            // رسالة الواتساب النصية بدون إكسل
-            let msg = `*طلب مبيعات جديد*\n`;
-            msg += `──────────────\n`;
-            msg += `المندوب: ${sessionName}\n`;
-            msg += `العميل: ${customer.trim()}\n`;
-            msg += `المستودع: ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
-            msg += `التاريخ: ${new Date().toLocaleDateString('ar-SA')}\n`;
-            if (notes.trim()) {
-                msg += `الملاحظات: ${notes.trim()}\n`;
-            }
-            msg += `──────────────\n`;
-            items.forEach((it, idx) => {
-                msg += `${idx + 1}. [${it.id}]\n   الكمية: *${it.cartQty}* | السعر: ${it.price || 0} ر.س\n`;
-            });
-            msg += `──────────────\n`;
-            msg += `الإجمالي التقديري: ${NUMBER_FORMATTER.format(totalAmount)} ر.س\n`;
-
-            setCart({});
-            onClose();
-            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-            
         } catch (err) {
-            console.error(err);
-            alert("حدث خطأ أثناء حفظ الفاتورة.");
+            console.error("Firebase Error:", err);
+            // نتجاهل الخطأ عمداً لكي لا يتوقف عمل المندوب في الميدان إذا كان الإنترنت ضعيفاً
         }
+
+        // 3. تفريغ السلة وإغلاق النافذة
+        setCart({});
+        onClose();
+        
+        // 4. الضربة القاضية: تحويل الصفحة بالكامل للواتساب (هذا يكسر حظر الآيفون للـ Popups)
+        window.location.href = waUrl;
+        
         setLoading(false);
     };
 
@@ -695,7 +702,6 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                                className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
                     </div>
 
-                    {/* مربع الملاحظات (تم تصغيره إلى h-64 ليكون مرتب وأنيق) */}
                     <div className="mb-16">
                         <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
                         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم خاص، شحن سريع، أو ملاحظة للمحاسب..."
