@@ -1530,14 +1530,11 @@ const App = () => {
                 </footer>
             </div>
 
-{/* ===== النوافذ المنبثقة ===== */}
+            {/* ===== النوافذ المنبثقة ===== */}
             {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} onScan={(scannedText) => { setShowScanner(false); setQuery(scannedText); }} />}
             {showCart && <OrderInvoiceModal cart={cart} setCart={setCart} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />}
             {showHistory && <OrderHistoryModal onClose={() => setShowHistory(false)} sessionName={sessionName} />}
-            
-            {/* ✨ نافذة لوحة الإدارة (هذا هو السطر الجديد) */}
             {showAdmin && isAdmin && <AdminDashboardModal onClose={() => setShowAdmin(false)} />}
-            
             {zoomItem && <Lightbox fileName={imagesList.get(zoomItem.cleanId)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />}
         </div>
     );
