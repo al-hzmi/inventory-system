@@ -1149,12 +1149,9 @@ const App = () => {
         return name ? (JSON.parse(localStorage.getItem(`b2b_cart_${name}`)) || {}) : {};
     });
     
-    const [showCart, setShowCart] = useState(false);
+   const [showCart, setShowCart] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
-    const [showCart, setShowCart] = useState(false);
-    const [showHistory, setShowHistory] = useState(false);
-    // ✨ إضافة متغير فتح لوحة الإدارة
-    const [showAdmin, setShowAdmin] = useState(false);
+    const [showAdmin, setShowAdmin] = useState(false); // ✨ زر الإدارة
     useEffect(() => {
         if (sessionName) {
             localStorage.setItem(`b2b_cart_${sessionName}`, JSON.stringify(cart));
