@@ -626,28 +626,24 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
     );
 });
 
-// نافذة الفاتورة الرسمية (الرفع لـ Firebase + فتح الواتساب الإجباري)
+// نافذة الفاتورة الرسمية (تفتح الواتساب فوراً وتحفظ الطلب في السجل)
 const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse }) => {
     const [customer, setCustomer] = useState("");
     const [notes, setNotes] = useState(""); 
-    const [loading, setLoading] = useState(false);
     const items = Object.values(cart);
     const totalAmount = items.reduce((sum, item) => sum + ((item.price || 0) * item.cartQty), 0);
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
-        setLoading(true);
         
-        // 1. تجهيز رسالة الواتساب أولاً
+        // 1. تجهيز الرسالة
         let msg = `*طلب مبيعات جديد*\n`;
         msg += `──────────────\n`;
         msg += `المندوب: ${sessionName}\n`;
         msg += `العميل: ${customer.trim()}\n`;
         msg += `المستودع: ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
         msg += `التاريخ: ${new Date().toLocaleDateString('ar-SA')}\n`;
-        if (notes.trim()) {
-            msg += `الملاحظات: ${notes.trim()}\n`;
-        }
+        if (notes.trim()) msg += `الملاحظات: ${notes.trim()}\n`;
         msg += `──────────────\n`;
         items.forEach((it, idx) => {
             msg += `${idx + 1}. [${it.id}]\n   الكمية: *${it.cartQty}* | السعر: ${it.price || 0} ر.س\n`;
@@ -655,34 +651,35 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
         msg += `──────────────\n`;
         msg += `الإجمالي التقديري: ${NUMBER_FORMATTER.format(totalAmount)} ر.س\n`;
 
-        const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        // 2. فتح الواتساب فوراً (بدون انتظار لحماية الكود من حظر المتصفح)
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+        window.open(waUrl, '_blank');
 
-        try {
-            // 2. محاولة الحفظ في فايربيس (في الخلفية)
-            const db = await getDb();
-            await db.collection('orders').add({
-                repName: sessionName,
-                customerName: customer.trim(),
-                warehouse: warehouse,
-                notes: notes.trim(), 
+        // 3. الحفظ في السجل المحلي للمندوب (كي لا تضيع الفاتورة)
+        const newOrder = {
+            id: Date.now(),
+            date: new Date().toLocaleString('ar-SA'),
+            customer: customer.trim(),
+            warehouse: warehouse,
+            totalAmount: totalAmount,
+            msg: msg // حفظ الرسالة الجاهزة لإعادة الإرسال
+        };
+        const historyKey = `b2b_history_${sessionName}`;
+        const existingHistory = JSON.parse(localStorage.getItem(historyKey)) || [];
+        localStorage.setItem(historyKey, JSON.stringify([newOrder, ...existingHistory]));
+
+        // 4. الحفظ الصامت في فايربيس (بالخلفية بدون تأخير المندوب)
+        getDb().then(db => {
+            db.collection('orders').add({
+                repName: sessionName, customerName: customer.trim(), warehouse: warehouse, notes: notes.trim(), 
                 items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),
-                totalAmount: totalAmount,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                userAgent: navigator.userAgent
+                totalAmount: totalAmount, timestamp: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent
             });
-        } catch (err) {
-            console.error("Firebase Error:", err);
-            // نتجاهل الخطأ عمداً لكي لا يتوقف عمل المندوب في الميدان إذا كان الإنترنت ضعيفاً
-        }
+        }).catch(()=>{});
 
-        // 3. تفريغ السلة وإغلاق النافذة
+        // 5. تفريغ السلة والإغلاق
         setCart({});
         onClose();
-        
-        // 4. الضربة القاضية: تحويل الصفحة بالكامل للواتساب (هذا يكسر حظر الآيفون للـ Popups)
-        window.location.href = waUrl;
-        
-        setLoading(false);
     };
 
     return (
@@ -698,7 +695,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                 <div className="p-16 overflow-y-auto flex-1 bg-surface">
                     <div className="mb-16">
                         <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
-                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="إسم العميل ..."
+                        <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="اسم العميل ..."
                                className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
                     </div>
 
@@ -733,9 +730,9 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                         <span className="text-[14px] font-semibold text-primary">الإجمالي التقديري:</span>
                         <span className="text-[18px] font-bold text-accent">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
                     </div>
-                    <button onClick={handleSubmit} disabled={loading || items.length === 0}
+                    <button onClick={handleSubmit} disabled={items.length === 0}
                             className="w-full h-48 bg-primary text-bg rounded-12 font-bold text-[15px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
-                        {loading ? "جاري الاعتماد..." : "اعتماد وإرسال الطلب (واتساب)"}
+                        اعتماد وإرسال الطلب (واتساب)
                     </button>
                 </div>
             </div>
@@ -743,6 +740,62 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
     );
 });
 
+    // نافذة سجل الطلبات (Order History) للمندوب
+const OrderHistoryModal = memo(({ onClose, sessionName }) => {
+    const historyKey = `b2b_history_${sessionName}`;
+    const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem(historyKey)) || []);
+
+    const resendWhatsApp = (msg) => {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    };
+
+    const deleteOrder = (id) => {
+        const newHistory = history.filter(o => o.id !== id);
+        setHistory(newHistory);
+        localStorage.setItem(historyKey, JSON.stringify(newHistory));
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
+            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.List className="w-20 h-20 text-accent"/> سجل الفواتير السابقة
+                    </h3>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
+                </div>
+                <div className="p-16 overflow-y-auto flex-1 bg-surface">
+                    {history.length === 0 ? (
+                        <div className="text-center p-32 text-muted">لا يوجد طلبات سابقة محفوظة في جهازك.</div>
+                    ) : (
+                        <div className="flex flex-col gap-12">
+                            {history.map(order => (
+                                <div key={order.id} className="bg-bg border border-border rounded-12 p-16 flex flex-col gap-12 shadow-card">
+                                    <div className="flex justify-between items-start border-b border-border pb-8">
+                                        <div>
+                                            <div className="text-[14px] font-bold text-primary">{order.customer}</div>
+                                            <div className="text-[11px] text-muted mt-2">{order.date} • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
+                                        </div>
+                                        <div className="text-[15px] font-bold text-accent">{NUMBER_FORMATTER.format(order.totalAmount)} ر.س</div>
+                                    </div>
+                                    <div className="flex gap-8">
+                                        <button onClick={() => resendWhatsApp(order.msg)} className="flex-1 h-36 bg-successSoft text-success rounded-8 font-semibold text-[13px] hover:bg-success hover:text-white transition-colors flex items-center justify-center gap-6">
+                                            إعادة إرسال واتساب
+                                        </button>
+                                        <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
+                                            <Icon.Trash className="w-16 h-16"/>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+});
+    
 // ============================================================
 // بطاقات المنتجات
 // ============================================================
