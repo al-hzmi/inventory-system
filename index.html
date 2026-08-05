@@ -90,13 +90,20 @@
             s.src = src; s.async = true; s.onload = res; s.onerror = () => rej(new Error('load failed: ' + src));
             document.head.appendChild(s);
         });
+        
+        // ✨ تفعيل المزامنة والأوفلاين في فايربيس
         function getDb() {
             if (__fbPromise) return __fbPromise;
             __fbPromise = loadScript("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js")
                 .then(() => loadScript("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"))
                 .then(() => {
                     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                    return firebase.firestore();
+                    const db = firebase.firestore();
+                    // تفعيل وضع الأوفلاين للفايربيس للحفظ حتى لو انقطع النت
+                    db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+                        console.warn("تنبيه: تعذر تفعيل وضع الأوفلاين للفايربيس", err.code);
+                    });
+                    return db;
                 });
             return __fbPromise;
         }
@@ -188,14 +195,37 @@ const verifyCode = (name, code) => {
     return Boolean(expected) && hashCode(toEnglishDigits(String(code)).trim()) === expected;
 };
 
+// ✨ دوال جلب البيانات مع دعم الأوفلاين التام
 const fetchText = async (url) => {
-    try { const res = await fetch(url); if (!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text();
-    } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return ""; }
+    const cacheKey = `b2b_cache_${url}`;
+    try { 
+        const res = await fetch(url); 
+        if (!res.ok) throw new Error(`HTTP ${res.status}`); 
+        const text = await res.text();
+        localStorage.setItem(cacheKey, text); // حفظ في الذاكرة
+        return text;
+    } catch (err) { 
+        console.warn(`[Offline] يتم جلب النسخة المخبأة لـ ${url}`); 
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) return cached;
+        return ""; 
+    }
 };
 
 const fetchJson = async (url) => {
-    try { const res = await fetch(url); if (!res.ok) throw new Error(`HTTP ${res.status}`); return await res.json();
-    } catch (err) { console.warn(`[Data] تعذر تحميل ${url}:`, err.message); return null; }
+    const cacheKey = `b2b_cache_${url}`;
+    try { 
+        const res = await fetch(url); 
+        if (!res.ok) throw new Error(`HTTP ${res.status}`); 
+        const data = await res.json();
+        localStorage.setItem(cacheKey, JSON.stringify(data)); // حفظ في الذاكرة
+        return data;
+    } catch (err) { 
+        console.warn(`[Offline] يتم جلب النسخة المخبأة لـ ${url}`); 
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) return JSON.parse(cached);
+        return null; 
+    }
 };
 
 const parsePricingMap = (rawText) => {
@@ -371,6 +401,8 @@ const Icon = {
     Alert:   (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M12 9v4M12 17h.01"/><path d="M10.3 4.3L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z"/></svg>),
     Filter:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>),
     Eye:     (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>),
+    Archive: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>),
+    WifiOff: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><line x1="2" y1="2" x2="22" y2="22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>),
 };
 
 const Quantity = ({ qty, unit, size = 'lg' }) => {
@@ -461,7 +493,6 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
-    // ✨ حماية الحذف: رسالتين تأكيد للحذف من السجل
     const deleteOrder = (id) => {
         if(window.confirm("هل أنت متأكد من حذف هذه الفاتورة من السجل؟")) {
             if(window.confirm("تأكيد نهائي: لن تتمكن من استرجاع الفاتورة.")) {
@@ -513,8 +544,66 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
     );
 });
 
+// ✨ نافذة المسودات المؤقتة
+const DraftsModal = memo(({ drafts, setDrafts, setCart, setWarehouse, onClose }) => {
+    const resumeDraft = (draft) => {
+        if(window.confirm(`هل أنت متأكد من استرجاع مسودة "${draft.name}"؟ (سيتم مسح السلة الحالية إن وجدت)`)) {
+            setCart(draft.cart);
+            if (draft.warehouse) setWarehouse(draft.warehouse);
+            setDrafts(drafts.filter(d => d.id !== draft.id)); // حذف المسودة بعد فتحها
+            onClose();
+        }
+    };
+
+    const deleteDraft = (id) => {
+        if(window.confirm("تأكيد حذف هذه المسودة نهائياً؟")) {
+            setDrafts(drafts.filter(d => d.id !== id));
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
+            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.Archive className="w-20 h-20 text-accent"/> مسودات الطلبات المؤقتة
+                    </h3>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
+                </div>
+                <div className="p-16 overflow-y-auto flex-1 bg-surface">
+                    {drafts.length === 0 ? (
+                        <div className="text-center p-32 text-muted">لا توجد مسودات محفوظة.</div>
+                    ) : (
+                        <div className="flex flex-col gap-12">
+                            {drafts.map(draft => (
+                                <div key={draft.id} className="bg-bg border border-border rounded-12 p-16 flex flex-col gap-12 shadow-card">
+                                    <div className="flex justify-between items-start border-b border-border pb-8">
+                                        <div>
+                                            <div className="text-[14px] font-bold text-primary truncate max-w-[200px]">{draft.name}</div>
+                                            <div className="text-[11px] text-muted mt-2">{draft.date} • {WAREHOUSES[draft.warehouse]?.name || draft.warehouse}</div>
+                                        </div>
+                                        <div className="text-[13px] font-bold text-accent bg-accentSoft px-8 py-4 rounded-full">{Object.keys(draft.cart).length} أصناف</div>
+                                    </div>
+                                    <div className="flex gap-8 mt-8">
+                                        <button onClick={() => resumeDraft(draft)} className="flex-1 h-36 bg-primary text-bg rounded-8 font-semibold text-[13px] hover:bg-accent transition-colors flex items-center justify-center gap-6">
+                                            استكمال الطلب
+                                        </button>
+                                        <button onClick={() => deleteDraft(draft.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
+                                            <Icon.Trash className="w-16 h-16"/>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+});
+
 // نافذة السلة الرئيسية (اعتماد الطلبات)
-const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse }) => {
+const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, sessionName, warehouse }) => {
     const [customer, setCustomer] = useState("");
     const [notes, setNotes] = useState(""); 
     const items = Object.values(cart);
@@ -523,10 +612,8 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
     const handleSubmit = () => {
         if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
         
-        // استخراج التاريخ الميلادي
         const gregorianDate = new Date().toLocaleDateString('en-GB');
 
-        // ✨ تنسيق الرسالة الرسمي الخالي من الايموجيات
         let msg = `*طلب مبيعات جديد*\n`;
         msg += `════════════════\n`;
         msg += `المندوب: ${sessionName}\n`;
@@ -537,7 +624,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
         msg += `════════════════\n\n`;
 
         items.forEach((it, idx) => {
-            msg += `${idx + 1}. *[ ${it.id} ]*\n`; // استخدام الترقيم بدل المربع
+            msg += `${idx + 1}. *[ ${it.id} ]*\n`;
             msg += `   الكمية: *${it.cartQty}* | الإجمالي: *${NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}* ر.س\n`;
             if (idx < items.length - 1) msg += `  ╌╌╌╌╌╌╌╌╌╌╌╌\n`;
         });
@@ -572,7 +659,22 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
         onClose();
     };
 
-    // ✨ حماية الحذف: رسالتين تأكيد عند حذف صنف من السلة قبل الاعتماد
+    // ✨ دالة حفظ المسودة
+    const saveAsDraft = () => {
+        const draftName = customer.trim() || `مسودة ${new Date().toLocaleTimeString('ar-SA')}`;
+        const newDraft = {
+            id: Date.now(),
+            name: draftName,
+            date: new Date().toLocaleString('ar-SA'),
+            warehouse,
+            cart: { ...cart },
+            notes: notes.trim()
+        };
+        setDrafts([newDraft, ...drafts]);
+        setCart({});
+        onClose();
+    };
+
     const deleteCartItem = (cleanId) => {
         if(window.confirm("هل أنت متأكد من حذف الصنف من الفاتورة؟")) {
             if(window.confirm("تأكيد نهائي: سيتم الحذف الآن.")) {
@@ -631,10 +733,17 @@ const OrderInvoiceModal = memo(({ cart, setCart, onClose, sessionName, warehouse
                         <span className="text-[14px] font-semibold text-primary">الإجمالي التقديري:</span>
                         <span className="text-[18px] font-bold text-accent">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
                     </div>
-                    <button onClick={handleSubmit} disabled={items.length === 0}
-                            className="w-full h-48 bg-primary text-bg rounded-12 font-bold text-[15px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
-                        اعتماد وإرسال الطلب (واتساب)
-                    </button>
+                    {/* ✨ إضافة زر حفظ المسودة */}
+                    <div className="flex gap-8">
+                        <button onClick={saveAsDraft} disabled={items.length === 0}
+                                className="flex-1 h-48 bg-surface text-primary border border-border rounded-12 font-bold text-[13px] hover:bg-border disabled:opacity-50 transition-colors flex items-center justify-center gap-6">
+                            <Icon.Archive className="w-16 h-16"/> مسودة
+                        </button>
+                        <button onClick={handleSubmit} disabled={items.length === 0}
+                                className="w-[70%] h-48 bg-primary text-bg rounded-12 font-bold text-[14px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
+                            اعتماد (واتساب)
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1005,10 +1114,10 @@ const AdminDashboardModal = memo(({ onClose }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // ✨ متغيرات الفرز والبحث
+    // متغيرات الفرز والبحث
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortOrder, setSortOrder] = useState('desc'); // 'desc' الأحدث, 'asc' الأقدم
-    const [expandedOrderId, setExpandedOrderId] = useState(null); // لعرض تفاصيل الفاتورة
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     const tabs = [
         { id: 'orders', label: 'الطلبات والفواتير' },
@@ -1024,14 +1133,12 @@ const AdminDashboardModal = memo(({ onClose }) => {
         setExpandedOrderId(null);
 
         getDb().then(db => {
-            // تحديد حقل التاريخ المناسب لكل جدول
             let sortField = 'timestamp';
             if (activeTab === 'users') sortField = 'lastLogin';
             else if (activeTab === 'login_logs' || activeTab === 'search_logs') sortField = 'time';
             
             const collectionRef = db.collection(activeTab);
             
-            // سحب أحدث 200 عملية لضمان وجود بيانات كافية للفرز المحلي
             collectionRef.orderBy(sortField, 'desc').limit(200).get()
                 .then(snapshot => {
                     if (isMounted) {
@@ -1041,12 +1148,10 @@ const AdminDashboardModal = memo(({ onClose }) => {
                     }
                 })
                 .catch(err => {
-                    console.warn("Index missing, falling back to basic fetch:", err);
-                    // في حال كان فايربيس يفتقد للفهرسة (Index)، نسحب البيانات بدون ترتيب ونجري الترتيب برمجياً هنا
+                    console.warn("جاري استخدام الجلب الأساسي (Fallback):", err);
                     collectionRef.limit(200).get().then(snap => {
                         if (isMounted) {
                             let fetchedData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            // الترتيب البرمجي للأحدث
                             fetchedData.sort((a,b) => {
                                 const t1 = a.timestamp || a.time || a.lastLogin || a.firstJoined || 0;
                                 const t2 = b.timestamp || b.time || b.lastLogin || b.firstJoined || 0;
@@ -1065,19 +1170,13 @@ const AdminDashboardModal = memo(({ onClose }) => {
         return () => { isMounted = false; };
     }, [activeTab]);
 
-    // معالجة البحث والترتيب المحلي
     const filteredData = useMemo(() => {
         let res = [...data];
-
         if (searchTerm.trim()) {
             const q = searchTerm.toLowerCase();
             res = res.filter(row => JSON.stringify(row).toLowerCase().includes(q));
         }
-
-        if (sortOrder === 'asc') {
-            res.reverse();
-        }
-
+        if (sortOrder === 'asc') res.reverse();
         return res;
     }, [data, searchTerm, sortOrder]);
 
@@ -1091,7 +1190,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
     return (
         <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-card">
             <div className="w-full max-w-[1000px] h-[95vh] sm:h-[90vh] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col">
-                {/* الترويسة */}
                 <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
                     <h3 className="font-bold text-primary flex items-center gap-8">
                         <Icon.Dashboard className="w-20 h-20 text-accent"/> لوحة تحكم الإدارة (سجلات النظام)
@@ -1101,7 +1199,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
                     </button>
                 </div>
                 
-                {/* شريط التبويبات */}
                 <div className="flex overflow-x-auto border-b border-border bg-surface no-scrollbar">
                     {tabs.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -1111,7 +1208,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
                     ))}
                 </div>
 
-                {/* ✨ شريط البحث والفلترة */}
                 <div className="p-16 border-b border-border bg-surface flex flex-col sm:flex-row gap-12 items-center justify-between">
                     <div className="relative w-full sm:w-[350px]">
                         <Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted" />
@@ -1127,7 +1223,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
                     </div>
                 </div>
 
-                {/* المحتوى */}
                 <div className="flex-1 overflow-y-auto p-16 bg-surface">
                     {loading ? (
                         <div className="flex justify-center items-center h-full text-muted text-[14px]">جاري جلب السجلات الاحترافية...</div>
@@ -1196,7 +1291,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                                     </React.Fragment>
                                                 )}
                                             </tr>
-                                            {/* ✨ تفاصيل الفاتورة عند النقر */}
                                             {activeTab === 'orders' && expandedOrderId === row.id && (
                                                 <tr className="bg-accentSoft/30 border-b border-border">
                                                     <td colSpan="7" className="p-16">
@@ -1251,6 +1345,20 @@ const AdminDashboardModal = memo(({ onClose }) => {
 // التطبيق الرئيسي
 // ============================================================
 const App = () => {
+    // 🌐 حالة الاتصال بالإنترنت
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
     const [sessionName, setSessionName] = useState(() => localStorage.getItem(STORAGE_KEYS.NAME) || '');
     
     const [cart, setCart] = useState(() => {
@@ -1258,20 +1366,28 @@ const App = () => {
         return name ? (JSON.parse(localStorage.getItem(`b2b_cart_${name}`)) || {}) : {};
     });
     
+    // ✨ مسودات الطلبات المؤقتة
+    const [drafts, setDrafts] = useState(() => {
+        const name = localStorage.getItem(STORAGE_KEYS.NAME) || '';
+        return name ? (JSON.parse(localStorage.getItem(`b2b_drafts_${name}`)) || []) : [];
+    });
+    
     const [showCart, setShowCart] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
-    const [showAdmin, setShowAdmin] = useState(false); // ✨ زر الإدارة
+    const [showAdmin, setShowAdmin] = useState(false);
+    const [showDrafts, setShowDrafts] = useState(false);
 
     useEffect(() => {
         if (sessionName) {
             localStorage.setItem(`b2b_cart_${sessionName}`, JSON.stringify(cart));
+            localStorage.setItem(`b2b_drafts_${sessionName}`, JSON.stringify(drafts));
         }
-    }, [cart, sessionName]);
+    }, [cart, drafts, sessionName]);
 
     useEffect(() => {
         if (sessionName) {
-            const savedCart = JSON.parse(localStorage.getItem(`b2b_cart_${sessionName}`)) || {};
-            setCart(savedCart);
+            setCart(JSON.parse(localStorage.getItem(`b2b_cart_${sessionName}`)) || {});
+            setDrafts(JSON.parse(localStorage.getItem(`b2b_drafts_${sessionName}`)) || []);
         }
     }, [sessionName]);
 
@@ -1325,7 +1441,7 @@ const App = () => {
                 setLastUpdate(vJ && vJ.lastUpdate ? (typeof dayjs !== 'undefined' ? dayjs(vJ.lastUpdate).fromNow() : vJ.lastUpdate) : "غير متوفر");
             } catch (err) {
                 console.error('[Boot] فشل غير متوقع:', err);
-                if (alive) setLastUpdate("غير متوفر");
+                if (alive) setLastUpdate("تأكد من الاتصال بالإنترنت");
             } finally {
                 if (alive) setLoading(false);
             }
@@ -1440,7 +1556,14 @@ const App = () => {
         <div className="min-h-screen font-sans">
             <div className="border-b border-border bg-surface">
                 <div className="max-w-[1024px] mx-auto px-16 h-44 flex items-center justify-between gap-12">
-                    <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
+                    <div className="flex items-center gap-8">
+                        {!isOnline && (
+                            <div className="flex items-center gap-4 bg-danger text-white px-8 py-2 rounded-full text-[10px] font-bold animate-pulse">
+                                <Icon.WifiOff className="w-12 h-12" /> وضع أوفلاين
+                            </div>
+                        )}
+                        <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
+                    </div>
                     <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[11px] text-muted hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
                 </div>
             </div>
@@ -1466,7 +1589,6 @@ const App = () => {
                         </div>
                         
                         <div className="flex items-center gap-8 flex-shrink-0">
-                            {/* ✨ زر لوحة الإدارة يظهر للمدير دائماً سواء اختار مستودع أو لا */}
                             {isAdmin && (
                                 <button onClick={() => setShowAdmin(true)} title="لوحة الإدارة" className="flex items-center justify-center w-48 h-48 rounded-12 bg-accentSoft border border-accent text-accent hover:bg-accent hover:text-white transition-colors animate-flip">
                                     <Icon.Dashboard className="w-20 h-20" />
@@ -1475,12 +1597,20 @@ const App = () => {
 
                             {warehouse && (
                                 <React.Fragment>
-                                    {/* زر سجل الطلبات */}
+                                    {/* ✨ زر المسودات المؤقتة */}
+                                    <button onClick={() => setShowDrafts(true)} title="المسودات المؤقتة" className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
+                                        <Icon.Archive className="w-20 h-20" />
+                                        {drafts.length > 0 && (
+                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-warn text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-flip">
+                                                {drafts.length}
+                                            </span>
+                                        )}
+                                    </button>
+
                                     <button onClick={() => setShowHistory(true)} title="سجل الطلبات" className="flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                         <Icon.List className="w-20 h-20" />
                                     </button>
                                     
-                                    {/* زر السلة */}
                                     <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                         <Icon.Cart className="w-20 h-20" />
                                         {Object.keys(cart).length > 0 && (
@@ -1558,7 +1688,6 @@ const App = () => {
                         )}
                     </div>
 
-                    {/* دالة احترافية لجمع أزرار الأقسام وإعادة استخدامها فوق وتحت */}
                     {(() => {
                         const changeCategory = (cat) => {
                             setActiveCategory(cat);
@@ -1640,7 +1769,8 @@ const App = () => {
 
             {/* ===== النوافذ المنبثقة ===== */}
             {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} onScan={(scannedText) => { setShowScanner(false); setQuery(scannedText); }} />}
-            {showCart && <OrderInvoiceModal cart={cart} setCart={setCart} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />}
+            {showDrafts && <DraftsModal drafts={drafts} setDrafts={setDrafts} setCart={setCart} setWarehouse={setWarehouse} onClose={() => setShowDrafts(false)} />}
+            {showCart && <OrderInvoiceModal cart={cart} setCart={setCart} drafts={drafts} setDrafts={setDrafts} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />}
             {showHistory && <OrderHistoryModal onClose={() => setShowHistory(false)} sessionName={sessionName} />}
             {showAdmin && isAdmin && <AdminDashboardModal onClose={() => setShowAdmin(false)} />}
             {zoomItem && <Lightbox fileName={imagesList.get(zoomItem.cleanId)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />}
