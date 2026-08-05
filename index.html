@@ -91,7 +91,6 @@
             document.head.appendChild(s);
         });
         
-        // ✨ تفعيل المزامنة والأوفلاين في فايربيس
         function getDb() {
             if (__fbPromise) return __fbPromise;
             __fbPromise = loadScript("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js")
@@ -99,7 +98,6 @@
                 .then(() => {
                     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                     const db = firebase.firestore();
-                    // تفعيل وضع الأوفلاين للفايربيس للحفظ حتى لو انقطع النت
                     db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
                         console.warn("تنبيه: تعذر تفعيل وضع الأوفلاين للفايربيس", err.code);
                     });
@@ -195,14 +193,13 @@ const verifyCode = (name, code) => {
     return Boolean(expected) && hashCode(toEnglishDigits(String(code)).trim()) === expected;
 };
 
-// ✨ دوال جلب البيانات مع دعم الأوفلاين التام
 const fetchText = async (url) => {
     const cacheKey = `b2b_cache_${url}`;
     try { 
         const res = await fetch(url); 
         if (!res.ok) throw new Error(`HTTP ${res.status}`); 
         const text = await res.text();
-        localStorage.setItem(cacheKey, text); // حفظ في الذاكرة
+        localStorage.setItem(cacheKey, text);
         return text;
     } catch (err) { 
         console.warn(`[Offline] يتم جلب النسخة المخبأة لـ ${url}`); 
@@ -218,7 +215,7 @@ const fetchJson = async (url) => {
         const res = await fetch(url); 
         if (!res.ok) throw new Error(`HTTP ${res.status}`); 
         const data = await res.json();
-        localStorage.setItem(cacheKey, JSON.stringify(data)); // حفظ في الذاكرة
+        localStorage.setItem(cacheKey, JSON.stringify(data));
         return data;
     } catch (err) { 
         console.warn(`[Offline] يتم جلب النسخة المخبأة لـ ${url}`); 
@@ -385,6 +382,14 @@ const stockTone = (qty) => {
     return { text:'text-success', bg:'bg-successSoft' };
 };
 
+const formatTimeSpent = (minutes) => {
+    if (!minutes) return 'لم يسجل';
+    if (minutes < 60) return `${minutes} دقيقة`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h} ساعة${m > 0 ? ` و ${m} دقيقة` : ''}`;
+};
+
 const Icon = {
     Search:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
     Scan:    (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M8 12h8M12 8v8"/></svg>),
@@ -484,7 +489,6 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
     );
 });
 
-// نافذة سجل الطلبات
 const OrderHistoryModal = memo(({ onClose, sessionName }) => {
     const historyKey = `b2b_history_${sessionName}`;
     const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem(historyKey)) || []);
@@ -550,7 +554,8 @@ const DraftsModal = memo(({ drafts, setDrafts, setCart, setWarehouse, onClose })
         if(window.confirm(`هل أنت متأكد من استرجاع مسودة "${draft.name}"؟ (سيتم مسح السلة الحالية إن وجدت)`)) {
             setCart(draft.cart);
             if (draft.warehouse) setWarehouse(draft.warehouse);
-            setDrafts(drafts.filter(d => d.id !== draft.id)); // حذف المسودة بعد فتحها
+            setDrafts(drafts.filter(d => d.id !== draft.id)); 
+            getDb().then(db => db.collection('drafts').doc(draft.id.toString()).delete()).catch(()=>{});
             onClose();
         }
     };
@@ -558,6 +563,7 @@ const DraftsModal = memo(({ drafts, setDrafts, setCart, setWarehouse, onClose })
     const deleteDraft = (id) => {
         if(window.confirm("تأكيد حذف هذه المسودة نهائياً؟")) {
             setDrafts(drafts.filter(d => d.id !== id));
+            getDb().then(db => db.collection('drafts').doc(id.toString()).delete()).catch(()=>{});
         }
     };
 
@@ -602,7 +608,6 @@ const DraftsModal = memo(({ drafts, setDrafts, setCart, setWarehouse, onClose })
     );
 });
 
-// نافذة السلة الرئيسية (اعتماد الطلبات)
 const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, sessionName, warehouse }) => {
     const [customer, setCustomer] = useState("");
     const [notes, setNotes] = useState(""); 
@@ -659,11 +664,12 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
         onClose();
     };
 
-    // ✨ دالة حفظ المسودة
+    // ✨ دالة حفظ المسودة ورفعها مخفية لفايربيس ليراها الإدارة
     const saveAsDraft = () => {
+        const draftId = Date.now();
         const draftName = customer.trim() || `مسودة ${new Date().toLocaleTimeString('ar-SA')}`;
         const newDraft = {
-            id: Date.now(),
+            id: draftId,
             name: draftName,
             date: new Date().toLocaleString('ar-SA'),
             warehouse,
@@ -671,6 +677,13 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
             notes: notes.trim()
         };
         setDrafts([newDraft, ...drafts]);
+        
+        getDb().then(db => {
+            db.collection('drafts').doc(draftId.toString()).set({
+                ...newDraft, repName: sessionName, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }).catch(()=>{});
+
         setCart({});
         onClose();
     };
@@ -733,7 +746,6 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
                         <span className="text-[14px] font-semibold text-primary">الإجمالي التقديري:</span>
                         <span className="text-[18px] font-bold text-accent">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
                     </div>
-                    {/* ✨ إضافة زر حفظ المسودة */}
                     <div className="flex gap-8">
                         <button onClick={saveAsDraft} disabled={items.length === 0}
                                 className="flex-1 h-48 bg-surface text-primary border border-border rounded-12 font-bold text-[13px] hover:bg-border disabled:opacity-50 transition-colors flex items-center justify-center gap-6">
@@ -999,7 +1011,7 @@ const LoginScreen = ({ onLogin }) => {
             const doc = await userRef.get();
             const info = { userAgent: navigator.userAgent, lastLogin: firebase.firestore.FieldValue.serverTimestamp() };
             if (doc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
-            else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp() });
+            else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
             
             await db.collection('login_logs').add({ name: trimmed, isAdmin, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
         } catch (err) {
@@ -1107,7 +1119,7 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
 });
 
 // ============================================================
-// لوحة تحكم الإدارة (خاصة بالمدير فقط - مهند) ✨ مع الفرز الذكي
+// لوحة تحكم الإدارة (خاصة بالمدير فقط - مهند) ✨ مع الفرز والمؤشرات
 // ============================================================
 const AdminDashboardModal = memo(({ onClose }) => {
     const [activeTab, setActiveTab] = useState('orders');
@@ -1120,10 +1132,11 @@ const AdminDashboardModal = memo(({ onClose }) => {
     const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     const tabs = [
-        { id: 'orders', label: 'الطلبات والفواتير' },
+        { id: 'orders', label: 'الطلبات المعتمدة' },
+        { id: 'drafts', label: 'المسودات المؤقتة' }, // ✨ تبويب المسودات
         { id: 'search_logs', label: 'سجل عمليات البحث' },
         { id: 'login_logs', label: 'سجل الدخول' },
-        { id: 'users', label: 'المستخدمين' }
+        { id: 'users', label: 'المستخدمين ووقت العمل' }
     ];
 
     useEffect(() => {
@@ -1187,6 +1200,9 @@ const AdminDashboardModal = memo(({ onClose }) => {
         } catch { return '---'; }
     };
 
+    // حساب إجمالي الدخل للطلبات المعروضة
+    const totalRevenue = activeTab === 'orders' ? filteredData.reduce((sum, row) => sum + (row.totalAmount || 0), 0) : 0;
+
     return (
         <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-card">
             <div className="w-full max-w-[1000px] h-[95vh] sm:h-[90vh] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col">
@@ -1211,7 +1227,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
                 <div className="p-16 border-b border-border bg-surface flex flex-col sm:flex-row gap-12 items-center justify-between">
                     <div className="relative w-full sm:w-[350px]">
                         <Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted" />
-                        <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="بحث عن (اسم، رقم، ملاحظة...)"
+                        <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="بحث ذكي عن أي شيء..."
                                className="w-full pl-12 pr-36 py-8 rounded-8 border border-border bg-bg text-[13px] outline-none focus:border-accent transition-colors" />
                     </div>
                     <div className="flex items-center gap-8 w-full sm:w-auto">
@@ -1224,16 +1240,33 @@ const AdminDashboardModal = memo(({ onClose }) => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-16 bg-surface">
+                    {/* ✨ مؤشرات الأداء المالي */}
+                    {activeTab === 'orders' && !loading && (
+                        <div className="grid grid-cols-2 gap-12 mb-16">
+                            <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
+                                <p className="text-[12px] text-muted mb-4">إجمالي الدخل للعمليات المفلترة</p>
+                                <p className="text-[20px] font-bold text-success">{NUMBER_FORMATTER.format(totalRevenue)} ر.س</p>
+                            </div>
+                            <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
+                                <p className="text-[12px] text-muted mb-4">عدد الفواتير</p>
+                                <p className="text-[20px] font-bold text-primary">{NUMBER_FORMATTER.format(filteredData.length)} فاتورة</p>
+                            </div>
+                        </div>
+                    )}
+
                     {loading ? (
-                        <div className="flex justify-center items-center h-full text-muted text-[14px]">جاري جلب السجلات الاحترافية...</div>
+                        <div className="flex justify-center items-center h-48 text-muted text-[14px]">جاري جلب السجلات...</div>
                     ) : filteredData.length === 0 ? (
-                        <div className="flex justify-center items-center h-full text-muted text-[14px]">لا توجد بيانات مطابقة لعملية البحث.</div>
+                        <div className="flex justify-center items-center h-48 text-muted text-[14px]">لا توجد بيانات مطابقة لعملية البحث.</div>
                     ) : (
                         <div className="overflow-x-auto bg-bg border border-border rounded-12 shadow-card">
                             <table className="w-full text-right text-[12px]">
                                 <thead className="bg-surface text-muted border-b border-border">
                                     {activeTab === 'orders' && (
                                         <tr><th className="p-12">التاريخ</th><th className="p-12">المندوب</th><th className="p-12">العميل</th><th className="p-12">المستودع</th><th className="p-12">الملاحظات</th><th className="p-12">الإجمالي</th><th className="p-12">الإجراءات</th></tr>
+                                    )}
+                                    {activeTab === 'drafts' && (
+                                        <tr><th className="p-12">التاريخ</th><th className="p-12">المندوب</th><th className="p-12">اسم المسودة/العميل</th><th className="p-12">المستودع</th><th className="p-12">عدد الأصناف</th><th className="p-12">الإجراءات</th></tr>
                                     )}
                                     {activeTab === 'search_logs' && (
                                         <tr><th className="p-12">التاريخ</th><th className="p-12">المستخدم</th><th className="p-12">كلمة البحث</th><th className="p-12">المستودع</th><th className="p-12">النتائج</th></tr>
@@ -1242,7 +1275,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                         <tr><th className="p-12">التاريخ</th><th className="p-12">الاسم</th><th className="p-12">حالة الحساب</th><th className="p-12">الجهاز (نظرة عامة)</th></tr>
                                     )}
                                     {activeTab === 'users' && (
-                                        <tr><th className="p-12">آخر دخول</th><th className="p-12">الاسم</th><th className="p-12">عدد الدخول</th><th className="p-12">أول انضمام</th></tr>
+                                        <tr><th className="p-12">آخر دخول</th><th className="p-12">الاسم</th><th className="p-12">عدد الدخول</th><th className="p-12">وقت الاستخدام الفعلي</th><th className="p-12">أول انضمام</th></tr>
                                     )}
                                 </thead>
                                 <tbody className="divide-y divide-border">
@@ -1260,7 +1293,22 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                                         <td className="p-12">
                                                             <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
                                                                 <Icon.Eye className="w-14 h-14" />
-                                                                {expandedOrderId === row.id ? 'إخفاء الفاتورة' : 'عرض المحتوى'}
+                                                                {expandedOrderId === row.id ? 'إخفاء' : 'عرض المحتوى'}
+                                                            </button>
+                                                        </td>
+                                                    </React.Fragment>
+                                                )}
+                                                {activeTab === 'drafts' && (
+                                                    <React.Fragment>
+                                                        <td className="p-12 whitespace-nowrap text-secondary">{formatFbDate(row.timestamp)}</td>
+                                                        <td className="p-12 font-bold text-primary">{row.repName}</td>
+                                                        <td className="p-12 font-medium">{row.name}</td>
+                                                        <td className="p-12 text-muted whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
+                                                        <td className="p-12 font-bold text-warn">{Object.keys(row.cart || {}).length} أصناف</td>
+                                                        <td className="p-12">
+                                                            <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
+                                                                <Icon.Eye className="w-14 h-14" />
+                                                                {expandedOrderId === row.id ? 'إخفاء' : 'محتوى السلة'}
                                                             </button>
                                                         </td>
                                                     </React.Fragment>
@@ -1287,17 +1335,19 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                                         <td className="p-12 whitespace-nowrap text-secondary">{formatFbDate(row.lastLogin)}</td>
                                                         <td className="p-12 font-bold text-primary text-[14px]">{row.name}</td>
                                                         <td className="p-12 font-bold text-accent">{row.loginCount} مرات</td>
+                                                        <td className="p-12 font-bold text-success">{formatTimeSpent(row.timeSpentMinutes)}</td>
                                                         <td className="p-12 text-muted whitespace-nowrap">{formatFbDate(row.firstJoined)}</td>
                                                     </React.Fragment>
                                                 )}
                                             </tr>
-                                            {activeTab === 'orders' && expandedOrderId === row.id && (
+                                            {/* ✨ تفاصيل الفاتورة أو المسودة عند النقر */}
+                                            {(activeTab === 'orders' || activeTab === 'drafts') && expandedOrderId === row.id && (
                                                 <tr className="bg-accentSoft/30 border-b border-border">
                                                     <td colSpan="7" className="p-16">
                                                         <div className="bg-bg border border-accent/20 rounded-8 p-12 shadow-sm">
                                                             <div className="flex justify-between items-center mb-8 border-b border-border pb-8">
-                                                                <h4 className="font-bold text-[13px] text-primary">تفاصيل الأصناف المطلوبة ({row.items?.length || 0}):</h4>
-                                                                <span className="text-[12px] text-muted">إجمالي الفاتورة: <strong className="text-accent">{NUMBER_FORMATTER.format(row.totalAmount)} ر.س</strong></span>
+                                                                <h4 className="font-bold text-[13px] text-primary">تفاصيل الأصناف ({activeTab === 'orders' ? row.items?.length : Object.keys(row.cart||{}).length}):</h4>
+                                                                {activeTab === 'orders' && <span className="text-[12px] text-muted">إجمالي: <strong className="text-accent">{NUMBER_FORMATTER.format(row.totalAmount)} ر.س</strong></span>}
                                                             </div>
                                                             <div className="overflow-x-auto">
                                                                 <table className="w-full text-[12px] text-right">
@@ -1312,14 +1362,14 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
-                                                                        {row.items?.map((it, idx) => (
+                                                                        {(activeTab === 'orders' ? row.items : Object.values(row.cart || {})).map((it, idx) => (
                                                                             <tr key={idx} className="border-b border-border last:border-0 hover:bg-surface">
                                                                                 <td className="py-8 px-8 font-bold text-muted">{idx + 1}</td>
                                                                                 <td className="py-8 px-8 font-bold text-primary">{it.id}</td>
                                                                                 <td className="py-8 px-8 text-secondary truncate max-w-[200px]" title={it.name}>{it.name || '---'}</td>
-                                                                                <td className="py-8 px-8 font-bold text-primary">{it.qty}</td>
+                                                                                <td className="py-8 px-8 font-bold text-primary">{it.qty || it.cartQty}</td>
                                                                                 <td className="py-8 px-8 text-secondary">{NUMBER_FORMATTER.format(it.price || 0)}</td>
-                                                                                <td className="py-8 px-8 font-bold text-accent">{NUMBER_FORMATTER.format(it.total || 0)}</td>
+                                                                                <td className="py-8 px-8 font-bold text-accent">{NUMBER_FORMATTER.format(it.total || (it.price * it.cartQty) || 0)}</td>
                                                                             </tr>
                                                                         ))}
                                                                     </tbody>
@@ -1345,7 +1395,6 @@ const AdminDashboardModal = memo(({ onClose }) => {
 // التطبيق الرئيسي
 // ============================================================
 const App = () => {
-    // 🌐 حالة الاتصال بالإنترنت
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     
     useEffect(() => {
@@ -1366,7 +1415,6 @@ const App = () => {
         return name ? (JSON.parse(localStorage.getItem(`b2b_cart_${name}`)) || {}) : {};
     });
     
-    // ✨ مسودات الطلبات المؤقتة
     const [drafts, setDrafts] = useState(() => {
         const name = localStorage.getItem(STORAGE_KEYS.NAME) || '';
         return name ? (JSON.parse(localStorage.getItem(`b2b_drafts_${name}`)) || []) : [];
@@ -1389,6 +1437,22 @@ const App = () => {
             setCart(JSON.parse(localStorage.getItem(`b2b_cart_${sessionName}`)) || {});
             setDrafts(JSON.parse(localStorage.getItem(`b2b_drafts_${sessionName}`)) || []);
         }
+    }, [sessionName]);
+
+    // ✨ محرك تتبع وقت العمل (يعمل بصمت كل دقيقة طالما الشاشة مفتوحة للمندوب)
+    useEffect(() => {
+        if (!sessionName) return;
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                getDb().then(db => {
+                    db.collection('users').doc(toSafeDocId(sessionName)).set({
+                        timeSpentMinutes: firebase.firestore.FieldValue.increment(1),
+                        lastActive: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true }).catch(()=>{});
+                });
+            }
+        }, 60000); 
+        return () => clearInterval(interval);
     }, [sessionName]);
 
     const [isAdmin, setIsAdmin] = useState(() => {
@@ -1559,7 +1623,7 @@ const App = () => {
                     <div className="flex items-center gap-8">
                         {!isOnline && (
                             <div className="flex items-center gap-4 bg-danger text-white px-8 py-2 rounded-full text-[10px] font-bold animate-pulse">
-                                <Icon.WifiOff className="w-12 h-12" /> وضع أوفلاين
+                                <Icon.WifiOff className="w-12 h-12" /> أوفلاين
                             </div>
                         )}
                         <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
@@ -1597,7 +1661,6 @@ const App = () => {
 
                             {warehouse && (
                                 <React.Fragment>
-                                    {/* ✨ زر المسودات المؤقتة */}
                                     <button onClick={() => setShowDrafts(true)} title="المسودات المؤقتة" className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                         <Icon.Archive className="w-20 h-20" />
                                         {drafts.length > 0 && (
@@ -1673,7 +1736,6 @@ const App = () => {
                     </div>
                 )}
 
-                {/* ===== المعرض الرقمي ===== */}
                 <section className="mt-40" id="gallery-section">
                     <div className="flex justify-between items-end gap-12 mb-12">
                         <div className="min-w-0">
