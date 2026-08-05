@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>مخزون شركة بيت الأواني الطيبة | مشغل بواسطة Korvi</title>
+    <title>مخزون شركة بيت الأواني الطيبة</title>
     <meta name="description" content="نظام البحث عن مخزون شركة بيت الأواني الطيبة">
 
     <meta property="og:title" content="مخزون شركة بيت الأواني الطيبة">
@@ -20,8 +20,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- ✨ تم إضافة خطوط نظام كورفي (Plex Sans & Plex Mono) -->
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -30,129 +29,40 @@
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
-    <style>
-        /* ✨ الجذور اللونيّة والمقاسات الخاصة بنظام Korvi Design System */
-        :root {
-            --background: 0 0% 100%;
-            --foreground: 222 25% 12%;
-            --card: 0 0% 100%;
-            --card-foreground: 222 25% 12%;
-            --popover: 0 0% 100%;
-            --popover-foreground: 222 25% 12%;
-
-            --primary: 172 62% 26%;
-            --primary-foreground: 160 40% 98%;
-
-            --secondary: 210 20% 96%;
-            --secondary-foreground: 222 25% 20%;
-            --muted: 210 20% 96%;
-            --muted-foreground: 215 16% 45%;
-            --accent: 172 45% 94%;
-            --accent-foreground: 172 62% 20%;
-
-            --destructive: 0 72% 45%;
-            --destructive-foreground: 0 0% 100%;
-            --success: 152 55% 34%;
-            --success-foreground: 0 0% 100%;
-            --warning: 38 92% 45%;
-            --warning-foreground: 30 40% 12%;
-
-            --border: 214 20% 89%;
-            --input: 214 20% 89%;
-            --ring: 172 62% 32%;
-
-            --radius: 0.625rem; /* 10px */
-            --brand: 162.9 93.5% 24.3%;
-        }
-
-        html, body { 
-            overflow-x: hidden; 
-            width: 100%; max-width: 100%; 
-            background-color: hsl(var(--background)); 
-            color: hsl(var(--foreground)); 
-            -webkit-font-smoothing: antialiased; 
-            -moz-osx-font-smoothing: grayscale; 
-            -webkit-text-size-adjust: 100%; 
-        }
-        *, *::before, *::after { box-sizing: border-box; }
-        img, svg, video { max-width: 100%; height: auto; }
-        
-        /* ✨ تأثير التركيز الموحد لكورفي */
-        :focus-visible { 
-            outline: none; 
-            box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring)); 
-            border-radius: calc(var(--radius) - 2px); 
-        }
-
-        /* ✨ منحنى الحركة الخارقة لكورفي */
-        @keyframes slideUpFade { from { opacity:0; transform: translateY(4px);} to { opacity:1; transform:none; } }
-        .animate-card { animation: slideUpFade 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes flipIn { from { opacity:0; transform: scale(0.97);} to { opacity:1; transform:none; } }
-        .animate-flip { animation: flipIn 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .skeleton { background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--border)) 37%, hsl(var(--muted)) 63%); background-size: 200% 100%; animation: shimmer 1.6s ease-in-out infinite; }
-        
-        .tap-card { -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action: manipulation; }
-        .lightbox-backdrop { background: rgba(23, 28, 38, 0.9); backdrop-filter: blur(4px); }
-        input[type="text"], input[type="password"], input[type="number"], textarea { font-size: 16px; }
-
-        /* ✨ نظام الأرقام الجدولي الخاص بكورفي */
-        .numeric {
-            font-family: 'IBM Plex Mono', ui-monospace, monospace;
-            font-variant-numeric: tabular-nums;
-            font-feature-settings: 'tnum', 'kern' 1, 'liga' 1, 'calt' 1;
-            direction: ltr;
-            display: inline-block;
-        }
-        .bidi-isolate { unicode-bidi: isolate; direction: ltr; display: inline-block; }
-        
-        /* احترام تقليل الحركة */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after, .animate-card, .animate-flip {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
-
     <script>
-        // ✨ إعدادات Tailwind متطابقة مع Korvi Design System
         tailwind.config = {
-            darkMode: ['class', '[data-theme="dark"]'],
             theme: {
                 extend: {
-                    fontFamily: { 
-                        sans: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
-                        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
-                        numeric: ['"IBM Plex Mono"', 'ui-monospace', 'monospace']
-                    },
+                    fontFamily: { sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'] },
                     colors: {
-                        border: 'hsl(var(--border) / <alpha-value>)',
-                        input: 'hsl(var(--input) / <alpha-value>)',
-                        ring: 'hsl(var(--ring) / <alpha-value>)',
-                        background: 'hsl(var(--background) / <alpha-value>)',
-                        foreground: 'hsl(var(--foreground) / <alpha-value>)',
-                        primary: { DEFAULT: 'hsl(var(--primary) / <alpha-value>)', foreground: 'hsl(var(--primary-foreground) / <alpha-value>)' },
-                        secondary: { DEFAULT: 'hsl(var(--secondary) / <alpha-value>)', foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)' },
-                        muted: { DEFAULT: 'hsl(var(--muted) / <alpha-value>)', foreground: 'hsl(var(--muted-foreground) / <alpha-value>)' },
-                        accent: { DEFAULT: 'hsl(var(--accent) / <alpha-value>)', foreground: 'hsl(var(--accent-foreground) / <alpha-value>)' },
-                        destructive: { DEFAULT: 'hsl(var(--destructive) / <alpha-value>)', foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)' },
-                        success: { DEFAULT: 'hsl(var(--success) / <alpha-value>)', foreground: 'hsl(var(--success-foreground) / <alpha-value>)' },
-                        warning: { DEFAULT: 'hsl(var(--warning) / <alpha-value>)', foreground: 'hsl(var(--warning-foreground) / <alpha-value>)' },
-                        card: { DEFAULT: 'hsl(var(--card) / <alpha-value>)', foreground: 'hsl(var(--card-foreground) / <alpha-value>)' },
-                        brand: { DEFAULT: 'hsl(var(--brand) / <alpha-value>)' }
+                        primary: '#1C1917', secondary: '#57534E', muted: '#A8A29E', border: '#E7E5E4',
+                        surface: '#FAFAF9', bg: '#FFFFFF', accent: '#B45309', accentSoft: '#FEF3C7',
+                        success: '#15803D', successSoft: '#F0FDF4', warn: '#B45309', warnSoft: '#FFFBEB',
+                        danger: '#B91C1C', dangerSoft: '#FEF2F2',
                     },
-                    borderRadius: {
-                        lg: 'var(--radius)',
-                        md: 'calc(var(--radius) - 2px)',
-                        sm: 'calc(var(--radius) - 4px)',
-                    },
-                    // الحفاظ على المسافات الخاصة لتطابق التخطيط القديم دون كسره
-                    spacing: { '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px','14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px','28':'28px','32':'32px','36':'36px','40':'40px','44':'44px','48':'48px','56':'56px','64':'64px','72':'72px','120':'120px' }
+                    spacing: { '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px','14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px','28':'28px','32':'32px','36':'36px','40':'40px','44':'44px','48':'48px','56':'56px','64':'64px','72':'72px','120':'120px' },
+                    borderRadius: { '8':'8px','10':'10px','12':'12px','16':'16px','20':'20px' },
+                    boxShadow: { 'card': '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)', 'lift': '0 2px 4px rgba(28,25,23,0.04), 0 8px 24px rgba(28,25,23,0.08)' },
                 }
             }
         }
     </script>
+
+    <style>
+        html, body { overflow-x: hidden; width: 100%; max-width: 100%; background-color: #FFFFFF; color: #1C1917; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
+        *, *::before, *::after { box-sizing: border-box; }
+        img, svg, video { max-width: 100%; height: auto; }
+        *:focus-visible { outline: 2px solid #B45309; outline-offset: 2px; border-radius: 4px; }
+        @keyframes slideUpFade { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform:none; } }
+        .animate-card { animation: slideUpFade 200ms cubic-bezier(0.16,1,0.3,1) forwards; }
+        @keyframes flipIn { from { opacity:0; transform: scale(0.97);} to { opacity:1; transform:none; } }
+        .animate-flip { animation: flipIn 180ms cubic-bezier(0.16,1,0.3,1) forwards; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton { background: linear-gradient(90deg,#F5F5F4 25%,#EFEDEB 37%,#F5F5F4 63%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+        .tap-card { -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action: manipulation; }
+        .lightbox-backdrop { background: rgba(28,25,23,0.9); backdrop-filter: blur(4px); }
+        input[type="text"], input[type="password"], input[type="number"], textarea { font-size: 16px; }
+    </style>
 
     <meta name="theme-color" content="#FFFFFF">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
@@ -197,7 +107,7 @@
         }
     </script>
 </head>
-<body class="min-h-screen bg-background text-foreground font-sans">
+<body class="min-h-screen bg-bg">
     <div id="root"></div>
 
 <script type="text/babel">
@@ -467,9 +377,9 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
 };
 
 const stockTone = (qty) => {
-    if (qty <= 0) return { text:'text-destructive',  bg:'bg-destructive/10 ring-1 ring-inset ring-destructive/30'  };
-    if (qty <= LOW_STOCK_THRESHOLD) return { text:'text-warning', bg:'bg-warning/10 ring-1 ring-inset ring-warning/30' };
-    return { text:'text-success', bg:'bg-success/10 ring-1 ring-inset ring-success/30' };
+    if (qty <= 0) return { text:'text-danger',  bg:'bg-dangerSoft'  };
+    if (qty <= LOW_STOCK_THRESHOLD) return { text:'text-warn', bg:'bg-warnSoft' };
+    return { text:'text-success', bg:'bg-successSoft' };
 };
 
 const formatTimeSpent = (minutes) => {
@@ -506,10 +416,10 @@ const Quantity = ({ qty, unit, size = 'lg' }) => {
     return (
         <div className="flex flex-col items-start">
             <div className="flex items-baseline gap-4">
-                <span className={`numeric ${size === 'lg' ? 'text-[26px]' : 'text-[20px]'} font-bold leading-none ${tone.text}`}>
+                <span className={`${size === 'lg' ? 'text-[26px]' : 'text-[20px]'} font-bold leading-none ${tone.text}`}>
                     {NUMBER_FORMATTER.format(qty)}
                 </span>
-                {unit && <span className="text-[13px] text-muted-foreground">{unit}</span>}
+                {unit && <span className="text-[13px] text-muted">{unit}</span>}
             </div>
             {qty <= LOW_STOCK_THRESHOLD && (
                 <span className={`text-[12px] mt-4 ${tone.text}`}>
@@ -551,31 +461,31 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
     if (cartQty === 0) {
         return (
             <button onClick={(e) => { e.stopPropagation(); updateQty(1); }}
-                    className="flex items-center gap-6 px-12 h-32 rounded-md bg-card border border-border text-foreground text-[12px] font-medium hover:border-primary hover:text-primary transition-colors">
+                    className="flex items-center gap-6 px-12 h-32 rounded-8 bg-surface border border-border text-primary text-[12px] font-semibold hover:border-accent hover:text-accent transition-colors">
                 <Icon.Cart className="w-14 h-14" /> إضافة للفاتورة
             </button>
         );
     }
 
     return (
-        <div className="flex items-center bg-card border border-primary rounded-md overflow-hidden h-32" onClick={e => e.stopPropagation()}>
-            <button onClick={() => updateQty(cartQty - 1)} className="w-32 h-full flex items-center justify-center text-foreground hover:bg-muted transition-colors">-</button>
+        <div className="flex items-center bg-surface border border-accent rounded-8 overflow-hidden h-32" onClick={e => e.stopPropagation()}>
+            <button onClick={() => updateQty(cartQty - 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">-</button>
             
             {isEditing ? (
                 <input type="number" step="0.25" min="0" max={maxQty} autoFocus value={editVal}
                        onChange={e => setEditVal(e.target.value)}
                        onBlur={handleSaveEdit}
                        onKeyDown={e => { if(e.key === 'Enter') handleSaveEdit(); }}
-                       className="w-48 h-full text-center text-[13px] font-bold text-primary bg-background outline-none border-x border-primary appearance-none numeric" />
+                       className="w-48 h-full text-center text-[13px] font-bold text-accent bg-bg outline-none border-x border-accent appearance-none" />
             ) : (
                 <div onClick={() => { setEditVal(cartQty.toString()); setIsEditing(true); }}
-                     className="w-48 h-full flex items-center justify-center text-[13px] font-bold text-primary bg-background border-x border-primary cursor-text numeric"
+                     className="w-48 h-full flex items-center justify-center text-[13px] font-bold text-accent bg-bg border-x border-accent cursor-text"
                      title="اضغط لتعديل الكمية يدوياً (الكسور مدعومة)">
                     {cartQty}
                 </div>
             )}
             
-            <button onClick={() => updateQty(cartQty + 1)} className="w-32 h-full flex items-center justify-center text-foreground hover:bg-muted transition-colors">+</button>
+            <button onClick={() => updateQty(cartQty + 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">+</button>
         </div>
     );
 });
@@ -600,32 +510,32 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[600px] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
-                    <h3 className="font-bold text-foreground flex items-center gap-8">
-                        <Icon.List className="w-20 h-20 text-primary"/> سجل الفواتير السابقة
+            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.List className="w-20 h-20 text-accent"/> سجل الفواتير السابقة
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors"><Icon.Close className="w-16 h-16 text-muted-foreground"/></button>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
-                <div className="p-16 overflow-y-auto flex-1 bg-muted/20">
+                <div className="p-16 overflow-y-auto flex-1 bg-surface">
                     {history.length === 0 ? (
-                        <div className="text-center p-32 text-muted-foreground">لا يوجد طلبات سابقة محفوظة في جهازك.</div>
+                        <div className="text-center p-32 text-muted">لا يوجد طلبات سابقة محفوظة في جهازك.</div>
                     ) : (
                         <div className="flex flex-col gap-12">
                             {history.map(order => (
-                                <div key={order.id} className="bg-card border border-border rounded-lg p-16 flex flex-col gap-12 shadow-sm">
+                                <div key={order.id} className="bg-bg border border-border rounded-12 p-16 flex flex-col gap-12 shadow-card">
                                     <div className="flex justify-between items-start border-b border-border pb-8">
                                         <div>
-                                            <div className="text-[14px] font-bold text-foreground">{order.customer}</div>
-                                            <div className="text-[11px] text-muted-foreground mt-2">{order.date} • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
+                                            <div className="text-[14px] font-bold text-primary">{order.customer}</div>
+                                            <div className="text-[11px] text-muted mt-2">{order.date} • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
                                         </div>
-                                        <div className="text-[15px] font-bold text-primary numeric">{NUMBER_FORMATTER.format(order.totalAmount)} ر.س</div>
+                                        <div className="text-[15px] font-bold text-accent">{NUMBER_FORMATTER.format(order.totalAmount)} ر.س</div>
                                     </div>
                                     <div className="flex gap-8 mt-8">
-                                        <button onClick={() => resendWhatsApp(order.msg)} className="flex-1 h-36 bg-success/10 text-success rounded-md font-medium text-[13px] hover:bg-success hover:text-success-foreground transition-colors flex items-center justify-center gap-6">
+                                        <button onClick={() => resendWhatsApp(order.msg)} className="flex-1 h-36 bg-successSoft text-success rounded-8 font-semibold text-[13px] hover:bg-success hover:text-white transition-colors flex items-center justify-center gap-6">
                                             إعادة إرسال واتساب
                                         </button>
-                                        <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-destructive/10 text-destructive rounded-md hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center justify-center">
+                                        <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
                                             <Icon.Trash className="w-16 h-16"/>
                                         </button>
                                     </div>
@@ -659,32 +569,32 @@ const DraftsModal = memo(({ drafts, setDrafts, setCart, setWarehouse, onClose })
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[600px] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
-                    <h3 className="font-bold text-foreground flex items-center gap-8">
-                        <Icon.Archive className="w-20 h-20 text-primary"/> مسودات الطلبات المؤقتة
+            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.Archive className="w-20 h-20 text-accent"/> مسودات الطلبات المؤقتة
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors"><Icon.Close className="w-16 h-16 text-muted-foreground"/></button>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
-                <div className="p-16 overflow-y-auto flex-1 bg-muted/20">
+                <div className="p-16 overflow-y-auto flex-1 bg-surface">
                     {drafts.length === 0 ? (
-                        <div className="text-center p-32 text-muted-foreground">لا توجد مسودات محفوظة.</div>
+                        <div className="text-center p-32 text-muted">لا توجد مسودات محفوظة.</div>
                     ) : (
                         <div className="flex flex-col gap-12">
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-card border border-border rounded-lg p-16 flex flex-col gap-12 shadow-sm">
+                                <div key={draft.id} className="bg-bg border border-border rounded-12 p-16 flex flex-col gap-12 shadow-card">
                                     <div className="flex justify-between items-start border-b border-border pb-8">
                                         <div>
-                                            <div className="text-[14px] font-bold text-foreground truncate max-w-[200px]">{draft.name}</div>
-                                            <div className="text-[11px] text-muted-foreground mt-2">{draft.date} • {WAREHOUSES[draft.warehouse]?.name || draft.warehouse}</div>
+                                            <div className="text-[14px] font-bold text-primary truncate max-w-[200px]">{draft.name}</div>
+                                            <div className="text-[11px] text-muted mt-2">{draft.date} • {WAREHOUSES[draft.warehouse]?.name || draft.warehouse}</div>
                                         </div>
-                                        <div className="text-[13px] font-bold text-primary bg-primary/10 px-8 py-4 rounded-full numeric">{Object.keys(draft.cart).length} أصناف</div>
+                                        <div className="text-[13px] font-bold text-accent bg-accentSoft px-8 py-4 rounded-full">{Object.keys(draft.cart).length} أصناف</div>
                                     </div>
                                     <div className="flex gap-8 mt-8">
-                                        <button onClick={() => resumeDraft(draft)} className="flex-1 h-36 bg-primary text-primary-foreground rounded-md font-medium text-[13px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-6">
+                                        <button onClick={() => resumeDraft(draft)} className="flex-1 h-36 bg-primary text-bg rounded-8 font-semibold text-[13px] hover:bg-accent transition-colors flex items-center justify-center gap-6">
                                             استكمال الطلب
                                         </button>
-                                        <button onClick={() => deleteDraft(draft.id)} className="w-36 h-36 bg-destructive/10 text-destructive rounded-md hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center justify-center">
+                                        <button onClick={() => deleteDraft(draft.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
                                             <Icon.Trash className="w-16 h-16"/>
                                         </button>
                                     </div>
@@ -789,59 +699,59 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[600px] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
-                    <h3 className="font-bold text-foreground flex items-center gap-8">
-                        <Icon.Cart className="w-20 h-20 text-primary"/> فاتورة مبيعات
+            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.Cart className="w-20 h-20 text-accent"/> فاتورة مبيعات
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors"><Icon.Close className="w-16 h-16 text-muted-foreground"/></button>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
                 
-                <div className="p-16 overflow-y-auto flex-1 bg-muted/20">
+                <div className="p-16 overflow-y-auto flex-1 bg-surface">
                     <div className="mb-16">
-                        <label className="text-[12px] font-medium text-foreground mb-6 block">اسم العميل / الشركة <span className="text-destructive">*</span></label>
+                        <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
                         <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="اسم العميل..."
-                               className="w-full h-44 px-16 rounded-md border border-input bg-background outline-none focus-visible:ring-2 focus-visible:ring-ring text-[14px]" />
+                               className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
                     </div>
 
                     <div className="mb-16">
-                        <label className="text-[12px] font-medium text-foreground mb-6 block">ملاحظات الطلب (اختياري)</label>
+                        <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
                         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم، شحن، أو ملاحظة أخرى..."
-                               className="w-full h-64 p-12 rounded-md border border-input bg-background outline-none focus-visible:ring-2 focus-visible:ring-ring text-[13px] resize-none" />
+                               className="w-full h-64 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
                     </div>
 
-                    <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
-                        <div className="grid grid-cols-12 gap-4 p-10 bg-muted/50 border-b border-border text-[11px] font-medium text-muted-foreground text-center tracking-wide uppercase">
+                    <div className="bg-bg border border-border rounded-8 overflow-hidden">
+                        <div className="grid grid-cols-12 gap-4 p-10 bg-surface border-b border-border text-[11px] font-semibold text-muted text-center">
                             <div className="col-span-5 text-right">الصنف</div>
                             <div className="col-span-3">الكمية</div>
                             <div className="col-span-3">الإجمالي</div>
                             <div className="col-span-1"></div>
                         </div>
                         {items.length === 0 ? (
-                            <p className="p-24 text-center text-[13px] text-muted-foreground">الفاتورة فارغة</p>
+                            <p className="p-24 text-center text-[13px] text-muted">الفاتورة فارغة</p>
                         ) : items.map(it => (
-                            <div key={it.cleanId} className="grid grid-cols-12 gap-4 p-10 items-center border-b border-border last:border-0 text-[12px] text-center hover:bg-muted/30 transition-colors">
-                                <div className="col-span-5 text-right font-medium text-foreground truncate bidi-isolate" title={it.name || it.id}>{it.id}</div>
+                            <div key={it.cleanId} className="grid grid-cols-12 gap-4 p-10 items-center border-b border-border last:border-0 text-[12px] text-center">
+                                <div className="col-span-5 text-right font-medium text-primary truncate" title={it.name || it.id}>{it.id}</div>
                                 <div className="col-span-3"><OrderQuantityControl item={it} cart={cart} setCart={setCart} /></div>
-                                <div className="col-span-3 font-semibold text-primary numeric">{NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}</div>
-                                <button onClick={() => deleteCartItem(it.cleanId)} className="col-span-1 text-destructive flex justify-center hover:opacity-70"><Icon.Trash className="w-16 h-16"/></button>
+                                <div className="col-span-3 font-semibold text-accent">{NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}</div>
+                                <button onClick={() => deleteCartItem(it.cleanId)} className="col-span-1 text-danger flex justify-center"><Icon.Trash className="w-16 h-16"/></button>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="p-16 border-t border-border bg-background flex flex-col gap-12">
+                <div className="p-16 border-t border-border bg-bg flex flex-col gap-12">
                     <div className="flex justify-between items-center px-8">
-                        <span className="text-[14px] font-medium text-foreground">الإجمالي التقديري:</span>
-                        <span className="text-[18px] font-bold text-primary numeric">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
+                        <span className="text-[14px] font-semibold text-primary">الإجمالي التقديري:</span>
+                        <span className="text-[18px] font-bold text-accent">{NUMBER_FORMATTER.format(totalAmount)} ر.س</span>
                     </div>
                     <div className="flex gap-8">
                         <button onClick={saveAsDraft} disabled={items.length === 0}
-                                className="flex-1 h-44 bg-card text-foreground border border-input rounded-md font-medium text-[13px] hover:bg-muted disabled:opacity-50 transition-colors flex items-center justify-center gap-6">
+                                className="flex-1 h-48 bg-surface text-primary border border-border rounded-12 font-bold text-[13px] hover:bg-border disabled:opacity-50 transition-colors flex items-center justify-center gap-6">
                             <Icon.Archive className="w-16 h-16"/> مسودة
                         </button>
                         <button onClick={handleSubmit} disabled={items.length === 0}
-                                className="w-[70%] h-44 bg-primary text-primary-foreground rounded-md font-medium text-[14px] hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center gap-8">
+                                className="w-[70%] h-48 bg-primary text-bg rounded-12 font-bold text-[14px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
                             اعتماد (واتساب)
                         </button>
                     </div>
@@ -876,7 +786,7 @@ const Lightbox = ({ fileName, title, onClose }) => {
                 <Icon.Close className="w-20 h-20" />
             </button>
             <div className="max-w-[860px] w-full flex flex-col items-center gap-16" onClick={(e) => e.stopPropagation()}>
-                <img src={`${IMAGES_PATH}${fileName}`} alt={title} className="max-h-[72vh] w-auto object-cover rounded-lg bg-card" />
+                <img src={`${IMAGES_PATH}${fileName}`} alt={title} className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
                 <p className="text-white text-[15px] text-center px-16">{title}</p>
             </div>
         </div>
@@ -887,47 +797,47 @@ const Lightbox = ({ fileName, title, onClose }) => {
 // بطاقات العرض
 // ============================================================
 const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty, cart, setCart }) => (
-    <div className="animate-card w-full border border-border rounded-lg shadow-sm p-16 sm:p-20 bg-card flex flex-col gap-16">
+    <div className="animate-card w-full border border-border rounded-16 shadow-card p-16 sm:p-20 bg-bg flex flex-col gap-16">
         {showImage && imageFileName && (
             <div className="w-full flex justify-center border-b border-border pb-16">
                 <ProductImage fileName={imageFileName} alt={item.name || item.id}
-                              className="w-full max-w-[220px] aspect-square object-cover rounded-lg" />
+                              className="w-full max-w-[220px] aspect-square object-contain rounded-12" />
             </div>
         )}
         <div className="flex justify-between items-start gap-16">
             <div className="min-w-0 flex-1">
-                <div className="text-[12px] text-muted-foreground mb-2">رقم الصنف</div>
-                <div className="text-[18px] font-bold text-foreground break-words bidi-isolate">{item.id}</div>
+                <div className="text-[12px] text-muted mb-2">رقم الصنف</div>
+                <div className="text-[18px] font-bold text-primary break-words">{item.id}</div>
             </div>
             {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} /></div>}
         </div>
         <div>
-            <div className="text-[12px] text-muted-foreground mb-2">اسم الصنف</div>
-            <div className="text-[15px] text-foreground break-words">{item.name || "---"}</div>
+            <div className="text-[12px] text-muted mb-2">اسم الصنف</div>
+            <div className="text-[15px] text-primary break-words">{item.name || "---"}</div>
         </div>
         <div className="grid grid-cols-3 gap-8 border-t border-border pt-16">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted-foreground mb-2">الوحدة</div>
-                <div className="text-[14px] font-medium text-foreground break-words">{item.unit || "---"}</div>
+                <div className="text-[12px] text-muted mb-2">الوحدة</div>
+                <div className="text-[14px] font-semibold text-primary break-words">{item.unit || "---"}</div>
             </div>
             <div className="min-w-0">
-                <div className="text-[12px] text-muted-foreground mb-2">الشد</div>
-                <div className="text-[14px] font-medium text-foreground break-words numeric">{item.pack || "---"}</div>
+                <div className="text-[12px] text-muted mb-2">الشد</div>
+                <div className="text-[14px] font-semibold text-primary break-words">{item.pack || "---"}</div>
             </div>
             <div className="min-w-0">
-                <div className="text-[12px] text-muted-foreground mb-2">المستودع</div>
-                <div className="text-[14px] font-medium text-foreground break-words">{warehouseName}</div>
+                <div className="text-[12px] text-muted mb-2">المستودع</div>
+                <div className="text-[14px] font-semibold text-primary break-words">{warehouseName}</div>
             </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-muted/50 p-12 rounded-lg mt-8">
+        <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted-foreground mb-2">سعر (الكرتون)</div>
-                <div className="text-[15px] font-bold text-primary break-words numeric">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
+                <div className="text-[12px] text-muted mb-2">سعر (الكرتون)</div>
+                <div className="text-[15px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
             </div>
             <div className="min-w-0">
-                <div className="text-[12px] text-muted-foreground mb-2">السعر التقريبي للحبة</div>
-                <div className="text-[15px] font-bold text-success break-words numeric">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
+                <div className="text-[12px] text-muted mb-2">السعر التقريبي للحبة</div>
+                <div className="text-[15px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
             </div>
         </div>
 
@@ -938,16 +848,16 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
 ));
 
 const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart, setCart }) => (
-    <div className="animate-card w-full border border-border rounded-lg p-12 bg-card shadow-sm flex flex-col gap-12 hover:border-primary/50 transition-colors duration-200">
+    <div className="animate-card w-full border border-border rounded-12 p-12 bg-bg flex flex-col gap-12 hover:border-muted transition-colors duration-200">
         <div className="flex justify-between items-center gap-12">
             <div className="flex items-center gap-12 min-w-0 flex-1">
                 {showImage && imageFileName && (
                     <ProductImage fileName={imageFileName} alt={item.name || item.id}
-                                  className="w-48 h-48 flex-shrink-0 object-cover rounded-lg border border-border bg-muted" />
+                                  className="w-48 h-48 flex-shrink-0 object-contain rounded-10 border border-border bg-surface" />
                 )}
                 <div className="flex flex-col min-w-0">
-                    <span className="text-[15px] font-medium text-foreground truncate bidi-isolate">{item.id}</span>
-                    <span className="text-[13px] text-muted-foreground truncate">{item.name || '---'}</span>
+                    <span className="text-[15px] font-semibold text-primary truncate">{item.id}</span>
+                    <span className="text-[13px] text-secondary truncate">{item.name || '---'}</span>
                 </div>
             </div>
             {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} size="sm" /></div>}
@@ -970,65 +880,65 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
              title="نقرتان: الكمية · ثلاث نقرات: بطاقة المنتج"
              onClick={() => onTap(item.uid)}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCycle(item.uid); } }}
-             className={`tap-card group relative cursor-pointer border rounded-lg bg-card shadow-sm overflow-hidden flex flex-col transition-colors duration-200 ${isDetails ? 'border-primary' : 'border-border hover:border-primary/50'}`}>
+             className={`tap-card group relative cursor-pointer border rounded-16 bg-bg overflow-hidden flex flex-col transition-colors duration-200 ${isDetails ? 'border-accent' : 'border-border'}`}>
 
             {isDetails ? (
                 <div className="animate-flip w-full p-16 flex flex-col gap-10">
                     <div className="flex justify-between items-center border-b border-border pb-8">
-                        <span className="text-[12px] font-medium text-primary">بطاقة المنتج</span>
-                        <span className="text-[11px] text-muted-foreground">نقرتان للعودة</span>
+                        <span className="text-[12px] font-semibold text-accent">بطاقة المنتج</span>
+                        <span className="text-[11px] text-muted">نقرتان للعودة</span>
                     </div>
                     <div>
-                        <div className="text-[11px] text-muted-foreground">رقم الصنف</div>
-                        <div className="text-[15px] font-bold text-foreground break-words bidi-isolate">{item.id}</div>
+                        <div className="text-[11px] text-muted">رقم الصنف</div>
+                        <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
                     </div>
                     <div>
-                        <div className="text-[11px] text-muted-foreground">اسم الصنف</div>
-                        <div className="text-[13px] text-foreground break-words">{item.name || '---'}</div>
+                        <div className="text-[11px] text-muted">اسم الصنف</div>
+                        <div className="text-[13px] text-primary break-words">{item.name || '---'}</div>
                     </div>
                     <div className="grid grid-cols-2 gap-8 border-t border-border pt-8">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted-foreground">الوحدة</div>
-                            <div className="text-[13px] font-medium text-foreground break-words">{item.unit || '---'}</div>
+                            <div className="text-[11px] text-muted">الوحدة</div>
+                            <div className="text-[13px] font-semibold text-primary break-words">{item.unit || '---'}</div>
                         </div>
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted-foreground">الشد</div>
-                            <div className="text-[13px] font-medium text-foreground break-words numeric">{item.pack || '---'}</div>
+                            <div className="text-[11px] text-muted">الشد</div>
+                            <div className="text-[13px] font-semibold text-primary break-words">{item.pack || '---'}</div>
                         </div>
                     </div>
                     <div className="border-t border-border pt-8">
-                        <div className="text-[11px] text-muted-foreground mb-4">{warehouseName}</div>
+                        <div className="text-[11px] text-muted mb-4">{warehouseName}</div>
                         <Quantity qty={item.qty} unit={item.unit} size="sm" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-muted/50 p-8 rounded-md mt-4">
+                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted-foreground mb-2">سعر (الكرتون)</div>
-                            <div className="text-[13px] font-bold text-primary break-words numeric">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
+                            <div className="text-[11px] text-muted mb-2">سعر (الكرتون)</div>
+                            <div className="text-[13px] font-bold text-accent break-words">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) + ' ر.س' : '---'}</div>
                         </div>
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted-foreground mb-2">تقريبي للحبة</div>
-                            <div className="text-[13px] font-bold text-success break-words numeric">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
+                            <div className="text-[11px] text-muted mb-2">تقريبي للحبة</div>
+                            <div className="text-[13px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' + NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) + ' ر.س' : '---'}</div>
                         </div>
                     </div>
                 </div>
             ) : (
                 <React.Fragment>
                     {showImage && (
-                        <div className="relative w-full bg-muted/30">
+                        <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
-                                          className={`object-cover pointer-events-none w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
+                                          className={`object-contain pointer-events-none w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
-                                    className="absolute top-8 right-8 w-36 h-36 rounded-md bg-background/90 border border-border text-muted-foreground flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground">
+                                    className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <Icon.Expand className="w-16 h-16" />
                             </button>
                         </div>
                     )}
                     <div className={`p-12 flex flex-col items-center text-center gap-2 ${!showImage ? 'py-24' : ''}`}>
-                        <div className="text-[15px] font-bold text-foreground break-words bidi-isolate">{item.id}</div>
-                        <div className="text-[13px] text-muted-foreground break-words">{item.name || '---'}</div>
+                        <div className="text-[15px] font-bold text-primary break-words">{item.id}</div>
+                        <div className="text-[13px] text-secondary break-words">{item.name || '---'}</div>
                         {isQuantity && (
-                            <div className={`animate-flip text-[13px] font-medium mt-8 px-12 py-4 rounded-md numeric ${stockTone(item.qty).bg} ${stockTone(item.qty).text}`}>
+                            <div className={`animate-flip text-[13px] font-semibold mt-8 px-12 py-4 rounded-full ${stockTone(item.qty).bg} ${stockTone(item.qty).text}`}>
                                 {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
                             </div>
                         )}
@@ -1046,11 +956,11 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
 const SkeletonGrid = () => (
     <div className="flex flex-col gap-16">
         {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="border border-border rounded-lg overflow-hidden shadow-sm bg-card">
-                <div className="skeleton w-full aspect-square max-w-[360px] mx-auto bg-muted"></div>
+            <div key={i} className="border border-border rounded-16 overflow-hidden">
+                <div className="skeleton w-full aspect-square max-w-[360px] mx-auto"></div>
                 <div className="p-12 flex flex-col items-center gap-8">
-                    <div className="skeleton h-14 w-[40%] rounded-full bg-muted"></div>
-                    <div className="skeleton h-12 w-[70%] rounded-full bg-muted"></div>
+                    <div className="skeleton h-14 w-[40%] rounded-full"></div>
+                    <div className="skeleton h-12 w-[70%] rounded-full"></div>
                 </div>
             </div>
         ))}
@@ -1058,13 +968,13 @@ const SkeletonGrid = () => (
 );
 
 const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
-    <div className="animate-card w-full border border-border rounded-lg shadow-sm p-24 bg-card flex flex-col items-center text-center gap-12">
-        <div className={`w-44 h-44 rounded-full flex items-center justify-center flex-shrink-0 ${tone === 'danger' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground border border-border'}`}>
+    <div className="animate-card w-full border border-border rounded-16 p-24 bg-surface flex flex-col items-center text-center gap-12">
+        <div className={`w-44 h-44 rounded-full flex items-center justify-center flex-shrink-0 ${tone === 'danger' ? 'bg-dangerSoft text-danger' : 'bg-bg text-muted border border-border'}`}>
             {icon}
         </div>
         <div>
-            <h3 className="text-[15px] font-medium text-foreground mb-4">{title}</h3>
-            {note && <p className="text-[13px] text-muted-foreground">{note}</p>}
+            <h3 className="text-[15px] font-semibold text-primary mb-4">{title}</h3>
+            {note && <p className="text-[13px] text-secondary">{note}</p>}
         </div>
     </div>
 );
@@ -1117,30 +1027,30 @@ const LoginScreen = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-muted/30 flex items-center justify-center p-16 font-sans">
-            <div className="animate-card w-full max-w-[380px] bg-card border border-border rounded-lg shadow-2xl p-24 sm:p-32">
+        <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans">
+            <div className="animate-card w-full max-w-[380px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32">
                 <div className="text-center mb-32">
-                    <h1 className="text-[22px] font-extrabold tracking-wider text-brand mb-4">مخزون الأواني</h1>
-                    <p className="text-[13px] text-muted-foreground">مشغل بواسطة نظام كورفي</p>
+                    <h1 className="text-[22px] font-bold text-primary mb-4">نظام المخزون</h1>
+                    <p className="text-[13px] text-secondary">شركة بيت الأواني الطيبة</p>
                 </div>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-16">
                     <div>
-                        <label htmlFor="employeeName" className="text-[13px] font-medium text-foreground mb-8 block">الإسم الكريم</label>
+                        <label htmlFor="employeeName" className="text-[13px] font-medium text-primary mb-8 block">الإسم الكريم</label>
                         <input id="employeeName" type="text" required autoComplete="name" value={name}
                                onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="اكتب اسمك هنا..."
-                               className="w-full h-44 px-16 rounded-md border border-input bg-background focus-visible:ring-2 focus-visible:ring-ring text-foreground outline-none transition-shadow" />
+                               className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none transition-colors" />
                     </div>
                     {needCode && (
                         <div className="animate-card">
-                            <label htmlFor="accessCode" className="text-[13px] font-medium text-foreground mb-8 flex items-center gap-6"><Icon.Lock className="w-14 h-14 text-primary flex-shrink-0" /> رمز الدخول</label>
+                            <label htmlFor="accessCode" className="text-[13px] font-medium text-primary mb-8 flex items-center gap-6"><Icon.Lock className="w-14 h-14 text-accent flex-shrink-0" /> رمز الدخول</label>
                             <input ref={codeRef} id="accessCode" type="password" inputMode="numeric" autoComplete="off" value={code}
                                    onChange={(e) => { setCode(e.target.value); setError(''); }} placeholder="••••"
-                                   className="w-full h-44 px-16 rounded-md border border-input bg-background focus-visible:ring-2 focus-visible:ring-ring text-foreground outline-none transition-shadow tracking-widest" />
+                                   className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none transition-colors tracking-widest" />
                         </div>
                     )}
-                    {error  && <p className="text-[13px] text-destructive flex items-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
-                    {notice && <p className="text-[12px] text-muted-foreground">{notice}</p>}
-                    <button type="submit" disabled={loading} className="w-full h-44 bg-primary text-primary-foreground rounded-md font-medium text-[14px] hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm">
+                    {error  && <p className="text-[13px] text-danger flex items-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
+                    {notice && <p className="text-[12px] text-secondary">{notice}</p>}
+                    <button type="submit" disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] hover:opacity-90 disabled:opacity-60 transition-opacity">
                         {loading ? "جاري الدخول..." : "دخول للنظام"}
                     </button>
                 </form>
@@ -1230,6 +1140,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
         return (Date.now() - lastTime) < (3 * 60 * 1000); 
     }, []);
 
+    // ✨ محرك تجميع الجلسات الخاص بالمدير
     const groupedSessions = useMemo(() => {
         if (activeTab !== 'site_sessions') return [];
         const groups = {};
@@ -1253,6 +1164,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
                 groups[name].isOnline = isUserOnline(session.lastActive);
             }
         });
+        // ترتيب المندوبين بحيث يكون المتصلون والأكثر نشاطاً في الأعلى
         return Object.values(groups).sort((a, b) => b.lastActive - a.lastActive);
     }, [filteredData, activeTab, isUserOnline]);
 
@@ -1270,120 +1182,122 @@ const AdminDashboardModal = memo(({ onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[1000px] h-[95vh] sm:h-[90vh] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
-                    <h3 className="font-bold text-foreground flex items-center gap-8">
-                        <Icon.Dashboard className="w-20 h-20 text-primary"/> لوحة تحكم الإدارة (سجلات النظام)
+            <div className="w-full max-w-[1000px] h-[95vh] sm:h-[90vh] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.Dashboard className="w-20 h-20 text-accent"/> لوحة تحكم الإدارة (سجلات النظام)
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors">
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border hover:bg-dangerSoft hover:text-danger transition-colors">
                         <Icon.Close className="w-16 h-16"/>
                     </button>
                 </div>
                 
-                <div className="flex overflow-x-auto border-b border-border bg-muted/20 no-scrollbar">
+                <div className="flex overflow-x-auto border-b border-border bg-surface no-scrollbar">
                     {tabs.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 min-w-[120px] whitespace-nowrap py-12 text-[13px] font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+                            className={`flex-1 min-w-[120px] whitespace-nowrap py-12 text-[13px] font-bold border-b-2 transition-colors ${activeTab === tab.id ? 'border-accent text-accent' : 'border-transparent text-secondary hover:text-primary'}`}>
                             {tab.label}
                         </button>
                     ))}
                 </div>
 
-                <div className="p-16 border-b border-border bg-background flex flex-col sm:flex-row gap-12 items-center justify-between">
+                <div className="p-16 border-b border-border bg-surface flex flex-col sm:flex-row gap-12 items-center justify-between">
                     <div className="relative w-full sm:w-[350px]">
-                        <Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted" />
                         <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="بحث ذكي عن أي شيء..."
-                               className="w-full pl-12 pr-36 py-8 rounded-md border border-input bg-background text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow" />
+                               className="w-full pl-12 pr-36 py-8 rounded-8 border border-border bg-bg text-[13px] outline-none focus:border-accent transition-colors" />
                     </div>
                     <div className="flex items-center gap-8 w-full sm:w-auto">
-                        <Icon.Filter className="w-16 h-16 text-muted-foreground" />
-                        <select value={sortOrder} onChange={e => setSortOrder(e.target.value)} className="bg-background border border-input rounded-md px-12 py-8 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 sm:flex-none cursor-pointer">
+                        <Icon.Filter className="w-16 h-16 text-muted" />
+                        <select value={sortOrder} onChange={e => setSortOrder(e.target.value)} className="bg-bg border border-border rounded-8 px-12 py-8 text-[13px] outline-none focus:border-accent flex-1 sm:flex-none cursor-pointer">
                             <option value="desc">ترتيب: الأحدث أولاً</option>
                             <option value="asc">ترتيب: الأقدم أولاً</option>
                         </select>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-16 bg-muted/10">
+                <div className="flex-1 overflow-y-auto p-16 bg-surface">
                     {activeTab === 'orders' && !loading && (
                         <div className="grid grid-cols-2 gap-12 mb-16">
-                            <div className="bg-card border border-border rounded-lg p-16 shadow-sm">
-                                <p className="text-[12px] text-muted-foreground mb-4">إجمالي الدخل للعمليات المفلترة</p>
-                                <p className="text-[20px] font-bold text-success numeric">{NUMBER_FORMATTER.format(totalRevenue)} ر.س</p>
+                            <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
+                                <p className="text-[12px] text-muted mb-4">إجمالي الدخل للعمليات المفلترة</p>
+                                <p className="text-[20px] font-bold text-success">{NUMBER_FORMATTER.format(totalRevenue)} ر.س</p>
                             </div>
-                            <div className="bg-card border border-border rounded-lg p-16 shadow-sm">
-                                <p className="text-[12px] text-muted-foreground mb-4">عدد الفواتير</p>
-                                <p className="text-[20px] font-bold text-foreground numeric">{NUMBER_FORMATTER.format(filteredData.length)} فاتورة</p>
+                            <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
+                                <p className="text-[12px] text-muted mb-4">عدد الفواتير</p>
+                                <p className="text-[20px] font-bold text-primary">{NUMBER_FORMATTER.format(filteredData.length)} فاتورة</p>
                             </div>
                         </div>
                     )}
 
                     {loading ? (
-                        <div className="flex justify-center items-center h-48 text-muted-foreground text-[14px]">جاري جلب السجلات...</div>
+                        <div className="flex justify-center items-center h-48 text-muted text-[14px]">جاري جلب السجلات...</div>
                     ) : (activeTab !== 'site_sessions' && filteredData.length === 0) || (activeTab === 'site_sessions' && groupedSessions.length === 0) ? (
-                        <div className="flex justify-center items-center h-48 text-muted-foreground text-[14px]">لا توجد بيانات مطابقة لعملية البحث.</div>
+                        <div className="flex justify-center items-center h-48 text-muted text-[14px]">لا توجد بيانات مطابقة لعملية البحث.</div>
                     ) : (
-                        <div className="overflow-x-auto bg-card border border-border rounded-lg shadow-sm">
+                        <div className="overflow-x-auto bg-bg border border-border rounded-12 shadow-card">
                             <table className="w-full text-right text-[12px]">
-                                <thead className="bg-muted/50 text-muted-foreground border-b border-border uppercase tracking-wide">
+                                <thead className="bg-surface text-muted border-b border-border">
                                     {activeTab === 'site_sessions' && (
-                                        <tr><th className="p-12 font-medium">المندوب</th><th className="p-12 font-medium">إجمالي الجلسات</th><th className="p-12 font-medium">إجمالي وقت العمل اليوم</th><th className="p-12 font-medium">الحالة الآن</th><th className="p-12 font-medium">الإجراءات</th></tr>
+                                        <tr><th className="p-12">المندوب</th><th className="p-12">إجمالي الجلسات</th><th className="p-12">إجمالي وقت العمل اليوم</th><th className="p-12">الحالة الآن</th><th className="p-12">الإجراءات</th></tr>
                                     )}
                                     {activeTab === 'orders' && (
-                                        <tr><th className="p-12 font-medium">التاريخ</th><th className="p-12 font-medium">المندوب</th><th className="p-12 font-medium">العميل</th><th className="p-12 font-medium">المستودع</th><th className="p-12 font-medium">الملاحظات</th><th className="p-12 font-medium">الإجمالي</th><th className="p-12 font-medium">الإجراءات</th></tr>
+                                        <tr><th className="p-12">التاريخ</th><th className="p-12">المندوب</th><th className="p-12">العميل</th><th className="p-12">المستودع</th><th className="p-12">الملاحظات</th><th className="p-12">الإجمالي</th><th className="p-12">الإجراءات</th></tr>
                                     )}
                                     {activeTab === 'drafts' && (
-                                        <tr><th className="p-12 font-medium">التاريخ</th><th className="p-12 font-medium">المندوب</th><th className="p-12 font-medium">اسم المسودة/العميل</th><th className="p-12 font-medium">المستودع</th><th className="p-12 font-medium">عدد الأصناف</th><th className="p-12 font-medium">الإجراءات</th></tr>
+                                        <tr><th className="p-12">التاريخ</th><th className="p-12">المندوب</th><th className="p-12">اسم المسودة/العميل</th><th className="p-12">المستودع</th><th className="p-12">عدد الأصناف</th><th className="p-12">الإجراءات</th></tr>
                                     )}
                                     {activeTab === 'search_logs' && (
-                                        <tr><th className="p-12 font-medium">التاريخ</th><th className="p-12 font-medium">الوقت</th><th className="p-12 font-medium">المستخدم</th><th className="p-12 font-medium">كلمة البحث</th><th className="p-12 font-medium">النتائج</th></tr>
+                                        <tr><th className="p-12">التاريخ</th><th className="p-12">الوقت</th><th className="p-12">المستخدم</th><th className="p-12">كلمة البحث</th><th className="p-12">النتائج</th></tr>
                                     )}
                                     {activeTab === 'users' && (
-                                        <tr><th className="p-12 font-medium">أول انضمام</th><th className="p-12 font-medium">الاسم</th><th className="p-12 font-medium">عدد الدخول</th><th className="p-12 font-medium">إجمالي وقت العمل</th></tr>
+                                        <tr><th className="p-12">أول انضمام</th><th className="p-12">الاسم</th><th className="p-12">عدد الدخول</th><th className="p-12">إجمالي وقت العمل</th></tr>
                                     )}
                                 </thead>
                                 <tbody className="divide-y divide-border">
+                                    {/* ✨ عرض الجلسات المجمعة بذكاء (Smart Grouping) */}
                                     {activeTab === 'site_sessions' ? (
                                         groupedSessions.map((group, i) => (
                                             <React.Fragment key={group.name}>
-                                                <tr className="hover:bg-muted/30 transition-colors">
-                                                    <td className="p-12 font-medium text-foreground text-[14px]">{group.name}</td>
-                                                    <td className="p-12 font-medium text-muted-foreground numeric">{group.sessions.length} جلسات</td>
-                                                    <td className="p-12 font-medium text-primary numeric">{formatTimeSpent(group.totalDuration)}</td>
+                                                <tr className="hover:bg-surface transition-colors">
+                                                    <td className="p-12 font-bold text-primary text-[14px]">{group.name}</td>
+                                                    <td className="p-12 font-bold text-secondary">{group.sessions.length} جلسات</td>
+                                                    <td className="p-12 font-bold text-accent">{formatTimeSpent(group.totalDuration)}</td>
                                                     <td className="p-12">
                                                         {group.isOnline 
-                                                            ? <span className="bg-success/10 text-success ring-1 ring-inset ring-success/30 px-8 py-4 rounded-md font-medium text-[11px]">متصل الآن</span> 
-                                                            : <span className="bg-muted text-muted-foreground ring-1 ring-inset ring-border px-8 py-4 rounded-md text-[11px]">مغادر</span>}
+                                                            ? <span className="bg-successSoft text-success px-8 py-4 rounded-full font-bold text-[11px]">🟢 متصل الآن</span> 
+                                                            : <span className="bg-surface border border-border text-muted px-8 py-4 rounded-full text-[11px]">🔴 مغادر</span>}
                                                     </td>
                                                     <td className="p-12">
-                                                        <button onClick={() => setExpandedOrderId(expandedOrderId === group.name ? null : group.name)} className="flex items-center gap-4 text-primary hover:text-primary-foreground transition-colors text-[11px] font-medium whitespace-nowrap bg-primary/10 hover:bg-primary px-8 py-4 rounded-md">
+                                                        <button onClick={() => setExpandedOrderId(expandedOrderId === group.name ? null : group.name)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
                                                             <Icon.Eye className="w-14 h-14" />
                                                             {expandedOrderId === group.name ? 'إخفاء' : 'عرض التفاصيل'}
                                                         </button>
                                                     </td>
                                                 </tr>
+                                                {/* سجل الحضور والانصراف المفصل للمندوب */}
                                                 {expandedOrderId === group.name && (
-                                                    <tr className="bg-muted/10 border-b border-border">
+                                                    <tr className="bg-accentSoft/30 border-b border-border">
                                                         <td colSpan="5" className="p-16">
-                                                            <div className="bg-card border border-border rounded-lg p-12 shadow-sm">
-                                                                <h4 className="font-medium text-[13px] text-foreground mb-8 border-b border-border pb-8">سجل الجلسات المفصل للمندوب ({group.name}):</h4>
+                                                            <div className="bg-bg border border-accent/20 rounded-8 p-12 shadow-sm">
+                                                                <h4 className="font-bold text-[13px] text-primary mb-8 border-b border-border pb-8">سجل الجلسات المفصل للمندوب ({group.name}):</h4>
                                                                 <div className="overflow-x-auto">
                                                                     <table className="w-full text-[12px] text-right">
                                                                         <thead>
-                                                                            <tr className="text-muted-foreground border-b border-border">
-                                                                                <th className="py-4 px-8 font-medium">تاريخ الجلسة</th>
-                                                                                <th className="py-4 px-8 font-medium">وقت الدخول</th>
-                                                                                <th className="py-4 px-8 font-medium">آخر نشاط مسجل</th>
-                                                                                <th className="py-4 px-8 font-medium">مدة البقاء</th>
+                                                                            <tr className="text-muted border-b border-border">
+                                                                                <th className="py-4 px-8">تاريخ الجلسة</th>
+                                                                                <th className="py-4 px-8">وقت الدخول</th>
+                                                                                <th className="py-4 px-8">آخر نشاط مسجل</th>
+                                                                                <th className="py-4 px-8">مدة البقاء</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>
                                                                             {group.sessions.map((sess, idx) => (
-                                                                                <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/30">
-                                                                                    <td className="py-8 px-8 text-muted-foreground numeric">{formatFbDate(sess.startTime)}</td>
-                                                                                    <td className="py-8 px-8 font-medium text-success numeric">{formatFbTime(sess.startTime)}</td>
-                                                                                    <td className="py-8 px-8 text-muted-foreground numeric">{formatFbTime(sess.lastActive)}</td>
-                                                                                    <td className="py-8 px-8 font-medium text-primary numeric">{sess.durationMinutes} دقيقة</td>
+                                                                                <tr key={idx} className="border-b border-border last:border-0 hover:bg-surface">
+                                                                                    <td className="py-8 px-8 text-secondary">{formatFbDate(sess.startTime)}</td>
+                                                                                    <td className="py-8 px-8 font-bold text-success">{formatFbTime(sess.startTime)}</td>
+                                                                                    <td className="py-8 px-8 text-muted">{formatFbTime(sess.lastActive)}</td>
+                                                                                    <td className="py-8 px-8 font-bold text-accent">{sess.durationMinutes} دقيقة</td>
                                                                                 </tr>
                                                                             ))}
                                                                         </tbody>
@@ -1398,17 +1312,17 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                     ) : (
                                         filteredData.map((row, i) => (
                                             <React.Fragment key={row.id || i}>
-                                                <tr className="hover:bg-muted/30 transition-colors">
+                                                <tr className="hover:bg-surface transition-colors">
                                                     {activeTab === 'orders' && (
                                                         <React.Fragment>
-                                                            <td className="p-12 whitespace-nowrap text-muted-foreground numeric">{formatFbDate(row.timestamp)}</td>
-                                                            <td className="p-12 font-medium text-foreground">{row.repName}</td>
-                                                            <td className="p-12 font-medium text-foreground">{row.customerName}</td>
-                                                            <td className="p-12 text-muted-foreground whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
-                                                            <td className="p-12 text-primary max-w-[120px] truncate" title={row.notes}>{row.notes || '---'}</td>
-                                                            <td className="p-12 font-medium text-success whitespace-nowrap numeric">{NUMBER_FORMATTER.format(row.totalAmount)} ر.س</td>
+                                                            <td className="p-12 whitespace-nowrap text-secondary">{formatFbDate(row.timestamp)}</td>
+                                                            <td className="p-12 font-bold text-primary">{row.repName}</td>
+                                                            <td className="p-12 font-medium">{row.customerName}</td>
+                                                            <td className="p-12 text-muted whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
+                                                            <td className="p-12 text-accent max-w-[120px] truncate" title={row.notes}>{row.notes || '---'}</td>
+                                                            <td className="p-12 font-bold text-success whitespace-nowrap">{NUMBER_FORMATTER.format(row.totalAmount)} ر.س</td>
                                                             <td className="p-12">
-                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-primary hover:text-primary-foreground transition-colors text-[11px] font-medium whitespace-nowrap bg-primary/10 hover:bg-primary px-8 py-4 rounded-md">
+                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
                                                                     <Icon.Eye className="w-14 h-14" />
                                                                     {expandedOrderId === row.id ? 'إخفاء' : 'عرض المحتوى'}
                                                                 </button>
@@ -1417,13 +1331,13 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                                     )}
                                                     {activeTab === 'drafts' && (
                                                         <React.Fragment>
-                                                            <td className="p-12 whitespace-nowrap text-muted-foreground numeric">{formatFbDate(row.timestamp)}</td>
-                                                            <td className="p-12 font-medium text-foreground">{row.repName}</td>
-                                                            <td className="p-12 font-medium text-foreground">{row.name}</td>
-                                                            <td className="p-12 text-muted-foreground whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
-                                                            <td className="p-12 font-medium text-warning numeric">{Object.keys(row.cart || {}).length} أصناف</td>
+                                                            <td className="p-12 whitespace-nowrap text-secondary">{formatFbDate(row.timestamp)}</td>
+                                                            <td className="p-12 font-bold text-primary">{row.repName}</td>
+                                                            <td className="p-12 font-medium">{row.name}</td>
+                                                            <td className="p-12 text-muted whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
+                                                            <td className="p-12 font-bold text-warn">{Object.keys(row.cart || {}).length} أصناف</td>
                                                             <td className="p-12">
-                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-primary hover:text-primary-foreground transition-colors text-[11px] font-medium whitespace-nowrap bg-primary/10 hover:bg-primary px-8 py-4 rounded-md">
+                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
                                                                     <Icon.Eye className="w-14 h-14" />
                                                                     {expandedOrderId === row.id ? 'إخفاء' : 'محتوى السلة'}
                                                                 </button>
@@ -1432,51 +1346,52 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                                     )}
                                                     {activeTab === 'search_logs' && (
                                                         <React.Fragment>
-                                                            <td className="p-12 whitespace-nowrap text-muted-foreground numeric">{formatFbDate(row.time)}</td>
-                                                            <td className="p-12 whitespace-nowrap text-muted-foreground numeric">{formatFbTime(row.time)}</td>
-                                                            <td className="p-12 font-medium text-foreground">{row.name}</td>
-                                                            <td className="p-12 font-medium text-primary">{row.rawQuery}</td>
-                                                            <td className="p-12">{row.resultsCount > 0 ? <span className="text-success font-medium numeric">{row.resultsCount} نتيجة</span> : <span className="text-destructive font-medium">0 (لا يوجد)</span>}</td>
+                                                            <td className="p-12 whitespace-nowrap text-secondary">{formatFbDate(row.time)}</td>
+                                                            <td className="p-12 whitespace-nowrap text-muted">{formatFbTime(row.time)}</td>
+                                                            <td className="p-12 font-bold">{row.name}</td>
+                                                            <td className="p-12 font-bold text-accent">{row.rawQuery}</td>
+                                                            <td className="p-12">{row.resultsCount > 0 ? <span className="text-success font-bold">{row.resultsCount} نتيجة</span> : <span className="text-danger font-bold">0 (لا يوجد)</span>}</td>
                                                         </React.Fragment>
                                                     )}
                                                     {activeTab === 'users' && (
                                                         <React.Fragment>
-                                                            <td className="p-12 text-muted-foreground whitespace-nowrap numeric">{formatFbDate(row.firstJoined)}</td>
-                                                            <td className="p-12 font-medium text-foreground text-[14px]">{row.name}</td>
-                                                            <td className="p-12 font-medium text-primary numeric">{row.loginCount} مرات</td>
-                                                            <td className="p-12 font-medium text-success numeric bg-success/10 rounded-md">{formatTimeSpent(row.timeSpentMinutes)}</td>
+                                                            <td className="p-12 text-muted whitespace-nowrap">{formatFbDate(row.firstJoined)}</td>
+                                                            <td className="p-12 font-bold text-primary text-[14px]">{row.name}</td>
+                                                            <td className="p-12 font-bold text-accent">{row.loginCount} مرات</td>
+                                                            <td className="p-12 font-bold text-success bg-successSoft/30">{formatTimeSpent(row.timeSpentMinutes)}</td>
                                                         </React.Fragment>
                                                     )}
                                                 </tr>
+                                                {/* ✨ تفاصيل الفاتورة أو المسودة عند النقر */}
                                                 {(activeTab === 'orders' || activeTab === 'drafts') && expandedOrderId === row.id && (
-                                                    <tr className="bg-muted/10 border-b border-border">
+                                                    <tr className="bg-accentSoft/30 border-b border-border">
                                                         <td colSpan="7" className="p-16">
-                                                            <div className="bg-card border border-border rounded-lg p-12 shadow-sm">
+                                                            <div className="bg-bg border border-accent/20 rounded-8 p-12 shadow-sm">
                                                                 <div className="flex justify-between items-center mb-8 border-b border-border pb-8">
-                                                                    <h4 className="font-medium text-[13px] text-foreground">تفاصيل الأصناف ({activeTab === 'orders' ? row.items?.length : Object.keys(row.cart||{}).length}):</h4>
-                                                                    {activeTab === 'orders' && <span className="text-[12px] text-muted-foreground">إجمالي: <strong className="text-primary numeric">{NUMBER_FORMATTER.format(row.totalAmount)} ر.س</strong></span>}
+                                                                    <h4 className="font-bold text-[13px] text-primary">تفاصيل الأصناف ({activeTab === 'orders' ? row.items?.length : Object.keys(row.cart||{}).length}):</h4>
+                                                                    {activeTab === 'orders' && <span className="text-[12px] text-muted">إجمالي: <strong className="text-accent">{NUMBER_FORMATTER.format(row.totalAmount)} ر.س</strong></span>}
                                                                 </div>
                                                                 <div className="overflow-x-auto">
                                                                     <table className="w-full text-[12px] text-right">
                                                                         <thead>
-                                                                            <tr className="text-muted-foreground border-b border-border uppercase tracking-wide">
-                                                                                <th className="py-4 px-8 w-16 font-medium">#</th>
-                                                                                <th className="py-4 px-8 font-medium">رقم الصنف</th>
-                                                                                <th className="py-4 px-8 font-medium">اسم الصنف</th>
-                                                                                <th className="py-4 px-8 font-medium">الكمية</th>
-                                                                                <th className="py-4 px-8 font-medium">السعر (ر.س)</th>
-                                                                                <th className="py-4 px-8 font-medium">الإجمالي (ر.س)</th>
+                                                                            <tr className="text-muted border-b border-border">
+                                                                                <th className="py-4 px-8 w-16">#</th>
+                                                                                <th className="py-4 px-8">رقم الصنف</th>
+                                                                                <th className="py-4 px-8">اسم الصنف</th>
+                                                                                <th className="py-4 px-8">الكمية</th>
+                                                                                <th className="py-4 px-8">السعر (ر.س)</th>
+                                                                                <th className="py-4 px-8">الإجمالي (ر.س)</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>
                                                                             {(activeTab === 'orders' ? row.items : Object.values(row.cart || {})).map((it, idx) => (
-                                                                                <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/30">
-                                                                                    <td className="py-8 px-8 font-medium text-muted-foreground numeric">{idx + 1}</td>
-                                                                                    <td className="py-8 px-8 font-medium text-foreground bidi-isolate">{it.id}</td>
-                                                                                    <td className="py-8 px-8 text-muted-foreground truncate max-w-[200px]" title={it.name}>{it.name || '---'}</td>
-                                                                                    <td className="py-8 px-8 font-medium text-foreground numeric">{it.qty || it.cartQty}</td>
-                                                                                    <td className="py-8 px-8 text-muted-foreground numeric">{NUMBER_FORMATTER.format(it.price || 0)}</td>
-                                                                                    <td className="py-8 px-8 font-medium text-primary numeric">{NUMBER_FORMATTER.format(it.total || (it.price * it.cartQty) || 0)}</td>
+                                                                                <tr key={idx} className="border-b border-border last:border-0 hover:bg-surface">
+                                                                                    <td className="py-8 px-8 font-bold text-muted">{idx + 1}</td>
+                                                                                    <td className="py-8 px-8 font-bold text-primary">{it.id}</td>
+                                                                                    <td className="py-8 px-8 text-secondary truncate max-w-[200px]" title={it.name}>{it.name || '---'}</td>
+                                                                                    <td className="py-8 px-8 font-bold text-primary">{it.qty || it.cartQty}</td>
+                                                                                    <td className="py-8 px-8 text-secondary">{NUMBER_FORMATTER.format(it.price || 0)}</td>
+                                                                                    <td className="py-8 px-8 font-bold text-accent">{NUMBER_FORMATTER.format(it.total || (it.price * it.cartQty) || 0)}</td>
                                                                                 </tr>
                                                                             ))}
                                                                         </tbody>
@@ -1548,6 +1463,7 @@ const App = () => {
         }
     }, [sessionName]);
 
+    // ✨ محرك تتبع الجلسات الحي (Live Session Tracker)
     useEffect(() => {
         if (!sessionName) return;
         
@@ -1747,39 +1663,39 @@ const App = () => {
 
     if (!sessionName) return <LoginScreen onLogin={(n, admin) => { setSessionName(n); setIsAdmin(admin); }} />;
 
-    const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'}`;
+    const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`;
 
     return (
         <div className="min-h-screen font-sans">
-            <div className="border-b border-border bg-card">
+            <div className="border-b border-border bg-surface">
                 <div className="max-w-[1024px] mx-auto px-16 h-44 flex items-center justify-between gap-12">
                     <div className="flex items-center gap-8">
                         {!isOnline && (
-                            <div className="flex items-center gap-4 bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/30 px-8 py-2 rounded-md text-[10px] font-bold animate-pulse">
+                            <div className="flex items-center gap-4 bg-danger text-white px-8 py-2 rounded-full text-[10px] font-bold animate-pulse">
                                 <Icon.WifiOff className="w-12 h-12" /> أوفلاين
                             </div>
                         )}
-                        <span className="text-[12px] text-muted-foreground truncate min-w-0">الاسم الكريم: {sessionName}</span>
+                        <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
                     </div>
-                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[11px] text-muted-foreground hover:text-primary transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[11px] text-muted hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
                 </div>
             </div>
             
             <div className="max-w-[1024px] mx-auto px-16">
                 <header className="text-center pt-32 pb-24 flex flex-col items-center gap-8">
-                    <h1 className="text-[24px] sm:text-[28px] md:text-[32px] font-extrabold text-brand tracking-wider leading-tight bidi-isolate">مخزون الأواني</h1>
-                    <h2 className="text-[14px] sm:text-[16px] text-muted-foreground font-medium">نظام الاستعلام والمبيعات الرقمي</h2>
-                    <p className="text-[12px] text-muted-foreground">آخر تحديث للمخزون: {lastUpdate}</p>
+                    <h1 className="text-[24px] sm:text-[28px] md:text-[32px] font-bold text-primary leading-tight">مخزون شركة بيت الأواني الطيبة</h1>
+                    <h2 className="text-[14px] sm:text-[16px] text-secondary font-normal">نظام الاستعلام والمبيعات الرقمي</h2>
+                    <p className="text-[12px] text-muted">آخر تحديث للمخزون: {lastUpdate}</p>
                 </header>
             </div>
 
-            <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
+            <div className="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-border">
                 <div className="max-w-[1024px] mx-auto px-16 py-12 flex flex-col gap-10">
                     <div className="flex justify-between items-center w-full sm:w-auto gap-16">
-                        <div className="flex flex-1 sm:flex-none sm:self-start bg-muted/50 border border-border rounded-lg p-4 gap-4" role="group" aria-label="اختيار المستودع">
+                        <div className="flex flex-1 sm:flex-none sm:self-start bg-surface border border-border rounded-12 p-4 gap-4" role="group" aria-label="اختيار المستودع">
                             {Object.values(WAREHOUSES).map(wh => (
                                 <button key={wh.key} onClick={() => setWarehouse(wh.key)} aria-pressed={warehouse === wh.key}
-                                        className={`flex-1 sm:flex-none sm:px-32 h-40 rounded-md text-[14px] font-medium transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${warehouse === wh.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                                        className={`flex-1 sm:flex-none sm:px-32 h-40 rounded-10 text-[15px] font-semibold transition-colors duration-200 ${warehouse === wh.key ? 'bg-primary text-bg' : 'text-secondary hover:text-primary'}`}>
                                     {wh.label}
                                 </button>
                             ))}
@@ -1787,30 +1703,30 @@ const App = () => {
                         
                         <div className="flex items-center gap-8 flex-shrink-0">
                             {isAdmin && (
-                                <button onClick={() => setShowAdmin(true)} title="لوحة الإدارة" className="flex items-center justify-center w-48 h-48 rounded-md bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-colors animate-flip focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                                <button onClick={() => setShowAdmin(true)} title="لوحة الإدارة" className="flex items-center justify-center w-48 h-48 rounded-12 bg-accentSoft border border-accent text-accent hover:bg-accent hover:text-white transition-colors animate-flip">
                                     <Icon.Dashboard className="w-20 h-20" />
                                 </button>
                             )}
 
                             {warehouse && (
                                 <React.Fragment>
-                                    <button onClick={() => setShowDrafts(true)} title="المسودات المؤقتة" className="relative flex items-center justify-center w-48 h-48 rounded-md bg-card border border-border text-foreground hover:border-primary/50 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                                    <button onClick={() => setShowDrafts(true)} title="المسودات المؤقتة" className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                         <Icon.Archive className="w-20 h-20" />
                                         {drafts.length > 0 && (
-                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-warning text-warning-foreground text-[10px] font-bold flex items-center justify-center rounded-full animate-flip numeric">
+                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-warn text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-flip">
                                                 {drafts.length}
                                             </span>
                                         )}
                                     </button>
 
-                                    <button onClick={() => setShowHistory(true)} title="سجل الطلبات" className="flex items-center justify-center w-48 h-48 rounded-md bg-card border border-border text-foreground hover:border-primary/50 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                                    <button onClick={() => setShowHistory(true)} title="سجل الطلبات" className="flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                         <Icon.List className="w-20 h-20" />
                                     </button>
                                     
-                                    <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-md bg-card border border-border text-foreground hover:border-primary/50 hover:text-primary transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                                    <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
                                         <Icon.Cart className="w-20 h-20" />
                                         {Object.keys(cart).length > 0 && (
-                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center rounded-full animate-flip numeric">
+                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-danger text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-flip">
                                                 {Object.keys(cart).length}
                                             </span>
                                         )}
@@ -1822,31 +1738,31 @@ const App = () => {
 
                     <div className="flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
-                            <Icon.Search className="w-18 h-18 text-muted-foreground absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input ref={searchInputRef} id="searchInput" type="text" autoComplete="off"
                                    value={query} onChange={(e) => setQuery(e.target.value)} disabled={!warehouse}
                                    placeholder={warehouse ? "اكتب رقم الصنف أو امسح الباركود..." : "اختر المستودع أولاً"}
-                                   className={`w-full h-48 pr-40 pl-48 rounded-md border outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring ${!warehouse ? 'bg-muted/50 border-border text-muted-foreground cursor-not-allowed' : 'bg-background border-input text-foreground'}`} />
+                                   className={`w-full h-48 pr-40 pl-48 rounded-12 border outline-none transition-colors ${!warehouse ? 'bg-surface border-border text-muted cursor-not-allowed' : 'bg-bg border-border focus:border-accent text-primary'}`} />
                             
                             {warehouse && (
                                 <button onClick={() => setShowScanner(true)} title="مسح الباركود بالكاميرا"
-                                    className="absolute left-6 top-1/2 -translate-y-1/2 w-36 h-36 flex items-center justify-center rounded-md text-muted-foreground bg-card border border-border hover:text-primary hover:border-primary/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                                    className="absolute left-6 top-1/2 -translate-y-1/2 w-36 h-36 flex items-center justify-center rounded-8 text-secondary bg-surface border border-border hover:text-accent hover:border-accent transition-colors">
                                     <Icon.Scan className="w-18 h-18" />
                                 </button>
                             )}
                         </div>
 
                         <label className="flex items-center gap-8 cursor-pointer flex-shrink-0">
-                            <span className="hidden sm:inline text-[12px] text-muted-foreground whitespace-nowrap">عرض مع الصورة</span>
+                            <span className="hidden sm:inline text-[12px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
                             <input type="checkbox" className="sr-only" checked={showImageInSearch}
                                    onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                            <div className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
-                                <div className={`absolute top-2 left-2 w-22 h-22 bg-background rounded-full shadow-sm transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
+                            <div className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-accent' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
+                                <div className={`absolute top-2 left-2 w-22 h-22 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
                             </div>
                         </label>
                     </div>
 
-                    {warehouse && showImageInSearch && <p className="text-[11px] text-primary"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
+                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
                 </div>
             </div>
 
@@ -1865,20 +1781,20 @@ const App = () => {
                         {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
                             <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && imagesList.has(item.cleanId)} imageFileName={imagesList.get(item.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />
                         ))}
-                        {search.total > search.visible.length && <p className="text-[12px] text-muted-foreground text-center pt-8 numeric">{NUMBER_FORMATTER.format(search.total)} نتيجة — أضف تفاصيل لتضييق البحث</p>}
+                        {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8">{NUMBER_FORMATTER.format(search.total)} نتيجة — أضف تفاصيل لتضييق البحث</p>}
                     </div>
                 )}
 
                 <section className="mt-40" id="gallery-section">
                     <div className="flex justify-between items-end gap-12 mb-12">
                         <div className="min-w-0">
-                            <h2 className="text-[18px] font-bold text-foreground">المعرض الرقمي</h2>
-                            {warehouse && <p className="text-[12px] text-muted-foreground mt-2">{activeWarehouseName}</p>}
+                            <h2 className="text-[18px] font-bold text-primary">المعرض الرقمي</h2>
+                            {warehouse && <p className="text-[12px] text-muted mt-2">{activeWarehouseName}</p>}
                         </div>
                         {activeCategory && (
-                            <div className="flex bg-muted/50 border border-border rounded-lg p-4 gap-4 flex-shrink-0" role="group" aria-label="نمط العرض">
-                                <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'} className={`flex items-center gap-6 px-12 h-36 rounded-md text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${galleryView === 'list' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Icon.List className="w-16 h-16" /> طولي</button>
-                                <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`flex items-center gap-6 px-12 h-36 rounded-md text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${galleryView === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Icon.Grid className="w-16 h-16" /> شبكي</button>
+                            <div className="flex bg-surface border border-border rounded-10 p-4 gap-4 flex-shrink-0" role="group" aria-label="نمط العرض">
+                                <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'} className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'list' ? 'bg-primary text-bg' : 'text-secondary'}`}><Icon.List className="w-16 h-16" /> طولي</button>
+                                <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'grid' ? 'bg-primary text-bg' : 'text-secondary'}`}><Icon.Grid className="w-16 h-16" /> شبكي</button>
                             </div>
                         )}
                     </div>
@@ -1900,7 +1816,7 @@ const App = () => {
                                 ))}
                                 <button onClick={() => changeCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={chip(activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)}>{SPECIAL_CATEGORIES.UNCATEGORIZED}</button>
                                 {isAdmin && (
-                                    <button onClick={() => changeCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-primary/10 text-primary border-primary/10 hover:border-primary/50'}`}>
+                                    <button onClick={() => changeCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accentSoft hover:border-accent'}`}>
                                         <Icon.ImageOff className="w-14 h-14 flex-shrink-0" /> {SPECIAL_CATEGORIES.MISSING_IMAGES}
                                     </button>
                                 )}
@@ -1909,7 +1825,7 @@ const App = () => {
 
                         return (
                             <React.Fragment>
-                                <p className="text-[12px] text-muted-foreground mb-8">الأقسام (<span className="numeric">{NUMBER_FORMATTER.format(totalCategoryCount)}</span>)</p>
+                                <p className="text-[12px] text-muted mb-8">الأقسام ({NUMBER_FORMATTER.format(totalCategoryCount)})</p>
                                 <div className="mb-20">
                                     {categoryButtons}
                                 </div>
@@ -1920,13 +1836,11 @@ const App = () => {
                                 ) : (
                                     <div>
                                         <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
-                                            <p className="text-[12px] text-muted-foreground">
-                                                {activeCategory} — <span className="numeric">{NUMBER_FORMATTER.format(galleryResults.length)}</span> صنف متوفر
-                                                {galleryResults.length > visibleItems.length && ` (معروض `}
-                                                {galleryResults.length > visibleItems.length && <span className="numeric">{NUMBER_FORMATTER.format(visibleItems.length)}</span>}
-                                                {galleryResults.length > visibleItems.length && `)`}
+                                            <p className="text-[12px] text-muted">
+                                                {activeCategory} — {NUMBER_FORMATTER.format(galleryResults.length)} صنف متوفر
+                                                {galleryResults.length > visibleItems.length && ` (معروض ${NUMBER_FORMATTER.format(visibleItems.length)})`}
                                             </p>
-                                            <p className="text-[11px] text-muted-foreground">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
+                                            <p className="text-[11px] text-muted">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
                                         </div>
 
                                         {galleryResults.length === 0 ? (
@@ -1942,13 +1856,13 @@ const App = () => {
 
                                         {galleryResults.length > visibleItems.length && (
                                             <div className="flex justify-center mt-24">
-                                                <button onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)} className="px-24 h-48 rounded-md border border-input bg-card text-foreground text-[14px] font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors shadow-sm">عرض المزيد</button>
+                                                <button onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)} className="px-24 h-48 rounded-12 border border-border bg-bg text-primary text-[14px] font-semibold hover:bg-surface transition-colors">عرض المزيد</button>
                                             </div>
                                         )}
 
                                         {galleryResults.length > 0 && (
                                             <div className="mt-32 pt-24 border-t border-border">
-                                                <p className="text-[12px] text-muted-foreground mb-8">انتقال سريع لقسم آخر:</p>
+                                                <p className="text-[12px] text-muted mb-8">انتقال سريع لقسم آخر:</p>
                                                 {categoryButtons}
                                             </div>
                                         )}
@@ -1960,7 +1874,7 @@ const App = () => {
                 </section>
 
                 <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
-                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted-foreground hover:text-primary transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
                 </footer>
             </div>
 
