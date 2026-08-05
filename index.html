@@ -1131,7 +1131,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
 
     // ✨ إضافة تبويب جلسات العمل (المراقبة الحية)
     const tabs = [
-        { id: 'site_sessions', label: 'جلسات العمل (مراقبة حية)' },
+        { id: 'site_sessions', label: 'جلسات العمل ' },
         { id: 'orders', label: 'الطلبات المعتمدة' },
         { id: 'drafts', label: 'المسودات المؤقتة' }, 
         { id: 'search_logs', label: 'سجل عمليات البحث' },
@@ -1759,7 +1759,7 @@ const App = () => {
                         </label>
                     </div>
 
-                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
+                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> وضع عرض الصور — الأصناف المنتهية مخفية</p>}
                 </div>
             </div>
 
