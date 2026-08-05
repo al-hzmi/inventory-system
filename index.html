@@ -1280,11 +1280,11 @@ const AdminDashboardModal = memo(({ onClose }) => {
                         <div className="grid grid-cols-2 gap-12 mb-16">
                             <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
                                 <p className="text-[12px] text-muted mb-4">إجمالي الدخل للعمليات المفلترة</p>
-                                <p className="text-[20px] font-bold text-success numeric">{NUMBER_FORMATTER.format(totalRevenue)} ر.س</p>
+                                <p className="text-[20px] font-bold text-success"><span className="numeric">{NUMBER_FORMATTER.format(totalRevenue)}</span> ر.س</p>
                             </div>
                             <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
                                 <p className="text-[12px] text-muted mb-4">عدد الفواتير</p>
-                                <p className="text-[20px] font-bold text-primary numeric">{NUMBER_FORMATTER.format(filteredData.length)} فاتورة</p>
+                                <p className="text-[20px] font-bold text-primary"><span className="numeric">{NUMBER_FORMATTER.format(filteredData.length)}</span> فاتورة</p>
                             </div>
                         </div>
                     )}
@@ -1298,19 +1298,19 @@ const AdminDashboardModal = memo(({ onClose }) => {
                             <table className="w-full text-right text-[12px]">
                                 <thead className="bg-surface text-muted border-b border-border">
                                     {activeTab === 'site_sessions' && (
-                                        <tr><th className="p-12">المندوب</th><th className="p-12">إجمالي الجلسات</th><th className="p-12">إجمالي وقت العمل اليوم</th><th className="p-12">الحالة الآن</th><th className="p-12">الإجراءات</th></tr>
+                                        <tr><th className="p-12 text-right">المندوب</th><th className="p-12 text-right">إجمالي الجلسات</th><th className="p-12 text-right">إجمالي وقت العمل اليوم</th><th className="p-12 text-right">الحالة الآن</th><th className="p-12 text-right">الإجراءات</th></tr>
                                     )}
                                     {activeTab === 'orders' && (
-                                        <tr><th className="p-12">التاريخ</th><th className="p-12">المندوب</th><th className="p-12">العميل</th><th className="p-12">المستودع</th><th className="p-12">الملاحظات</th><th className="p-12">الإجمالي</th><th className="p-12">الإجراءات</th></tr>
+                                        <tr><th className="p-12 text-right">التاريخ</th><th className="p-12 text-right">المندوب</th><th className="p-12 text-right">العميل</th><th className="p-12 text-right">المستودع</th><th className="p-12 text-right">الملاحظات</th><th className="p-12 text-right">الإجمالي</th><th className="p-12 text-right">الإجراءات</th></tr>
                                     )}
                                     {activeTab === 'drafts' && (
-                                        <tr><th className="p-12">التاريخ</th><th className="p-12">المندوب</th><th className="p-12">اسم المسودة/العميل</th><th className="p-12">المستودع</th><th className="p-12">عدد الأصناف</th><th className="p-12">الإجراءات</th></tr>
+                                        <tr><th className="p-12 text-right">التاريخ</th><th className="p-12 text-right">المندوب</th><th className="p-12 text-right">اسم المسودة/العميل</th><th className="p-12 text-right">المستودع</th><th className="p-12 text-right">عدد الأصناف</th><th className="p-12 text-right">الإجراءات</th></tr>
                                     )}
                                     {activeTab === 'search_logs' && (
-                                        <tr><th className="p-12">التاريخ</th><th className="p-12">الوقت</th><th className="p-12">المستخدم</th><th className="p-12">كلمة البحث</th><th className="p-12">النتائج</th></tr>
+                                        <tr><th className="p-12 text-right">التاريخ</th><th className="p-12 text-right">الوقت</th><th className="p-12 text-right">المستخدم</th><th className="p-12 text-right">كلمة البحث</th><th className="p-12 text-right">النتائج</th></tr>
                                     )}
                                     {activeTab === 'users' && (
-                                        <tr><th className="p-12">أول انضمام</th><th className="p-12">الاسم</th><th className="p-12">عدد الدخول</th><th className="p-12">إجمالي وقت العمل</th></tr>
+                                        <tr><th className="p-12 text-right">أول انضمام</th><th className="p-12 text-right">الاسم</th><th className="p-12 text-right">عدد الدخول</th><th className="p-12 text-right">إجمالي وقت العمل</th></tr>
                                     )}
                                 </thead>
                                 <tbody className="divide-y divide-border">
@@ -1319,8 +1319,8 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                             <React.Fragment key={group.name}>
                                                 <tr className="hover:bg-surface transition-colors">
                                                     <td className="p-12 font-bold text-primary text-[14px]">{group.name}</td>
-                                                    <td className="p-12 font-bold text-secondary numeric">{group.sessions.length} جلسات</td>
-                                                    <td className="p-12 font-bold text-accent numeric">{formatTimeSpent(group.totalDuration)}</td>
+                                                    <td className="p-12 font-bold text-secondary"><span className="numeric">{group.sessions.length}</span> جلسات</td>
+                                                    <td className="p-12 font-bold text-accent">{formatTimeSpent(group.totalDuration)}</td>
                                                     <td className="p-12">
                                                         {group.isOnline 
                                                             ? <span className="bg-successSoft text-success px-8 py-4 rounded-full font-bold text-[11px]">🟢 متصل الآن</span> 
@@ -1342,19 +1342,19 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                                                     <table className="w-full text-[12px] text-right">
                                                                         <thead>
                                                                             <tr className="text-muted border-b border-border">
-                                                                                <th className="py-4 px-8">تاريخ الجلسة</th>
-                                                                                <th className="py-4 px-8">وقت الدخول</th>
-                                                                                <th className="py-4 px-8">آخر نشاط مسجل</th>
-                                                                                <th className="py-4 px-8">مدة البقاء</th>
+                                                                                <th className="py-4 px-8 text-right">تاريخ الجلسة</th>
+                                                                                <th className="py-4 px-8 text-right">وقت الدخول</th>
+                                                                                <th className="py-4 px-8 text-right">آخر نشاط مسجل</th>
+                                                                                <th className="py-4 px-8 text-right">مدة البقاء</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>
                                                                             {group.sessions.map((sess, idx) => (
                                                                                 <tr key={idx} className="border-b border-border last:border-0 hover:bg-surface">
-                                                                                    <td className="py-8 px-8 text-secondary numeric">{formatFbDate(sess.startTime)}</td>
-                                                                                    <td className="py-8 px-8 font-bold text-success numeric">{formatFbTime(sess.startTime)}</td>
-                                                                                    <td className="py-8 px-8 text-muted numeric">{formatFbTime(sess.lastActive)}</td>
-                                                                                    <td className="py-8 px-8 font-bold text-accent numeric">{sess.durationMinutes} دقيقة</td>
+                                                                                    <td className="py-8 px-8 text-secondary"><span className="numeric">{formatFbDate(sess.startTime)}</span></td>
+                                                                                    <td className="py-8 px-8 font-bold text-success"><span className="numeric">{formatFbTime(sess.startTime)}</span></td>
+                                                                                    <td className="py-8 px-8 text-muted"><span className="numeric">{formatFbTime(sess.lastActive)}</span></td>
+                                                                                    <td className="py-8 px-8 font-bold text-accent"><span className="numeric">{sess.durationMinutes}</span> دقيقة</td>
                                                                                 </tr>
                                                                             ))}
                                                                         </tbody>
@@ -1367,6 +1367,109 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                             </React.Fragment>
                                         ))
                                     ) : (
+                                        filteredData.map((row, i) => (
+                                            <React.Fragment key={row.id || i}>
+                                                <tr className="hover:bg-surface transition-colors">
+                                                    {activeTab === 'orders' && (
+                                                        <React.Fragment>
+                                                            <td className="p-12 whitespace-nowrap text-secondary"><span className="numeric">{formatFbDate(row.timestamp)}</span></td>
+                                                            <td className="p-12 font-bold text-primary">{row.repName}</td>
+                                                            <td className="p-12 font-medium">{row.customerName}</td>
+                                                            <td className="p-12 text-muted whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
+                                                            <td className="p-12 text-accent max-w-[120px] truncate" title={row.notes}>{row.notes || '---'}</td>
+                                                            <td className="p-12 font-bold text-success whitespace-nowrap"><span className="numeric">{NUMBER_FORMATTER.format(row.totalAmount)}</span> ر.س</td>
+                                                            <td className="p-12">
+                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
+                                                                    <Icon.Eye className="w-14 h-14" />
+                                                                    {expandedOrderId === row.id ? 'إخفاء' : 'عرض المحتوى'}
+                                                                </button>
+                                                            </td>
+                                                        </React.Fragment>
+                                                    )}
+                                                    {activeTab === 'drafts' && (
+                                                        <React.Fragment>
+                                                            <td className="p-12 whitespace-nowrap text-secondary"><span className="numeric">{formatFbDate(row.timestamp)}</span></td>
+                                                            <td className="p-12 font-bold text-primary">{row.repName}</td>
+                                                            <td className="p-12 font-medium bidi-isolate">{row.name}</td>
+                                                            <td className="p-12 text-muted whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
+                                                            <td className="p-12 font-bold text-warn"><span className="numeric">{Object.keys(row.cart || {}).length}</span> أصناف</td>
+                                                            <td className="p-12">
+                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
+                                                                    <Icon.Eye className="w-14 h-14" />
+                                                                    {expandedOrderId === row.id ? 'إخفاء' : 'محتوى السلة'}
+                                                                </button>
+                                                            </td>
+                                                        </React.Fragment>
+                                                    )}
+                                                    {activeTab === 'search_logs' && (
+                                                        <React.Fragment>
+                                                            <td className="p-12 whitespace-nowrap text-secondary"><span className="numeric">{formatFbDate(row.time)}</span></td>
+                                                            <td className="p-12 whitespace-nowrap text-muted"><span className="numeric">{formatFbTime(row.time)}</span></td>
+                                                            <td className="p-12 font-bold">{row.name}</td>
+                                                            <td className="p-12 font-bold text-accent">{row.rawQuery}</td>
+                                                            <td className="p-12">{row.resultsCount > 0 ? <span className="text-success font-bold"><span className="numeric">{row.resultsCount}</span> نتيجة</span> : <span className="text-danger font-bold">0 (لا يوجد)</span>}</td>
+                                                        </React.Fragment>
+                                                    )}
+                                                    {activeTab === 'users' && (
+                                                        <React.Fragment>
+                                                            <td className="p-12 text-muted whitespace-nowrap"><span className="numeric">{formatFbDate(row.firstJoined)}</span></td>
+                                                            <td className="p-12 font-bold text-primary text-[14px]">{row.name}</td>
+                                                            <td className="p-12 font-bold text-accent"><span className="numeric">{row.loginCount}</span> مرات</td>
+                                                            <td className="p-12 font-bold text-success bg-successSoft/30">{formatTimeSpent(row.timeSpentMinutes)}</td>
+                                                        </React.Fragment>
+                                                    )}
+                                                </tr>
+                                                {(activeTab === 'orders' || activeTab === 'drafts') && expandedOrderId === row.id && (
+                                                    <tr className="bg-accentSoft/30 border-b border-border">
+                                                        <td colSpan="7" className="p-16">
+                                                            <div className="bg-bg border border-accent/20 rounded-8 p-12 shadow-sm">
+                                                                <div className="flex justify-between items-center mb-8 border-b border-border pb-8">
+                                                                    <h4 className="font-bold text-[13px] text-primary">تفاصيل الأصناف ({activeTab === 'orders' ? row.items?.length : Object.keys(row.cart||{}).length}):</h4>
+                                                                    {activeTab === 'orders' && <span className="text-[12px] text-muted">إجمالي: <strong className="text-accent"><span className="numeric">{NUMBER_FORMATTER.format(row.totalAmount)}</span> ر.س</strong></span>}
+                                                                </div>
+                                                                <div className="overflow-x-auto">
+                                                                    <table className="w-full text-[12px] text-right">
+                                                                        <thead>
+                                                                            <tr className="text-muted border-b border-border">
+                                                                                <th className="py-4 px-8 w-16 text-right">#</th>
+                                                                                <th className="py-4 px-8 text-right">رقم الصنف</th>
+                                                                                <th className="py-4 px-8 text-right">اسم الصنف</th>
+                                                                                <th className="py-4 px-8 text-right">الكمية</th>
+                                                                                <th className="py-4 px-8 text-right">السعر (ر.س)</th>
+                                                                                <th className="py-4 px-8 text-right">الإجمالي (ر.س)</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {(activeTab === 'orders' ? row.items : Object.values(row.cart || {})).map((it, idx) => (
+                                                                                <tr key={idx} className="border-b border-border last:border-0 hover:bg-surface">
+                                                                                    <td className="py-8 px-8 font-bold text-muted"><span className="numeric">{idx + 1}</span></td>
+                                                                                    <td className="py-8 px-8 font-bold text-primary bidi-isolate">{it.id}</td>
+                                                                                    <td className="py-8 px-8 text-secondary truncate max-w-[200px]" title={it.name}>{it.name || '---'}</td>
+                                                                                    <td className="py-8 px-8 font-bold text-primary"><span className="numeric">{it.qty || it.cartQty}</span></td>
+                                                                                    <td className="py-8 px-8 text-secondary"><span className="numeric">{NUMBER_FORMATTER.format(it.price || 0)}</span></td>
+                                                                                    <td className="py-8 px-8 font-bold text-accent"><span className="numeric">{NUMBER_FORMATTER.format(it.total || (it.price * it.cartQty) || 0)}</span></td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+});
+                                        
                                         filteredData.map((row, i) => (
                                             <React.Fragment key={row.id || i}>
                                                 <tr className="hover:bg-surface transition-colors">
