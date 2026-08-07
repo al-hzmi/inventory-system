@@ -4,23 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>مخزون شركة بيت الأواني الطيبة</title>
-    <meta name="description" content="نظام البحث عن مخزون شركة بيت الأواني الطيبة">
+    <title>مخزون الأواني | Korvi ERP</title>
+    <meta name="description" content="نظام البحث عن مخزون شركة بيت الأواني الطيبة - مشغل بواسطة Korvi">
 
-    <meta property="og:title" content="مخزون شركة بيت الأواني الطيبة">
+    <meta property="og:title" content="مخزون الأواني | Korvi ERP">
     <meta property="og:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
     <meta property="og:url" content="https://inventory-system-coral-nu.vercel.app">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="مخزون شركة بيت الأواني الطيبة">
+    <meta name="twitter:title" content="مخزون الأواني | Korvi ERP">
     <meta name="twitter:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
     <meta name="twitter:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -29,42 +29,131 @@
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
+    <style>
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 222 25% 12%;
+            --card: 0 0% 100%;
+            --card-foreground: 222 25% 12%;
+            --popover: 0 0% 100%;
+            --popover-foreground: 222 25% 12%;
+
+            --primary: 172 62% 26%;
+            --primary-foreground: 160 40% 98%;
+
+            --secondary: 210 20% 96%;
+            --secondary-foreground: 222 25% 20%;
+            --muted: 210 20% 96%;
+            --muted-foreground: 215 16% 45%;
+            --accent: 172 45% 94%;
+            --accent-foreground: 172 62% 20%;
+
+            --destructive: 0 72% 45%;
+            --destructive-foreground: 0 0% 100%;
+            --success: 152 55% 34%;
+            --success-foreground: 0 0% 100%;
+            --warning: 38 92% 45%;
+            --warning-foreground: 30 40% 12%;
+
+            --border: 214 20% 89%;
+            --input: 214 20% 89%;
+            --ring: 172 62% 32%;
+
+            --radius: 0.625rem;
+            --brand: 162.9 93.5% 24.3%;
+        }
+
+        html, body { 
+            overflow-x: hidden; 
+            width: 100%; max-width: 100%; 
+            background-color: hsl(var(--background)); 
+            color: hsl(var(--foreground)); 
+            -webkit-font-smoothing: antialiased; 
+            -moz-osx-font-smoothing: grayscale; 
+            -webkit-text-size-adjust: 100%; 
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        img, svg, video { max-width: 100%; height: auto; }
+        
+        :focus-visible { 
+            outline: none; 
+            box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring)); 
+            border-radius: calc(var(--radius) - 2px); 
+        }
+
+        @keyframes slideUpFade { from { opacity:0; transform: translateY(4px);} to { opacity:1; transform:none; } }
+        .animate-card { animation: slideUpFade 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes flipIn { from { opacity:0; transform: scale(0.97);} to { opacity:1; transform:none; } }
+        .animate-flip { animation: flipIn 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton { background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--border)) 37%, hsl(var(--muted)) 63%); background-size: 200% 100%; animation: shimmer 1.6s ease-in-out infinite; }
+        
+        /* ✨ حركة ليزر المسح الحيوي */
+        @keyframes scanLaser {
+            0%, 100% { top: 0%; opacity: 0; }
+            10%, 90% { opacity: 1; }
+            50% { top: 100%; }
+        }
+        .animate-laser { animation: scanLaser 2.5s ease-in-out infinite; }
+
+        .tap-card { -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action: manipulation; }
+        .lightbox-backdrop { background: rgba(23, 28, 38, 0.9); backdrop-filter: blur(4px); }
+        input[type="text"], input[type="password"], input[type="number"], textarea { font-size: 16px; }
+
+        .numeric {
+            font-family: 'IBM Plex Mono', ui-monospace, monospace;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: 'tnum', 'kern' 1, 'liga' 1, 'calt' 1;
+            direction: ltr;
+            display: inline-block;
+        }
+        .bidi-isolate { unicode-bidi: isolate; direction: ltr; display: inline-block; }
+        
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after, .animate-card, .animate-flip, .animate-laser {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+
     <script>
         tailwind.config = {
+            darkMode: ['class', '[data-theme="dark"]'],
             theme: {
                 extend: {
-                    fontFamily: { sans: ['"IBM Plex Sans Arabic"', '"Noto Sans Arabic"', 'system-ui', 'sans-serif'] },
+                    fontFamily: { 
+                        sans: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
+                        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+                        numeric: ['"IBM Plex Mono"', 'ui-monospace', 'monospace']
+                    },
                     colors: {
-                        primary: '#1C1917', secondary: '#57534E', muted: '#A8A29E', border: '#E7E5E4',
-                        surface: '#FAFAF9', bg: '#FFFFFF', accent: '#B45309', accentSoft: '#FEF3C7',
-                        success: '#15803D', successSoft: '#F0FDF4', warn: '#B45309', warnSoft: '#FFFBEB',
-                        danger: '#B91C1C', dangerSoft: '#FEF2F2',
+                        border: 'hsl(var(--border) / <alpha-value>)',
+                        input: 'hsl(var(--input) / <alpha-value>)',
+                        ring: 'hsl(var(--ring) / <alpha-value>)',
+                        background: 'hsl(var(--background) / <alpha-value>)',
+                        foreground: 'hsl(var(--foreground) / <alpha-value>)',
+                        primary: { DEFAULT: 'hsl(var(--primary) / <alpha-value>)', foreground: 'hsl(var(--primary-foreground) / <alpha-value>)' },
+                        secondary: { DEFAULT: 'hsl(var(--secondary) / <alpha-value>)', foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)' },
+                        muted: { DEFAULT: 'hsl(var(--muted) / <alpha-value>)', foreground: 'hsl(var(--muted-foreground) / <alpha-value>)' },
+                        accent: { DEFAULT: 'hsl(var(--accent) / <alpha-value>)', foreground: 'hsl(var(--accent-foreground) / <alpha-value>)' },
+                        destructive: { DEFAULT: 'hsl(var(--destructive) / <alpha-value>)', foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)' },
+                        success: { DEFAULT: 'hsl(var(--success) / <alpha-value>)', foreground: 'hsl(var(--success-foreground) / <alpha-value>)' },
+                        warning: { DEFAULT: 'hsl(var(--warning) / <alpha-value>)', foreground: 'hsl(var(--warning-foreground) / <alpha-value>)' },
+                        card: { DEFAULT: 'hsl(var(--card) / <alpha-value>)', foreground: 'hsl(var(--card-foreground) / <alpha-value>)' },
+                        brand: { DEFAULT: 'hsl(var(--brand) / <alpha-value>)' }
+                    },
+                    borderRadius: {
+                        lg: 'var(--radius)',
+                        md: 'calc(var(--radius) - 2px)',
+                        sm: 'calc(var(--radius) - 4px)',
                     },
                     spacing: { '2':'2px','4':'4px','6':'6px','8':'8px','10':'10px','12':'12px','14':'14px','16':'16px','18':'18px','20':'20px','22':'22px','24':'24px','26':'26px','28':'28px','32':'32px','36':'36px','40':'40px','44':'44px','48':'48px','56':'56px','64':'64px','72':'72px','120':'120px' },
-                    borderRadius: { '8':'8px','10':'10px','12':'12px','16':'16px','20':'20px' },
-                    boxShadow: { 'card': '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)', 'lift': '0 2px 4px rgba(28,25,23,0.04), 0 8px 24px rgba(28,25,23,0.08)' },
+                    boxShadow: { 'sm': '0 1px 2px rgba(23,28,38,0.04), 0 1px 3px rgba(23,28,38,0.06)', '2xl': '0 2px 4px rgba(23,28,38,0.04), 0 8px 24px rgba(23,28,38,0.08)' }
                 }
             }
         }
     </script>
-
-    <style>
-        html, body { overflow-x: hidden; width: 100%; max-width: 100%; background-color: #FFFFFF; color: #1C1917; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
-        *, *::before, *::after { box-sizing: border-box; }
-        img, svg, video { max-width: 100%; height: auto; }
-        *:focus-visible { outline: 2px solid #B45309; outline-offset: 2px; border-radius: 4px; }
-        @keyframes slideUpFade { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform:none; } }
-        .animate-card { animation: slideUpFade 200ms cubic-bezier(0.16,1,0.3,1) forwards; }
-        @keyframes flipIn { from { opacity:0; transform: scale(0.97);} to { opacity:1; transform:none; } }
-        .animate-flip { animation: flipIn 180ms cubic-bezier(0.16,1,0.3,1) forwards; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .skeleton { background: linear-gradient(90deg,#F5F5F4 25%,#EFEDEB 37%,#F5F5F4 63%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-        .tap-card { -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action: manipulation; }
-        .lightbox-backdrop { background: rgba(28,25,23,0.9); backdrop-filter: blur(4px); }
-        input[type="text"], input[type="password"], input[type="number"], textarea { font-size: 16px; }
-        .numeric { font-variant-numeric: tabular-nums; direction: ltr; display: inline-block; }
-        .bidi-isolate { unicode-bidi: isolate; direction: ltr; display: inline-block; }
-    </style>
 
     <meta name="theme-color" content="#FFFFFF">
     <link rel="icon" href="./icons/icon-192.png" type="image/png">
@@ -109,7 +198,7 @@
         }
     </script>
 </head>
-<body class="min-h-screen bg-bg">
+<body class="min-h-screen bg-background text-foreground font-sans">
     <div id="root"></div>
 
 <script type="text/babel">
@@ -379,9 +468,9 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
 };
 
 const stockTone = (qty) => {
-    if (qty <= 0) return { text:'text-danger',  bg:'bg-dangerSoft'  };
-    if (qty <= LOW_STOCK_THRESHOLD) return { text:'text-warn', bg:'bg-warnSoft' };
-    return { text:'text-success', bg:'bg-successSoft' };
+    if (qty <= 0) return { text:'text-destructive',  bg:'bg-destructive/10 ring-1 ring-inset ring-destructive/30'  };
+    if (qty <= LOW_STOCK_THRESHOLD) return { text:'text-warning', bg:'bg-warning/10 ring-1 ring-inset ring-warning/30' };
+    return { text:'text-success', bg:'bg-success/10 ring-1 ring-inset ring-success/30' };
 };
 
 const formatTimeSpent = (minutes) => {
@@ -410,6 +499,10 @@ const Icon = {
     Eye:     (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>),
     Archive: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>),
     WifiOff: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><line x1="2" y1="2" x2="22" y2="22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>),
+    Activity:(p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>),
+    Camera:  (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>),
+    CheckCircle: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>),
+    MapPin: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>),
 };
 
 const Quantity = ({ qty, unit, size = 'lg' }) => {
@@ -420,7 +513,7 @@ const Quantity = ({ qty, unit, size = 'lg' }) => {
                 <span className={`numeric ${size === 'lg' ? 'text-[26px]' : 'text-[20px]'} font-bold leading-none ${tone.text}`}>
                     {NUMBER_FORMATTER.format(qty)}
                 </span>
-                {unit && <span className="text-[13px] text-muted">{unit}</span>}
+                {unit && <span className="text-[13px] text-muted-foreground">{unit}</span>}
             </div>
             {qty <= LOW_STOCK_THRESHOLD && (
                 <span className={`text-[12px] mt-4 ${tone.text}`}>
@@ -462,31 +555,31 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
     if (cartQty === 0) {
         return (
             <button onClick={(e) => { e.stopPropagation(); updateQty(1); }}
-                    className="flex items-center gap-6 px-12 h-32 rounded-8 bg-surface border border-border text-primary text-[12px] font-semibold hover:border-accent hover:text-accent transition-colors">
+                    className="flex items-center gap-6 px-12 h-32 rounded-md bg-card border border-border text-foreground text-[12px] font-medium hover:border-primary hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Icon.Cart className="w-14 h-14" /> إضافة للفاتورة
             </button>
         );
     }
 
     return (
-        <div className="flex items-center bg-surface border border-accent rounded-8 overflow-hidden h-32" onClick={e => e.stopPropagation()}>
-            <button onClick={() => updateQty(cartQty - 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">-</button>
+        <div className="flex items-center bg-card border border-primary rounded-md overflow-hidden h-32" onClick={e => e.stopPropagation()}>
+            <button onClick={() => updateQty(cartQty - 1)} className="w-32 h-full flex items-center justify-center text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">-</button>
             
             {isEditing ? (
                 <input type="number" step="0.25" min="0" max={maxQty} autoFocus value={editVal}
                        onChange={e => setEditVal(e.target.value)}
                        onBlur={handleSaveEdit}
                        onKeyDown={e => { if(e.key === 'Enter') handleSaveEdit(); }}
-                       className="w-48 h-full text-center text-[13px] font-bold text-accent bg-bg outline-none border-x border-accent appearance-none numeric" />
+                       className="w-48 h-full text-center text-[13px] font-bold text-primary bg-background outline-none border-x border-primary appearance-none numeric" />
             ) : (
                 <div onClick={() => { setEditVal(cartQty.toString()); setIsEditing(true); }}
-                     className="w-48 h-full flex items-center justify-center text-[13px] font-bold text-accent bg-bg border-x border-accent cursor-text numeric"
+                     className="w-48 h-full flex items-center justify-center text-[13px] font-bold text-primary bg-background border-x border-primary cursor-text numeric"
                      title="اضغط لتعديل الكمية يدوياً (الكسور مدعومة)">
                     {cartQty}
                 </div>
             )}
             
-            <button onClick={() => updateQty(cartQty + 1)} className="w-32 h-full flex items-center justify-center text-primary hover:bg-border transition-colors">+</button>
+            <button onClick={() => updateQty(cartQty + 1)} className="w-32 h-full flex items-center justify-center text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">+</button>
         </div>
     );
 });
@@ -511,32 +604,32 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
-                    <h3 className="font-bold text-primary flex items-center gap-8">
-                        <Icon.List className="w-20 h-20 text-accent"/> سجل الفواتير السابقة
+            <div className="w-full max-w-[600px] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
+                    <h3 className="font-bold text-foreground flex items-center gap-8">
+                        <Icon.List className="w-20 h-20 text-primary"/> سجل الفواتير السابقة
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
+                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon.Close className="w-16 h-16 text-muted-foreground"/></button>
                 </div>
-                <div className="p-16 overflow-y-auto flex-1 bg-surface">
+                <div className="p-16 overflow-y-auto flex-1 bg-muted/20">
                     {history.length === 0 ? (
-                        <div className="text-center p-32 text-muted">لا يوجد طلبات سابقة محفوظة في جهازك.</div>
+                        <div className="text-center p-32 text-muted-foreground">لا يوجد طلبات سابقة محفوظة في جهازك.</div>
                     ) : (
                         <div className="flex flex-col gap-12">
                             {history.map(order => (
-                                <div key={order.id} className="bg-bg border border-border rounded-12 p-16 flex flex-col gap-12 shadow-card">
+                                <div key={order.id} className="bg-card border border-border rounded-lg p-16 flex flex-col gap-12 shadow-sm">
                                     <div className="flex justify-between items-start border-b border-border pb-8">
                                         <div>
-                                            <div className="text-[14px] font-bold text-primary">{order.customer}</div>
-                                            <div className="text-[11px] text-muted mt-2"><span className="numeric">{order.date}</span> • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
+                                            <div className="text-[14px] font-bold text-foreground">{order.customer}</div>
+                                            <div className="text-[11px] text-muted-foreground mt-2"><span className="numeric">{order.date}</span> • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
                                         </div>
-                                        <div className="text-[15px] font-bold text-accent"><span className="numeric">{NUMBER_FORMATTER.format(order.totalAmount)}</span> ر.س</div>
+                                        <div className="text-[15px] font-bold text-primary"><span className="numeric">{NUMBER_FORMATTER.format(order.totalAmount)}</span> ر.س</div>
                                     </div>
                                     <div className="flex gap-8 mt-8">
-                                        <button onClick={() => resendWhatsApp(order.msg)} className="flex-1 h-36 bg-successSoft text-success rounded-8 font-semibold text-[13px] hover:bg-success hover:text-white transition-colors flex items-center justify-center gap-6">
+                                        <button onClick={() => resendWhatsApp(order.msg)} className="flex-1 h-36 bg-success/10 text-success rounded-md font-medium text-[13px] hover:bg-success hover:text-success-foreground transition-colors flex items-center justify-center gap-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                             إعادة إرسال واتساب
                                         </button>
-                                        <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
+                                        <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-destructive/10 text-destructive rounded-md hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                             <Icon.Trash className="w-16 h-16"/>
                                         </button>
                                     </div>
@@ -570,32 +663,32 @@ const DraftsModal = memo(({ drafts, setDrafts, setCart, setWarehouse, onClose })
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
-                    <h3 className="font-bold text-primary flex items-center gap-8">
-                        <Icon.Archive className="w-20 h-20 text-accent"/> مسودات الطلبات المؤقتة
+            <div className="w-full max-w-[600px] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
+                    <h3 className="font-bold text-foreground flex items-center gap-8">
+                        <Icon.Archive className="w-20 h-20 text-primary"/> مسودات الطلبات المؤقتة
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
+                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon.Close className="w-16 h-16 text-muted-foreground"/></button>
                 </div>
-                <div className="p-16 overflow-y-auto flex-1 bg-surface">
+                <div className="p-16 overflow-y-auto flex-1 bg-muted/20">
                     {drafts.length === 0 ? (
-                        <div className="text-center p-32 text-muted">لا توجد مسودات محفوظة.</div>
+                        <div className="text-center p-32 text-muted-foreground">لا توجد مسودات محفوظة.</div>
                     ) : (
                         <div className="flex flex-col gap-12">
                             {drafts.map(draft => (
-                                <div key={draft.id} className="bg-bg border border-border rounded-12 p-16 flex flex-col gap-12 shadow-card">
+                                <div key={draft.id} className="bg-card border border-border rounded-lg p-16 flex flex-col gap-12 shadow-sm">
                                     <div className="flex justify-between items-start border-b border-border pb-8">
                                         <div>
-                                            <div className="text-[14px] font-bold text-primary truncate max-w-[200px] bidi-isolate">{draft.name}</div>
-                                            <div className="text-[11px] text-muted mt-2"><span className="numeric">{draft.date}</span> • {WAREHOUSES[draft.warehouse]?.name || draft.warehouse}</div>
+                                            <div className="text-[14px] font-bold text-foreground truncate max-w-[200px] bidi-isolate">{draft.name}</div>
+                                            <div className="text-[11px] text-muted-foreground mt-2"><span className="numeric">{draft.date}</span> • {WAREHOUSES[draft.warehouse]?.name || draft.warehouse}</div>
                                         </div>
-                                        <div className="text-[13px] font-bold text-accent bg-accentSoft px-8 py-4 rounded-full"><span className="numeric">{Object.keys(draft.cart).length}</span> أصناف</div>
+                                        <div className="text-[13px] font-bold text-primary bg-primary/10 px-8 py-4 rounded-full"><span className="numeric">{Object.keys(draft.cart).length}</span> أصناف</div>
                                     </div>
                                     <div className="flex gap-8 mt-8">
-                                        <button onClick={() => resumeDraft(draft)} className="flex-1 h-36 bg-primary text-bg rounded-8 font-semibold text-[13px] hover:bg-accent transition-colors flex items-center justify-center gap-6">
+                                        <button onClick={() => resumeDraft(draft)} className="flex-1 h-36 bg-primary text-primary-foreground rounded-md font-medium text-[13px] hover:bg-primary/90 transition-colors flex items-center justify-center gap-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                             استكمال الطلب
                                         </button>
-                                        <button onClick={() => deleteDraft(draft.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
+                                        <button onClick={() => deleteDraft(draft.id)} className="w-36 h-36 bg-destructive/10 text-destructive rounded-md hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                             <Icon.Trash className="w-16 h-16"/>
                                         </button>
                                     </div>
@@ -700,59 +793,59 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[600px] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col max-h-[90vh]">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
-                    <h3 className="font-bold text-primary flex items-center gap-8">
-                        <Icon.Cart className="w-20 h-20 text-accent"/> فاتورة مبيعات
+            <div className="w-full max-w-[600px] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
+                    <h3 className="font-bold text-foreground flex items-center gap-8">
+                        <Icon.Cart className="w-20 h-20 text-primary"/> فاتورة مبيعات
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
+                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Icon.Close className="w-16 h-16 text-muted-foreground"/></button>
                 </div>
                 
-                <div className="p-16 overflow-y-auto flex-1 bg-surface">
+                <div className="p-16 overflow-y-auto flex-1 bg-muted/20">
                     <div className="mb-16">
-                        <label className="text-[12px] font-semibold text-primary mb-6 block">اسم العميل / الشركة <span className="text-danger">*</span></label>
+                        <label className="text-[12px] font-medium text-foreground mb-6 block">اسم العميل / الشركة <span className="text-destructive">*</span></label>
                         <input type="text" value={customer} onChange={e => setCustomer(e.target.value)} placeholder="اسم العميل..."
-                               className="w-full h-44 px-16 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[14px]" />
+                               className="w-full h-44 px-16 rounded-md border border-input bg-background outline-none focus-visible:ring-2 focus-visible:ring-ring text-[14px] transition-shadow" />
                     </div>
 
                     <div className="mb-16">
-                        <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
+                        <label className="text-[12px] font-medium text-foreground mb-6 block">ملاحظات الطلب (اختياري)</label>
                         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم، شحن، أو ملاحظة أخرى..."
-                               className="w-full h-64 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
+                               className="w-full h-64 p-12 rounded-md border border-input bg-background outline-none focus-visible:ring-2 focus-visible:ring-ring text-[13px] resize-none transition-shadow" />
                     </div>
 
-                    <div className="bg-bg border border-border rounded-8 overflow-hidden">
-                        <div className="grid grid-cols-12 gap-4 p-10 bg-surface border-b border-border text-[11px] font-semibold text-muted text-center">
+                    <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+                        <div className="grid grid-cols-12 gap-4 p-10 bg-muted/50 border-b border-border text-[11px] font-medium text-muted-foreground text-center tracking-wide uppercase">
                             <div className="col-span-5 text-right">الصنف</div>
                             <div className="col-span-3">الكمية</div>
                             <div className="col-span-3">الإجمالي</div>
                             <div className="col-span-1"></div>
                         </div>
                         {items.length === 0 ? (
-                            <p className="p-24 text-center text-[13px] text-muted">الفاتورة فارغة</p>
+                            <p className="p-24 text-center text-[13px] text-muted-foreground">الفاتورة فارغة</p>
                         ) : items.map(it => (
-                            <div key={it.cleanId} className="grid grid-cols-12 gap-4 p-10 items-center border-b border-border last:border-0 text-[12px] text-center hover:bg-surface transition-colors">
-                                <div className="col-span-5 text-right font-medium text-primary truncate bidi-isolate" title={it.name || it.id}>{it.id}</div>
+                            <div key={it.cleanId} className="grid grid-cols-12 gap-4 p-10 items-center border-b border-border last:border-0 text-[12px] text-center hover:bg-muted/30 transition-colors">
+                                <div className="col-span-5 text-right font-medium text-foreground truncate bidi-isolate" title={it.name || it.id}>{it.id}</div>
                                 <div className="col-span-3"><OrderQuantityControl item={it} cart={cart} setCart={setCart} /></div>
-                                <div className="col-span-3 font-semibold text-accent"><span className="numeric">{NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}</span></div>
-                                <button onClick={() => deleteCartItem(it.cleanId)} className="col-span-1 text-danger flex justify-center"><Icon.Trash className="w-16 h-16"/></button>
+                                <div className="col-span-3 font-semibold text-primary"><span className="numeric">{NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}</span></div>
+                                <button onClick={() => deleteCartItem(it.cleanId)} className="col-span-1 text-destructive flex justify-center hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"><Icon.Trash className="w-16 h-16"/></button>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="p-16 border-t border-border bg-bg flex flex-col gap-12">
+                <div className="p-16 border-t border-border bg-background flex flex-col gap-12">
                     <div className="flex justify-between items-center px-8">
-                        <span className="text-[14px] font-semibold text-primary">الإجمالي التقديري:</span>
-                        <span className="text-[18px] font-bold text-accent"><span className="numeric">{NUMBER_FORMATTER.format(totalAmount)}</span> ر.س</span>
+                        <span className="text-[14px] font-medium text-foreground">الإجمالي التقديري:</span>
+                        <span className="text-[18px] font-bold text-primary"><span className="numeric">{NUMBER_FORMATTER.format(totalAmount)}</span> ر.س</span>
                     </div>
                     <div className="flex gap-8">
                         <button onClick={saveAsDraft} disabled={items.length === 0}
-                                className="flex-1 h-48 bg-surface text-primary border border-border rounded-12 font-bold text-[13px] hover:bg-border disabled:opacity-50 transition-colors flex items-center justify-center gap-6">
+                                className="flex-1 h-44 bg-card text-foreground border border-input rounded-md font-medium text-[13px] hover:bg-muted disabled:opacity-50 transition-colors flex items-center justify-center gap-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                             <Icon.Archive className="w-16 h-16"/> مسودة
                         </button>
                         <button onClick={handleSubmit} disabled={items.length === 0}
-                                className="w-[70%] h-48 bg-primary text-bg rounded-12 font-bold text-[14px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
+                                className="w-[70%] h-44 bg-primary text-primary-foreground rounded-md font-medium text-[14px] hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center gap-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                             اعتماد (واتساب)
                         </button>
                     </div>
@@ -783,12 +876,12 @@ const Lightbox = ({ fileName, title, onClose }) => {
         <div className="lightbox-backdrop fixed inset-0 z-50 flex items-center justify-center p-16 animate-flip"
              role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
             <button onClick={onClose} aria-label="إغلاق"
-                    className="absolute top-16 left-16 w-44 h-44 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    className="absolute top-16 left-16 w-44 h-44 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                 <Icon.Close className="w-20 h-20" />
             </button>
             <div className="max-w-[860px] w-full flex flex-col items-center gap-16" onClick={(e) => e.stopPropagation()}>
-                <img src={`${IMAGES_PATH}${fileName}`} alt={title} className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
-                <p className="text-white text-[15px] text-center px-16">{title}</p>
+                <img src={`${IMAGES_PATH}${fileName}`} alt={title} className="max-h-[72vh] w-auto object-contain rounded-lg bg-card shadow-2xl" />
+                <p className="text-white text-[15px] font-medium text-center px-16">{title}</p>
             </div>
         </div>
     );
@@ -798,47 +891,47 @@ const Lightbox = ({ fileName, title, onClose }) => {
 // بطاقات العرض
 // ============================================================
 const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty, cart, setCart }) => (
-    <div className="animate-card w-full border border-border rounded-16 shadow-card p-16 sm:p-20 bg-bg flex flex-col gap-16">
+    <div className="animate-card w-full border border-border rounded-lg shadow-sm p-16 sm:p-20 bg-card flex flex-col gap-16">
         {showImage && imageFileName && (
             <div className="w-full flex justify-center border-b border-border pb-16">
                 <ProductImage fileName={imageFileName} alt={item.name || item.id}
-                              className="w-full max-w-[220px] aspect-square object-contain rounded-12 shrink-0" />
+                              className="w-full max-w-[220px] aspect-square object-cover rounded-lg shrink-0" />
             </div>
         )}
         <div className="flex justify-between items-start gap-16">
             <div className="min-w-0 flex-1">
-                <div className="text-[12px] text-muted mb-2">رقم الصنف</div>
-                <div className="text-[18px] font-bold text-primary break-words bidi-isolate">{item.id}</div>
+                <div className="text-[12px] text-muted-foreground mb-2">رقم الصنف</div>
+                <div className="text-[18px] font-bold text-foreground break-words bidi-isolate">{item.id}</div>
             </div>
             {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} /></div>}
         </div>
         <div>
-            <div className="text-[12px] text-muted mb-2">اسم الصنف</div>
-            <div className="text-[15px] text-primary break-words">{item.name || "---"}</div>
+            <div className="text-[12px] text-muted-foreground mb-2">اسم الصنف</div>
+            <div className="text-[15px] font-medium text-foreground break-words">{item.name || "---"}</div>
         </div>
         <div className="grid grid-cols-3 gap-8 border-t border-border pt-16">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">الوحدة</div>
-                <div className="text-[14px] font-semibold text-primary break-words">{item.unit || "---"}</div>
+                <div className="text-[12px] text-muted-foreground mb-2">الوحدة</div>
+                <div className="text-[14px] font-medium text-foreground break-words">{item.unit || "---"}</div>
             </div>
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">الشد</div>
-                <div className="text-[14px] font-semibold text-primary break-words numeric">{item.pack || "---"}</div>
+                <div className="text-[12px] text-muted-foreground mb-2">الشد</div>
+                <div className="text-[14px] font-medium text-foreground break-words"><span className="numeric">{item.pack || "---"}</span></div>
             </div>
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">المستودع</div>
-                <div className="text-[14px] font-semibold text-primary break-words">{warehouseName}</div>
+                <div className="text-[12px] text-muted-foreground mb-2">المستودع</div>
+                <div className="text-[14px] font-medium text-foreground break-words">{warehouseName}</div>
             </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-surface p-12 rounded-10 mt-8">
+        <div className="grid grid-cols-2 gap-8 border-t border-border pt-16 bg-muted/50 p-12 rounded-md mt-8">
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">سعر (الكرتون)</div>
-                <div className="text-[15px] font-bold text-accent break-words"><span className="numeric">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) : '---'}</span> {item.price > 0 && 'ر.س'}</div>
+                <div className="text-[12px] text-muted-foreground mb-2">سعر (الكرتون)</div>
+                <div className="text-[15px] font-bold text-primary break-words">{item.price > 0 ? <><span className="numeric">{NUMBER_FORMATTER.format(item.price)}</span> ر.س</> : '---'}</div>
             </div>
             <div className="min-w-0">
-                <div className="text-[12px] text-muted mb-2">السعر التقريبي للحبة</div>
-                <div className="text-[15px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' : ''}<span className="numeric">{item.approxPrice > 0 ? NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) : '---'}</span> {item.approxPrice > 0 && 'ر.س'}</div>
+                <div className="text-[12px] text-muted-foreground mb-2">السعر التقريبي للحبة</div>
+                <div className="text-[15px] font-bold text-success break-words">{item.approxPrice > 0 ? <>~ <span className="numeric">{NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2)))}</span> ر.س</> : '---'}</div>
             </div>
         </div>
 
@@ -849,16 +942,16 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
 ));
 
 const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart, setCart }) => (
-    <div className="animate-card w-full border border-border rounded-12 p-12 bg-bg flex flex-col gap-12 hover:border-muted transition-colors duration-200">
+    <div className="animate-card w-full border border-border rounded-lg p-12 bg-card shadow-sm flex flex-col gap-12 hover:border-primary/50 transition-colors duration-200">
         <div className="flex justify-between items-center gap-12">
             <div className="flex items-center gap-12 min-w-0 flex-1">
                 {showImage && imageFileName && (
                     <ProductImage fileName={imageFileName} alt={item.name || item.id}
-                                  className="w-48 h-48 flex-shrink-0 object-contain rounded-10 border border-border bg-surface" />
+                                  className="w-48 h-48 flex-shrink-0 object-cover rounded-md border border-border bg-muted" />
                 )}
                 <div className="flex flex-col min-w-0">
-                    <span className="text-[15px] font-semibold text-primary truncate bidi-isolate">{item.id}</span>
-                    <span className="text-[13px] text-secondary truncate">{item.name || '---'}</span>
+                    <span className="text-[15px] font-medium text-foreground truncate bidi-isolate">{item.id}</span>
+                    <span className="text-[13px] text-muted-foreground truncate">{item.name || '---'}</span>
                 </div>
             </div>
             {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} size="sm" /></div>}
@@ -881,66 +974,66 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
              title="نقرتان: الكمية · ثلاث نقرات: بطاقة المنتج"
              onClick={() => onTap(item.uid)}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCycle(item.uid); } }}
-             className={`tap-card group relative cursor-pointer border rounded-16 bg-bg overflow-hidden flex flex-col transition-colors duration-200 ${isDetails ? 'border-accent' : 'border-border'}`}>
+             className={`tap-card group relative cursor-pointer border rounded-lg bg-card shadow-sm overflow-hidden flex flex-col transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isDetails ? 'border-primary' : 'border-border hover:border-primary/50'}`}>
 
             {isDetails ? (
                 <div className="animate-flip w-full p-16 flex flex-col gap-10">
                     <div className="flex justify-between items-center border-b border-border pb-8">
-                        <span className="text-[12px] font-semibold text-accent">بطاقة المنتج</span>
-                        <span className="text-[11px] text-muted">نقرتان للعودة</span>
+                        <span className="text-[12px] font-medium text-primary">بطاقة المنتج</span>
+                        <span className="text-[11px] text-muted-foreground">نقرتان للعودة</span>
                     </div>
                     <div>
-                        <div className="text-[11px] text-muted">رقم الصنف</div>
-                        <div className="text-[15px] font-bold text-primary break-words bidi-isolate">{item.id}</div>
+                        <div className="text-[11px] text-muted-foreground">رقم الصنف</div>
+                        <div className="text-[15px] font-bold text-foreground break-words bidi-isolate">{item.id}</div>
                     </div>
                     <div>
-                        <div className="text-[11px] text-muted">اسم الصنف</div>
-                        <div className="text-[13px] text-primary break-words">{item.name || '---'}</div>
+                        <div className="text-[11px] text-muted-foreground">اسم الصنف</div>
+                        <div className="text-[13px] font-medium text-foreground break-words">{item.name || '---'}</div>
                     </div>
                     <div className="grid grid-cols-2 gap-8 border-t border-border pt-8">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted">الوحدة</div>
-                            <div className="text-[13px] font-semibold text-primary break-words">{item.unit || '---'}</div>
+                            <div className="text-[11px] text-muted-foreground">الوحدة</div>
+                            <div className="text-[13px] font-medium text-foreground break-words">{item.unit || '---'}</div>
                         </div>
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted">الشد</div>
-                            <div className="text-[13px] font-semibold text-primary break-words numeric">{item.pack || '---'}</div>
+                            <div className="text-[11px] text-muted-foreground">الشد</div>
+                            <div className="text-[13px] font-medium text-foreground break-words"><span className="numeric">{item.pack || '---'}</span></div>
                         </div>
                     </div>
                     <div className="border-t border-border pt-8">
-                        <div className="text-[11px] text-muted mb-4">{warehouseName}</div>
+                        <div className="text-[11px] text-muted-foreground mb-4">{warehouseName}</div>
                         <Quantity qty={item.qty} unit={item.unit} size="sm" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
+                    <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-muted/50 p-8 rounded-md mt-4">
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted mb-2">سعر (الكرتون)</div>
-                            <div className="text-[13px] font-bold text-accent break-words"><span className="numeric">{item.price > 0 ? NUMBER_FORMATTER.format(item.price) : '---'}</span> {item.price > 0 && 'ر.س'}</div>
+                            <div className="text-[11px] text-muted-foreground mb-2">سعر (الكرتون)</div>
+                            <div className="text-[13px] font-bold text-primary break-words">{item.price > 0 ? <><span className="numeric">{NUMBER_FORMATTER.format(item.price)}</span> ر.س</> : '---'}</div>
                         </div>
                         <div className="min-w-0">
-                            <div className="text-[11px] text-muted mb-2">تقريبي للحبة</div>
-                            <div className="text-[13px] font-bold text-success break-words">{item.approxPrice > 0 ? '~ ' : ''}<span className="numeric">{item.approxPrice > 0 ? NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2))) : '---'}</span> {item.approxPrice > 0 && 'ر.س'}</div>
+                            <div className="text-[11px] text-muted-foreground mb-2">تقريبي للحبة</div>
+                            <div className="text-[13px] font-bold text-success break-words">{item.approxPrice > 0 ? <>~ <span className="numeric">{NUMBER_FORMATTER.format(Number(item.approxPrice.toFixed(2)))}</span> ر.س</> : '---'}</div>
                         </div>
                     </div>
                 </div>
             ) : (
                 <React.Fragment>
                     {showImage && (
-                        <div className="relative w-full bg-surface">
+                        <div className="relative w-full bg-muted/30">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
-                                          className={`object-contain pointer-events-none w-full mx-auto shrink-0 ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
+                                          className={`object-cover pointer-events-none w-full mx-auto shrink-0 ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
-                                    className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                    className="absolute top-8 right-8 w-36 h-36 rounded-md bg-background/90 border border-border text-muted-foreground flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                 <Icon.Expand className="w-16 h-16" />
                             </button>
                         </div>
                     )}
                     <div className={`p-12 flex flex-col items-center text-center gap-2 ${!showImage ? 'py-24' : ''}`}>
-                        <div className="text-[15px] font-bold text-primary break-words bidi-isolate">{item.id}</div>
-                        <div className="text-[13px] text-secondary break-words">{item.name || '---'}</div>
+                        <div className="text-[15px] font-bold text-foreground break-words bidi-isolate">{item.id}</div>
+                        <div className="text-[13px] text-muted-foreground break-words">{item.name || '---'}</div>
                         {isQuantity && (
-                            <div className={`animate-flip text-[13px] font-semibold mt-8 px-12 py-4 rounded-full numeric ${stockTone(item.qty).bg} ${stockTone(item.qty).text}`}>
-                                {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
+                            <div className={`animate-flip text-[13px] font-medium mt-8 px-12 py-4 rounded-md ${stockTone(item.qty).bg} ${stockTone(item.qty).text}`}>
+                                <span className="numeric">{NUMBER_FORMATTER.format(item.qty)}</span>{item.unit ? ` ${item.unit}` : ''}
                             </div>
                         )}
                         
@@ -957,11 +1050,11 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
 const SkeletonGrid = () => (
     <div className="flex flex-col gap-16">
         {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="border border-border rounded-16 overflow-hidden">
-                <div className="skeleton w-full aspect-square max-w-[360px] mx-auto"></div>
+            <div key={i} className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
+                <div className="skeleton w-full aspect-square max-w-[360px] mx-auto bg-muted/50"></div>
                 <div className="p-12 flex flex-col items-center gap-8">
-                    <div className="skeleton h-14 w-[40%] rounded-full"></div>
-                    <div className="skeleton h-12 w-[70%] rounded-full"></div>
+                    <div className="skeleton h-14 w-[40%] rounded-full bg-muted/50"></div>
+                    <div className="skeleton h-12 w-[70%] rounded-full bg-muted/50"></div>
                 </div>
             </div>
         ))}
@@ -969,42 +1062,63 @@ const SkeletonGrid = () => (
 );
 
 const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
-    <div className="animate-card w-full border border-border rounded-16 p-24 bg-surface flex flex-col items-center text-center gap-12">
-        <div className={`w-44 h-44 rounded-full flex items-center justify-center flex-shrink-0 ${tone === 'danger' ? 'bg-dangerSoft text-danger' : 'bg-bg text-muted border border-border'}`}>
+    <div className="animate-card w-full border border-border rounded-lg p-24 bg-card shadow-sm flex flex-col items-center text-center gap-12">
+        <div className={`w-44 h-44 rounded-full flex items-center justify-center flex-shrink-0 ${tone === 'danger' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground border border-border'}`}>
             {icon}
         </div>
         <div>
-            <h3 className="text-[15px] font-semibold text-primary mb-4">{title}</h3>
-            {note && <p className="text-[13px] text-secondary">{note}</p>}
+            <h3 className="text-[15px] font-medium text-foreground mb-4">{title}</h3>
+            {note && <p className="text-[13px] text-muted-foreground">{note}</p>}
         </div>
     </div>
 );
 
+// ✨ نافذة الدخول بالتحقق الحيوي (Face ID) وتحديد الموقع (GPS)
 const LoginScreen = ({ onLogin }) => {
-    const [name, setName]       = useState('');
-    const [code, setCode]       = useState('');
-    const [needCode, setNeed]   = useState(false);
-    const [error, setError]     = useState('');
-    const [notice, setNotice]   = useState('');
+    const [name, setName] = useState('');
+    const [step, setStep] = useState('name'); // 'name', 'scan', 'wait', 'rejected', 'password' (for admin)
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    // Admin Backdoor
+    const [code, setCode] = useState('');
     const codeRef = useRef(null);
+    
+    // Scanner
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const [stream, setStream] = useState(null);
+    const [requestId, setRequestId] = useState(null);
 
-    useEffect(() => { if (needCode && codeRef.current) codeRef.current.focus(); }, [needCode]);
+    // Focus password field if admin
+    useEffect(() => { if (step === 'password' && codeRef.current) codeRef.current.focus(); }, [step]);
 
-    const handleSubmit = async (e) => {
+    // Handle Name Submit
+    const handleNameSubmit = async (e) => {
         e.preventDefault();
         const trimmed = name.trim();
         if (!trimmed) return;
 
-        let isAdmin = false;
+        setError('');
+        
+        // 🚨 الباب السري لمهند (يطلب الباسورد القديم ولا يمر بالكاميرا)
         if (isProtectedName(trimmed)) {
-            if (!code.trim()) { setNeed(true); setError('هذا الاسم محمي. أدخل رمز الدخول للمتابعة.'); return; }
-            if (!verifyCode(trimmed, code)) { setNeed(true); setError('رمز الدخول غير صحيح.'); return; }
-            isAdmin = true;
+            setStep('password');
+            return;
         }
 
-        setError(''); setLoading(true);
+        // المستخدمين العاديين: الانتقال لشاشة الكاميرا
+        setStep('scan');
+        startCamera();
+    };
 
+    // Handle Admin Password Submit
+    const handleAdminSubmit = async (e) => {
+        e.preventDefault();
+        const trimmed = name.trim();
+        if (!verifyCode(trimmed, code)) { setError('رمز الدخول غير صحيح.'); return; }
+        
+        setLoading(true);
         try {
             const db = await getDb();
             const userRef = db.collection('users').doc(toSafeDocId(trimmed));
@@ -1013,58 +1127,252 @@ const LoginScreen = ({ onLogin }) => {
             if (doc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
             else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
             
-            await db.collection('login_logs').add({ name: trimmed, isAdmin, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
-        } catch (err) {
-            console.error("Error logging in:", err);
-            setNotice('تعذر الاتصال بسجل الدخول، وتم الدخول بشكل طبيعي.');
-        }
+            await db.collection('login_logs').add({ name: trimmed, isAdmin: true, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
+        } catch (err) {}
 
         localStorage.setItem(STORAGE_KEYS.NAME, trimmed);
-        if (isAdmin) localStorage.setItem(STORAGE_KEYS.TOKEN, hashCode(toEnglishDigits(String(code)).trim()));
-        else localStorage.removeItem(STORAGE_KEYS.TOKEN);
-
+        localStorage.setItem(STORAGE_KEYS.TOKEN, hashCode(toEnglishDigits(String(code)).trim()));
         setLoading(false);
-        onLogin(trimmed, isAdmin);
+        onLogin(trimmed, true);
     };
 
+    // Start Camera for normal users
+    const startCamera = async () => {
+        try {
+            const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            setStream(mediaStream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = mediaStream;
+            }
+        } catch (err) {
+            setError('تعذر الوصول للكاميرا. يرجى إعطاء الصلاحية للمتصفح للمتابعة.');
+            setStep('name');
+        }
+    };
+
+    // Stop Camera
+    const stopCamera = useCallback(() => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+    }, [stream]);
+
+    // Capture Face & GPS
+    const captureAndRequest = async () => {
+        if (!videoRef.current) return;
+        setLoading(true);
+        setError('');
+
+        try {
+            // 1. Capture Image
+            const canvas = canvasRef.current;
+            const context = canvas.getContext('2d');
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+            const photoDataUrl = canvas.toDataURL('image/jpeg', 0.5); // compress
+            
+            stopCamera();
+
+            // 2. Get GPS
+            let lat = null, lng = null;
+            try {
+                const pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+                });
+                lat = pos.coords.latitude;
+                lng = pos.coords.longitude;
+            } catch (gpsErr) {
+                console.warn("GPS Denied or Timeout");
+            }
+
+            // 3. Send to Firebase Access Requests
+            const db = await getDb();
+            const docRef = await db.collection('access_requests').add({
+                name: name.trim(),
+                photoDataUrl,
+                latitude: lat,
+                longitude: lng,
+                status: 'pending',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                userAgent: navigator.userAgent
+            });
+
+            setRequestId(docRef.id);
+            setStep('wait');
+            setLoading(false);
+
+        } catch (err) {
+            console.error(err);
+            setError('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
+            setLoading(false);
+            setStep('name');
+        }
+    };
+
+    // Listen to Request Status
+    useEffect(() => {
+        if (step === 'wait' && requestId) {
+            let unsubscribe;
+            getDb().then(db => {
+                unsubscribe = db.collection('access_requests').doc(requestId).onSnapshot(async (doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.status === 'approved') {
+                            // Proceed to login
+                            const trimmed = name.trim();
+                            const userRef = db.collection('users').doc(toSafeDocId(trimmed));
+                            const userDoc = await userRef.get();
+                            const info = { userAgent: navigator.userAgent, lastLogin: firebase.firestore.FieldValue.serverTimestamp() };
+                            if (userDoc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
+                            else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
+                            
+                            await db.collection('login_logs').add({ name: trimmed, isAdmin: false, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
+                            
+                            localStorage.setItem(STORAGE_KEYS.NAME, trimmed);
+                            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+                            onLogin(trimmed, false);
+                        } else if (data.status === 'rejected') {
+                            setStep('rejected');
+                        }
+                    }
+                });
+            });
+            return () => { if (unsubscribe) unsubscribe(); };
+        }
+    }, [step, requestId, name, onLogin]);
+
+    // Cleanup camera on unmount
+    useEffect(() => {
+        return () => stopCamera();
+    }, [stopCamera]);
+
+
     return (
-        <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans">
-            <div className="animate-card w-full max-w-[380px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32">
-                <div className="text-center mb-32">
-                    <h1 className="text-[22px] font-bold text-primary mb-4">نظام المخزون</h1>
-                    <p className="text-[13px] text-secondary">شركة بيت الأواني الطيبة</p>
-                </div>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-16">
-                    <div>
-                        <label htmlFor="employeeName" className="text-[13px] font-medium text-primary mb-8 block">الإسم الكريم</label>
-                        <input id="employeeName" type="text" required autoComplete="name" value={name}
-                               onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="اكتب اسمك هنا..."
-                               className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none transition-colors" />
+        <div className="min-h-screen bg-muted/30 flex items-center justify-center p-16 font-sans">
+            <div className="animate-card w-full max-w-[380px] bg-card border border-border rounded-lg shadow-2xl p-24 sm:p-32 flex flex-col items-center">
+                
+                {/* Header */}
+                <div className="text-center mb-24 w-full">
+                    <div className="flex items-center justify-center gap-8 mb-4">
+                        <h1 className="text-[24px] font-extrabold tracking-wider text-brand bidi-isolate">Korvi</h1>
+                        <span className="text-[22px] font-bold text-foreground">Security</span>
                     </div>
-                    {needCode && (
-                        <div className="animate-card">
-                            <label htmlFor="accessCode" className="text-[13px] font-medium text-primary mb-8 flex items-center gap-6"><Icon.Lock className="w-14 h-14 text-accent flex-shrink-0" /> رمز الدخول</label>
+                    <p className="text-[13px] text-muted-foreground">حماية شركة بيت الأواني الطيبة</p>
+                </div>
+
+                {/* Step 1: Name Input */}
+                {step === 'name' && (
+                    <form onSubmit={handleNameSubmit} className="flex flex-col gap-16 w-full">
+                        <div>
+                            <label htmlFor="employeeName" className="text-[13px] font-medium text-foreground mb-8 block text-center">أدخل الإسم الكريم للمطابقة</label>
+                            <input id="employeeName" type="text" required autoComplete="name" value={name}
+                                   onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="اكتب اسمك هنا..."
+                                   className="w-full h-44 px-16 rounded-md border border-input bg-background focus-visible:ring-2 focus-visible:ring-ring text-foreground outline-none transition-shadow text-center font-bold" />
+                        </div>
+                        {error  && <p className="text-[13px] text-destructive flex items-center justify-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
+                        <button type="submit" className="w-full h-44 bg-primary text-primary-foreground rounded-md font-medium text-[14px] hover:bg-primary/90 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mt-4 flex items-center justify-center gap-8">
+                            المتابعة <Icon.Shield className="w-16 h-16" />
+                        </button>
+                    </form>
+                )}
+
+                {/* Step 1B: Admin Password (Hidden Door) */}
+                {step === 'password' && (
+                    <form onSubmit={handleAdminSubmit} className="flex flex-col gap-16 w-full animate-flip">
+                        <div>
+                            <label htmlFor="accessCode" className="text-[13px] font-medium text-primary mb-8 flex items-center justify-center gap-6">
+                                <Icon.Lock className="w-14 h-14 flex-shrink-0" /> بوابة الإدارة
+                            </label>
                             <input ref={codeRef} id="accessCode" type="password" inputMode="numeric" autoComplete="off" value={code}
                                    onChange={(e) => { setCode(e.target.value); setError(''); }} placeholder="••••"
-                                   className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none transition-colors tracking-widest" />
+                                   className="w-full h-44 px-16 rounded-md border border-primary/50 bg-primary/5 focus-visible:ring-2 focus-visible:ring-primary text-primary outline-none transition-shadow tracking-widest text-center font-bold" />
                         </div>
-                    )}
-                    {error  && <p className="text-[13px] text-danger flex items-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
-                    {notice && <p className="text-[12px] text-secondary">{notice}</p>}
-                    <button type="submit" disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] hover:opacity-90 disabled:opacity-60 transition-opacity">
-                        {loading ? "جاري الدخول..." : "دخول للنظام"}
-                    </button>
-                </form>
+                        {error  && <p className="text-[13px] text-destructive flex items-center justify-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
+                        <button type="submit" disabled={loading} className="w-full h-44 bg-primary text-primary-foreground rounded-md font-medium text-[14px] hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            {loading ? "جاري الدخول..." : "فتح النظام"}
+                        </button>
+                        <button type="button" onClick={() => setStep('name')} className="text-[12px] text-muted-foreground hover:text-foreground mt-4">العودة</button>
+                    </form>
+                )}
+
+                {/* Step 2: Scanner UI */}
+                {step === 'scan' && (
+                    <div className="flex flex-col items-center gap-16 w-full animate-flip">
+                        <div className="text-center">
+                            <p className="text-[14px] font-bold text-foreground">التحقق الحيوي والمكاني</p>
+                            <p className="text-[11px] text-muted-foreground mt-2">يرجى وضع وجهك داخل الإطار للمطابقة</p>
+                        </div>
+                        
+                        <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-full overflow-hidden border-[6px] border-muted shadow-inner bg-black">
+                            <video ref={videoRef} autoPlay playsInline muted className="object-cover w-full h-full transform scale-x-[-1] opacity-90" />
+                            
+                            {/* Face Guides */}
+                            <div className="absolute inset-0 border-[4px] border-dashed border-primary/40 rounded-full animate-pulse" style={{ margin: '10%' }}></div>
+                            
+                            {/* Scanning Laser */}
+                            <div className="absolute left-0 w-full h-[2px] bg-success shadow-[0_0_15px_3px_hsl(var(--success))] animate-laser"></div>
+                        </div>
+                        
+                        {/* Hidden Canvas for capture */}
+                        <canvas ref={canvasRef} className="hidden" />
+
+                        <button onClick={captureAndRequest} disabled={loading} className="w-full h-44 bg-primary text-primary-foreground rounded-md font-medium text-[14px] hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex items-center justify-center gap-8 mt-4">
+                            {loading ? "جاري التقاط البيانات..." : <><Icon.Camera className="w-18 h-18" /> مسح الوجه وإرسال الطلب</>}
+                        </button>
+                        <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                            <Icon.MapPin className="w-12 h-12" /> سيتم إرفاق موقعك الجغرافي للضرورة الأمنية
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 3: Waiting Room */}
+                {step === 'wait' && (
+                    <div className="flex flex-col items-center gap-16 w-full animate-flip text-center py-16">
+                        <div className="w-64 h-64 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
+                        <div>
+                            <h3 className="text-[16px] font-bold text-foreground mb-4">في غرفة الانتظار الأمنية</h3>
+                            <p className="text-[13px] text-muted-foreground leading-relaxed">
+                                تم إرسال هويتك الحيوية وموقعك الجغرافي.<br/>
+                                يرجى البقاء في هذه الصفحة حتى يقوم مشرف النظام بالموافقة على دخولك.
+                            </p>
+                        </div>
+                        <div className="bg-primary/10 text-primary px-16 py-8 rounded-md text-[11px] font-bold mt-8 flex items-center gap-6">
+                            <Icon.Shield className="w-14 h-14" /> الطلب قيد المراجعة اللحظية...
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 4: Rejected */}
+                {step === 'rejected' && (
+                    <div className="flex flex-col items-center gap-16 w-full animate-flip text-center py-16">
+                        <div className="w-64 h-64 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-8">
+                            <Icon.Close className="w-32 h-32" />
+                        </div>
+                        <div>
+                            <h3 className="text-[18px] font-bold text-destructive mb-4">تم رفض الدخول</h3>
+                            <p className="text-[13px] text-muted-foreground leading-relaxed">
+                                تم رفض طلب وصولك من قبل الإدارة.<br/>
+                                يرجى مراجعة المسؤول المباشر.
+                            </p>
+                        </div>
+                        <button onClick={() => { setStep('name'); setName(''); }} className="w-full h-44 bg-surface text-foreground border border-input rounded-md font-medium text-[13px] hover:bg-muted transition-colors mt-8">
+                            العودة للرئيسية
+                        </button>
+                    </div>
+                )}
+
             </div>
         </div>
     );
 };
 
 // ============================================================
-// لوحة تحكم الإدارة (خاصة بالمدير فقط - مهند) ✨ التجميع الذكي للجلسات
+// لوحة تحكم الإدارة (خاصة بالمدير فقط - مهند) ✨ تبويب طلبات الدخول
 // ============================================================
 const AdminDashboardModal = memo(({ onClose }) => {
-    const [activeTab, setActiveTab] = useState('site_sessions'); 
+    const [activeTab, setActiveTab] = useState('access_requests'); // ✨ تبويب الطلبات الحية الافتراضي
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     
@@ -1073,6 +1381,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
     const [expandedOrderId, setExpandedOrderId] = useState(null);
 
     const tabs = [
+        { id: 'access_requests', label: 'طلبات الدخول 🔴' }, // ✨ التبويب الأمني الجديد
         { id: 'site_sessions', label: 'جلسات العمل (مراقبة حية)' },
         { id: 'orders', label: 'الطلبات المعتمدة' },
         { id: 'drafts', label: 'المسودات المؤقتة' }, 
@@ -1080,49 +1389,84 @@ const AdminDashboardModal = memo(({ onClose }) => {
         { id: 'users', label: 'إحصائيات المستخدمين' }
     ];
 
+    // Listen to live access requests
     useEffect(() => {
         let isMounted = true;
-        setLoading(true);
-        setSearchTerm('');
-        setExpandedOrderId(null);
+        let unsubscribe;
 
-        getDb().then(db => {
-            let sortField = 'timestamp';
-            if (activeTab === 'users') sortField = 'lastLogin';
-            else if (activeTab === 'search_logs') sortField = 'time';
-            else if (activeTab === 'site_sessions') sortField = 'lastActive'; 
-            
-            const collectionRef = db.collection(activeTab);
-            
-            collectionRef.orderBy(sortField, 'desc').limit(200).get()
-                .then(snapshot => {
-                    if (isMounted) {
-                        const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setData(fetchedData);
-                        setLoading(false);
-                    }
-                })
-                .catch(err => {
-                    console.warn("جاري استخدام الجلب الأساسي (Fallback):", err);
-                    collectionRef.limit(200).get().then(snap => {
+        if (activeTab === 'access_requests') {
+            setLoading(true);
+            getDb().then(db => {
+                // Real-time listener for pending requests
+                unsubscribe = db.collection('access_requests')
+                    .where('status', '==', 'pending')
+                    .orderBy('timestamp', 'desc')
+                    .onSnapshot(snapshot => {
                         if (isMounted) {
-                            let fetchedData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            fetchedData.sort((a,b) => {
-                                const t1 = a.timestamp || a.time || a.lastLogin || a.firstJoined || a.lastActive || 0;
-                                const t2 = b.timestamp || b.time || b.lastLogin || b.firstJoined || b.lastActive || 0;
-                                const v1 = t1.toMillis ? t1.toMillis() : new Date(t1).getTime();
-                                const v2 = t2.toMillis ? t2.toMillis() : new Date(t2).getTime();
-                                return v2 - v1;
-                            });
+                            const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            setData(reqs);
+                            setLoading(false);
+                        }
+                    }, err => {
+                        console.error(err);
+                        // Fallback without orderBy if index is missing
+                        db.collection('access_requests').where('status', '==', 'pending').onSnapshot(snap => {
+                            if (isMounted) {
+                                let reqs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                                reqs.sort((a,b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
+                                setData(reqs);
+                                setLoading(false);
+                            }
+                        });
+                    });
+            });
+        } else {
+            // Normal fetch for other tabs
+            setLoading(true);
+            setSearchTerm('');
+            setExpandedOrderId(null);
+
+            getDb().then(db => {
+                let sortField = 'timestamp';
+                if (activeTab === 'users') sortField = 'lastLogin';
+                else if (activeTab === 'search_logs') sortField = 'time';
+                else if (activeTab === 'site_sessions') sortField = 'lastActive'; 
+                
+                const collectionRef = db.collection(activeTab);
+                
+                collectionRef.orderBy(sortField, 'desc').limit(200).get()
+                    .then(snapshot => {
+                        if (isMounted) {
+                            const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             setData(fetchedData);
                             setLoading(false);
                         }
-                    }).catch(e => {
-                        if(isMounted) setLoading(false);
+                    })
+                    .catch(err => {
+                        collectionRef.limit(200).get().then(snap => {
+                            if (isMounted) {
+                                let fetchedData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                                fetchedData.sort((a,b) => {
+                                    const t1 = a.timestamp || a.time || a.lastLogin || a.firstJoined || a.lastActive || 0;
+                                    const t2 = b.timestamp || b.time || b.lastLogin || b.firstJoined || b.lastActive || 0;
+                                    const v1 = t1.toMillis ? t1.toMillis() : new Date(t1).getTime();
+                                    const v2 = t2.toMillis ? t2.toMillis() : new Date(t2).getTime();
+                                    return v2 - v1;
+                                });
+                                setData(fetchedData);
+                                setLoading(false);
+                            }
+                        }).catch(e => {
+                            if(isMounted) setLoading(false);
+                        });
                     });
-                });
-        });
-        return () => { isMounted = false; };
+            });
+        }
+
+        return () => { 
+            isMounted = false; 
+            if (unsubscribe) unsubscribe();
+        };
     }, [activeTab]);
 
     const filteredData = useMemo(() => {
@@ -1147,13 +1491,7 @@ const AdminDashboardModal = memo(({ onClose }) => {
         filteredData.forEach(session => {
             const name = session.name || 'مجهول';
             if (!groups[name]) {
-                groups[name] = {
-                    name: name,
-                    totalDuration: 0,
-                    sessions: [],
-                    isOnline: false,
-                    lastActive: 0
-                };
+                groups[name] = { name: name, totalDuration: 0, sessions: [], isOnline: false, lastActive: 0 };
             }
             groups[name].sessions.push(session);
             groups[name].totalDuration += (session.durationMinutes || 0);
@@ -1179,230 +1517,298 @@ const AdminDashboardModal = memo(({ onClose }) => {
 
     const totalRevenue = activeTab === 'orders' ? filteredData.reduce((sum, row) => sum + (row.totalAmount || 0), 0) : 0;
 
+    // ✨ دوال الموافقة والرفض الأمنية
+    const handleRequestDecision = async (reqId, decision) => {
+        if (!window.confirm(`تأكيد ${decision === 'approved' ? 'الموافقة' : 'الرفض'} لهذا الشخص؟`)) return;
+        try {
+            const db = await getDb();
+            await db.collection('access_requests').doc(reqId).update({ status: decision });
+        } catch (e) {
+            alert('حدث خطأ أثناء تنفيذ القرار.');
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-card">
-            <div className="w-full max-w-[1000px] h-[95vh] sm:h-[90vh] bg-bg sm:rounded-16 rounded-t-20 overflow-hidden shadow-lift flex flex-col">
-                <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
-                    <h3 className="font-bold text-primary flex items-center gap-8">
-                        <Icon.Dashboard className="w-20 h-20 text-accent"/> لوحة تحكم الإدارة (سجلات النظام)
+            <div className="w-full max-w-[1000px] h-[95vh] sm:h-[90vh] bg-background sm:rounded-lg rounded-t-lg overflow-hidden shadow-2xl flex flex-col">
+                <div className="p-16 flex justify-between items-center border-b border-border bg-muted/50">
+                    <h3 className="font-bold text-foreground flex items-center gap-8">
+                        <Icon.Shield className="w-20 h-20 text-primary"/> مركز القيادة والتحكم الأمني
                     </h3>
-                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border hover:bg-dangerSoft hover:text-danger transition-colors">
+                    <button onClick={onClose} className="p-4 bg-background rounded-md border border-border hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <Icon.Close className="w-16 h-16"/>
                     </button>
                 </div>
                 
-                <div className="flex overflow-x-auto border-b border-border bg-surface no-scrollbar">
+                <div className="flex overflow-x-auto border-b border-border bg-muted/20 no-scrollbar">
                     {tabs.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 min-w-[120px] whitespace-nowrap py-12 text-[13px] font-bold border-b-2 transition-colors ${activeTab === tab.id ? 'border-accent text-accent' : 'border-transparent text-secondary hover:text-primary'}`}>
+                            className={`flex-1 min-w-[120px] whitespace-nowrap py-12 text-[13px] font-medium border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
                             {tab.label}
+                            {tab.id === 'access_requests' && data.length > 0 && activeTab === 'access_requests' && (
+                                <span className="mr-6 inline-flex bg-destructive text-white rounded-full px-6 py-2 text-[10px] numeric animate-pulse">{data.length}</span>
+                            )}
                         </button>
                     ))}
                 </div>
 
-                <div className="p-16 border-b border-border bg-surface flex flex-col sm:flex-row gap-12 items-center justify-between">
+                <div className="p-16 border-b border-border bg-background flex flex-col sm:flex-row gap-12 items-center justify-between">
                     <div className="relative w-full sm:w-[350px]">
-                        <Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted" />
+                        <Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="بحث ذكي عن أي شيء..."
-                               className="w-full pl-12 pr-36 py-8 rounded-8 border border-border bg-bg text-[13px] outline-none focus:border-accent transition-colors" />
+                               className="w-full pl-12 pr-36 py-8 rounded-md border border-input bg-background text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring transition-shadow" />
                     </div>
                     <div className="flex items-center gap-8 w-full sm:w-auto">
-                        <Icon.Filter className="w-16 h-16 text-muted" />
-                        <select value={sortOrder} onChange={e => setSortOrder(e.target.value)} className="bg-bg border border-border rounded-8 px-12 py-8 text-[13px] outline-none focus:border-accent flex-1 sm:flex-none cursor-pointer">
+                        <Icon.Filter className="w-16 h-16 text-muted-foreground" />
+                        <select value={sortOrder} onChange={e => setSortOrder(e.target.value)} className="bg-background border border-input rounded-md px-12 py-8 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 sm:flex-none cursor-pointer">
                             <option value="desc">ترتيب: الأحدث أولاً</option>
                             <option value="asc">ترتيب: الأقدم أولاً</option>
                         </select>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-16 bg-surface">
-                    {activeTab === 'orders' && !loading && (
-                        <div className="grid grid-cols-2 gap-12 mb-16">
-                            <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
-                                <p className="text-[12px] text-muted mb-4">إجمالي الدخل للعمليات المفلترة</p>
-                                <p className="text-[20px] font-bold text-success"><span className="numeric">{NUMBER_FORMATTER.format(totalRevenue)}</span> ر.س</p>
-                            </div>
-                            <div className="bg-bg border border-border rounded-12 p-16 shadow-card">
-                                <p className="text-[12px] text-muted mb-4">عدد الفواتير</p>
-                                <p className="text-[20px] font-bold text-primary"><span className="numeric">{NUMBER_FORMATTER.format(filteredData.length)}</span> فاتورة</p>
-                            </div>
-                        </div>
-                    )}
+                <div className="flex-1 overflow-y-auto p-16 bg-muted/10">
+                    {/* ✨ واجهة طلبات الدخول المعلقة (Quarantine Room) */}
+                    {activeTab === 'access_requests' ? (
+                        loading ? (
+                            <div className="flex justify-center items-center h-48 text-muted-foreground text-[14px]">جاري جلب الطلبات الحية...</div>
+                        ) : data.length === 0 ? (
+                            <StateBlock icon={<Icon.Shield className="w-20 h-20" />} title="لا توجد طلبات دخول معلقة" note="النظام آمن ومستقر حالياً." />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
+                                {filteredData.map(req => (
+                                    <div key={req.id} className="bg-card border border-border rounded-lg p-16 shadow-sm flex flex-col gap-12 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-full h-4 bg-warning animate-pulse"></div>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h4 className="font-bold text-[16px] text-foreground">{req.name}</h4>
+                                                <p className="text-[11px] text-muted-foreground mt-2 numeric">{formatFbDate(req.timestamp)} • {formatFbTime(req.timestamp)}</p>
+                                            </div>
+                                            <span className="bg-warning/10 text-warning px-8 py-2 rounded-md text-[10px] font-bold">بانتظار الموافقة</span>
+                                        </div>
+                                        
+                                        <div className="w-full aspect-square bg-black rounded-md overflow-hidden relative border-2 border-muted">
+                                            {req.photoDataUrl ? (
+                                                <img src={req.photoDataUrl} alt="صورة حية" className="w-full h-full object-cover transform scale-x-[-1]" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Icon.ImageOff className="w-24 h-24" /></div>
+                                            )}
+                                            <div className="absolute bottom-0 left-0 w-full p-8 bg-black/60 backdrop-blur-sm flex justify-between items-center">
+                                                <span className="text-[10px] text-white">التقطت حياً</span>
+                                                {req.latitude && req.longitude ? (
+                                                    <a href={`https://www.google.com/maps?q=${req.latitude},${req.longitude}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 text-[10px] text-primary hover:text-white transition-colors bg-primary/20 px-6 py-2 rounded">
+                                                        <Icon.MapPin className="w-10 h-10" /> عرض الموقع
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-[10px] text-destructive">بدون موقع</span>
+                                                )}
+                                            </div>
+                                        </div>
 
-                    {loading ? (
-                        <div className="flex justify-center items-center h-48 text-muted text-[14px]">جاري جلب السجلات...</div>
-                    ) : (activeTab !== 'site_sessions' && filteredData.length === 0) || (activeTab === 'site_sessions' && groupedSessions.length === 0) ? (
-                        <div className="flex justify-center items-center h-48 text-muted text-[14px]">لا توجد بيانات مطابقة لعملية البحث.</div>
+                                        <div className="flex gap-8 mt-4">
+                                            <button onClick={() => handleRequestDecision(req.id, 'approved')} className="flex-1 h-36 bg-success text-success-foreground rounded-md font-medium text-[13px] hover:bg-success/90 transition-colors flex items-center justify-center gap-6">
+                                                <Icon.CheckCircle className="w-14 h-14"/> اعتماد
+                                            </button>
+                                            <button onClick={() => handleRequestDecision(req.id, 'rejected')} className="flex-1 h-36 bg-destructive/10 text-destructive rounded-md font-medium text-[13px] hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center justify-center gap-6">
+                                                <Icon.Close className="w-14 h-14"/> طرد وحظر
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )
                     ) : (
-                        <div className="overflow-x-auto bg-bg border border-border rounded-12 shadow-card">
-                            <table className="w-full text-right text-[12px]">
-                                <thead className="bg-surface text-muted border-b border-border">
-                                    {activeTab === 'site_sessions' && (
-                                        <tr><th className="p-12 text-right">المندوب</th><th className="p-12 text-right">إجمالي الجلسات</th><th className="p-12 text-right">إجمالي وقت العمل اليوم</th><th className="p-12 text-right">الحالة الآن</th><th className="p-12 text-right">الإجراءات</th></tr>
-                                    )}
-                                    {activeTab === 'orders' && (
-                                        <tr><th className="p-12 text-right">التاريخ</th><th className="p-12 text-right">المندوب</th><th className="p-12 text-right">العميل</th><th className="p-12 text-right">المستودع</th><th className="p-12 text-right">الملاحظات</th><th className="p-12 text-right">الإجمالي</th><th className="p-12 text-right">الإجراءات</th></tr>
-                                    )}
-                                    {activeTab === 'drafts' && (
-                                        <tr><th className="p-12 text-right">التاريخ</th><th className="p-12 text-right">المندوب</th><th className="p-12 text-right">اسم المسودة/العميل</th><th className="p-12 text-right">المستودع</th><th className="p-12 text-right">عدد الأصناف</th><th className="p-12 text-right">الإجراءات</th></tr>
-                                    )}
-                                    {activeTab === 'search_logs' && (
-                                        <tr><th className="p-12 text-right">التاريخ</th><th className="p-12 text-right">الوقت</th><th className="p-12 text-right">المستخدم</th><th className="p-12 text-right">كلمة البحث</th><th className="p-12 text-right">النتائج</th></tr>
-                                    )}
-                                    {activeTab === 'users' && (
-                                        <tr><th className="p-12 text-right">أول انضمام</th><th className="p-12 text-right">الاسم</th><th className="p-12 text-right">عدد الدخول</th><th className="p-12 text-right">إجمالي وقت العمل</th></tr>
-                                    )}
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {activeTab === 'site_sessions' ? (
-                                        groupedSessions.map((group, i) => (
-                                            <React.Fragment key={group.name}>
-                                                <tr className="hover:bg-surface transition-colors">
-                                                    <td className="p-12 font-bold text-primary text-[14px]">{group.name}</td>
-                                                    <td className="p-12 font-bold text-secondary"><span className="numeric">{group.sessions.length}</span> جلسات</td>
-                                                    <td className="p-12 font-bold text-accent">{formatTimeSpent(group.totalDuration)}</td>
-                                                    <td className="p-12">
-                                                        {group.isOnline 
-                                                            ? <span className="bg-successSoft text-success px-8 py-4 rounded-full font-bold text-[11px]">🟢 متصل الآن</span> 
-                                                            : <span className="bg-surface border border-border text-muted px-8 py-4 rounded-full text-[11px]">🔴 مغادر</span>}
-                                                    </td>
-                                                    <td className="p-12">
-                                                        <button onClick={() => setExpandedOrderId(expandedOrderId === group.name ? null : group.name)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
-                                                            <Icon.Eye className="w-14 h-14" />
-                                                            {expandedOrderId === group.name ? 'إخفاء' : 'عرض التفاصيل'}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {expandedOrderId === group.name && (
-                                                    <tr className="bg-accentSoft/30 border-b border-border">
-                                                        <td colSpan="5" className="p-16">
-                                                            <div className="bg-bg border border-accent/20 rounded-8 p-12 shadow-sm">
-                                                                <h4 className="font-bold text-[13px] text-primary mb-8 border-b border-border pb-8">سجل الجلسات المفصل للمندوب ({group.name}):</h4>
-                                                                <div className="overflow-x-auto">
-                                                                    <table className="w-full text-[12px] text-right">
-                                                                        <thead>
-                                                                            <tr className="text-muted border-b border-border">
-                                                                                <th className="py-4 px-8 text-right">تاريخ الجلسة</th>
-                                                                                <th className="py-4 px-8 text-right">وقت الدخول</th>
-                                                                                <th className="py-4 px-8 text-right">آخر نشاط مسجل</th>
-                                                                                <th className="py-4 px-8 text-right">مدة البقاء</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            {group.sessions.map((sess, idx) => (
-                                                                                <tr key={idx} className="border-b border-border last:border-0 hover:bg-surface">
-                                                                                    <td className="py-8 px-8 text-secondary"><span className="numeric">{formatFbDate(sess.startTime)}</span></td>
-                                                                                    <td className="py-8 px-8 font-bold text-success"><span className="numeric">{formatFbTime(sess.startTime)}</span></td>
-                                                                                    <td className="py-8 px-8 text-muted"><span className="numeric">{formatFbTime(sess.lastActive)}</span></td>
-                                                                                    <td className="py-8 px-8 font-bold text-accent"><span className="numeric">{sess.durationMinutes}</span> دقيقة</td>
-                                                                                </tr>
-                                                                            ))}
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        ))
-                                    ) : (
-                                        filteredData.map((row, i) => (
-                                            <React.Fragment key={row.id || i}>
-                                                <tr className="hover:bg-surface transition-colors">
-                                                    {activeTab === 'orders' && (
-                                                        <React.Fragment>
-                                                            <td className="p-12 whitespace-nowrap text-secondary"><span className="numeric">{formatFbDate(row.timestamp)}</span></td>
-                                                            <td className="p-12 font-bold text-primary">{row.repName}</td>
-                                                            <td className="p-12 font-medium">{row.customerName}</td>
-                                                            <td className="p-12 text-muted whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
-                                                            <td className="p-12 text-accent max-w-[120px] truncate" title={row.notes}>{row.notes || '---'}</td>
-                                                            <td className="p-12 font-bold text-success whitespace-nowrap"><span className="numeric">{NUMBER_FORMATTER.format(row.totalAmount)}</span> ر.س</td>
+                        // الأقسام القديمة
+                        <React.Fragment>
+                            {activeTab === 'orders' && !loading && (
+                                <div className="grid grid-cols-2 gap-12 mb-16">
+                                    <div className="bg-card border border-border rounded-lg p-16 shadow-sm">
+                                        <p className="text-[12px] text-muted-foreground mb-4">إجمالي الدخل للعمليات المفلترة</p>
+                                        <p className="text-[20px] font-bold text-success"><span className="numeric">{NUMBER_FORMATTER.format(totalRevenue)}</span> ر.س</p>
+                                    </div>
+                                    <div className="bg-card border border-border rounded-lg p-16 shadow-sm">
+                                        <p className="text-[12px] text-muted-foreground mb-4">عدد الفواتير</p>
+                                        <p className="text-[20px] font-bold text-foreground"><span className="numeric">{NUMBER_FORMATTER.format(filteredData.length)}</span> فاتورة</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {loading ? (
+                                <div className="flex justify-center items-center h-48 text-muted-foreground text-[14px]">جاري جلب السجلات...</div>
+                            ) : (activeTab !== 'site_sessions' && filteredData.length === 0) || (activeTab === 'site_sessions' && groupedSessions.length === 0) ? (
+                                <div className="flex justify-center items-center h-48 text-muted-foreground text-[14px]">لا توجد بيانات مطابقة لعملية البحث.</div>
+                            ) : (
+                                <div className="overflow-x-auto bg-card border border-border rounded-lg shadow-sm">
+                                    <table className="w-full text-right text-[12px]">
+                                        <thead className="bg-muted/50 text-muted-foreground border-b border-border uppercase tracking-wide">
+                                            {activeTab === 'site_sessions' && (
+                                                <tr><th className="p-12 font-medium">المندوب</th><th className="p-12 font-medium text-right">إجمالي الجلسات</th><th className="p-12 font-medium text-right">إجمالي وقت العمل اليوم</th><th className="p-12 font-medium text-right">الحالة الآن</th><th className="p-12 font-medium text-right">الإجراءات</th></tr>
+                                            )}
+                                            {activeTab === 'orders' && (
+                                                <tr><th className="p-12 font-medium text-right">التاريخ</th><th className="p-12 font-medium text-right">المندوب</th><th className="p-12 font-medium text-right">العميل</th><th className="p-12 font-medium text-right">المستودع</th><th className="p-12 font-medium text-right">الملاحظات</th><th className="p-12 font-medium text-right">الإجمالي</th><th className="p-12 font-medium text-right">الإجراءات</th></tr>
+                                            )}
+                                            {activeTab === 'drafts' && (
+                                                <tr><th className="p-12 font-medium text-right">التاريخ</th><th className="p-12 font-medium text-right">المندوب</th><th className="p-12 font-medium text-right">اسم المسودة/العميل</th><th className="p-12 font-medium text-right">المستودع</th><th className="p-12 font-medium text-right">عدد الأصناف</th><th className="p-12 font-medium text-right">الإجراءات</th></tr>
+                                            )}
+                                            {activeTab === 'search_logs' && (
+                                                <tr><th className="p-12 font-medium text-right">التاريخ</th><th className="p-12 font-medium text-right">الوقت</th><th className="p-12 font-medium text-right">المستخدم</th><th className="p-12 font-medium text-right">كلمة البحث</th><th className="p-12 font-medium text-right">النتائج</th></tr>
+                                            )}
+                                            {activeTab === 'users' && (
+                                                <tr><th className="p-12 font-medium text-right">أول انضمام</th><th className="p-12 font-medium text-right">الاسم</th><th className="p-12 font-medium text-right">عدد الدخول</th><th className="p-12 font-medium text-right">إجمالي وقت العمل</th></tr>
+                                            )}
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {activeTab === 'site_sessions' ? (
+                                                groupedSessions.map((group, i) => (
+                                                    <React.Fragment key={group.name}>
+                                                        <tr className="hover:bg-muted/30 transition-colors">
+                                                            <td className="p-12 font-medium text-foreground text-[14px]">{group.name}</td>
+                                                            <td className="p-12 font-medium text-muted-foreground"><span className="numeric">{group.sessions.length}</span> جلسات</td>
+                                                            <td className="p-12 font-medium text-primary"><span className="numeric">{formatTimeSpent(group.totalDuration)}</span></td>
                                                             <td className="p-12">
-                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
+                                                                {group.isOnline 
+                                                                    ? <span className="bg-success/10 text-success ring-1 ring-inset ring-success/30 px-8 py-4 rounded-md font-medium text-[11px]">متصل الآن</span> 
+                                                                    : <span className="bg-muted text-muted-foreground ring-1 ring-inset ring-border px-8 py-4 rounded-md text-[11px]">مغادر</span>}
+                                                            </td>
+                                                            <td className="p-12">
+                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === group.name ? null : group.name)} className="flex items-center gap-4 text-primary hover:text-primary-foreground transition-colors text-[11px] font-medium whitespace-nowrap bg-primary/10 hover:bg-primary px-8 py-4 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                                                     <Icon.Eye className="w-14 h-14" />
-                                                                    {expandedOrderId === row.id ? 'إخفاء' : 'عرض المحتوى'}
+                                                                    {expandedOrderId === group.name ? 'إخفاء' : 'عرض التفاصيل'}
                                                                 </button>
                                                             </td>
-                                                        </React.Fragment>
-                                                    )}
-                                                    {activeTab === 'drafts' && (
-                                                        <React.Fragment>
-                                                            <td className="p-12 whitespace-nowrap text-secondary"><span className="numeric">{formatFbDate(row.timestamp)}</span></td>
-                                                            <td className="p-12 font-bold text-primary">{row.repName}</td>
-                                                            <td className="p-12 font-medium bidi-isolate">{row.name}</td>
-                                                            <td className="p-12 text-muted whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
-                                                            <td className="p-12 font-bold text-warn"><span className="numeric">{Object.keys(row.cart || {}).length}</span> أصناف</td>
-                                                            <td className="p-12">
-                                                                <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-accent hover:text-primary transition-colors text-[11px] font-bold whitespace-nowrap bg-accentSoft px-8 py-4 rounded-full">
-                                                                    <Icon.Eye className="w-14 h-14" />
-                                                                    {expandedOrderId === row.id ? 'إخفاء' : 'محتوى السلة'}
-                                                                </button>
-                                                            </td>
-                                                        </React.Fragment>
-                                                    )}
-                                                    {activeTab === 'search_logs' && (
-                                                        <React.Fragment>
-                                                            <td className="p-12 whitespace-nowrap text-secondary"><span className="numeric">{formatFbDate(row.time)}</span></td>
-                                                            <td className="p-12 whitespace-nowrap text-muted"><span className="numeric">{formatFbTime(row.time)}</span></td>
-                                                            <td className="p-12 font-bold">{row.name}</td>
-                                                            <td className="p-12 font-bold text-accent">{row.rawQuery}</td>
-                                                            <td className="p-12">{row.resultsCount > 0 ? <span className="text-success font-bold"><span className="numeric">{row.resultsCount}</span> نتيجة</span> : <span className="text-danger font-bold">0 (لا يوجد)</span>}</td>
-                                                        </React.Fragment>
-                                                    )}
-                                                    {activeTab === 'users' && (
-                                                        <React.Fragment>
-                                                            <td className="p-12 text-muted whitespace-nowrap"><span className="numeric">{formatFbDate(row.firstJoined)}</span></td>
-                                                            <td className="p-12 font-bold text-primary text-[14px]">{row.name}</td>
-                                                            <td className="p-12 font-bold text-accent"><span className="numeric">{row.loginCount}</span> مرات</td>
-                                                            <td className="p-12 font-bold text-success bg-successSoft/30">{formatTimeSpent(row.timeSpentMinutes)}</td>
-                                                        </React.Fragment>
-                                                    )}
-                                                </tr>
-                                                {(activeTab === 'orders' || activeTab === 'drafts') && expandedOrderId === row.id && (
-                                                    <tr className="bg-accentSoft/30 border-b border-border">
-                                                        <td colSpan="7" className="p-16">
-                                                            <div className="bg-bg border border-accent/20 rounded-8 p-12 shadow-sm">
-                                                                <div className="flex justify-between items-center mb-8 border-b border-border pb-8">
-                                                                    <h4 className="font-bold text-[13px] text-primary">تفاصيل الأصناف ({activeTab === 'orders' ? row.items?.length : Object.keys(row.cart||{}).length}):</h4>
-                                                                    {activeTab === 'orders' && <span className="text-[12px] text-muted">إجمالي: <strong className="text-accent"><span className="numeric">{NUMBER_FORMATTER.format(row.totalAmount)}</span> ر.س</strong></span>}
-                                                                </div>
-                                                                <div className="overflow-x-auto">
-                                                                    <table className="w-full text-[12px] text-right">
-                                                                        <thead>
-                                                                            <tr className="text-muted border-b border-border">
-                                                                                <th className="py-4 px-8 w-16 text-right">#</th>
-                                                                                <th className="py-4 px-8 text-right">رقم الصنف</th>
-                                                                                <th className="py-4 px-8 text-right">اسم الصنف</th>
-                                                                                <th className="py-4 px-8 text-right">الكمية</th>
-                                                                                <th className="py-4 px-8 text-right">السعر (ر.س)</th>
-                                                                                <th className="py-4 px-8 text-right">الإجمالي (ر.س)</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            {(activeTab === 'orders' ? row.items : Object.values(row.cart || {})).map((it, idx) => (
-                                                                                <tr key={idx} className="border-b border-border last:border-0 hover:bg-surface">
-                                                                                    <td className="py-8 px-8 font-bold text-muted"><span className="numeric">{idx + 1}</span></td>
-                                                                                    <td className="py-8 px-8 font-bold text-primary bidi-isolate">{it.id}</td>
-                                                                                    <td className="py-8 px-8 text-secondary truncate max-w-[200px]" title={it.name}>{it.name || '---'}</td>
-                                                                                    <td className="py-8 px-8 font-bold text-primary"><span className="numeric">{it.qty || it.cartQty}</span></td>
-                                                                                    <td className="py-8 px-8 text-secondary"><span className="numeric">{NUMBER_FORMATTER.format(it.price || 0)}</span></td>
-                                                                                    <td className="py-8 px-8 font-bold text-accent"><span className="numeric">{NUMBER_FORMATTER.format(it.total || (it.price * it.cartQty) || 0)}</span></td>
-                                                                                </tr>
-                                                                            ))}
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                                        </tr>
+                                                        {expandedOrderId === group.name && (
+                                                            <tr className="bg-muted/10 border-b border-border">
+                                                                <td colSpan="5" className="p-16">
+                                                                    <div className="bg-card border border-border rounded-lg p-12 shadow-sm">
+                                                                        <h4 className="font-medium text-[13px] text-foreground mb-8 border-b border-border pb-8">سجل الجلسات المفصل للمندوب ({group.name}):</h4>
+                                                                        <div className="overflow-x-auto">
+                                                                            <table className="w-full text-[12px] text-right">
+                                                                                <thead>
+                                                                                    <tr className="text-muted-foreground border-b border-border uppercase tracking-wide">
+                                                                                        <th className="py-4 px-8 font-medium text-right">تاريخ الجلسة</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">وقت الدخول</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">آخر نشاط مسجل</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">مدة البقاء</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    {group.sessions.map((sess, idx) => (
+                                                                                        <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/30">
+                                                                                            <td className="py-8 px-8 text-muted-foreground"><span className="numeric">{formatFbDate(sess.startTime)}</span></td>
+                                                                                            <td className="py-8 px-8 font-medium text-success"><span className="numeric">{formatFbTime(sess.startTime)}</span></td>
+                                                                                            <td className="py-8 px-8 text-muted-foreground"><span className="numeric">{formatFbTime(sess.lastActive)}</span></td>
+                                                                                            <td className="py-8 px-8 font-medium text-primary"><span className="numeric">{sess.durationMinutes}</span> دقيقة</td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                ))
+                                            ) : (
+                                                filteredData.map((row, i) => (
+                                                    <React.Fragment key={row.id || i}>
+                                                        <tr className="hover:bg-muted/30 transition-colors">
+                                                            {activeTab === 'orders' && (
+                                                                <React.Fragment>
+                                                                    <td className="p-12 whitespace-nowrap text-muted-foreground"><span className="numeric">{formatFbDate(row.timestamp)}</span></td>
+                                                                    <td className="p-12 font-medium text-foreground">{row.repName}</td>
+                                                                    <td className="p-12 font-medium text-foreground">{row.customerName}</td>
+                                                                    <td className="p-12 text-muted-foreground whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
+                                                                    <td className="p-12 text-primary max-w-[120px] truncate" title={row.notes}>{row.notes || '---'}</td>
+                                                                    <td className="p-12 font-medium text-success whitespace-nowrap"><span className="numeric">{NUMBER_FORMATTER.format(row.totalAmount)}</span> ر.س</td>
+                                                                    <td className="p-12">
+                                                                        <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-primary hover:text-primary-foreground transition-colors text-[11px] font-medium whitespace-nowrap bg-primary/10 hover:bg-primary px-8 py-4 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                                                            <Icon.Eye className="w-14 h-14" />
+                                                                            {expandedOrderId === row.id ? 'إخفاء' : 'عرض المحتوى'}
+                                                                        </button>
+                                                                    </td>
+                                                                </React.Fragment>
+                                                            )}
+                                                            {activeTab === 'drafts' && (
+                                                                <React.Fragment>
+                                                                    <td className="p-12 whitespace-nowrap text-muted-foreground"><span className="numeric">{formatFbDate(row.timestamp)}</span></td>
+                                                                    <td className="p-12 font-medium text-foreground">{row.repName}</td>
+                                                                    <td className="p-12 font-medium text-foreground bidi-isolate">{row.name}</td>
+                                                                    <td className="p-12 text-muted-foreground whitespace-nowrap">{WAREHOUSES[row.warehouse]?.name || row.warehouse}</td>
+                                                                    <td className="p-12 font-medium text-warning"><span className="numeric">{Object.keys(row.cart || {}).length}</span> أصناف</td>
+                                                                    <td className="p-12">
+                                                                        <button onClick={() => setExpandedOrderId(expandedOrderId === row.id ? null : row.id)} className="flex items-center gap-4 text-primary hover:text-primary-foreground transition-colors text-[11px] font-medium whitespace-nowrap bg-primary/10 hover:bg-primary px-8 py-4 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                                                            <Icon.Eye className="w-14 h-14" />
+                                                                            {expandedOrderId === row.id ? 'إخفاء' : 'محتوى السلة'}
+                                                                        </button>
+                                                                    </td>
+                                                                </React.Fragment>
+                                                            )}
+                                                            {activeTab === 'search_logs' && (
+                                                                <React.Fragment>
+                                                                    <td className="p-12 whitespace-nowrap text-muted-foreground"><span className="numeric">{formatFbDate(row.time)}</span></td>
+                                                                    <td className="p-12 whitespace-nowrap text-muted-foreground"><span className="numeric">{formatFbTime(row.time)}</span></td>
+                                                                    <td className="p-12 font-medium text-foreground">{row.name}</td>
+                                                                    <td className="p-12 font-medium text-primary">{row.rawQuery}</td>
+                                                                    <td className="p-12">{row.resultsCount > 0 ? <span className="text-success font-medium"><span className="numeric">{row.resultsCount}</span> نتيجة</span> : <span className="text-destructive font-medium">0 (لا يوجد)</span>}</td>
+                                                                </React.Fragment>
+                                                            )}
+                                                            {activeTab === 'users' && (
+                                                                <React.Fragment>
+                                                                    <td className="p-12 text-muted-foreground whitespace-nowrap"><span className="numeric">{formatFbDate(row.firstJoined)}</span></td>
+                                                                    <td className="p-12 font-medium text-foreground text-[14px]">{row.name}</td>
+                                                                    <td className="p-12 font-medium text-primary"><span className="numeric">{row.loginCount}</span> مرات</td>
+                                                                    <td className="p-12 font-medium text-success bg-success/10 rounded-md"><span className="numeric">{formatTimeSpent(row.timeSpentMinutes)}</span></td>
+                                                                </React.Fragment>
+                                                            )}
+                                                        </tr>
+                                                        {(activeTab === 'orders' || activeTab === 'drafts') && expandedOrderId === row.id && (
+                                                            <tr className="bg-muted/10 border-b border-border">
+                                                                <td colSpan="7" className="p-16">
+                                                                    <div className="bg-card border border-border rounded-lg p-12 shadow-sm">
+                                                                        <div className="flex justify-between items-center mb-8 border-b border-border pb-8">
+                                                                            <h4 className="font-medium text-[13px] text-foreground">تفاصيل الأصناف ({activeTab === 'orders' ? row.items?.length : Object.keys(row.cart||{}).length}):</h4>
+                                                                            {activeTab === 'orders' && <span className="text-[12px] text-muted-foreground">إجمالي: <strong className="text-primary"><span className="numeric">{NUMBER_FORMATTER.format(row.totalAmount)}</span> ر.س</strong></span>}
+                                                                        </div>
+                                                                        <div className="overflow-x-auto">
+                                                                            <table className="w-full text-[12px] text-right">
+                                                                                <thead>
+                                                                                    <tr className="text-muted-foreground border-b border-border uppercase tracking-wide">
+                                                                                        <th className="py-4 px-8 w-16 font-medium text-right">#</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">رقم الصنف</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">اسم الصنف</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">الكمية</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">السعر (ر.س)</th>
+                                                                                        <th className="py-4 px-8 font-medium text-right">الإجمالي (ر.س)</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    {(activeTab === 'orders' ? row.items : Object.values(row.cart || {})).map((it, idx) => (
+                                                                                        <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/30">
+                                                                                            <td className="py-8 px-8 font-medium text-muted-foreground"><span className="numeric">{idx + 1}</span></td>
+                                                                                            <td className="py-8 px-8 font-medium text-foreground bidi-isolate">{it.id}</td>
+                                                                                            <td className="py-8 px-8 text-muted-foreground truncate max-w-[200px]" title={it.name}>{it.name || '---'}</td>
+                                                                                            <td className="py-8 px-8 font-medium text-foreground"><span className="numeric">{it.qty || it.cartQty}</span></td>
+                                                                                            <td className="py-8 px-8 text-muted-foreground"><span className="numeric">{NUMBER_FORMATTER.format(it.price || 0)}</span></td>
+                                                                                            <td className="py-8 px-8 font-medium text-primary"><span className="numeric">{NUMBER_FORMATTER.format(it.total || (it.price * it.cartQty) || 0)}</span></td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </React.Fragment>
                     )}
                 </div>
             </div>
@@ -1658,25 +2064,23 @@ const App = () => {
 
     if (!sessionName) return <LoginScreen onLogin={(n, admin) => { setSessionName(n); setIsAdmin(admin); }} />;
 
-    const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`;
+    const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'}`;
 
     return (
         <div className="min-h-screen font-sans">
-            {/* ✨ الترويسة العلوية - تحتوي على اسم المطور وبصمة كورفي */}
-            <div className="border-b border-border bg-surface">
+            <div className="border-b border-border bg-card">
                 <div className="max-w-[1024px] mx-auto px-16 h-44 flex items-center justify-between gap-12">
                     <div className="flex items-center gap-8">
                         {!isOnline && (
-                            <div className="flex items-center gap-4 bg-danger text-white px-8 py-2 rounded-full text-[10px] font-bold animate-pulse">
+                            <div className="flex items-center gap-4 bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/30 px-8 py-2 rounded-md text-[10px] font-bold animate-pulse">
                                 <Icon.WifiOff className="w-12 h-12" /> أوفلاين
                             </div>
                         )}
-                        <span className="text-[12px] text-secondary truncate min-w-0">الاسم الكريم: {sessionName}</span>
+                        <span className="text-[12px] text-muted-foreground truncate min-w-0">الاسم الكريم: {sessionName}</span>
                     </div>
-                    {/* ✨ بصمة كورفي بجانب اسمك مع التوافق في الجوال */}
                     <div className="flex items-center gap-2 sm:gap-5">
                         <div className="flex items-center gap-1 sm:gap-1.5" title="جزء من منظومة كورفي ERP">
-                            <span className="text-[9px] sm:text-[10px] font-medium text-secondary">مشغل بواسطة</span>
+                            <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground">مشغل بواسطة</span>
                             <span className="text-[11px] sm:text-[13px] font-extrabold text-[#047857] tracking-wider bidi-isolate">Korvi</span>
                         </div>
                         <span className="text-border text-[10px] sm:text-base">|</span>
@@ -1687,19 +2091,19 @@ const App = () => {
             
             <div className="max-w-[1024px] mx-auto px-16">
                 <header className="text-center pt-32 pb-24 flex flex-col items-center gap-8">
-                    <h1 className="text-[24px] sm:text-[28px] md:text-[32px] font-bold text-primary leading-tight">مخزون شركة بيت الأواني الطيبة</h1>
-                    <h2 className="text-[14px] sm:text-[16px] text-secondary font-normal">نظام الاستعلام والمبيعات الرقمي</h2>
-                    <p className="text-[12px] text-muted">آخر تحديث للمخزون: <span className="numeric">{lastUpdate}</span></p>
+                    <h1 className="text-[24px] sm:text-[28px] md:text-[32px] font-extrabold text-brand tracking-wider leading-tight bidi-isolate">مخزون الأواني</h1>
+                    <h2 className="text-[14px] sm:text-[16px] text-muted-foreground font-medium">نظام الاستعلام والمبيعات الرقمي</h2>
+                    <p className="text-[12px] text-muted-foreground">آخر تحديث للمخزون: <span className="numeric">{lastUpdate}</span></p>
                 </header>
             </div>
 
-            <div className="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-border">
+            <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
                 <div className="max-w-[1024px] mx-auto px-16 py-12 flex flex-col gap-10">
                     <div className="flex justify-between items-center w-full sm:w-auto gap-16">
-                        <div className="flex flex-1 sm:flex-none sm:self-start bg-surface border border-border rounded-12 p-4 gap-4" role="group" aria-label="اختيار المستودع">
+                        <div className="flex flex-1 sm:flex-none sm:self-start bg-muted/50 border border-border rounded-lg p-4 gap-4" role="group" aria-label="اختيار المستودع">
                             {Object.values(WAREHOUSES).map(wh => (
                                 <button key={wh.key} onClick={() => setWarehouse(wh.key)} aria-pressed={warehouse === wh.key}
-                                        className={`flex-1 sm:flex-none sm:px-32 h-40 rounded-10 text-[15px] font-semibold transition-colors duration-200 ${warehouse === wh.key ? 'bg-primary text-bg' : 'text-secondary hover:text-primary'}`}>
+                                        className={`flex-1 sm:flex-none sm:px-32 h-40 rounded-md text-[14px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${warehouse === wh.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
                                     {wh.label}
                                 </button>
                             ))}
@@ -1707,30 +2111,30 @@ const App = () => {
                         
                         <div className="flex items-center gap-8 flex-shrink-0">
                             {isAdmin && (
-                                <button onClick={() => setShowAdmin(true)} title="لوحة الإدارة" className="flex items-center justify-center w-48 h-48 rounded-12 bg-accentSoft border border-accent text-accent hover:bg-accent hover:text-white transition-colors animate-flip">
+                                <button onClick={() => setShowAdmin(true)} title="لوحة الإدارة" className="flex items-center justify-center w-48 h-48 rounded-md bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-colors animate-flip focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                     <Icon.Dashboard className="w-20 h-20" />
                                 </button>
                             )}
 
                             {warehouse && (
                                 <React.Fragment>
-                                    <button onClick={() => setShowDrafts(true)} title="المسودات المؤقتة" className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
+                                    <button onClick={() => setShowDrafts(true)} title="المسودات المؤقتة" className="relative flex items-center justify-center w-48 h-48 rounded-md bg-card border border-border text-foreground hover:border-primary/50 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                         <Icon.Archive className="w-20 h-20" />
                                         {drafts.length > 0 && (
-                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-warn text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-flip numeric">
+                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-warning text-warning-foreground text-[10px] font-bold flex items-center justify-center rounded-full animate-flip numeric">
                                                 {drafts.length}
                                             </span>
                                         )}
                                     </button>
 
-                                    <button onClick={() => setShowHistory(true)} title="سجل الطلبات" className="flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
+                                    <button onClick={() => setShowHistory(true)} title="سجل الطلبات" className="flex items-center justify-center w-48 h-48 rounded-md bg-card border border-border text-foreground hover:border-primary/50 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                         <Icon.List className="w-20 h-20" />
                                     </button>
                                     
-                                    <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-surface border border-border text-primary hover:text-accent transition-colors">
+                                    <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center w-48 h-48 rounded-md bg-card border border-border text-foreground hover:border-primary/50 hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                         <Icon.Cart className="w-20 h-20" />
                                         {Object.keys(cart).length > 0 && (
-                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-danger text-white text-[10px] font-bold flex items-center justify-center rounded-full animate-flip numeric">
+                                            <span className="absolute -top-4 -right-4 w-20 h-20 bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center rounded-full animate-flip numeric">
                                                 {Object.keys(cart).length}
                                             </span>
                                         )}
@@ -1742,31 +2146,31 @@ const App = () => {
 
                     <div className="flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
-                            <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <Icon.Search className="w-18 h-18 text-muted-foreground absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input ref={searchInputRef} id="searchInput" type="text" autoComplete="off"
                                    value={query} onChange={(e) => setQuery(e.target.value)} disabled={!warehouse}
                                    placeholder={warehouse ? "اكتب رقم الصنف أو امسح الباركود..." : "اختر المستودع أولاً"}
-                                   className={`w-full h-48 pr-40 pl-48 rounded-12 border outline-none transition-colors ${!warehouse ? 'bg-surface border-border text-muted cursor-not-allowed' : 'bg-bg border-border focus:border-accent text-primary'}`} />
+                                   className={`w-full h-48 pr-40 pl-48 rounded-md border outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring ${!warehouse ? 'bg-muted/50 border-border text-muted-foreground cursor-not-allowed' : 'bg-background border-input text-foreground'}`} />
                             
                             {warehouse && (
                                 <button onClick={() => setShowScanner(true)} title="مسح الباركود بالكاميرا"
-                                    className="absolute left-6 top-1/2 -translate-y-1/2 w-36 h-36 flex items-center justify-center rounded-8 text-secondary bg-surface border border-border hover:text-accent hover:border-accent transition-colors">
+                                    className="absolute left-6 top-1/2 -translate-y-1/2 w-36 h-36 flex items-center justify-center rounded-md text-muted-foreground bg-card border border-border hover:text-primary hover:border-primary/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                     <Icon.Scan className="w-18 h-18" />
                                 </button>
                             )}
                         </div>
 
                         <label className="flex items-center gap-8 cursor-pointer flex-shrink-0">
-                            <span className="hidden sm:inline text-[12px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
+                            <span className="hidden sm:inline text-[12px] text-muted-foreground whitespace-nowrap">عرض مع الصورة</span>
                             <input type="checkbox" className="sr-only" checked={showImageInSearch}
                                    onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                            <div className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-accent' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
-                                <div className={`absolute top-2 left-2 w-22 h-22 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
+                            <div className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
+                                <div className={`absolute top-2 left-2 w-22 h-22 bg-background rounded-full shadow-sm transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
                             </div>
                         </label>
                     </div>
 
-                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
+                    {warehouse && showImageInSearch && <p className="text-[11px] text-primary"> وضع العرض للعميل — الأصناف المنتهية مخفية</p>}
                 </div>
             </div>
 
@@ -1785,20 +2189,20 @@ const App = () => {
                         {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
                             <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && imagesList.has(item.cleanId)} imageFileName={imagesList.get(item.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />
                         ))}
-                        {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — أضف تفاصيل لتضييق البحث</p>}
+                        {search.total > search.visible.length && <p className="text-[12px] text-muted-foreground text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — أضف تفاصيل لتضييق البحث</p>}
                     </div>
                 )}
 
                 <section className="mt-40" id="gallery-section">
                     <div className="flex justify-between items-end gap-12 mb-12">
                         <div className="min-w-0">
-                            <h2 className="text-[18px] font-bold text-primary">المعرض الرقمي</h2>
-                            {warehouse && <p className="text-[12px] text-muted mt-2">{activeWarehouseName}</p>}
+                            <h2 className="text-[18px] font-bold text-foreground">المعرض الرقمي</h2>
+                            {warehouse && <p className="text-[12px] text-muted-foreground mt-2">{activeWarehouseName}</p>}
                         </div>
                         {activeCategory && (
-                            <div className="flex bg-surface border border-border rounded-10 p-4 gap-4 flex-shrink-0" role="group" aria-label="نمط العرض">
-                                <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'} className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'list' ? 'bg-primary text-bg' : 'text-secondary'}`}><Icon.List className="w-16 h-16" /> طولي</button>
-                                <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`flex items-center gap-6 px-12 h-36 rounded-8 text-[13px] font-medium transition-colors ${galleryView === 'grid' ? 'bg-primary text-bg' : 'text-secondary'}`}><Icon.Grid className="w-16 h-16" /> شبكي</button>
+                            <div className="flex bg-muted/50 border border-border rounded-lg p-4 gap-4 flex-shrink-0" role="group" aria-label="نمط العرض">
+                                <button onClick={() => setGalleryView('list')} aria-pressed={galleryView === 'list'} className={`flex items-center gap-6 px-12 h-36 rounded-md text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${galleryView === 'list' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Icon.List className="w-16 h-16" /> طولي</button>
+                                <button onClick={() => setGalleryView('grid')} aria-pressed={galleryView === 'grid'} className={`flex items-center gap-6 px-12 h-36 rounded-md text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${galleryView === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Icon.Grid className="w-16 h-16" /> شبكي</button>
                             </div>
                         )}
                     </div>
@@ -1820,7 +2224,7 @@ const App = () => {
                                 ))}
                                 <button onClick={() => changeCategory(SPECIAL_CATEGORIES.UNCATEGORIZED)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED} className={chip(activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED)}>{SPECIAL_CATEGORIES.UNCATEGORIZED}</button>
                                 {isAdmin && (
-                                    <button onClick={() => changeCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accentSoft hover:border-accent'}`}>
+                                    <button onClick={() => changeCategory(SPECIAL_CATEGORIES.MISSING_IMAGES)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES} className={`px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 flex items-center gap-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-primary/10 text-primary border-primary/10 hover:border-primary/50'}`}>
                                         <Icon.ImageOff className="w-14 h-14 flex-shrink-0" /> {SPECIAL_CATEGORIES.MISSING_IMAGES}
                                     </button>
                                 )}
@@ -1829,7 +2233,7 @@ const App = () => {
 
                         return (
                             <React.Fragment>
-                                <p className="text-[12px] text-muted mb-8">الأقسام (<span className="numeric">{NUMBER_FORMATTER.format(totalCategoryCount)}</span>)</p>
+                                <p className="text-[12px] text-muted-foreground mb-8">الأقسام (<span className="numeric">{NUMBER_FORMATTER.format(totalCategoryCount)}</span>)</p>
                                 <div className="mb-20">
                                     {categoryButtons}
                                 </div>
@@ -1840,13 +2244,13 @@ const App = () => {
                                 ) : (
                                     <div>
                                         <div className="flex flex-wrap justify-between items-center gap-8 mb-16">
-                                            <p className="text-[12px] text-muted">
+                                            <p className="text-[12px] text-muted-foreground">
                                                 {activeCategory} — <span className="numeric">{NUMBER_FORMATTER.format(galleryResults.length)}</span> صنف متوفر
                                                 {galleryResults.length > visibleItems.length && ` (معروض `}
                                                 {galleryResults.length > visibleItems.length && <span className="numeric">{NUMBER_FORMATTER.format(visibleItems.length)}</span>}
                                                 {galleryResults.length > visibleItems.length && `)`}
                                             </p>
-                                            <p className="text-[11px] text-muted">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
+                                            <p className="text-[11px] text-muted-foreground">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
                                         </div>
 
                                         {galleryResults.length === 0 ? (
@@ -1862,13 +2266,13 @@ const App = () => {
 
                                         {galleryResults.length > visibleItems.length && (
                                             <div className="flex justify-center mt-24">
-                                                <button onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)} className="px-24 h-48 rounded-12 border border-border bg-bg text-primary text-[14px] font-semibold hover:bg-surface transition-colors">عرض المزيد</button>
+                                                <button onClick={() => setVisibleCount(c => c + GALLERY_PAGE_SIZE)} className="px-24 h-48 rounded-md border border-input bg-card text-foreground text-[14px] font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors shadow-sm">عرض المزيد</button>
                                             </div>
                                         )}
 
                                         {galleryResults.length > 0 && (
                                             <div className="mt-32 pt-24 border-t border-border">
-                                                <p className="text-[12px] text-muted mb-8">انتقال سريع لقسم آخر:</p>
+                                                <p className="text-[12px] text-muted-foreground mb-8">انتقال سريع لقسم آخر:</p>
                                                 {categoryButtons}
                                             </div>
                                         )}
@@ -1880,7 +2284,7 @@ const App = () => {
                 </section>
 
                 <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
-                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted-foreground hover:text-primary transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
                 </footer>
             </div>
 
