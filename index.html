@@ -27,7 +27,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
     
     <script>
         tailwind.config = {
@@ -773,11 +773,168 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
     );
 });
 
+// ============================================================
+// صور المنتجات — ضغط مطول: حفظ / مشاركة (بدون زر ظاهر)
+// ============================================================
+const getProductImageUrl = (fileName) => new URL(`${IMAGES_PATH}${fileName}`, window.location.href).href;
+
+const copyTextSafe = async (value) => {
+    try {
+        await navigator.clipboard.writeText(value);
+        return true;
+    } catch (e) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = value;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            ta.remove();
+            return ok;
+        } catch (_) {
+            return false;
+        }
+    }
+};
+
 const ProductImage = ({ fileName, alt, className }) => {
+    const [showActions, setShowActions] = useState(false);
+    const [preparedFile, setPreparedFile] = useState(null);
+    const holdTimerRef = useRef(null);
+    const suppressClickRef = useRef(false);
+
     if (!fileName) return null;
+
+    const imageUrl = getProductImageUrl(fileName);
+
+    const prepareShareFile = async () => {
+        try {
+            const response = await fetch(imageUrl, { cache: 'force-cache' });
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+            setPreparedFile(file);
+            return file;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const openActions = () => {
+        suppressClickRef.current = true;
+        setShowActions(true);
+        if (!preparedFile) prepareShareFile();
+        try { navigator.vibrate && navigator.vibrate(20); } catch (e) {}
+    };
+
+    const clearHold = () => {
+        if (holdTimerRef.current) {
+            clearTimeout(holdTimerRef.current);
+            holdTimerRef.current = null;
+        }
+    };
+
+    const startHold = () => {
+        clearHold();
+        suppressClickRef.current = false;
+        holdTimerRef.current = setTimeout(openActions, 520);
+    };
+
+    const handleClick = (e) => {
+        if (suppressClickRef.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            suppressClickRef.current = false;
+        }
+    };
+
+    const handleDownload = async () => {
+        try {
+            const response = await fetch(imageUrl, { cache: 'force-cache' });
+            if (!response.ok) throw new Error('download failed');
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName || 'product-image.jpg';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        } catch (e) {
+            window.open(imageUrl, '_blank', 'noopener,noreferrer');
+        } finally {
+            setShowActions(false);
+        }
+    };
+
+    const handleShare = async () => {
+        try {
+            let file = preparedFile;
+            if (!file) file = await prepareShareFile();
+
+            if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: alt || 'صورة المنتج' });
+            } else if (navigator.share) {
+                await navigator.share({ title: alt || 'صورة المنتج', url: imageUrl });
+            } else {
+                const copied = await copyTextSafe(imageUrl);
+                alert(copied ? 'تم نسخ رابط الصورة.' : 'المشاركة غير مدعومة على هذا الجهاز.');
+            }
+        } catch (e) {
+            if (e && e.name !== 'AbortError') console.warn('[Image Share]', e);
+        } finally {
+            setShowActions(false);
+        }
+    };
+
     return (
-        <img src={`${IMAGES_PATH}${fileName}`} alt={alt} loading="lazy" decoding="async" draggable="false"
-             className={className} onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+        <React.Fragment>
+            <img
+                src={imageUrl}
+                alt={alt}
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+                className={className}
+                style={{ WebkitTouchCallout: 'none', userSelect: 'none' }}
+                onPointerDown={startHold}
+                onPointerUp={clearHold}
+                onPointerCancel={clearHold}
+                onPointerLeave={clearHold}
+                onContextMenu={(e) => { e.preventDefault(); clearHold(); openActions(); }}
+                onClick={handleClick}
+                onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+            />
+
+            {showActions && (
+                <div
+                    className="fixed inset-0 z-[300] bg-black/50 flex items-end sm:items-center justify-center animate-card"
+                    onClick={(e) => { e.stopPropagation(); setShowActions(false); }}
+                >
+                    <div
+                        className="w-full max-w-[390px] bg-bg rounded-t-20 sm:rounded-20 p-12 shadow-lift border border-border"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="px-8 pb-10 border-b border-border">
+                            <p className="text-[13px] font-bold text-primary">خيارات الصورة</p>
+                            <p className="text-[11px] text-muted mt-2 truncate">{alt || fileName}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8 pt-12">
+                            <button onClick={handleDownload} className="h-44 rounded-10 bg-surface border border-border text-primary font-semibold text-[13px] hover:border-accent transition-colors">
+                                حفظ الصورة
+                            </button>
+                            <button onClick={handleShare} className="h-44 rounded-10 bg-primary text-bg font-semibold text-[13px] hover:bg-accent transition-colors">
+                                مشاركة الصورة
+                            </button>
+                        </div>
+                        <button onClick={() => setShowActions(false)} className="w-full h-40 mt-8 text-[12px] text-muted hover:text-primary">إلغاء</button>
+                    </div>
+                </div>
+            )}
+        </React.Fragment>
     );
 };
 
@@ -798,8 +955,9 @@ const Lightbox = ({ fileName, title, onClose }) => {
                 <Icon.Close className="w-20 h-20" />
             </button>
             <div className="max-w-[860px] w-full flex flex-col items-center gap-16" onClick={(e) => e.stopPropagation()}>
-                <img src={`${IMAGES_PATH}${fileName}`} alt={title} className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
+                <ProductImage fileName={fileName} alt={title} className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
                 <p className="text-white text-[15px] text-center px-16">{title}</p>
+                <p className="text-white/60 text-[11px] text-center">اضغط مطولاً على الصورة للحفظ أو المشاركة</p>
             </div>
         </div>
     );
@@ -859,8 +1017,11 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
     </div>
 ));
 
-const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart, setCart }) => (
-    <div className="animate-card w-full border border-border rounded-12 p-12 bg-bg flex flex-col gap-12 hover:border-muted transition-colors duration-200">
+const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart, setCart, onSelect }) => (
+    <div role="button" tabIndex={0}
+         onClick={() => onSelect && onSelect(item)}
+         onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onSelect) { e.preventDefault(); onSelect(item); } }}
+         className="animate-card w-full border border-border rounded-12 p-12 bg-bg flex flex-col gap-12 hover:border-accent hover:shadow-card transition-all duration-200 cursor-pointer">
         <div className="flex justify-between items-center gap-12">
             <div className="flex items-center gap-12 min-w-0 flex-1">
                 {showImage && imageFileName && (
@@ -939,7 +1100,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                     {showImage && (
                         <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
-                                          className={`object-contain pointer-events-none w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
+                                          className={`object-contain w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
                                     className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <Icon.Expand className="w-16 h-16" />
@@ -1075,10 +1236,15 @@ const LoginScreen = ({ onLogin }) => {
         try {
             const canvas = canvasRef.current;
             const context = canvas.getContext('2d');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
+            const sourceW = videoRef.current.videoWidth || 640;
+            const sourceH = videoRef.current.videoHeight || 480;
+            const maxW = 640;
+            const scale = Math.min(1, maxW / sourceW);
+            canvas.width = Math.max(1, Math.round(sourceW * scale));
+            canvas.height = Math.max(1, Math.round(sourceH * scale));
             context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-            const photoDataUrl = canvas.toDataURL('image/jpeg', 0.5); 
+            // حجم مضبوط ليبقى أرشيف الصور عملياً داخل Firestore.
+            const photoDataUrl = canvas.toDataURL('image/jpeg', 0.68); 
             
             stopCamera();
 
@@ -1257,67 +1423,178 @@ const LoginScreen = ({ onLogin }) => {
     );
 };
 
-// ✨ المسح الضوئي التلقائي 100% (بدون أزرار)
+// ============================================================
+// ماسح الباركود للجوال — Ultra Fast 1D (iPhone + Android)
+// ============================================================
 const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     const [camError, setCamError] = useState("");
-    
+    const [ready, setReady] = useState(false);
+    const scannerRef = useRef(null);
+    const lockedRef = useRef(false);
+
     useEffect(() => {
-        let isMounted = true;
-        const html5QrCode = new Html5Qrcode("reader");
-        const config = {
-            fps: 10, 
-            qrbox: (viewfinderWidth, viewfinderHeight) => { const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.72; return { width: size, height: size }; },
-            aspectRatio: 1, disableFlip: true
+        let alive = true;
+        let html5QrCode = null;
+
+        const stopScanner = async () => {
+            if (!html5QrCode) return;
+            try {
+                if (html5QrCode.isScanning) await html5QrCode.stop();
+            } catch (e) {}
+            try { html5QrCode.clear(); } catch (e) {}
         };
+
+        const formats = [
+            window.Html5QrcodeSupportedFormats?.CODE_128,
+            window.Html5QrcodeSupportedFormats?.CODE_39,
+            window.Html5QrcodeSupportedFormats?.CODE_93,
+            window.Html5QrcodeSupportedFormats?.EAN_13,
+            window.Html5QrcodeSupportedFormats?.EAN_8,
+            window.Html5QrcodeSupportedFormats?.UPC_A,
+            window.Html5QrcodeSupportedFormats?.UPC_E
+        ].filter(v => v !== undefined && v !== null);
 
         const onScanSuccess = (decodedText) => {
-            if (isMounted) {
-                html5QrCode.stop().then(() => {
-                    html5QrCode.clear();
-                    onScan(decodedText.trim());
-                }).catch(e => {
-                    onScan(decodedText.trim());
-                });
+            if (!alive || lockedRef.current) return;
+            const code = String(decodedText || '').trim();
+            if (!code) return;
+
+            // أول قراءة صحيحة تفوز فوراً — لا ننتظر إغلاق الكاميرا.
+            lockedRef.current = true;
+            try { navigator.vibrate && navigator.vibrate(35); } catch (e) {}
+            onScan(code);
+        };
+
+        const optimizeCamera = async () => {
+            try {
+                const video = document.querySelector('#reader video');
+                if (!video) return;
+                video.setAttribute('playsinline', 'true');
+                video.style.objectFit = 'cover';
+
+                const track = video.srcObject?.getVideoTracks?.()[0];
+                if (!track || !track.getCapabilities || !track.applyConstraints) return;
+                const caps = track.getCapabilities();
+                const advanced = [];
+
+                if (Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+                    advanced.push({ focusMode: 'continuous' });
+                }
+
+                // تقريب خفيف فقط؛ التقريب العالي قد يبطئ الفوكس في بعض أجهزة iPhone/Samsung.
+                if (caps.zoom && typeof caps.zoom.min === 'number' && typeof caps.zoom.max === 'number') {
+                    const targetZoom = Math.min(caps.zoom.max, Math.max(caps.zoom.min, 1.12));
+                    if (targetZoom > caps.zoom.min) advanced.push({ zoom: targetZoom });
+                }
+
+                if (advanced.length) await track.applyConstraints({ advanced });
+            } catch (e) {
+                // القيود المتقدمة اختيارية؛ عدم دعمها لا يعطل الماسح.
             }
         };
 
-        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-        .catch((err) => {
-            console.error("خطأ الكاميرا:", err);
-            if (isMounted) setCamError("تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.");
-        });
+        const startScanner = async () => {
+            try {
+                if (!window.Html5Qrcode) throw new Error('html5-qrcode غير محمل');
 
-        return () => { 
-            isMounted = false; 
-            if (html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {}); 
+                html5QrCode = new Html5Qrcode('reader', {
+                    formatsToSupport: formats,
+                    useBarCodeDetectorIfSupported: true,
+                    verbose: false
+                });
+                scannerRef.current = html5QrCode;
+
+                const config = {
+                    // 20 محاولة/ث مناسبة لباركود 1D بدون إغراق معالج الجوال.
+                    fps: 20,
+                    // باركود المنتجات مستطيل؛ تقليل ROI يسرّع فك الترميز بشكل واضح.
+                    qrbox: (w, h) => {
+                        const width = Math.max(240, Math.min(Math.floor(w * 0.92), 420));
+                        const height = Math.max(105, Math.min(Math.floor(h * 0.30), 145));
+                        return { width, height };
+                    },
+                    aspectRatio: 4 / 3,
+                    disableFlip: true
+                };
+
+                await html5QrCode.start(
+                    { facingMode: 'environment' },
+                    config,
+                    onScanSuccess,
+                    () => {}
+                );
+
+                if (!alive) {
+                    await stopScanner();
+                    return;
+                }
+
+                setReady(true);
+                requestAnimationFrame(() => optimizeCamera());
+            } catch (err) {
+                console.error('[BarcodeScanner]', err);
+                if (!alive) return;
+
+                let msg = 'تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.';
+                const raw = String(err?.message || err || '');
+                if (!window.isSecureContext) msg = 'الكاميرا تحتاج إلى تشغيل الموقع عبر HTTPS.';
+                else if (/NotAllowed|Permission|denied/i.test(raw)) msg = 'صلاحية الكاميرا مرفوضة. اسمح للمتصفح باستخدام الكاميرا ثم أعد المحاولة.';
+                else if (/NotFound|DevicesNotFound/i.test(raw)) msg = 'لم يتم العثور على كاميرا خلفية متاحة.';
+                else if (/NotReadable|TrackStart/i.test(raw)) msg = 'الكاميرا مستخدمة بواسطة تطبيق آخر. أغلق التطبيق الآخر ثم حاول مجدداً.';
+                setCamError(msg);
             }
+        };
+
+        startScanner();
+
+        return () => {
+            alive = false;
+            lockedRef.current = true;
+            stopScanner();
         };
     }, [onScan]);
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-16 animate-card">
-            <div className="w-full max-w-[380px] bg-bg rounded-16 overflow-hidden shadow-lift flex flex-col">
+            <div className="w-full max-w-[400px] bg-bg rounded-16 overflow-hidden shadow-lift flex flex-col">
                 <div className="p-16 flex justify-between items-center border-b border-border bg-surface">
-                    <h3 className="font-bold text-primary flex items-center gap-8"><Icon.Scan className="w-20 h-20 text-accent"/> مسح الباركود التلقائي</h3>
-                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
+                    <h3 className="font-bold text-primary flex items-center gap-8">
+                        <Icon.Scan className="w-20 h-20 text-accent"/> مسح الباركود
+                    </h3>
+                    <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border" aria-label="إغلاق الماسح">
+                        <Icon.Close className="w-16 h-16 text-secondary"/>
+                    </button>
                 </div>
-                <div className="w-full bg-black min-h-[300px] relative flex items-center justify-center overflow-hidden">
+
+                <div className="w-full bg-black h-[330px] relative flex items-center justify-center overflow-hidden">
                     {camError ? (
-                        <div className="text-danger text-center p-24 text-[13px] font-medium leading-relaxed">
+                        <div className="text-danger text-center p-24 text-[13px] font-medium leading-relaxed bg-bg m-16 rounded-12">
                             <Icon.Alert className="w-24 h-24 mx-auto mb-8 text-danger" />{camError}
                         </div>
                     ) : (
                         <React.Fragment>
-                            <div id="reader" className="w-full h-full object-cover"></div>
-                            {/* ✨ ليزر أخضر ليدل على أن المسح التلقائي يعمل */}
-                            <div className="absolute left-0 w-full h-[2px] bg-success shadow-[0_0_15px_3px_#15803D] animate-laser pointer-events-none z-10" style={{top: '50%'}}></div>
+                            <div id="reader" className="absolute inset-0 w-full h-full"></div>
+
+                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[125px] border-2 border-white/60 rounded-12 pointer-events-none z-20">
+                                <div className="absolute left-[5%] w-[90%] h-[2px] bg-success shadow-[0_0_12px_2px_#15803D] animate-laser"></div>
+                                <div className="absolute -top-[2px] -right-[2px] w-28 h-28 border-t-[4px] border-r-[4px] border-success rounded-tr-8"></div>
+                                <div className="absolute -top-[2px] -left-[2px] w-28 h-28 border-t-[4px] border-l-[4px] border-success rounded-tl-8"></div>
+                                <div className="absolute -bottom-[2px] -right-[2px] w-28 h-28 border-b-[4px] border-r-[4px] border-success rounded-br-8"></div>
+                                <div className="absolute -bottom-[2px] -left-[2px] w-28 h-28 border-b-[4px] border-l-[4px] border-success rounded-bl-8"></div>
+                            </div>
+
+                            {!ready && (
+                                <div className="absolute inset-0 z-30 bg-black/25 flex items-center justify-center pointer-events-none">
+                                    <span className="bg-black/65 text-white text-[11px] px-12 py-6 rounded-full">جاري تجهيز الكاميرا...</span>
+                                </div>
+                            )}
                         </React.Fragment>
                     )}
                 </div>
+
                 <div className="p-16 text-center text-[13px] font-medium text-primary bg-surface border-t border-border">
-                    فقط قم بتوجيه الكاميرا وسيتم المسح تلقائياً
-                    <p className="text-[11px] text-muted font-normal mt-4">مدعوم بتقنية التسريع العتادي ⚡️</p>
+                    وجّه الباركود داخل الإطار — الالتقاط تلقائي وفوري
+                    <p className="text-[11px] text-muted font-normal mt-4">مهيأ لباركودات المنتجات 1D على iPhone وAndroid ⚡</p>
                 </div>
             </div>
         </div>
@@ -1335,9 +1612,11 @@ const AdminDashboardModal = memo(({ onClose }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortOrder, setSortOrder] = useState('desc');
     const [expandedOrderId, setExpandedOrderId] = useState(null);
+    const [archiveFilter, setArchiveFilter] = useState('all');
 
     const tabs = [
         { id: 'access_requests', label: 'طلبات الدخول 🔴' },
+        { id: 'access_archive', label: 'صور الدخول' },
         { id: 'site_sessions', label: 'جلسات العمل' },
         { id: 'orders', label: 'الطلبات المعتمدة' },
         { id: 'drafts', label: 'المسودات المؤقتة' }, 
@@ -1371,6 +1650,30 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                 setLoading(false);
                             }
                         });
+                    });
+            });
+        } else if (activeTab === 'access_archive') {
+            setLoading(true);
+            setSearchTerm('');
+            setExpandedOrderId(null);
+            getDb().then(db => {
+                db.collection('access_requests').limit(500).get()
+                    .then(snapshot => {
+                        if (!isMounted) return;
+                        const rows = snapshot.docs
+                            .map(doc => ({ id: doc.id, ...doc.data() }))
+                            .filter(row => row.status === 'approved' || row.status === 'rejected')
+                            .sort((a, b) => {
+                                const av = a.reviewedAt?.toMillis?.() || a.timestamp?.toMillis?.() || 0;
+                                const bv = b.reviewedAt?.toMillis?.() || b.timestamp?.toMillis?.() || 0;
+                                return bv - av;
+                            });
+                        setData(rows);
+                        setLoading(false);
+                    })
+                    .catch(err => {
+                        console.error('[Access Archive]', err);
+                        if (isMounted) { setData([]); setLoading(false); }
                     });
             });
         } else {
@@ -1474,9 +1777,31 @@ const AdminDashboardModal = memo(({ onClose }) => {
         if (!window.confirm(`تأكيد ${decision === 'approved' ? 'الموافقة' : 'الرفض'} لهذا الشخص؟`)) return;
         try {
             const db = await getDb();
-            await db.collection('access_requests').doc(reqId).update({ status: decision });
+            await db.collection('access_requests').doc(reqId).update({
+                status: decision,
+                reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                reviewedBy: 'مهند'
+            });
         } catch (e) {
             alert('حدث خطأ أثناء تنفيذ القرار.');
+        }
+    };
+
+
+    const archivedAccess = useMemo(() => {
+        if (activeTab !== 'access_archive') return [];
+        return filteredData.filter(row => archiveFilter === 'all' || row.status === archiveFilter);
+    }, [activeTab, filteredData, archiveFilter]);
+
+    const deleteArchivedAccess = async (reqId) => {
+        if (!window.confirm('حذف هذه الصورة وطلب الدخول نهائياً من الأرشيف؟')) return;
+        try {
+            const db = await getDb();
+            await db.collection('access_requests').doc(reqId).delete();
+            setData(prev => prev.filter(row => row.id !== reqId));
+        } catch (e) {
+            console.error('[Delete Access Photo]', e);
+            alert('تعذر حذف الصورة. حاول مرة أخرى.');
         }
     };
 
@@ -1568,6 +1893,64 @@ const AdminDashboardModal = memo(({ onClose }) => {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        )
+                    ) : activeTab === 'access_archive' ? (
+                        loading ? (
+                            <div className="flex justify-center items-center h-48 text-muted text-[14px]">جاري تحميل أرشيف صور الدخول...</div>
+                        ) : (
+                            <div>
+                                <div className="flex flex-wrap gap-8 mb-16">
+                                    <button onClick={() => setArchiveFilter('all')} className={`px-12 h-34 rounded-full text-[11px] font-semibold border ${archiveFilter === 'all' ? 'bg-primary text-white border-primary' : 'bg-bg text-secondary border-border'}`}>
+                                        الكل ({filteredData.length})
+                                    </button>
+                                    <button onClick={() => setArchiveFilter('approved')} className={`px-12 h-34 rounded-full text-[11px] font-semibold border ${archiveFilter === 'approved' ? 'bg-success text-white border-success' : 'bg-bg text-secondary border-border'}`}>
+                                        المقبولون
+                                    </button>
+                                    <button onClick={() => setArchiveFilter('rejected')} className={`px-12 h-34 rounded-full text-[11px] font-semibold border ${archiveFilter === 'rejected' ? 'bg-danger text-white border-danger' : 'bg-bg text-secondary border-border'}`}>
+                                        المرفوضون
+                                    </button>
+                                </div>
+
+                                {archivedAccess.length === 0 ? (
+                                    <StateBlock icon={<Icon.Camera className="w-20 h-20" />} title="لا توجد صور محفوظة" note="ستظهر هنا صور طلبات الدخول بعد قبولها أو رفضها." />
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-16">
+                                        {archivedAccess.map(req => (
+                                            <div key={req.id} className="bg-bg border border-border rounded-12 overflow-hidden shadow-card flex flex-col">
+                                                <div className="aspect-square bg-black relative overflow-hidden">
+                                                    {req.photoDataUrl ? (
+                                                        <img src={req.photoDataUrl} alt={`صورة ${req.name || 'المستخدم'}`} className="w-full h-full object-cover scale-x-[-1]" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-muted"><Icon.ImageOff className="w-28 h-28" /></div>
+                                                    )}
+                                                    <span className={`absolute top-8 right-8 px-8 py-4 rounded-full text-[10px] font-bold ${req.status === 'approved' ? 'bg-success text-white' : 'bg-danger text-white'}`}>
+                                                        {req.status === 'approved' ? 'مقبول' : 'مرفوض'}
+                                                    </span>
+                                                </div>
+                                                <div className="p-12 flex flex-col gap-8">
+                                                    <div>
+                                                        <h4 className="font-bold text-[15px] text-primary">{req.name || 'بدون اسم'}</h4>
+                                                        <p className="text-[10px] text-muted mt-2">
+                                                            {formatFbDate(req.reviewedAt || req.timestamp)} • {formatFbTime(req.reviewedAt || req.timestamp)}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex gap-8">
+                                                        {req.latitude && req.longitude && (
+                                                            <a href={`https://www.google.com/maps?q=${req.latitude},${req.longitude}`} target="_blank" rel="noopener noreferrer"
+                                                               className="flex-1 h-34 rounded-8 bg-surface border border-border text-[11px] font-semibold text-primary flex items-center justify-center gap-4">
+                                                                <Icon.MapPin className="w-12 h-12"/> الموقع
+                                                            </a>
+                                                        )}
+                                                        <button onClick={() => deleteArchivedAccess(req.id)} className="flex-1 h-34 rounded-8 bg-dangerSoft text-danger border border-danger/10 text-[11px] font-bold flex items-center justify-center gap-4 hover:bg-danger hover:text-white transition-colors">
+                                                            <Icon.Trash className="w-13 h-13"/> حذف نهائي
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )
                     ) : (
@@ -1869,6 +2252,7 @@ const App = () => {
     const [query, setQuery] = useState('');
     const [showImageInSearch, setShowImageInSearch] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
+    const [selectedSearchItem, setSelectedSearchItem] = useState(null);
     
     const [databases, setDatabases]   = useState({ jeddah: [], riyadh: [] });
     const [imagesList, setImagesList] = useState(new Map());
@@ -1930,6 +2314,7 @@ const App = () => {
     }, []);
 
     useEffect(() => { if (warehouse && searchInputRef.current) searchInputRef.current.focus(); }, [warehouse]);
+    useEffect(() => { setSelectedSearchItem(null); }, [query, warehouse]);
     useEffect(() => { setVisibleCount(GALLERY_PAGE_SIZE); setCardViews({}); }, [activeCategory, warehouse]);
 
     useEffect(() => { if (!isAdmin && activeCategory && ADMIN_ONLY_CATEGORIES.has(activeCategory)) setActiveCategory(null); }, [isAdmin, activeCategory]);
@@ -2141,11 +2526,25 @@ const App = () => {
                 {query.trim() && search && (
                     <div className="max-w-[520px] mx-auto mt-24 flex flex-col gap-8">
                         {search.total === 0 && <StateBlock icon={<Icon.Search className="w-20 h-20" />} title="لم يتم العثور على الصنف" note="لا يوجد صنف بهذا الرقم أو الاسم في المستودع المحدد." />}
-                        {search.exact && <FullResultCard item={search.exact} warehouseName={activeWarehouseName} showImage={showImageInSearch && imagesList.has(search.exact.cleanId)} imageFileName={imagesList.get(search.exact.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />}
-                        {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
-                            <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && imagesList.has(item.cleanId)} imageFileName={imagesList.get(item.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />
-                        ))}
-                        {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — أضف تفاصيل لتضييق البحث</p>}
+
+                        {selectedSearchItem ? (
+                            <React.Fragment>
+                                <button onClick={() => setSelectedSearchItem(null)} className="self-start px-12 h-34 rounded-8 bg-surface border border-border text-[12px] font-semibold text-secondary hover:text-primary hover:border-accent transition-colors">
+                                    ← العودة لنتائج البحث
+                                </button>
+                                <FullResultCard item={selectedSearchItem} warehouseName={activeWarehouseName}
+                                    showImage={showImageInSearch && imagesList.has(selectedSearchItem.cleanId)}
+                                    imageFileName={imagesList.get(selectedSearchItem.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />
+                            </React.Fragment>
+                        ) : (
+                            <React.Fragment>
+                                {search.exact && <FullResultCard item={search.exact} warehouseName={activeWarehouseName} showImage={showImageInSearch && imagesList.has(search.exact.cleanId)} imageFileName={imagesList.get(search.exact.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} />}
+                                {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
+                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && imagesList.has(item.cleanId)} imageFileName={imagesList.get(item.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} onSelect={setSelectedSearchItem} />
+                                ))}
+                                {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — اضغط على أي نتيجة لفتح بطاقتها كاملة</p>}
+                            </React.Fragment>
+                        )}
                     </div>
                 )}
 
