@@ -108,6 +108,9 @@ const PAGE_SIZE = 48;
 const CUSTOMER_COLLECTION = 'customers';
 const ORDER_COLLECTION = 'customer_orders';
 const DRAFT_COLLECTION = 'customer_drafts';
+const CUSTOMER_ACTIVITY_COLLECTION = 'customer_activity_logs';
+const CUSTOMER_SESSION_COLLECTION = 'customer_sessions';
+const CUSTOMER_LOGIN_COLLECTION = 'customer_login_logs';
 const CATEGORY_OVERRIDES = 'product_category_overrides';
 const CATEGORY_META = 'catalog_categories';
 const CATEGORY_UNASSIGNED = '__UNCATEGORIZED__';
@@ -140,6 +143,40 @@ const floorHalf = n => Math.max(0,Math.floor((Number(n)||0)*2+1e-7)/2);
 const sum = arr => arr.reduce((a,b)=>a+(Number(b)||0),0);
 const uidPart = () => Math.random().toString(36).slice(2,10);
 const nowLabel = () => new Date().toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
+
+
+// Security telemetry: meaningful customer activity only. Never stores PINs or face images.
+const customerSessionId = (()=>{
+  try{
+    let id=sessionStorage.getItem('batco_customer_session_id');
+    if(!id){id=`cs_${Date.now().toString(36)}_${uidPart()}`;sessionStorage.setItem('batco_customer_session_id',id)}
+    return id;
+  }catch{return `cs_${Date.now().toString(36)}_${uidPart()}`}
+})();
+const customerDeviceInfo = () => ({
+  userAgent:navigator.userAgent||'', platform:navigator.platform||'', language:navigator.language||'',
+  viewport:`${window.innerWidth||0}x${window.innerHeight||0}`, standalone:Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches || navigator.standalone),
+  timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||''
+});
+async function logCustomerEvent(user,type,label='',data={}){
+  if(!user?.uid)return;
+  try{
+    await db.collection(CUSTOMER_ACTIVITY_COLLECTION).add({
+      customerUid:user.uid, sessionId:customerSessionId, type, label:String(label||''), data:data||{},
+      device:customerDeviceInfo(), createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }catch(e){console.warn('[Customer telemetry]',e?.message||e)}
+}
+async function touchCustomerSession(user,profile,event='active'){
+  if(!user?.uid)return;
+  try{
+    const key='batco_customer_session_started_'+customerSessionId;
+    const first=!sessionStorage.getItem(key);
+    const payload={customerUid:user.uid,sessionId:customerSessionId,name:profile?.name||'',company:profile?.company||'',phone:profile?.phone||'',event,lastActive:firebase.firestore.FieldValue.serverTimestamp(),device:customerDeviceInfo()};
+    if(first){payload.startedAt=firebase.firestore.FieldValue.serverTimestamp();sessionStorage.setItem(key,'1')}
+    await db.collection(CUSTOMER_SESSION_COLLECTION).doc(`${user.uid}_${customerSessionId}`).set(payload,{merge:true});
+  }catch(e){console.warn('[Customer session]',e?.message||e)}
+}
 
 function normalizePhone(raw){
   let d=toEnglishDigits(raw).replace(/\D/g,'');
@@ -435,21 +472,37 @@ function LivenessCheck({registration,onBack,onSuccess}){
     return()=>{cancelled=true;stop();};
   },[onSuccess,stop]);
 
-  const checks=[['face','تم اكتشاف الوجه'],['light','الصورة واضحة'],['ready','جاهز']];
-  return <div className="min-h-[100dvh] bg-[#111] text-white flex flex-col safe-top safe-bottom">
-    <div className="px-4 py-3 flex items-center justify-between"><button onClick={()=>{stop();onBack()}} className="h-10 px-3 rounded-10 bg-white/10 text-sm">إلغاء</button><b>تحقق سريع</b><span className="w-16"/></div>
-    <div className="flex-1 flex items-center justify-center px-4 py-4"><div className="w-full max-w-[500px]">
-      <div className="relative aspect-[4/5] sm:aspect-[4/3] rounded-20 overflow-hidden bg-black border border-white/10 shadow-lift">
-        <video ref={videoRef} muted playsInline className="face-video absolute inset-0 w-full h-full object-cover"/>
-        <div className="absolute inset-x-[10%] top-[8%] bottom-[9%] border-2 border-white/70 rounded-[42%] pointer-events-none"></div>
-        <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur rounded-12 px-4 py-3 text-center text-sm font-bold">{error||status}</div>
-        {phase==='success'&&<div className="absolute inset-0 bg-success/20 flex items-center justify-center"><div className="w-20 h-20 rounded-full bg-success text-white flex items-center justify-center pulse-ring"><Icon name="check" className="w-10 h-10"/></div></div>}
+  const checks=[['face','الوجه ظاهر'],['light','الصورة واضحة'],['ready','اكتمل التحقق']];
+  return <div className="min-h-[100dvh] ui-auth-bg safe-top safe-bottom px-4 py-5">
+    <div className="max-w-[520px] mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={()=>{stop();onBack()}} className="ui-back"><Icon name="back" className="w-4 h-4"/>رجوع</button>
+        <div className="text-left"><div className="text-[10px] text-muted">خطوة أخيرة</div><b className="text-sm">تأكيد الحضور</b></div>
       </div>
-      <canvas ref={miniCanvas} className="hidden"/>
-      <div className="mt-4 grid grid-cols-3 gap-2">{checks.map(([k,l])=><div key={k} className={`rounded-12 px-2 py-3 text-center border ${quality[k]?'bg-success/20 border-success/40 text-green-200':'bg-white/5 border-white/10 text-white/50'}`}><div className="mx-auto w-5 h-5 flex items-center justify-center">{quality[k]?<Icon name="check" className="w-4 h-4"/>:<span className="w-2 h-2 rounded-full bg-current"/>}</div><div className="text-[10px] mt-1">{l}</div></div>)}</div>
-      {error&&<button onClick={()=>location.reload()} className="mt-4 w-full h-12 rounded-12 bg-white text-primary font-bold">إعادة المحاولة</button>}
-      <p className="text-[11px] text-white/50 text-center mt-4">فقط وجّه الكاميرا على وجهك لثانية. لا نطلب رمشة أو تحريك الرأس، ولا يتم حفظ صورة الوجه.</p>
-    </div></div>
+      <section className="ui-panel fade-in overflow-hidden">
+        <div className="ui-panel-head !pb-4">
+          <div className="w-12 h-12 mx-auto rounded-16 bg-successSoft text-success flex items-center justify-center mb-3"><Icon name="camera" className="w-6 h-6"/></div>
+          <div className="ui-eyebrow !text-success">تحقق سريع وآمن</div>
+          <h1 className="ui-title !text-[20px]">خلّ وجهك ظاهر أمام الكاميرا للحظة</h1>
+          <p className="ui-subtitle">ما تحتاج تسوي أي حركة. التحقق يتم تلقائيًا خلال لحظة، ولا نحفظ صورة وجهك.</p>
+        </div>
+        <div className="p-4 sm:p-5">
+          <div className="relative aspect-[4/3] rounded-20 overflow-hidden bg-[#F5F5F4] border border-border shadow-card">
+            <video ref={videoRef} muted playsInline className="face-video absolute inset-0 w-full h-full object-cover"/>
+            <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[76%] rounded-[46%] border-[3px] transition-colors duration-200 pointer-events-none ${quality.face?'border-white':'border-white/85'}`} style={{boxShadow:'0 0 0 999px rgba(28,25,23,.10)'}}></div>
+            <div className="absolute left-3 right-3 bottom-3 flex justify-center">
+              <div className={`max-w-[92%] rounded-full px-4 py-2 text-[12px] font-bold shadow-card backdrop-blur ${error?'bg-danger text-white':phase==='success'?'bg-success text-white':'bg-white/95 text-primary'}`}>{error||status}</div>
+            </div>
+            {phase==='loading'&&<div className="absolute inset-0 bg-white/80 flex items-center justify-center"><div className="flex items-center gap-3 text-sm font-semibold text-secondary"><Spinner/>جاري تشغيل الكاميرا...</div></div>}
+            {phase==='success'&&<div className="absolute inset-0 bg-white/72 backdrop-blur-[2px] flex items-center justify-center"><div className="text-center"><div className="w-16 h-16 rounded-full bg-success text-white mx-auto flex items-center justify-center shadow-lift"><Icon name="check" className="w-8 h-8"/></div><b className="block mt-4 text-success">تم التحقق بنجاح</b><span className="text-xs text-secondary">جاري فتح حسابك...</span></div></div>}
+          </div>
+          <canvas ref={miniCanvas} className="hidden"/>
+          <div className="grid grid-cols-3 gap-2 mt-4">{checks.map(([k,l])=><div key={k} className={`rounded-12 px-2 py-3 text-center border transition-colors ${quality[k]?'bg-successSoft border-success/15 text-success':'bg-surface border-border text-muted'}`}><div className="mx-auto w-6 h-6 rounded-full flex items-center justify-center bg-white border border-current/10">{quality[k]?<Icon name="check" className="w-4 h-4"/>:<span className="w-1.5 h-1.5 rounded-full bg-current"/>}</div><div className="text-[10px] font-bold mt-1.5">{l}</div></div>)}</div>
+          {error&&<button onClick={()=>location.reload()} className="ui-btn ui-btn-primary w-full mt-4">إعادة المحاولة</button>}
+          <div className="mt-4 flex items-start gap-2 rounded-12 bg-surface border border-border p-3 text-[11px] leading-6 text-secondary"><Icon name="lock" className="w-4 h-4 text-success shrink-0 mt-1"/><span>هذا التحقق مخصص لمنع التسجيلات العشوائية فقط. لا يتم إنشاء بصمة وجه ولا حفظ صورة من الكاميرا.</span></div>
+        </div>
+      </section>
+    </div>
   </div>;
 }
 
@@ -457,7 +510,7 @@ function ExistingLogin({onBack}){
   const [phone,setPhone]=useState(''),[pin,setPin]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const submit=async e=>{e.preventDefault();setError('');const p=normalizePhone(phone);if(!validPhone(p))return setError('تحقق من رقم الجوال.');if(!validPin(pin))return setError('رمز الدخول يجب أن يكون 6 أرقام.');
     const rateKey='cust_login_rate_'+p;let state={n:0,t:0};try{state=JSON.parse(localStorage.getItem(rateKey)||'{}')}catch{};const now=Date.now();if(state.t&&now-state.t<15*60*1000&&state.n>=6)return setError('تم إيقاف المحاولات مؤقتًا. حاول بعد 15 دقيقة.');
-    setBusy(true);try{await auth.signInWithEmailAndPassword(authEmailFromPhone(p),toEnglishDigits(pin));localStorage.removeItem(rateKey)}catch(err){const n=(state.t&&now-state.t<15*60*1000?state.n:0)+1;localStorage.setItem(rateKey,JSON.stringify({n,t:now}));if(err.code==='auth/operation-not-allowed')setError('خدمة تسجيل الدخول غير مفعّلة حاليًا.');else setError('رقم الجوال أو رمز الدخول غير صحيح.')}finally{setBusy(false)}};
+    setBusy(true);try{sessionStorage.setItem('batco_customer_auth_reason','manual_login');await auth.signInWithEmailAndPassword(authEmailFromPhone(p),toEnglishDigits(pin));localStorage.removeItem(rateKey)}catch(err){const n=(state.t&&now-state.t<15*60*1000?state.n:0)+1;localStorage.setItem(rateKey,JSON.stringify({n,t:now}));if(err.code==='auth/operation-not-allowed')setError('خدمة تسجيل الدخول غير مفعّلة حاليًا.');else setError('رقم الجوال أو رمز الدخول غير صحيح.')}finally{setBusy(false)}};
   return <div className="min-h-[100dvh] ui-auth-bg flex items-center justify-center px-4 py-8 safe-top safe-bottom"><div className="w-full max-w-[500px]">
     <button type="button" onClick={onBack} className="ui-back mb-4"><Icon name="back" className="w-4 h-4"/>رجوع</button>
     <form onSubmit={submit} className="ui-panel fade-in">
@@ -608,6 +661,8 @@ function CustomerApp({user,profile,onProfileUpdate}){
   const cartKey='customer_cart_v1_'+user.uid;
   useEffect(()=>{try{setCart(JSON.parse(localStorage.getItem(cartKey)||'{}'))}catch{setCart({})}},[cartKey]);
   useEffect(()=>{localStorage.setItem(cartKey,JSON.stringify(cart))},[cart,cartKey]);
+  useEffect(()=>{touchCustomerSession(user,profile,'active');const t=setInterval(()=>touchCustomerSession(user,profile,'heartbeat'),120000);return()=>clearInterval(t)},[user.uid,profile.name,profile.company,profile.phone]);
+  useEffect(()=>{logCustomerEvent(user,'page_view',page,{company:profile.company})},[page]);
   useEffect(()=>{
     let alive=true,unsubO=null,unsubM=null;
     Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv')]).then(([j,r,imgs,cats])=>{if(!alive)return;const images=buildImagesMap(imgs);const merged=mergeInventories(parseInventory(j),parseInventory(r)).filter(x=>x.allowedMax>=CART_STEP).map(x=>({...x,imageFile:images.get(x.cleanId)||''}));setProducts(merged);setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});
@@ -619,6 +674,8 @@ function CustomerApp({user,profile,onProfileUpdate}){
   const enriched=useMemo(()=>products.map(p=>({...p,category:catLookup[p.cleanId]||SPECIAL_UNCATEGORIZED})),[products,catLookup]);
   const categoryNames=useMemo(()=>Object.keys(categories).filter(Boolean).sort((a,b)=>a.localeCompare(b,'ar')),[categories]);
   const filtered=useMemo(()=>{let rows=enriched;if(activeCategory!== 'الكل') rows=activeCategory===SPECIAL_UNCATEGORIZED?rows.filter(p=>!catLookup[p.cleanId]):rows.filter(p=>catLookup[p.cleanId]===activeCategory);const q=query.trim();if(q){const clean=normalizeCleanId(q),text=normalizeText(q);rows=rows.filter(p=>(clean&&p.cleanId.includes(clean))||(text&&p.searchName.includes(text))||p.searchId.includes(toEnglishDigits(q).toLowerCase()))}return rows},[enriched,activeCategory,query,catLookup]);
+  useEffect(()=>{const q=query.trim();if(q.length<2)return;const t=setTimeout(()=>logCustomerEvent(user,'search',q,{results:filtered.length,category:activeCategory}),1800);return()=>clearTimeout(t)},[query,activeCategory,filtered.length]);
+  useEffect(()=>{if(activeCategory&&activeCategory!=='الكل')logCustomerEvent(user,'category_view',activeCategory)},[activeCategory]);
   useEffect(()=>setPageCount(PAGE_SIZE),[query,activeCategory]);
   const branches=profile.branches||[];
   const cartItems=useMemo(()=>Object.values(cart).map(c=>{const product=enriched.find(p=>p.cleanId===c.cleanId);const branchQuantities=c.branchQuantities||{};return {...(product||c),...c,allowedMax:product?.allowedMax??0,branchQuantities,totalQty:roundHalf(sum(Object.values(branchQuantities)))}}).filter(i=>i.totalQty>0),[cart,enriched]);
@@ -627,8 +684,10 @@ function CustomerApp({user,profile,onProfileUpdate}){
     const clean=String(name||'').trim().replace(/\s+/g,' ');
     await db.collection(CUSTOMER_COLLECTION).doc(user.uid).update({name:clean,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     onProfileUpdate({...profile,name:clean});
+    logCustomerEvent(user,'profile_name_saved','تم حفظ الاسم',{name:clean});
   }
   function requestProduct(item){
+    logCustomerEvent(user,'product_add_open',item.id,{cleanId:item.cleanId,name:item.name,category:item.category||''});
     if(!branches.length){setFirstBranchItem(item);return;}
     setAllocItem(item);
   }
@@ -638,29 +697,31 @@ function CustomerApp({user,profile,onProfileUpdate}){
     await db.collection(CUSTOMER_COLLECTION).doc(user.uid).update({branches:[branch],updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     onProfileUpdate({...profile,branches:[branch]});
     setFirstBranchItem(null);
+    logCustomerEvent(user,'branch_created',branch.name,{branchId:branch.id,source:'first_product'});
     if(item)setAllocItem(item);
   }
-  const saveAllocation=(item,q)=>{const clean={};Object.entries(q).forEach(([k,v])=>{const n=roundHalf(v);if(n>0)clean[k]=n});setCart(prev=>{const nx={...prev};const total=sum(Object.values(clean));if(total<=0)delete nx[item.cleanId];else nx[item.cleanId]={cleanId:item.cleanId,id:item.id,name:item.name,imageFile:item.imageFile||'',branchQuantities:clean};return nx});setAllocItem(null);setToast({type:'success',message:'تم تحديث طلب المنتج.'})};
+  const saveAllocation=(item,q)=>{const clean={};Object.entries(q).forEach(([k,v])=>{const n=roundHalf(v);if(n>0)clean[k]=n});const total=sum(Object.values(clean));setCart(prev=>{const nx={...prev};if(total<=0)delete nx[item.cleanId];else nx[item.cleanId]={cleanId:item.cleanId,id:item.id,name:item.name,imageFile:item.imageFile||'',branchQuantities:clean};return nx});logCustomerEvent(user,total>0?'cart_item_updated':'cart_item_removed',item.id,{cleanId:item.cleanId,name:item.name,totalQty:total,branchQuantities:clean});setAllocItem(null);setToast({type:'success',message:'تم تحديث طلب المنتج.'})};
   const showLimit=max=>setToast({type:'info',message:`تم الوصول للحد الأقصى المسموح لهذا الصنف: ${NF.format(max)} كرتون.`});
-  const removeItem=id=>setCart(c=>{const n={...c};delete n[id];return n});
+  const removeItem=id=>{const found=cart[id];logCustomerEvent(user,'cart_item_removed',found?.id||id,{cleanId:id,name:found?.name||''});setCart(c=>{const n={...c};delete n[id];return n})};
   async function saveDraft(notes=''){
-    if(!cartItems.length)return;setSavingDraft(true);try{const ref=db.collection(DRAFT_COLLECTION).doc();const draftNo='D-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,draftNo,items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',branchQuantities:i.branchQuantities,totalQty:i.totalQty})),notes:String(notes||'').trim(),totalCartons,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});setToast({type:'success',message:`تم حفظ ${draftNo} كمسودة.`});await loadHistory()}catch(e){console.error(e);setToast({type:'error',message:'تعذر حفظ المسودة.'})}finally{setSavingDraft(false)}}
+    if(!cartItems.length)return;setSavingDraft(true);try{const ref=db.collection(DRAFT_COLLECTION).doc();const draftNo='D-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,draftNo,items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',branchQuantities:i.branchQuantities,totalQty:i.totalQty})),notes:String(notes||'').trim(),totalCartons,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});setToast({type:'success',message:`تم حفظ ${draftNo} كمسودة.`});logCustomerEvent(user,'draft_saved',draftNo,{draftId:ref.id,itemCount:cartItems.length,totalCartons});await loadHistory()}catch(e){console.error(e);setToast({type:'error',message:'تعذر حفظ المسودة.'})}finally{setSavingDraft(false)}}
   async function freshAllowedMap(){const [j,r]=await Promise.all([fetchText(DATA_PATH+'jeddah.tsv',{fresh:true}),fetchText(DATA_PATH+'riyadh.tsv',{fresh:true})]);return new Map(mergeInventories(parseInventory(j),parseInventory(r)).map(x=>[x.cleanId,x.allowedMax]))}
   async function submitOrder(notes){
     const cleanNotes=String(notes||'').trim();if(!cleanNotes){setToast({type:'error',message:'الملاحظات إلزامية قبل اعتماد الطلب.'});return}if(!cartItems.length)return;
     setSubmitBusy(true);setValidationErrors([]);try{const allowed=await freshAllowedMap();const errors=cartItems.map(i=>({cleanId:i.cleanId,id:i.id,requested:i.totalQty,allowed:allowed.get(i.cleanId)||0})).filter(x=>x.requested>x.allowed+1e-9);if(errors.length){setValidationErrors(errors);setToast({type:'error',message:'تغير الحد المسموح لبعض الأصناف. راجع التنبيه.'});return}
-      const ref=db.collection(ORDER_COLLECTION).doc(),orderNo='BT-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,orderNo,customer:{name:profile.name,company:profile.company,phone:profile.phone},branches:branches.map(b=>({id:b.id,name:b.name})),items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,branchQuantities:i.branchQuantities,totalQty:i.totalQty})),notes:cleanNotes,totalCartons,status:'submitted',createdAt:firebase.firestore.FieldValue.serverTimestamp()});setCart({});setCheckout(false);setPage('orders');setToast({type:'success',message:`تم إرسال الطلب ${orderNo} بنجاح.`});await loadHistory()
+      const ref=db.collection(ORDER_COLLECTION).doc(),orderNo='BT-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,orderNo,customer:{name:profile.name,company:profile.company,phone:profile.phone},branches:branches.map(b=>({id:b.id,name:b.name})),items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,branchQuantities:i.branchQuantities,totalQty:i.totalQty})),notes:cleanNotes,totalCartons,status:'submitted',createdAt:firebase.firestore.FieldValue.serverTimestamp()});setCart({});setCheckout(false);setPage('orders');setToast({type:'success',message:`تم إرسال الطلب ${orderNo} بنجاح.`});logCustomerEvent(user,'order_submitted',orderNo,{orderId:ref.id,itemCount:cartItems.length,totalCartons,notesLength:cleanNotes.length,branches:branches.map(b=>b.name)});await loadHistory()
     }catch(e){console.error(e);setToast({type:'error',message:'تعذر اعتماد الطلب. تحقق من الاتصال وحاول مجددًا.'})}finally{setSubmitBusy(false)}}
   async function loadHistory(){setHistoryLoading(true);try{const [o,d]=await Promise.all([db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).get(),db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).get()]);const cv=x=>x?.toMillis?.()||0;setOrders(o.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));setDrafts(d.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.updatedAt||b.createdAt)-cv(a.updatedAt||a.createdAt)))}catch(e){console.error(e)}finally{setHistoryLoading(false)}}
   useEffect(()=>{if(page==='orders')loadHistory()},[page]);
-  async function deleteDraft(id){try{await db.collection(DRAFT_COLLECTION).doc(id).delete();setDrafts(x=>x.filter(d=>d.id!==id));setToast({type:'success',message:'تم حذف المسودة.'})}catch{setToast({type:'error',message:'تعذر حذف المسودة.'})}}
-  function loadDraft(d){const next={};(d.items||[]).forEach(i=>next[i.cleanId]={cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',branchQuantities:i.branchQuantities||{}});setCart(next);setCheckout(false);setPage('cart');setToast({type:'success',message:'تم تحميل المسودة إلى السلة.'})}
-  async function saveBranches(next){await db.collection(CUSTOMER_COLLECTION).doc(user.uid).update({branches:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});onProfileUpdate({...profile,branches:next});setToast({type:'success',message:'تم تحديث أسماء الفروع.'})}
+  async function deleteDraft(id){try{const row=drafts.find(x=>x.id===id);await db.collection(DRAFT_COLLECTION).doc(id).delete();setDrafts(x=>x.filter(d=>d.id!==id));logCustomerEvent(user,'draft_deleted',row?.draftNo||id,{draftId:id});setToast({type:'success',message:'تم حذف المسودة.'})}catch{setToast({type:'error',message:'تعذر حذف المسودة.'})}}
+  function loadDraft(d){logCustomerEvent(user,'draft_loaded',d.draftNo||d.id,{draftId:d.id,itemCount:d.items?.length||0});const next={};(d.items||[]).forEach(i=>next[i.cleanId]={cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',branchQuantities:i.branchQuantities||{}});setCart(next);setCheckout(false);setPage('cart');setToast({type:'success',message:'تم تحميل المسودة إلى السلة.'})}
+  async function saveBranches(next){await db.collection(CUSTOMER_COLLECTION).doc(user.uid).update({branches:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});onProfileUpdate({...profile,branches:next});logCustomerEvent(user,'branches_updated','تحديث الفروع',{branches:next.map(b=>({id:b.id,name:b.name}))});setToast({type:'success',message:'تم تحديث أسماء الفروع.'})}
   async function changePin(currentPin,newPin){
     try{
       const credential=firebase.auth.EmailAuthProvider.credential(authEmailFromPhone(profile.phone),currentPin);
       await user.reauthenticateWithCredential(credential);
       await user.updatePassword(newPin);
+      logCustomerEvent(user,'pin_changed','تم تغيير رمز الدخول');
       setToast({type:'success',message:'تم تغيير رمز الدخول بنجاح.'});
     }catch(e){
       if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')throw new Error('رمز الدخول الحالي غير صحيح.');
@@ -677,11 +738,11 @@ function CustomerApp({user,profile,onProfileUpdate}){
         {page==='home'&&<div className="mb-5 bg-primary text-white rounded-20 p-5 sm:p-6 overflow-hidden relative"><div className="relative z-10"><div className="text-xs text-white/65">أهلًا {profile.name||'بك'}</div><h1 className="text-xl sm:text-2xl font-bold mt-1">المعرض الرقمي</h1><p className="text-sm text-white/70 mt-2 max-w-xl">ابحث عن منتجاتك، وزّع الكمية على فروعك، وأرسل الطلب مباشرة.</p><div className="mt-4 inline-flex gap-2 text-xs"><span className="px-3 py-2 rounded-full bg-white/10">{cartCount} صنف في السلة</span><span className="px-3 py-2 rounded-full bg-white/10 ltr">{NF.format(totalCartons)} كرتون</span></div></div></div>}
         <div className="sticky top-[69px] z-20 bg-surface/95 backdrop-blur py-2"><div className="relative"><Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="ابحث برقم الصنف أو اسم المنتج..." className="w-full h-[52px] pr-12 pl-4 bg-white border border-border rounded-16 outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 shadow-card"/></div><div className="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1"><button onClick={()=>setActiveCategory('الكل')} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory==='الكل'?'bg-primary border-primary text-white':'bg-white border-border'}`}>الكل</button><button onClick={()=>setActiveCategory(SPECIAL_UNCATEGORIZED)} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory===SPECIAL_UNCATEGORIZED?'bg-primary border-primary text-white':'bg-white border-border'}`}>أخرى</button>{categoryNames.map(c=><button key={c} onClick={()=>setActiveCategory(c)} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory===c?'bg-primary border-primary text-white':'bg-white border-border'}`}>{c}</button>)}</div></div>
         <div className="flex items-center justify-between mt-4 mb-3"><div><b className="text-sm">{activeCategory==='الكل'?'جميع المنتجات':activeCategory}</b><div className="text-[10px] text-muted">{filtered.length} منتج متاح للطلب</div></div></div>
-        {loading?<div className="py-24 flex justify-center"><Spinner/></div>:filtered.length===0?<Empty title="لا توجد منتجات مطابقة" note="جرّب رقم صنف آخر أو قسمًا مختلفًا." icon="search"/>:<><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">{filtered.slice(0,pageCount).map(item=><ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onZoom={setZoom}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-5 w-full h-12 rounded-12 border border-border bg-white font-bold text-sm">عرض المزيد</button>}</>}
+        {loading?<div className="py-24 flex justify-center"><Spinner/></div>:filtered.length===0?<Empty title="لا توجد منتجات مطابقة" note="جرّب رقم صنف آخر أو قسمًا مختلفًا." icon="search"/>:<><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">{filtered.slice(0,pageCount).map(item=><ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onZoom={x=>{setZoom(x);logCustomerEvent(user,'product_image_view',x.id,{cleanId:x.cleanId,name:x.name})}}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-5 w-full h-12 rounded-12 border border-border bg-white font-bold text-sm">عرض المزيد</button>}</>}
       </div>}
       {page==='cart'&&<div className="fade-in"><div className="ui-section-head"><h2>طلب الشراء</h2><p>عدّل الكمية بنصف كرتون ووزّعها على فروعك بدون كتابة يدوية.</p></div><CartView cartItems={cartItems} branches={branches} onEdit={setAllocItem} onRemove={removeItem} onCheckout={()=>setCheckout(true)} onSaveDraft={()=>saveDraft('')} savingDraft={savingDraft}/></div>}
       {page==='orders'&&<div className="fade-in"><div className="ui-section-head"><h2>طلباتي</h2><p>كل الطلبات المرسلة والمسودات المحفوظة في مكان واحد.</p></div><OrdersView orders={orders} drafts={drafts} onLoadDraft={loadDraft} onDeleteDraft={deleteDraft} loading={historyLoading}/></div>}
-      {page==='account'&&<div className="fade-in"><div className="ui-section-head"><h2>حسابي</h2><p>بيانات الحساب، الفروع، ورمز الدخول.</p></div><AccountView profile={profile} onLogout={()=>auth.signOut()} onSaveBranches={saveBranches} onChangePin={changePin}/></div>}
+      {page==='account'&&<div className="fade-in"><div className="ui-section-head"><h2>حسابي</h2><p>بيانات الحساب، الفروع، ورمز الدخول.</p></div><AccountView profile={profile} onLogout={()=>{logCustomerEvent(user,'logout','تسجيل خروج');touchCustomerSession(user,profile,'logout');auth.signOut()}} onSaveBranches={saveBranches} onChangePin={changePin}/></div>}
     </main>
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-border safe-bottom"><div className="max-w-[700px] mx-auto grid grid-cols-5 px-1 pt-2">{nav.map(([id,icon,label])=><button key={id} onClick={()=>{setCheckout(false);setPage(id);if(id==='categories')setActiveCategory('الكل')}} className={`h-14 flex flex-col items-center justify-center gap-1 rounded-10 text-[10px] font-bold ${page===id?'text-accent':'text-muted'}`}><div className="relative"><Icon name={icon} className="w-5 h-5"/>{id==='cart'&&cartCount>0&&<span className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-accent text-white text-[8px] flex items-center justify-center">{cartCount}</span>}</div>{label}</button>)}</div></nav>
     {!String(profile.name||'').trim()&&<NamePromptModal company={profile.company} onSave={saveCustomerName}/>}
@@ -704,7 +765,11 @@ function Root(){
       const p={id:doc.id,...doc.data()};
       if(p.status==='suspended'){await auth.signOut();setGlobalError('هذا الحساب موقوف حاليًا. تواصل مع الإدارة.');setAuthState('guest');return;}
       setProfile(p);setAuthState('ready');
+      const reason=sessionStorage.getItem('batco_customer_auth_reason')||'session_restore';sessionStorage.removeItem('batco_customer_auth_reason');
       db.collection(CUSTOMER_COLLECTION).doc(u.uid).update({lastLoginAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+      touchCustomerSession(u,p,reason);
+      logCustomerEvent(u,reason==='manual_login'?'login_success':'session_restored',reason,{company:p.company,phone:p.phone});
+      db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:u.uid,company:p.company||'',phone:p.phone||'',type:reason==='manual_login'?'login_success':'session_restore',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
     }catch(e){console.error(e);setGlobalError('تعذر تحميل حساب العميل.');setAuthState('guest');}
   }),[]);
 
@@ -713,12 +778,17 @@ function Root(){
     setRegistering(true);setGlobalError('');creatingAccountRef.current=true;
     let created=null;
     try{
+      sessionStorage.setItem('batco_customer_auth_reason','account_created');
       const cred=await auth.createUserWithEmailAndPassword(authEmailFromPhone(registration.phone),registration.pin);
       created=cred.user;
       const profileData={name:'',company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),schemaVersion:2};
       await db.collection(CUSTOMER_COLLECTION).doc(created.uid).set(profileData);
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
-      setProfile({id:created.uid,...doc.data()});
+      const createdProfile={id:created.uid,...doc.data()};setProfile(createdProfile);
+      touchCustomerSession(created,createdProfile,'account_created');
+      logCustomerEvent(created,'account_created','إنشاء حساب',{company:registration.company,phone:registration.phone,livenessVerified:true});
+      logCustomerEvent(created,'liveness_verified','تم التحقق من الحضور',{savedFaceImage:false});
+      db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:created.uid,company:registration.company,phone:registration.phone,type:'account_created',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
       setRegistration(null);setAuthState('ready');setScreen('choice');
     }catch(err){
       console.error(err);
