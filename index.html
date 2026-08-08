@@ -3109,6 +3109,12 @@ const App = () => {
                                 </button>
                             )}
                             {isAdmin && (
+                                <button onClick={() => { window.location.href = './security-center.html'; }} title="مركز الأمن والرقابة" className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-primary border border-primary text-bg hover:opacity-90 transition-colors animate-flip">
+                                    <Icon.Shield className="w-20 h-20" />
+                                    <span className="absolute -top-4 -left-4 px-5 h-18 rounded-full bg-danger text-white text-[8px] font-bold flex items-center">أمن</span>
+                                </button>
+                            )}
+                            {isAdmin && (
                                 <button onClick={() => customerPortalReleased ? (window.location.href = './customer.html') : openCustomerPortalPreview()}
                                         title={customerPortalReleased ? 'فتح بوابة العملاء' : 'معاينة بوابة العملاء قبل الإطلاق'}
                                         className={`relative flex items-center justify-center w-48 h-48 rounded-12 border transition-colors animate-flip ${customerPortalReleased ? 'bg-surface border-border text-primary hover:text-accent' : 'bg-infoSoft border-info text-info hover:bg-info hover:text-white'}`}>
