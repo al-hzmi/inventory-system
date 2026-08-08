@@ -55,6 +55,10 @@
 <div id="root"></div>
 <script type="text/babel">
 
+// نافذة إطلاق مرحلية: متاحة لمهند للمعاينة الآن، وتفتح للعامة تلقائيًا صباح 9 أغسطس 2026 الساعة 08:00 بتوقيت السعودية.
+const CUSTOMER_PORTAL_RELEASE_AT = new Date('2026-08-09T08:00:00+03:00').getTime();
+const CUSTOMER_PORTAL_PREVIEW_KEY = 'batco_customer_portal_preview_v1';
+
 const DATA_PATH = './data/';
 const IMAGES_PATH = './images/';
 const CART_STEP = 0.5;
@@ -638,7 +642,39 @@ function Root(){
   return <><AccessChoice onNew={()=>{setGlobalError('');setScreen('register')}} onExisting={()=>{setGlobalError('');setScreen('login')}}/>{globalError&&<div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-32px)] max-w-[560px] bg-danger text-white rounded-12 p-3 shadow-lift text-sm font-bold">{globalError}</div>}</>;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+function CustomerPortalBootstrap(){
+  const [released,setReleased]=useState(()=>Date.now()>=CUSTOMER_PORTAL_RELEASE_AT);
+  const previewAllowed=useMemo(()=>{
+    try{return localStorage.getItem(CUSTOMER_PORTAL_PREVIEW_KEY)===String(CUSTOMER_PORTAL_RELEASE_AT)}catch{return false}
+  },[]);
+
+  useEffect(()=>{
+    if(released)return;
+    const check=()=>{if(Date.now()>=CUSTOMER_PORTAL_RELEASE_AT)setReleased(true)};
+    check();
+    const timer=setInterval(check,15000);
+    return()=>clearInterval(timer);
+  },[released]);
+
+  if(!released&&!previewAllowed){
+    return <div className="min-h-[100dvh] bg-surface flex items-center justify-center p-5 font-sans">
+      <div className="w-full max-w-[420px] bg-white border border-border rounded-20 shadow-lift p-6 sm:p-8 text-center fade-in">
+        <div className="w-16 h-16 mx-auto rounded-20 bg-accentSoft text-accent flex items-center justify-center mb-5"><Icon name="lock" className="w-7 h-7"/></div>
+        <div className="text-[11px] font-bold text-accent mb-2">بوابة العملاء</div>
+        <h1 className="text-xl font-bold">الخدمة غير متاحة حاليًا</h1>
+        <p className="text-sm text-secondary leading-7 mt-3">يجري تجهيز المعرض والطلبات لإطلاقها للعملاء. ستتاح البوابة تلقائيًا في الموعد المحدد.</p>
+        <a href="./index.html" className="mt-6 h-12 rounded-12 border border-border bg-white flex items-center justify-center text-sm font-bold hover:border-accent hover:text-accent">العودة للبوابة الرئيسية</a>
+      </div>
+    </div>;
+  }
+
+  return <>
+    {!released&&previewAllowed&&<div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] px-3 py-2 rounded-full bg-info text-white shadow-lift text-[11px] font-bold whitespace-nowrap">وضع المعاينة للإدارة — غير متاح للعملاء بعد</div>}
+    <Root/>
+  </>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<CustomerPortalBootstrap/>);
 </script>
 </body>
 </html>
