@@ -305,8 +305,8 @@ function RegistrationForm({onBack,onReady}){
         <FormField label="اسم الشركة / المؤسسة" icon="building"><input value={form.company} onChange={e=>set('company',e.target.value)} autoComplete="organization" className="ui-input" placeholder="مثال: مؤسسة النور"/></FormField>
         <FormField label="أنشئ رمز دخول من 6 أرقام" icon="lock" hint="احفظه جيدًا؛ ستستخدمه إذا دخلت من جهاز آخر."><input value={form.pin} onChange={e=>set('pin',toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6))} inputMode="numeric" type="password" autoComplete="new-password" className="ui-input ui-pin" placeholder="••••••"/></FormField>
         {error&&<div className="ui-error"><Icon name="alert" className="w-5 h-5 shrink-0 mt-[1px]"/>{error}</div>}
-        <button className="ui-btn ui-btn-primary">متابعة للتحقق <Icon name="camera" className="w-5 h-5"/></button>
-        <p className="text-[11px] leading-6 text-muted text-center">بعد التحقق تدخل مباشرة، ثم نسألك عن اسمك الكريم في نافذة سريعة.</p>
+        <button className="ui-btn ui-btn-primary">تحقق سريع ومتابعة <Icon name="camera" className="w-5 h-5"/></button>
+        <p className="text-[11px] leading-6 text-muted text-center">التحقق يستغرق لحظة فقط، وبعدها تدخل مباشرة ونحفظ اسمك في خطوة سريعة.</p>
       </div>
     </form>
   </div></div>
@@ -314,11 +314,10 @@ function RegistrationForm({onBack,onReady}){
 
 function LivenessCheck({registration,onBack,onSuccess}){
   const videoRef=useRef(null), miniCanvas=useRef(null), streamRef=useRef(null), meshRef=useRef(null), loopTimerRef=useRef(null);
-  const phaseRef=useRef('center');
-  const centeredFrames=useRef(0), returnedFrames=useRef(0), baselineEye=useRef([]), blinkClosed=useRef(false), doneRef=useRef(false);
+  const goodFramesRef=useRef(0), doneRef=useRef(false);
   const [phase,setPhase]=useState('loading');
-  const [status,setStatus]=useState('جاري تجهيز وحدة التحقق...');
-  const [quality,setQuality]=useState({face:false,light:false,distance:false,motion:false,blink:false});
+  const [status,setStatus]=useState('جاري تشغيل الكاميرا...');
+  const [quality,setQuality]=useState({face:false,light:false,ready:false});
   const [error,setError]=useState('');
 
   const stop=useCallback(()=>{
@@ -337,55 +336,59 @@ function LivenessCheck({registration,onBack,onSuccess}){
       if(cancelled||doneRef.current)return;
       const faces=results.multiFaceLandmarks||[];
       let lightOk=true;
+
       try{
         const c=miniCanvas.current,ctx=c.getContext('2d',{willReadFrequently:true});
-        c.width=48;c.height=36;ctx.drawImage(videoRef.current,0,0,48,36);
-        const d=ctx.getImageData(0,0,48,36).data;let total=0;
-        for(let i=0;i<d.length;i+=4)total+=(d[i]+d[i+1]+d[i+2])/3;
-        const avg=total/(d.length/4);lightOk=avg>35&&avg<245;
+        c.width=40;c.height=30;
+        ctx.drawImage(videoRef.current,0,0,40,30);
+        const d=ctx.getImageData(0,0,40,30).data;
+        let total=0;
+        for(let i=0;i<d.length;i+=4) total+=(d[i]+d[i+1]+d[i+2])/3;
+        const avg=total/(d.length/4);
+        // متسامح عمدًا: نرفض فقط الظلام الشديد أو الصورة المحروقة جدًا.
+        lightOk=avg>18&&avg<252;
       }catch{}
 
       if(faces.length!==1){
-        centeredFrames.current=0;
-        setQuality(q=>({...q,face:false,light:lightOk,distance:false}));
-        setStatus(faces.length>1?'يجب أن يظهر شخص واحد فقط':'ضع وجهك داخل الإطار');
+        goodFramesRef.current=0;
+        setQuality({face:false,light:lightOk,ready:false});
+        setStatus(faces.length>1?'خلّ شخص واحد فقط أمام الكاميرا':'وجّه الكاميرا على وجهك');
         return;
       }
 
-      const lm=faces[0], left=lm[234], right=lm[454], top=lm[10], bottom=lm[152], nose=lm[1];
+      const lm=faces[0], left=lm[234], right=lm[454], top=lm[10], bottom=lm[152];
       const faceW=Math.abs(right.x-left.x), faceH=Math.abs(bottom.y-top.y);
-      const sizeOk=faceW>.20&&faceW<.72&&faceH>.26&&faceH<.88;
-      const eyeMid=(lm[33].x+lm[263].x)/2;
-      const turn=Math.abs((nose.x-eyeMid)/Math.max(faceW,.001));
-      const eyeL=Math.abs(lm[159].y-lm[145].y)/Math.max(Math.abs(lm[33].x-lm[133].x),.001);
-      const eyeR=Math.abs(lm[386].y-lm[374].y)/Math.max(Math.abs(lm[362].x-lm[263].x),.001);
-      const eye=(eyeL+eyeR)/2;
+      // نطاق واسع جدًا حتى لا نزعج العميل بالاقتراب/الابتعاد.
+      const faceSizeOk=faceW>.115&&faceW<.92&&faceH>.15&&faceH<.96;
+      const faceOk=faceSizeOk;
 
-      setQuality(q=>({...q,face:true,light:lightOk,distance:sizeOk}));
-      if(!lightOk){setStatus('حسّن الإضاءة حتى يظهر وجهك بوضوح');return;}
-      if(!sizeOk){setStatus(faceW<=.20?'اقترب قليلًا من الكاميرا':'ابتعد قليلًا عن الكاميرا');return;}
+      if(!lightOk){
+        goodFramesRef.current=0;
+        setQuality({face:true,light:false,ready:false});
+        setStatus('ارفع الإضاءة قليلًا');
+        return;
+      }
 
-      const centered=turn<.055;
-      if(phaseRef.current==='center'){
-        if(centered){
-          centeredFrames.current++;
-          baselineEye.current.push(eye);
-          if(baselineEye.current.length>30)baselineEye.current.shift();
-          setStatus('ثبّت وجهك للحظة...');
-        }else centeredFrames.current=0;
-        if(centeredFrames.current>=10){phaseRef.current='turn';setPhase('turn');setStatus('حرّك رأسك بوضوح إلى أحد الجانبين');}
-      }else if(phaseRef.current==='turn'){
-        if(turn>.105){setQuality(q=>({...q,motion:true}));phaseRef.current='return';setPhase('return');setStatus('ممتاز، أعد وجهك للمنتصف');}
-      }else if(phaseRef.current==='return'){
-        if(centered)returnedFrames.current++;else returnedFrames.current=0;
-        if(returnedFrames.current>=7){phaseRef.current='blink';setPhase('blink');setStatus('ارمش مرة واحدة بشكل طبيعي');}
-      }else if(phaseRef.current==='blink'){
-        const base=baselineEye.current.length?baselineEye.current.reduce((a,b)=>a+b,0)/baselineEye.current.length:.25;
-        if(!blinkClosed.current&&eye<base*.60){blinkClosed.current=true;setStatus('ممتاز، افتح عينيك');}
-        else if(blinkClosed.current&&eye>base*.80){
-          setQuality(q=>({...q,blink:true}));doneRef.current=true;setPhase('success');setStatus('تم التحقق من الحضور المباشر بنجاح');
-          setTimeout(()=>{stop();onSuccess();},650);
-        }
+      if(!faceOk){
+        goodFramesRef.current=0;
+        setQuality({face:true,light:true,ready:false});
+        setStatus(faceW<=.115?'قرّب الجوال قليلًا':'أبعد الجوال قليلًا');
+        return;
+      }
+
+      // لا رمشة، لا لف رأس، لا تحديات. وجه واضح ومستقر للحظة واحدة فقط.
+      goodFramesRef.current+=1;
+      const ready=goodFramesRef.current>=3;
+      setQuality({face:true,light:true,ready});
+      setStatus(goodFramesRef.current<3?'ممتاز، ثبّت الجوال لحظة...':'جاري إنهاء التحقق...');
+
+      // نحو ثانية واحدة من اكتشاف مستقر كافية.
+      if(goodFramesRef.current>=8){
+        doneRef.current=true;
+        setPhase('success');
+        setQuality({face:true,light:true,ready:true});
+        setStatus('تم التحقق بنجاح');
+        setTimeout(()=>{stop();onSuccess();},450);
       }
     };
 
@@ -399,7 +402,7 @@ function LivenessCheck({registration,onBack,onSuccess}){
           processing=false;
         }
         scheduleLoop();
-      },90);
+      },110);
     };
 
     async function start(){
@@ -413,17 +416,18 @@ function LivenessCheck({registration,onBack,onSuccess}){
         await videoRef.current.play();
 
         const mesh=new FaceMesh({locateFile:file=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`});
-        mesh.setOptions({maxNumFaces:2,refineLandmarks:true,minDetectionConfidence:.72,minTrackingConfidence:.72});
+        mesh.setOptions({maxNumFaces:2,refineLandmarks:false,minDetectionConfidence:.5,minTrackingConfidence:.5});
         mesh.onResults(processResults);
         meshRef.current=mesh;
 
-        setPhase('center');phaseRef.current='center';setStatus('ضع وجهك في منتصف الإطار');
+        setPhase('scan');
+        setStatus('وجّه الكاميرا على وجهك');
         scheduleLoop();
       }catch(err){
         console.error(err);stop();
-        if(err?.name==='NotAllowedError'||err?.name==='PermissionDeniedError')setError('تعذر الوصول للكاميرا. اسمح باستخدام الكاميرا لإكمال التسجيل.');
-        else if(err?.name==='NotFoundError')setError('لم يتم العثور على كاميرا أمامية متاحة.');
-        else setError('تعذر تشغيل وحدة التحقق من الحضور على هذا الجهاز.');
+        if(err?.name==='NotAllowedError'||err?.name==='PermissionDeniedError')setError('اسمح باستخدام الكاميرا لإكمال التسجيل.');
+        else if(err?.name==='NotFoundError')setError('لم يتم العثور على كاميرا أمامية.');
+        else setError('تعذر تشغيل التحقق على هذا الجهاز. حاول مرة أخرى.');
       }
     }
 
@@ -431,20 +435,20 @@ function LivenessCheck({registration,onBack,onSuccess}){
     return()=>{cancelled=true;stop();};
   },[onSuccess,stop]);
 
-  const checks=[['face','وجه واحد'],['light','إضاءة مناسبة'],['distance','موضع مناسب'],['motion','حركة حية'],['blink','استجابة مباشرة']];
+  const checks=[['face','تم اكتشاف الوجه'],['light','الصورة واضحة'],['ready','جاهز']];
   return <div className="min-h-[100dvh] bg-[#111] text-white flex flex-col safe-top safe-bottom">
-    <div className="px-4 py-3 flex items-center justify-between"><button onClick={()=>{stop();onBack()}} className="h-10 px-3 rounded-10 bg-white/10 text-sm">إلغاء</button><b>التحقق من الحضور</b><span className="w-16"/></div>
-    <div className="flex-1 flex items-center justify-center px-4 py-4"><div className="w-full max-w-[520px]">
-      <div className="relative aspect-[3/4] sm:aspect-[4/3] rounded-20 overflow-hidden bg-black border border-white/10 shadow-lift">
+    <div className="px-4 py-3 flex items-center justify-between"><button onClick={()=>{stop();onBack()}} className="h-10 px-3 rounded-10 bg-white/10 text-sm">إلغاء</button><b>تحقق سريع</b><span className="w-16"/></div>
+    <div className="flex-1 flex items-center justify-center px-4 py-4"><div className="w-full max-w-[500px]">
+      <div className="relative aspect-[4/5] sm:aspect-[4/3] rounded-20 overflow-hidden bg-black border border-white/10 shadow-lift">
         <video ref={videoRef} muted playsInline className="face-video absolute inset-0 w-full h-full object-cover"/>
-        <div className="absolute inset-[12%] border-2 border-white/60 rounded-[45%] pointer-events-none"></div>
-        <div className="absolute bottom-4 left-4 right-4 bg-black/55 backdrop-blur rounded-12 p-3 text-center text-sm font-bold">{error||status}</div>
-        {phase==='success'&&<div className="absolute inset-0 bg-success/25 flex items-center justify-center"><div className="w-20 h-20 rounded-full bg-success text-white flex items-center justify-center pulse-ring"><Icon name="check" className="w-10 h-10"/></div></div>}
+        <div className="absolute inset-x-[10%] top-[8%] bottom-[9%] border-2 border-white/70 rounded-[42%] pointer-events-none"></div>
+        <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur rounded-12 px-4 py-3 text-center text-sm font-bold">{error||status}</div>
+        {phase==='success'&&<div className="absolute inset-0 bg-success/20 flex items-center justify-center"><div className="w-20 h-20 rounded-full bg-success text-white flex items-center justify-center pulse-ring"><Icon name="check" className="w-10 h-10"/></div></div>}
       </div>
       <canvas ref={miniCanvas} className="hidden"/>
-      <div className="mt-4 grid grid-cols-5 gap-2">{checks.map(([k,l])=><div key={k} className={`rounded-10 px-2 py-2 text-center border ${quality[k]?'bg-success/20 border-success/40 text-green-200':'bg-white/5 border-white/10 text-white/50'}`}><div className="mx-auto w-5 h-5 flex items-center justify-center">{quality[k]?<Icon name="check" className="w-4 h-4"/>:<span className="w-2 h-2 rounded-full bg-current"/>}</div><div className="text-[9px] mt-1">{l}</div></div>)}</div>
+      <div className="mt-4 grid grid-cols-3 gap-2">{checks.map(([k,l])=><div key={k} className={`rounded-12 px-2 py-3 text-center border ${quality[k]?'bg-success/20 border-success/40 text-green-200':'bg-white/5 border-white/10 text-white/50'}`}><div className="mx-auto w-5 h-5 flex items-center justify-center">{quality[k]?<Icon name="check" className="w-4 h-4"/>:<span className="w-2 h-2 rounded-full bg-current"/>}</div><div className="text-[10px] mt-1">{l}</div></div>)}</div>
       {error&&<button onClick={()=>location.reload()} className="mt-4 w-full h-12 rounded-12 bg-white text-primary font-bold">إعادة المحاولة</button>}
-      <p className="text-[11px] text-white/50 text-center mt-4">يتم التحليل على جهازك ولا يتم حفظ صورة الوجه في حساب العميل.</p>
+      <p className="text-[11px] text-white/50 text-center mt-4">فقط وجّه الكاميرا على وجهك لثانية. لا نطلب رمشة أو تحريك الرأس، ولا يتم حفظ صورة الوجه.</p>
     </div></div>
   </div>;
 }
@@ -768,4 +772,4 @@ function CustomerPortalBootstrap(){
 ReactDOM.createRoot(document.getElementById('root')).render(<CustomerPortalBootstrap/>);
 </script>
 </body>
-</html>
+</html> 
