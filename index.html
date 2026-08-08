@@ -135,7 +135,13 @@ const LOW_STOCK_THRESHOLD    = 10;
 
 const DEFAULT_GALLERY_VIEW = 'list';
 
-const STORAGE_KEYS = { NAME: 'inventory_user_name_v2', TOKEN: 'inventory_admin_token_v2' };
+const STORAGE_KEYS = {
+    NAME: 'inventory_user_name_v2',
+    TOKEN: 'inventory_admin_token_v2',
+    ACCESS_GATE_VERSION: 'inventory_access_gate_version_v1',
+    ACCESS_APPROVED_NAME: 'inventory_access_approved_name_v1'
+};
+const ACCESS_GATE_VERSION = '1';
 const VISIBILITY_RULES = {
     hideOutOfStockInGallery         : true,
     hideOutOfStockInSearchWithImage : true,
@@ -1153,8 +1159,8 @@ const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
 );
 
 // ✨ نافذة الدخول بالتحقق الحيوي (Face ID) وتحديد الموقع (GPS) بالهوية البصرية الأصلية
-const LoginScreen = ({ onLogin }) => {
-    const [name, setName] = useState('');
+const LoginScreen = ({ onLogin, initialName = '' }) => {
+    const [name, setName] = useState(initialName);
     const [step, setStep] = useState('name'); 
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -1301,6 +1307,9 @@ const LoginScreen = ({ onLogin }) => {
                             
                             localStorage.setItem(STORAGE_KEYS.NAME, trimmed);
                             localStorage.removeItem(STORAGE_KEYS.TOKEN);
+                            // تصريح أمني لهذا الجهاز/المستخدم بعد موافقة المشرف.
+                            localStorage.setItem(STORAGE_KEYS.ACCESS_GATE_VERSION, ACCESS_GATE_VERSION);
+                            localStorage.setItem(STORAGE_KEYS.ACCESS_APPROVED_NAME, normalizeText(trimmed));
                             onLogin(trimmed, false);
                         } else if (data.status === 'rejected') {
                             setStep('rejected');
@@ -2171,6 +2180,42 @@ const App = () => {
     }, []);
 
     const [sessionName, setSessionName] = useState(() => localStorage.getItem(STORAGE_KEYS.NAME) || '');
+
+    const [isAdmin, setIsAdmin] = useState(() => {
+        const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
+        const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
+        return Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
+    });
+
+    // الحاجز الأمني V1:
+    // المستخدمون القدامى كان يكفي عندهم وجود NAME في localStorage، لذلك كانوا يتجاوزون شاشة التحقق.
+    // الآن أي موظف غير إداري لا يدخل إلا إذا كان لديه تصريح صادر بعد موافقة المشرف.
+    const [accessVerified, setAccessVerified] = useState(() => {
+        const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
+        const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
+        const admin = Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
+        if (admin) return true;
+
+        const gateVersion = localStorage.getItem(STORAGE_KEYS.ACCESS_GATE_VERSION) || '';
+        const approvedName = localStorage.getItem(STORAGE_KEYS.ACCESS_APPROVED_NAME) || '';
+        return Boolean(n) && gateVersion === ACCESS_GATE_VERSION && approvedName === normalizeText(n);
+    });
+
+    // إذا تغيّر الاسم يدويًا/من جلسة سابقة لا نسمح بإعادة استخدام تصريح مستخدم آخر.
+    useEffect(() => {
+        if (isAdmin) {
+            setAccessVerified(true);
+            return;
+        }
+        if (!sessionName) {
+            setAccessVerified(false);
+            return;
+        }
+        const gateVersion = localStorage.getItem(STORAGE_KEYS.ACCESS_GATE_VERSION) || '';
+        const approvedName = localStorage.getItem(STORAGE_KEYS.ACCESS_APPROVED_NAME) || '';
+        setAccessVerified(gateVersion === ACCESS_GATE_VERSION && approvedName === normalizeText(sessionName));
+    }, [sessionName, isAdmin]);
+
     const [sessionId] = useState(() => Date.now().toString() + Math.random().toString(36).substr(2, 5));
     
     const [cart, setCart] = useState(() => {
@@ -2203,7 +2248,7 @@ const App = () => {
     }, [sessionName]);
 
     useEffect(() => {
-        if (!sessionName) return;
+        if (!sessionName || (!isAdmin && !accessVerified)) return;
         
         let isTracking = true;
         const initSession = async () => {
@@ -2240,13 +2285,7 @@ const App = () => {
             isTracking = false;
             clearInterval(interval);
         };
-    }, [sessionName, sessionId]);
-
-    const [isAdmin, setIsAdmin] = useState(() => {
-        const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
-        const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
-        return Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
-    });
+    }, [sessionName, sessionId, isAdmin, accessVerified]);
 
     const [warehouse, setWarehouse] = useState(null);
     const [query, setQuery] = useState('');
@@ -2401,7 +2440,22 @@ const App = () => {
     const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
     const totalCategoryCount  = categoryNames.length + 1 + (isAdmin ? 1 : 0);
 
-    if (!sessionName) return <LoginScreen onLogin={(n, admin) => { setSessionName(n); setIsAdmin(admin); }} />;
+    if (!sessionName || (!isAdmin && !accessVerified)) {
+        return (
+            <LoginScreen
+                initialName={sessionName}
+                onLogin={(n, admin) => {
+                    setSessionName(n);
+                    setIsAdmin(admin);
+                    if (admin) {
+                        setAccessVerified(true);
+                    } else {
+                        setAccessVerified(true);
+                    }
+                }}
+            />
+        );
+    }
 
     const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`;
 
