@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>بوابة عملاء بيت الأواني الطيبة</title>
+<meta name="description" content="المعرض الرقمي وطلبات العملاء - شركة بيت الأواني الطيبة">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="manifest" href="./customer-manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['"IBM Plex Sans Arabic"','"Noto Sans Arabic"','system-ui','sans-serif'] },
+      colors: {
+        primary:'#1C1917', secondary:'#57534E', muted:'#A8A29E', border:'#E7E5E4', surface:'#FAFAF9', bg:'#FFFFFF',
+        accent:'#B45309', accentSoft:'#FEF3C7', success:'#15803D', successSoft:'#F0FDF4', danger:'#B91C1C', dangerSoft:'#FEF2F2', info:'#0369A1', infoSoft:'#F0F9FF'
+      },
+      borderRadius:{'8':'8px','10':'10px','12':'12px','16':'16px','20':'20px'},
+      boxShadow:{card:'0 1px 2px rgba(28,25,23,.04),0 1px 3px rgba(28,25,23,.06)',lift:'0 12px 38px rgba(28,25,23,.12)'}
+    }}
+  };
+</script>
+<style>
+  html,body,#root{min-height:100%;background:#fff;color:#1C1917}
+  html,body{overflow-x:hidden;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+  *,*::before,*::after{box-sizing:border-box}
+  button,input,textarea{font-family:inherit}
+  input,textarea{font-size:16px!important}
+  button{-webkit-tap-highlight-color:transparent}
+  img,video,svg{max-width:100%}
+  .safe-bottom{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+  .safe-top{padding-top:max(8px,env(safe-area-inset-top))}
+  .no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
+  .ltr{direction:ltr;unicode-bidi:isolate}
+  .fade-in{animation:fadeIn .2s ease-out both}@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .pulse-ring{animation:ring 1.8s ease-out infinite}@keyframes ring{0%{box-shadow:0 0 0 0 rgba(21,128,61,.18)}70%{box-shadow:0 0 0 15px rgba(21,128,61,0)}100%{box-shadow:0 0 0 0 rgba(21,128,61,0)}}
+  .face-video{transform:scaleX(-1)}
+  .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const DATA_PATH = './data/';
+const IMAGES_PATH = './images/';
+const CART_STEP = 0.5;
+const PAGE_SIZE = 48;
+const CUSTOMER_COLLECTION = 'customers';
+const ORDER_COLLECTION = 'customer_orders';
+const DRAFT_COLLECTION = 'customer_drafts';
+const CATEGORY_OVERRIDES = 'product_category_overrides';
+const CATEGORY_META = 'catalog_categories';
+const CATEGORY_UNASSIGNED = '__UNCATEGORIZED__';
+const SPECIAL_UNCATEGORIZED = 'بقية الأصناف';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',
+  authDomain: 'inventory-system-ca3dc.firebaseapp.com',
+  projectId: 'inventory-system-ca3dc',
+  storageBucket: 'inventory-system-ca3dc.firebasestorage.app',
+  messagingSenderId: '139575913885',
+  appId: '1:139575913885:web:110648e07345b36da15374',
+  measurementId: 'G-ZGF5DT9D0K'
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+
+const {useState,useEffect,useMemo,useRef,useCallback,memo} = React;
+const NF = new Intl.NumberFormat('en-US',{maximumFractionDigits:1});
+const AR = '٠١٢٣٤٥٦٧٨٩', FA = '۰۱۲۳۴۵۶۷۸۹';
+const toEnglishDigits = s => String(s??'').replace(/[٠-٩۰-۹]/g,d=>{const a=AR.indexOf(d);return a>-1?String(a):String(FA.indexOf(d))});
+const normalizeCleanId = s => toEnglishDigits(s).replace(/\D/g,'');
+const normalizeText = s => toEnglishDigits(String(s??'')).toLowerCase().replace(/[\u064B-\u065F\u0670]/g,'').replace(/\u0640/g,'').replace(/[أإآٱ]/g,'ا').replace(/[ىئ]/g,'ي').replace(/ؤ/g,'و').replace(/ة/g,'ه').replace(/[^\u0600-\u06FFa-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+const roundHalf = n => Math.round((Number(n)||0)*2)/2;
+const floorHalf = n => Math.max(0,Math.floor((Number(n)||0)*2+1e-7)/2);
+const sum = arr => arr.reduce((a,b)=>a+(Number(b)||0),0);
+const uidPart = () => Math.random().toString(36).slice(2,10);
+const nowLabel = () => new Date().toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
+
+function normalizePhone(raw){
+  let d=toEnglishDigits(raw).replace(/\D/g,'');
+  if(d.startsWith('00')) d=d.slice(2);
+  if(/^05\d{8}$/.test(d)) d='966'+d.slice(1);
+  else if(/^5\d{8}$/.test(d)) d='966'+d;
+  return d;
+}
+function displayPhone(p){
+  const d=normalizePhone(p);
+  if(/^9665\d{8}$/.test(d)) return '0'+d.slice(3);
+  return d;
+}
+function authEmailFromPhone(phone){ return `customer_${normalizePhone(phone)}@portal.batco.local`; }
+function validPhone(phone){ const d=normalizePhone(phone); return /^\d{8,15}$/.test(d); }
+function validPin(pin){ return /^\d{6}$/.test(toEnglishDigits(pin)); }
+
+async function fetchText(url,{fresh=false}={}){
+  const key='customer_cache_'+url;
+  try{
+    const target=fresh?`${url}${url.includes('?')?'&':'?'}v=${Date.now()}`:url;
+    const res=await fetch(target,{cache:fresh?'no-store':'default'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    if(!fresh) localStorage.setItem(key,text);
+    return text;
+  }catch(err){
+    const cached=localStorage.getItem(key);
+    if(cached&&!fresh) return cached;
+    throw err;
+  }
+}
+
+function parseInventory(raw){
+  if(!raw) return [];
+  const lines=raw.trim().split(/\r?\n/); if(lines.length<2) return [];
+  const headers=lines[0].split('\t').map(x=>x.trim());
+  const idIdx=headers.findIndex(h=>/رقم|كود|sku|item/i.test(h));
+  const nameIdx=headers.findIndex(h=>/اسم|وصف|description|name/i.test(h));
+  const qtyIdx=headers.findIndex(h=>/كمية|رصيد|متوفر|qty|quantity/i.test(h));
+  const unitIdx=headers.findIndex(h=>/وحدة|unit|uom/i.test(h));
+  const packIdx=headers.findIndex(h=>/شد|الشد/i.test(h));
+  if(idIdx<0) return [];
+  const map=new Map();
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split('\t').map(x=>x.trim());
+    const id=c[idIdx]||''; const cleanId=normalizeCleanId(id); if(!cleanId) continue;
+    const q=parseFloat(toEnglishDigits(qtyIdx>=0?(c[qtyIdx]||'0'):'0').replace(/,/g,''));
+    map.set(cleanId,{cleanId,id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});
+  }
+  return [...map.values()];
+}
+function mergeInventories(a,b){
+  const map=new Map();
+  [...a,...b].forEach(item=>{
+    const prev=map.get(item.cleanId);
+    if(!prev) map.set(item.cleanId,{...item,mergedQty:Math.max(0,item.qty||0)});
+    else map.set(item.cleanId,{...prev,id:prev.id||item.id,name:prev.name||item.name,unit:prev.unit||item.unit,pack:prev.pack||item.pack,mergedQty:Math.max(0,prev.mergedQty||0)+Math.max(0,item.qty||0)});
+  });
+  return [...map.values()].map(x=>({...x,allowedMax:floorHalf(x.mergedQty),searchName:normalizeText(x.name),searchId:toEnglishDigits(x.id).toLowerCase()}));
+}
+function buildImagesMap(text){
+  const map=new Map();
+  String(text||'').split(/\r?\n/).forEach(line=>{const f=line.trim();if(!f)return;const id=normalizeCleanId(f.replace(/\.[^.]+$/,''));if(id&&!map.has(id))map.set(id,f)});
+  return map;
+}
+function parseCategories(text){
+  const out={}; if(!text)return out;
+  const rows=text.split(/\r?\n/).map(r=>r.split('\t').map(c=>c.trim())); if(!rows.length)return out;
+  const headers=rows[0]; headers.forEach(h=>{if(h)out[h]=[]});
+  for(let i=1;i<rows.length;i++) headers.forEach((h,j)=>{if(!h)return;const id=normalizeCleanId(rows[i]?.[j]);if(id)out[h].push(id)});
+  return out;
+}
+function effectiveCategories(base,overrides,meta){
+  const out={}; const archived=new Set();
+  Object.values(meta||{}).forEach(m=>{if(m?.name&&m.archived)archived.add(m.name);else if(m?.name)out[m.name]=out[m.name]||[]});
+  Object.entries(base||{}).forEach(([cat,ids])=>{
+    if(!cat||archived.has(cat))return; out[cat]=out[cat]||[];
+    ids.forEach(id=>{const o=overrides[id]; if(o&&Object.prototype.hasOwnProperty.call(o,'category')&&(o.category===CATEGORY_UNASSIGNED||o.category!==cat))return; out[cat].push(id)});
+  });
+  Object.values(overrides||{}).forEach(o=>{const id=normalizeCleanId(o?.cleanId||o?.id);const cat=o?.category;if(!id||!cat||cat===CATEGORY_UNASSIGNED||archived.has(cat))return;out[cat]=out[cat]||[];out[cat].push(id)});
+  Object.keys(out).forEach(k=>out[k]=[...new Set(out[k])]); return out;
+}
+function categoryLookup(cats){const out={};Object.entries(cats||{}).forEach(([c,ids])=>ids.forEach(id=>out[id]=c));return out}
+function imageUrl(file){return file?new URL(IMAGES_PATH+file,window.location.href).href:''}
+
+const Icon=({name,className='w-5 h-5'})=>{
+  const paths={
+    user:'M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0', building:'M4 20V6a2 2 0 012-2h8a2 2 0 012 2v14M8 8h4M8 12h4M8 16h4M16 10h4v10',
+    phone:'M6.5 2h3l1.5 5-2 1.5a15 15 0 006.5 6.5L17 13l5 1.5v3A3.5 3.5 0 0118.5 21C9.4 21 3 14.6 3 5.5A3.5 3.5 0 016.5 2z',
+    lock:'M6 10V8a6 6 0 0112 0v2M5 10h14v11H5z', eye:'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12zm10 3a3 3 0 100-6 3 3 0 000 6z',
+    shop:'M3 10l2-6h14l2 6M5 10v10h14V10M9 20v-6h6v6', search:'M21 21l-4.35-4.35m1.35-5.65a7 7 0 11-14 0 7 7 0 0114 0z',
+    grid:'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', cart:'M3 4h2l2.4 10.4a2 2 0 002 1.6h7.8a2 2 0 002-1.5L21 8H7M10 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z',
+    file:'M6 2h8l4 4v16H6zM14 2v5h5M9 12h6M9 16h6', plus:'M12 5v14M5 12h14', minus:'M5 12h14', close:'M6 6l12 12M18 6L6 18', check:'M5 12l4 4L19 6',
+    chevron:'M9 18l6-6-6-6', back:'M15 18l-6-6 6-6', home:'M3 11l9-8 9 8v10h-6v-6H9v6H3z', logout:'M10 17l5-5-5-5M15 12H3M14 3h7v18h-7',
+    branch:'M12 3v6M6 21v-4a4 4 0 014-4h4a4 4 0 014 4v4M6 9a3 3 0 100-6 3 3 0 000 6zm12 0a3 3 0 100-6 3 3 0 000 6z',
+    alert:'M12 9v4m0 4h.01M10.3 4.5L2.8 18a2 2 0 001.7 3h15a2 2 0 001.7-3L13.7 4.5a2 2 0 00-3.4 0z',
+    camera:'M4 7h3l2-3h6l2 3h3v13H4zM12 17a4 4 0 100-8 4 4 0 000 8z', refresh:'M20 11a8 8 0 10-2 5M20 4v7h-7', trash:'M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14', edit:'M4 20h4L19 9l-4-4L4 16v4z', save:'M5 4h12l2 2v14H5zM8 4v6h8V4M8 20v-6h8v6'
+  };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={paths[name]||paths.file}/></svg>
+};
+
+function Toast({toast,onClose}){
+  useEffect(()=>{if(!toast)return;const t=setTimeout(onClose,3200);return()=>clearTimeout(t)},[toast,onClose]);
+  if(!toast)return null;
+  const tone=toast.type==='error'?'bg-danger text-white':toast.type==='success'?'bg-success text-white':'bg-primary text-white';
+  return <div className={`fixed z-[100] left-1/2 -translate-x-1/2 bottom-[86px] w-[calc(100%-32px)] max-w-[440px] ${tone} rounded-12 px-14 py-12 shadow-lift text-[13px] font-semibold fade-in`}>{toast.message}</div>
+}
+function Spinner(){return <div className="w-6 h-6 border-2 border-border border-t-accent rounded-full animate-spin"/>}
+function Empty({title,note,icon='file'}){return <div className="border border-border bg-surface rounded-16 p-8 text-center min-h-[220px] flex flex-col items-center justify-center gap-3"><div className="w-12 h-12 rounded-full bg-white border border-border flex items-center justify-center text-muted"><Icon name={icon}/></div><b>{title}</b>{note&&<p className="text-sm text-secondary max-w-sm">{note}</p>}</div>}
+
+function AccessChoice({onNew,onExisting}){
+  return <div className="min-h-[100dvh] bg-surface flex items-center justify-center px-4 py-8 safe-top safe-bottom">
+    <div className="w-full max-w-[520px] bg-white border border-border rounded-20 shadow-card overflow-hidden fade-in">
+      <div className="p-6 sm:p-8 border-b border-border text-center">
+        <div className="w-14 h-14 mx-auto rounded-16 bg-accentSoft text-accent flex items-center justify-center mb-4"><Icon name="shop" className="w-7 h-7"/></div>
+        <h1 className="text-xl sm:text-2xl font-bold">بوابة عملاء بيت الأواني الطيبة</h1>
+        <p className="text-sm text-secondary mt-2">المعرض الرقمي وإدارة طلبات الفروع</p>
+      </div>
+      <div className="p-4 sm:p-6 grid gap-3">
+        <button onClick={onNew} className="w-full text-right p-4 rounded-16 border border-border hover:border-accent hover:bg-accentSoft/30 transition flex items-center gap-4">
+          <div className="w-11 h-11 rounded-12 bg-primary text-white flex items-center justify-center shrink-0"><Icon name="plus"/></div><div><b className="block">إنشاء حساب جديد</b><span className="text-xs text-secondary">تسجيل بيانات المنشأة والفروع والتحقق من الحضور</span></div>
+        </button>
+        <button onClick={onExisting} className="w-full text-right p-4 rounded-16 border border-border hover:border-accent hover:bg-accentSoft/30 transition flex items-center gap-4">
+          <div className="w-11 h-11 rounded-12 bg-accentSoft text-accent flex items-center justify-center shrink-0"><Icon name="user"/></div><div><b className="block">مستخدم سابق</b><span className="text-xs text-secondary">الدخول برقم الهاتف ورمز الدخول</span></div>
+        </button>
+      </div>
+      <div className="px-6 pb-6 text-center"><a href="./index.html" className="text-xs text-secondary hover:text-accent">دخول الموظفين</a></div>
+    </div>
+  </div>
+}
+
+function FormField({label,icon,children,hint,error}){
+  return <label className="block"><span className="text-xs font-bold text-primary flex items-center gap-2 mb-2"><Icon name={icon} className="w-4 h-4 text-muted"/>{label}</span>{children}{hint&&<span className="block text-[11px] text-muted mt-1">{hint}</span>}{error&&<span className="block text-[11px] text-danger mt-1">{error}</span>}</label>
+}
+
+function RegistrationForm({onBack,onReady}){
+  const [form,setForm]=useState({name:'',company:'',phone:'',branchCount:1,branches:[''],pin:'',pin2:''});
+  const [error,setError]=useState('');
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const changeCount=v=>{const n=clamp(parseInt(v)||1,1,20);setForm(f=>({...f,branchCount:n,branches:Array.from({length:n},(_,i)=>f.branches[i]||'')}))};
+  const submit=e=>{
+    e.preventDefault(); setError('');
+    const name=form.name.trim(), company=form.company.trim(), phone=normalizePhone(form.phone), branches=form.branches.map(x=>x.trim());
+    if(name.length<2)return setError('اكتب الاسم الكريم بشكل صحيح.');
+    if(company.length<2)return setError('اكتب اسم الشركة أو المؤسسة.');
+    if(!validPhone(phone))return setError('رقم الهاتف غير صحيح.');
+    if(branches.some(x=>x.length<2))return setError('يجب تسمية جميع الفروع.');
+    if(new Set(branches.map(normalizeText)).size!==branches.length)return setError('أسماء الفروع يجب أن تكون مختلفة.');
+    if(!validPin(form.pin))return setError('رمز الدخول يجب أن يكون 6 أرقام.');
+    if(toEnglishDigits(form.pin)!==toEnglishDigits(form.pin2))return setError('تأكيد رمز الدخول غير مطابق.');
+    onReady({name,company,phone,branches:branches.map((name,i)=>({id:`b_${Date.now().toString(36)}_${i}_${uidPart()}`,name})),pin:toEnglishDigits(form.pin)});
+  };
+  return <div className="min-h-[100dvh] bg-surface px-4 py-6 safe-top safe-bottom"><div className="max-w-[620px] mx-auto">
+    <button onClick={onBack} className="h-10 px-3 rounded-10 border border-border bg-white text-sm flex items-center gap-2 mb-4"><Icon name="back" className="w-4 h-4"/>رجوع</button>
+    <form onSubmit={submit} className="bg-white border border-border rounded-20 shadow-card overflow-hidden fade-in">
+      <div className="p-5 sm:p-7 border-b border-border"><h2 className="text-xl font-bold">إنشاء حساب عميل</h2><p className="text-sm text-secondary mt-1">أدخل بياناتك مرة واحدة، وبعدها تدخل من أي جهاز برقم الهاتف ورمز الدخول.</p></div>
+      <div className="p-5 sm:p-7 grid gap-5">
+        <FormField label="الاسم الكريم" icon="user"><input value={form.name} onChange={e=>set('name',e.target.value)} autoComplete="name" className="w-full h-12 rounded-12 border border-border px-4 outline-none focus:border-accent" placeholder="الاسم الكامل"/></FormField>
+        <FormField label="اسم الشركة / المؤسسة" icon="building"><input value={form.company} onChange={e=>set('company',e.target.value)} className="w-full h-12 rounded-12 border border-border px-4 outline-none focus:border-accent" placeholder="مثال: مؤسسة النور"/></FormField>
+        <FormField label="رقم الهاتف" icon="phone" hint="يُستخدم كاسم دخول فقط، ولا يتم إرسال SMS."><input value={form.phone} onChange={e=>set('phone',toEnglishDigits(e.target.value).replace(/[^0-9+]/g,''))} inputMode="tel" autoComplete="tel" dir="ltr" className="w-full h-12 rounded-12 border border-border px-4 outline-none focus:border-accent text-left" placeholder="05xxxxxxxx"/></FormField>
+        <FormField label="عدد الفروع" icon="branch" hint="من 1 إلى 20 فرعًا"><select value={form.branchCount} onChange={e=>changeCount(e.target.value)} className="w-full h-12 rounded-12 border border-border px-4 bg-white outline-none focus:border-accent">{Array.from({length:20},(_,i)=><option key={i+1} value={i+1}>{i+1}</option>)}</select></FormField>
+        <div className="border border-border bg-surface rounded-16 p-4"><div className="text-xs font-bold mb-3">تسمية الفروع</div><div className="grid sm:grid-cols-2 gap-3">{form.branches.map((b,i)=><input key={i} value={b} onChange={e=>setForm(f=>({...f,branches:f.branches.map((x,j)=>j===i?e.target.value:x)}))} className="w-full h-11 rounded-10 border border-border px-3 bg-white outline-none focus:border-accent" placeholder={`اسم الفرع ${i+1}`}/>)}</div></div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FormField label="رمز دخول من 6 أرقام" icon="lock"><input value={form.pin} onChange={e=>set('pin',toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6))} inputMode="numeric" type="password" autoComplete="new-password" className="w-full h-12 rounded-12 border border-border px-4 text-center tracking-[.45em] outline-none focus:border-accent"/></FormField>
+          <FormField label="تأكيد رمز الدخول" icon="lock"><input value={form.pin2} onChange={e=>set('pin2',toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6))} inputMode="numeric" type="password" autoComplete="new-password" className="w-full h-12 rounded-12 border border-border px-4 text-center tracking-[.45em] outline-none focus:border-accent"/></FormField>
+        </div>
+        {error&&<div className="bg-dangerSoft border border-danger/20 text-danger rounded-12 p-3 text-sm flex gap-2"><Icon name="alert" className="w-5 h-5 shrink-0"/>{error}</div>}
+        <button className="h-13 rounded-12 bg-primary text-white font-bold flex items-center justify-center gap-2">متابعة للتحقق <Icon name="camera" className="w-5 h-5"/></button>
+      </div>
+    </form>
+  </div></div>
+}
+
+function LivenessCheck({registration,onBack,onSuccess}){
+  const videoRef=useRef(null), miniCanvas=useRef(null), streamRef=useRef(null), meshRef=useRef(null), loopTimerRef=useRef(null);
+  const phaseRef=useRef('center');
+  const centeredFrames=useRef(0), returnedFrames=useRef(0), baselineEye=useRef([]), blinkClosed=useRef(false), doneRef=useRef(false);
+  const [phase,setPhase]=useState('loading');
+  const [status,setStatus]=useState('جاري تجهيز وحدة التحقق...');
+  const [quality,setQuality]=useState({face:false,light:false,distance:false,motion:false,blink:false});
+  const [error,setError]=useState('');
+
+  const stop=useCallback(()=>{
+    if(loopTimerRef.current){clearTimeout(loopTimerRef.current);loopTimerRef.current=null;}
+    try{streamRef.current?.getTracks?.().forEach(t=>t.stop())}catch{}
+    streamRef.current=null;
+    meshRef.current=null;
+    if(videoRef.current) videoRef.current.srcObject=null;
+  },[]);
+
+  useEffect(()=>{
+    let cancelled=false;
+    let processing=false;
+
+    const processResults=(results)=>{
+      if(cancelled||doneRef.current)return;
+      const faces=results.multiFaceLandmarks||[];
+      let lightOk=true;
+      try{
+        const c=miniCanvas.current,ctx=c.getContext('2d',{willReadFrequently:true});
+        c.width=48;c.height=36;ctx.drawImage(videoRef.current,0,0,48,36);
+        const d=ctx.getImageData(0,0,48,36).data;let total=0;
+        for(let i=0;i<d.length;i+=4)total+=(d[i]+d[i+1]+d[i+2])/3;
+        const avg=total/(d.length/4);lightOk=avg>35&&avg<245;
+      }catch{}
+
+      if(faces.length!==1){
+        centeredFrames.current=0;
+        setQuality(q=>({...q,face:false,light:lightOk,distance:false}));
+        setStatus(faces.length>1?'يجب أن يظهر شخص واحد فقط':'ضع وجهك داخل الإطار');
+        return;
+      }
+
+      const lm=faces[0], left=lm[234], right=lm[454], top=lm[10], bottom=lm[152], nose=lm[1];
+      const faceW=Math.abs(right.x-left.x), faceH=Math.abs(bottom.y-top.y);
+      const sizeOk=faceW>.20&&faceW<.72&&faceH>.26&&faceH<.88;
+      const eyeMid=(lm[33].x+lm[263].x)/2;
+      const turn=Math.abs((nose.x-eyeMid)/Math.max(faceW,.001));
+      const eyeL=Math.abs(lm[159].y-lm[145].y)/Math.max(Math.abs(lm[33].x-lm[133].x),.001);
+      const eyeR=Math.abs(lm[386].y-lm[374].y)/Math.max(Math.abs(lm[362].x-lm[263].x),.001);
+      const eye=(eyeL+eyeR)/2;
+
+      setQuality(q=>({...q,face:true,light:lightOk,distance:sizeOk}));
+      if(!lightOk){setStatus('حسّن الإضاءة حتى يظهر وجهك بوضوح');return;}
+      if(!sizeOk){setStatus(faceW<=.20?'اقترب قليلًا من الكاميرا':'ابتعد قليلًا عن الكاميرا');return;}
+
+      const centered=turn<.055;
+      if(phaseRef.current==='center'){
+        if(centered){
+          centeredFrames.current++;
+          baselineEye.current.push(eye);
+          if(baselineEye.current.length>30)baselineEye.current.shift();
+          setStatus('ثبّت وجهك للحظة...');
+        }else centeredFrames.current=0;
+        if(centeredFrames.current>=10){phaseRef.current='turn';setPhase('turn');setStatus('حرّك رأسك بوضوح إلى أحد الجانبين');}
+      }else if(phaseRef.current==='turn'){
+        if(turn>.105){setQuality(q=>({...q,motion:true}));phaseRef.current='return';setPhase('return');setStatus('ممتاز، أعد وجهك للمنتصف');}
+      }else if(phaseRef.current==='return'){
+        if(centered)returnedFrames.current++;else returnedFrames.current=0;
+        if(returnedFrames.current>=7){phaseRef.current='blink';setPhase('blink');setStatus('ارمش مرة واحدة بشكل طبيعي');}
+      }else if(phaseRef.current==='blink'){
+        const base=baselineEye.current.length?baselineEye.current.reduce((a,b)=>a+b,0)/baselineEye.current.length:.25;
+        if(!blinkClosed.current&&eye<base*.60){blinkClosed.current=true;setStatus('ممتاز، افتح عينيك');}
+        else if(blinkClosed.current&&eye>base*.80){
+          setQuality(q=>({...q,blink:true}));doneRef.current=true;setPhase('success');setStatus('تم التحقق من الحضور المباشر بنجاح');
+          setTimeout(()=>{stop();onSuccess();},650);
+        }
+      }
+    };
+
+    const scheduleLoop=()=>{
+      if(cancelled||doneRef.current)return;
+      loopTimerRef.current=setTimeout(async()=>{
+        if(cancelled||doneRef.current)return;
+        if(!processing&&meshRef.current&&videoRef.current?.readyState>=2){
+          processing=true;
+          try{await meshRef.current.send({image:videoRef.current});}catch(e){if(!cancelled)console.warn('FaceMesh frame:',e)}
+          processing=false;
+        }
+        scheduleLoop();
+      },90);
+    };
+
+    async function start(){
+      try{
+        if(!window.FaceMesh) throw new Error('MODULE');
+        if(!navigator.mediaDevices?.getUserMedia) throw new Error('CAMERA_UNSUPPORTED');
+        const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+        if(cancelled){stream.getTracks().forEach(t=>t.stop());return;}
+        streamRef.current=stream;
+        videoRef.current.srcObject=stream;
+        await videoRef.current.play();
+
+        const mesh=new FaceMesh({locateFile:file=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`});
+        mesh.setOptions({maxNumFaces:2,refineLandmarks:true,minDetectionConfidence:.72,minTrackingConfidence:.72});
+        mesh.onResults(processResults);
+        meshRef.current=mesh;
+
+        setPhase('center');phaseRef.current='center';setStatus('ضع وجهك في منتصف الإطار');
+        scheduleLoop();
+      }catch(err){
+        console.error(err);stop();
+        if(err?.name==='NotAllowedError'||err?.name==='PermissionDeniedError')setError('تعذر الوصول للكاميرا. اسمح باستخدام الكاميرا لإكمال التسجيل.');
+        else if(err?.name==='NotFoundError')setError('لم يتم العثور على كاميرا أمامية متاحة.');
+        else setError('تعذر تشغيل وحدة التحقق من الحضور على هذا الجهاز.');
+      }
+    }
+
+    start();
+    return()=>{cancelled=true;stop();};
+  },[onSuccess,stop]);
+
+  const checks=[['face','وجه واحد'],['light','إضاءة مناسبة'],['distance','موضع مناسب'],['motion','حركة حية'],['blink','استجابة مباشرة']];
+  return <div className="min-h-[100dvh] bg-[#111] text-white flex flex-col safe-top safe-bottom">
+    <div className="px-4 py-3 flex items-center justify-between"><button onClick={()=>{stop();onBack()}} className="h-10 px-3 rounded-10 bg-white/10 text-sm">إلغاء</button><b>التحقق من الحضور</b><span className="w-16"/></div>
+    <div className="flex-1 flex items-center justify-center px-4 py-4"><div className="w-full max-w-[520px]">
+      <div className="relative aspect-[3/4] sm:aspect-[4/3] rounded-20 overflow-hidden bg-black border border-white/10 shadow-lift">
+        <video ref={videoRef} muted playsInline className="face-video absolute inset-0 w-full h-full object-cover"/>
+        <div className="absolute inset-[12%] border-2 border-white/60 rounded-[45%] pointer-events-none"></div>
+        <div className="absolute bottom-4 left-4 right-4 bg-black/55 backdrop-blur rounded-12 p-3 text-center text-sm font-bold">{error||status}</div>
+        {phase==='success'&&<div className="absolute inset-0 bg-success/25 flex items-center justify-center"><div className="w-20 h-20 rounded-full bg-success text-white flex items-center justify-center pulse-ring"><Icon name="check" className="w-10 h-10"/></div></div>}
+      </div>
+      <canvas ref={miniCanvas} className="hidden"/>
+      <div className="mt-4 grid grid-cols-5 gap-2">{checks.map(([k,l])=><div key={k} className={`rounded-10 px-2 py-2 text-center border ${quality[k]?'bg-success/20 border-success/40 text-green-200':'bg-white/5 border-white/10 text-white/50'}`}><div className="mx-auto w-5 h-5 flex items-center justify-center">{quality[k]?<Icon name="check" className="w-4 h-4"/>:<span className="w-2 h-2 rounded-full bg-current"/>}</div><div className="text-[9px] mt-1">{l}</div></div>)}</div>
+      {error&&<button onClick={()=>location.reload()} className="mt-4 w-full h-12 rounded-12 bg-white text-primary font-bold">إعادة المحاولة</button>}
+      <p className="text-[11px] text-white/50 text-center mt-4">يتم التحليل على جهازك ولا يتم حفظ صورة الوجه في حساب العميل.</p>
+    </div></div>
+  </div>;
+}
+
+function ExistingLogin({onBack}){
+  const [phone,setPhone]=useState(''),[pin,setPin]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const submit=async e=>{e.preventDefault();setError('');const p=normalizePhone(phone);if(!validPhone(p))return setError('رقم الهاتف غير صحيح.');if(!validPin(pin))return setError('رمز الدخول يجب أن يكون 6 أرقام.');
+    const rateKey='cust_login_rate_'+p;let state={n:0,t:0};try{state=JSON.parse(localStorage.getItem(rateKey)||'{}')}catch{};const now=Date.now();if(state.t&&now-state.t<15*60*1000&&state.n>=6)return setError('تم إيقاف المحاولات مؤقتًا. حاول بعد 15 دقيقة.');
+    setBusy(true);try{await auth.signInWithEmailAndPassword(authEmailFromPhone(p),toEnglishDigits(pin));localStorage.removeItem(rateKey)}catch(err){const n=(state.t&&now-state.t<15*60*1000?state.n:0)+1;localStorage.setItem(rateKey,JSON.stringify({n,t:now}));if(err.code==='auth/operation-not-allowed')setError('يلزم تفعيل Email/Password في Firebase Authentication مرة واحدة.');else setError('رقم الهاتف أو رمز الدخول غير صحيح.')}finally{setBusy(false)}};
+  return <div className="min-h-[100dvh] bg-surface flex items-center justify-center px-4 py-8 safe-top safe-bottom"><form onSubmit={submit} className="w-full max-w-[480px] bg-white border border-border rounded-20 shadow-card overflow-hidden fade-in">
+    <div className="p-5 border-b border-border"><button type="button" onClick={onBack} className="text-xs text-secondary flex items-center gap-1 mb-4"><Icon name="back" className="w-4 h-4"/>رجوع</button><h2 className="text-xl font-bold">أهلاً بعودتك</h2><p className="text-sm text-secondary mt-1">ادخل من أي جهاز برقم الهاتف ورمزك السري.</p></div>
+    <div className="p-5 grid gap-5"><FormField label="رقم الهاتف" icon="phone"><input value={phone} onChange={e=>setPhone(toEnglishDigits(e.target.value).replace(/[^0-9+]/g,''))} inputMode="tel" autoComplete="username" dir="ltr" className="w-full h-12 rounded-12 border border-border px-4 text-left outline-none focus:border-accent" placeholder="05xxxxxxxx"/></FormField><FormField label="رمز الدخول" icon="lock"><input value={pin} onChange={e=>setPin(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6))} inputMode="numeric" type="password" autoComplete="current-password" className="w-full h-12 rounded-12 border border-border px-4 text-center tracking-[.45em] outline-none focus:border-accent"/></FormField>{error&&<div className="bg-dangerSoft border border-danger/20 text-danger p-3 rounded-12 text-sm">{error}</div>}<button disabled={busy} className="h-13 rounded-12 bg-primary text-white font-bold flex items-center justify-center gap-2 disabled:opacity-60">{busy?<Spinner/>:'دخول إلى المعرض'}</button><p className="text-[11px] text-muted text-center">لا نرسل أي رمز SMS. إذا نسيت رمز الدخول تواصل مع الإدارة.</p></div>
+  </form></div>
+}
+
+const ProductImage=memo(({file,alt,className=''})=>{
+  const [bad,setBad]=useState(false);if(!file||bad)return <div className={`bg-surface flex items-center justify-center text-muted ${className}`}><Icon name="shop" className="w-8 h-8"/></div>;
+  return <img src={imageUrl(file)} alt={alt||''} loading="lazy" decoding="async" onError={()=>setBad(true)} draggable="false" className={className}/>;
+});
+
+function QuantityButtons({value,onMinus,onPlus,disabledPlus=false,compact=false}){
+  return <div className="inline-flex items-center border border-border rounded-12 overflow-hidden bg-white" onClick={e=>e.stopPropagation()}><button onClick={onMinus} className={`${compact?'w-9 h-9':'w-11 h-11'} flex items-center justify-center text-secondary disabled:opacity-30`} disabled={value<=0}><Icon name="minus" className="w-4 h-4"/></button><div className={`${compact?'min-w-[58px]':'min-w-[72px]'} text-center font-bold ltr text-sm`}>{NF.format(value)}</div><button onClick={onPlus} disabled={disabledPlus} className={`${compact?'w-9 h-9':'w-11 h-11'} flex items-center justify-center bg-primary text-white disabled:bg-muted`}><Icon name="plus" className="w-4 h-4"/></button></div>
+}
+
+function BranchAllocationModal({item,branches,current,onClose,onSave,onLimit}){
+  const [q,setQ]=useState(()=>Object.fromEntries(branches.map(b=>[b.id,roundHalf(current?.[b.id]||0)])));
+  const total=sum(Object.values(q)); const max=item.allowedMax;
+  const adjust=(id,delta)=>{setQ(prev=>{const next={...prev};const cur=roundHalf(next[id]||0);if(delta>0&&sum(Object.values(prev))+CART_STEP>max+1e-9){onLimit(max);return prev}next[id]=Math.max(0,roundHalf(cur+delta));return next})};
+  return <div className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div className="w-full sm:max-w-[560px] max-h-[88dvh] bg-white rounded-t-20 sm:rounded-20 shadow-lift overflow-hidden fade-in">
+    <div className="p-4 border-b border-border flex items-start gap-3"><div className="w-16 h-16 rounded-12 overflow-hidden border border-border shrink-0"><ProductImage file={item.imageFile} alt={item.name} className="w-full h-full object-contain"/></div><div className="min-w-0 flex-1"><div className="text-xs text-muted ltr">{item.id}</div><b className="text-sm line-clamp-2">{item.name||'---'}</b><div className="text-[11px] text-secondary mt-1">وزّع الكمية المطلوبة على فروعك</div></div><button onClick={onClose} className="w-9 h-9 rounded-10 border border-border flex items-center justify-center"><Icon name="close" className="w-4 h-4"/></button></div>
+    <div className="p-4 overflow-y-auto max-h-[56dvh] grid gap-3">{branches.map(b=><div key={b.id} className="border border-border rounded-12 p-3 flex items-center justify-between gap-3"><div className="min-w-0"><b className="text-sm block truncate">{b.name}</b><span className="text-[10px] text-muted">الفرع</span></div><QuantityButtons value={q[b.id]||0} onMinus={()=>adjust(b.id,-CART_STEP)} onPlus={()=>adjust(b.id,CART_STEP)} disabledPlus={total+CART_STEP>max+1e-9}/></div>)}</div>
+    <div className="p-4 border-t border-border bg-surface safe-bottom"><div className="flex items-center justify-between mb-3"><span className="text-sm text-secondary">إجمالي الصنف</span><b className="ltr">{NF.format(total)} كرتون</b></div><button onClick={()=>onSave(q)} className="w-full h-12 rounded-12 bg-primary text-white font-bold">{total>0?'حفظ في السلة':'إزالة من السلة'}</button></div>
+  </div></div>
+}
+
+function ProductCard({item,onAdd,onZoom}){
+  return <article className="bg-white border border-border rounded-16 overflow-hidden flex flex-col shadow-card"><button onClick={()=>onZoom(item)} className="aspect-square bg-surface p-2"><ProductImage file={item.imageFile} alt={item.name} className="w-full h-full object-contain"/></button><div className="p-3 flex-1 flex flex-col"><div className="text-[11px] text-muted ltr">{item.id}</div><h3 className="text-sm font-bold leading-6 line-clamp-2 min-h-[48px]">{item.name||'---'}</h3><div className="mt-2 flex items-center justify-between gap-2"><span className="text-[10px] px-2 py-1 rounded-full bg-successSoft text-success font-bold">متوفر للطلب</span>{item.category&&<span className="text-[10px] text-muted truncate">{item.category}</span>}</div><button onClick={()=>onAdd(item)} className="mt-3 h-10 rounded-10 bg-primary text-white text-xs font-bold flex items-center justify-center gap-2"><Icon name="plus" className="w-4 h-4"/>إضافة للطلب</button></div></article>
+}
+
+function Lightbox({item,onClose}){if(!item)return null;return <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={onClose}><button className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center"><Icon name="close"/></button><div className="max-w-4xl w-full" onClick={e=>e.stopPropagation()}><ProductImage file={item.imageFile} alt={item.name} className="max-h-[78dvh] w-full object-contain"/><div className="text-white text-center mt-3"><b className="ltr inline-block">{item.id}</b><div className="text-sm text-white/70">{item.name}</div></div></div></div>}
+
+function CartView({cartItems,branches,onEdit,onRemove,onCheckout,onSaveDraft,savingDraft}){
+  const totalCartons=sum(cartItems.map(i=>i.totalQty)); if(!cartItems.length)return <Empty title="طلبك فارغ" note="أضف المنتجات من المعرض، ثم وزّع الكمية على الفروع." icon="cart"/>;
+  return <div className="grid gap-4"><div className="bg-white border border-border rounded-16 p-4 flex items-center justify-between"><div><div className="text-xs text-muted">ملخص طلب الشراء</div><b>{cartItems.length} صنف</b></div><div className="text-left"><div className="text-xs text-muted">إجمالي الكراتين</div><b className="ltr">{NF.format(totalCartons)}</b></div></div>
+    {cartItems.map(item=><div key={item.cleanId} className="bg-white border border-border rounded-16 p-3"><div className="flex gap-3"><div className="w-20 h-20 rounded-12 overflow-hidden border border-border shrink-0"><ProductImage file={item.imageFile} alt={item.name} className="w-full h-full object-contain"/></div><div className="min-w-0 flex-1"><div className="text-[11px] text-muted ltr">{item.id}</div><b className="text-sm line-clamp-2">{item.name}</b><div className="text-xs mt-2">الإجمالي: <b className="ltr">{NF.format(item.totalQty)} كرتون</b></div></div></div><div className="mt-3 bg-surface rounded-12 p-3 grid gap-2">{branches.filter(b=>(item.branchQuantities[b.id]||0)>0).map(b=><div key={b.id} className="flex items-center justify-between text-xs"><span>{b.name}</span><b className="ltr">{NF.format(item.branchQuantities[b.id])}</b></div>)}</div><div className="mt-3 grid grid-cols-2 gap-2"><button onClick={()=>onEdit(item)} className="h-10 rounded-10 border border-border text-xs font-bold flex items-center justify-center gap-2"><Icon name="edit" className="w-4 h-4"/>تعديل التوزيع</button><button onClick={()=>onRemove(item.cleanId)} className="h-10 rounded-10 border border-danger/20 bg-dangerSoft text-danger text-xs font-bold">إزالة</button></div></div>)}
+    <div className="sticky bottom-[76px] bg-white/95 backdrop-blur border border-border rounded-16 p-3 shadow-lift grid grid-cols-2 gap-2"><button disabled={savingDraft} onClick={onSaveDraft} className="h-12 rounded-12 border border-border font-bold text-sm flex items-center justify-center gap-2">{savingDraft?<Spinner/>:<><Icon name="save" className="w-4 h-4"/>حفظ مسودة</>}</button><button onClick={onCheckout} className="h-12 rounded-12 bg-primary text-white font-bold text-sm">متابعة الاعتماد</button></div>
+  </div>
+}
+
+function Checkout({items,branches,profile,onBack,onDraft,onSubmit,busy,validationErrors}){
+  const [notes,setNotes]=useState(''); const total=sum(items.map(i=>i.totalQty)); const byBranch=branches.map(b=>({branch:b,items:items.map(i=>({...i,qty:i.branchQuantities[b.id]||0})).filter(i=>i.qty>0)})).filter(x=>x.items.length);
+  return <div className="grid gap-4"><button onClick={onBack} className="w-fit h-10 px-3 rounded-10 border border-border bg-white flex items-center gap-2 text-sm"><Icon name="back" className="w-4 h-4"/>العودة للسلة</button><div className="bg-white border border-border rounded-16 p-4"><div className="text-xs text-muted">العميل</div><b>{profile.name}</b><div className="text-sm text-secondary">{profile.company}</div><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الأصناف</div><b>{items.length}</b></div><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الفروع</div><b>{byBranch.length}</b></div><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الكراتين</div><b className="ltr">{NF.format(total)}</b></div></div></div>
+    {byBranch.map(({branch,items:rows})=><div key={branch.id} className="bg-white border border-border rounded-16 overflow-hidden"><div className="p-3 bg-surface border-b border-border font-bold text-sm">{branch.name}</div><div className="divide-y divide-border">{rows.map(i=><div key={i.cleanId} className="p-3 flex justify-between gap-3 text-sm"><div><span className="ltr text-[11px] text-muted block">{i.id}</span><span>{i.name}</span></div><b className="ltr shrink-0">{NF.format(i.qty)}</b></div>)}</div></div>)}
+    {validationErrors?.length>0&&<div className="bg-dangerSoft border border-danger/20 rounded-16 p-4 text-danger"><b className="text-sm flex gap-2"><Icon name="alert" className="w-5 h-5"/>تغير الحد المسموح لبعض الأصناف</b><div className="mt-2 grid gap-1 text-xs">{validationErrors.map(e=><div key={e.cleanId}><span className="ltr">{e.id}</span> — المطلوب {NF.format(e.requested)}، الحد المسموح حاليًا {NF.format(e.allowed)} كرتون</div>)}</div></div>}
+    <div className="bg-white border border-border rounded-16 p-4"><label className="text-sm font-bold">ملاحظات الطلب <span className="text-danger">*</span></label><p className="text-xs text-secondary mt-1 mb-3">اكتب طريقة الشحن أو الاستلام وأي تعليمات مهمة.</p><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows="5" className="w-full rounded-12 border border-border p-3 outline-none focus:border-accent resize-none" placeholder="مثال: الشحن مع الناقل، وكل فرع يكون منفصلًا..."/></div>
+    <div className="grid sm:grid-cols-2 gap-2"><button disabled={busy} onClick={()=>onDraft(notes)} className="h-12 rounded-12 border border-border font-bold flex items-center justify-center gap-2"><Icon name="save" className="w-4 h-4"/>حفظ كمسودة</button><button disabled={busy||!notes.trim()} onClick={()=>onSubmit(notes)} className="h-12 rounded-12 bg-primary text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2">{busy?<Spinner/>:<><Icon name="check" className="w-4 h-4"/>اعتماد وإرسال الطلب</>}</button></div>
+  </div>
+}
+
+function OrdersView({orders,drafts,onLoadDraft,onDeleteDraft,loading}){
+  const [tab,setTab]=useState('orders');
+  const [expanded,setExpanded]=useState(null);
+  useEffect(()=>setExpanded(null),[tab]);
+  const rows=tab==='orders'?orders:drafts;
+
+  const details=(row)=>{
+    const branchRows=(row.branches||[]).map(branch=>({
+      branch,
+      items:(row.items||[]).map(item=>({...item,qty:item.branchQuantities?.[branch.id]||0})).filter(item=>item.qty>0)
+    })).filter(x=>x.items.length);
+    return <div className="mt-3 pt-3 border-t border-border grid gap-3 fade-in">
+      {branchRows.map(({branch,items})=><div key={branch.id} className="rounded-12 bg-surface overflow-hidden"><div className="px-3 py-2 border-b border-border text-xs font-bold">{branch.name}</div><div className="divide-y divide-border">{items.map(item=><div key={item.cleanId} className="px-3 py-2 flex justify-between gap-3 text-xs"><div className="min-w-0"><span className="ltr text-[10px] text-muted block">{item.id}</span><span className="line-clamp-2">{item.name}</span></div><b className="ltr shrink-0">{NF.format(item.qty)}</b></div>)}</div></div>)}
+      {row.notes&&<div className="rounded-12 bg-accentSoft/50 border border-accent/10 p-3"><div className="text-[10px] text-accent font-bold mb-1">ملاحظات الطلب</div><div className="text-xs text-primary whitespace-pre-wrap">{row.notes}</div></div>}
+    </div>;
+  };
+
+  return <div>
+    <div className="bg-surface border border-border rounded-12 p-1 grid grid-cols-2 mb-4"><button onClick={()=>setTab('orders')} className={`h-10 rounded-10 text-sm font-bold ${tab==='orders'?'bg-white shadow-card':'text-secondary'}`}>الطلبات المرسلة</button><button onClick={()=>setTab('drafts')} className={`h-10 rounded-10 text-sm font-bold ${tab==='drafts'?'bg-white shadow-card':'text-secondary'}`}>المسودات</button></div>
+    {loading?<div className="py-20 flex justify-center"><Spinner/></div>:!rows.length?<Empty title={tab==='orders'?'لا توجد طلبات بعد':'لا توجد مسودات'} icon="file"/>:<div className="grid gap-3">{rows.map(row=>{
+      const isOpen=expanded===row.id;
+      return <div key={row.id} className="bg-white border border-border rounded-16 p-4"><div className="flex items-start justify-between gap-3"><div><span className={`inline-block text-[10px] font-bold rounded-full px-2 py-1 ${tab==='orders'?'bg-successSoft text-success':'bg-accentSoft text-accent'}`}>{tab==='orders'?'تم الإرسال':'مسودة'}</span><b className="block mt-2 ltr text-sm">{row.orderNo||row.draftNo||row.id.slice(0,8)}</b><div className="text-xs text-secondary mt-1">{row.items?.length||0} صنف · {NF.format(row.totalCartons||0)} كرتون</div><div className="text-[10px] text-muted mt-1">{row.createdAt?.toDate?row.createdAt.toDate().toLocaleString('ar-SA'):row.updatedAt?.toDate?row.updatedAt.toDate().toLocaleString('ar-SA'):'—'}</div></div><div className="flex gap-2">{tab==='orders'?<button onClick={()=>setExpanded(isOpen?null:row.id)} className="h-9 px-3 rounded-10 border border-border text-xs font-bold">{isOpen?'إخفاء':'التفاصيل'}</button>:<><button onClick={()=>onLoadDraft(row)} className="h-9 px-3 rounded-10 bg-primary text-white text-xs font-bold">استكمال</button><button onClick={()=>onDeleteDraft(row.id)} className="w-9 h-9 rounded-10 border border-danger/20 text-danger flex items-center justify-center"><Icon name="trash" className="w-4 h-4"/></button></>}</div></div>{tab==='orders'&&isOpen&&details(row)}{tab==='drafts'&&row.notes&&<div className="mt-3 bg-surface rounded-10 p-2 text-xs text-secondary">{row.notes}</div>}</div>})}</div>}
+  </div>;
+}
+
+function AccountView({profile,onLogout,onSaveBranches,onChangePin}){
+  const [edit,setEdit]=useState(false),[branches,setBranches]=useState(profile.branches||[]),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [pinOpen,setPinOpen]=useState(false),[pinForm,setPinForm]=useState({current:'',next:'',confirm:''}),[pinBusy,setPinBusy]=useState(false),[pinError,setPinError]=useState('');
+  useEffect(()=>setBranches(profile.branches||[]),[profile.branches]);
+
+  const save=async()=>{
+    const names=branches.map(b=>b.name.trim());
+    if(names.some(n=>n.length<2))return setError('أسماء الفروع غير مكتملة.');
+    if(new Set(names.map(normalizeText)).size!==names.length)return setError('أسماء الفروع يجب أن تكون مختلفة.');
+    setBusy(true);try{await onSaveBranches(branches.map(b=>({...b,name:b.name.trim()})));setEdit(false);setError('')}finally{setBusy(false)}
+  };
+  const addBranch=()=>{
+    if(branches.length>=20)return setError('الحد الأعلى 20 فرعًا.');
+    setBranches(x=>[...x,{id:`b_${Date.now().toString(36)}_${uidPart()}`,name:''}]);setEdit(true);
+  };
+  const submitPin=async()=>{
+    setPinError('');
+    const current=toEnglishDigits(pinForm.current),next=toEnglishDigits(pinForm.next),confirm=toEnglishDigits(pinForm.confirm);
+    if(!validPin(current)||!validPin(next))return setPinError('يجب أن يكون الرمز الحالي والجديد 6 أرقام.');
+    if(next!==confirm)return setPinError('تأكيد الرمز الجديد غير مطابق.');
+    if(current===next)return setPinError('اختر رمزًا جديدًا مختلفًا.');
+    setPinBusy(true);try{await onChangePin(current,next);setPinForm({current:'',next:'',confirm:''});setPinOpen(false)}catch(e){setPinError(e?.message||'تعذر تغيير رمز الدخول.')}finally{setPinBusy(false)}
+  };
+
+  return <div className="grid gap-4">
+    <div className="bg-white border border-border rounded-16 p-5"><div className="w-14 h-14 rounded-16 bg-accentSoft text-accent flex items-center justify-center mb-4"><Icon name="user" className="w-7 h-7"/></div><h2 className="text-lg font-bold">{profile.name}</h2><p className="text-sm text-secondary">{profile.company}</p><div className="mt-4 border-t border-border pt-4 text-sm flex justify-between"><span className="text-muted">رقم الهاتف</span><b className="ltr">{displayPhone(profile.phone)}</b></div></div>
+
+    <div className="bg-white border border-border rounded-16 p-4"><div className="flex items-center justify-between mb-3"><div><b>فروع الشركة</b><div className="text-[10px] text-muted mt-1">تُستخدم لتوزيع كميات كل منتج داخل الطلب.</div></div><div className="flex gap-2"><button onClick={addBranch} className="h-9 px-3 rounded-10 border border-border text-xs font-bold">+ فرع</button><button onClick={()=>{setEdit(x=>!x);setError('')}} className="h-9 px-3 rounded-10 border border-border text-xs font-bold">{edit?'إلغاء':'تعديل'}</button></div></div><div className="grid gap-2">{branches.map((b,i)=><div key={b.id} className="bg-surface rounded-10 p-3 flex items-center gap-2"><Icon name="branch" className="w-4 h-4 text-muted"/>{edit?<input value={b.name} onChange={e=>setBranches(x=>x.map((v,j)=>j===i?{...v,name:e.target.value}:v))} className="h-9 flex-1 rounded-8 border border-border px-2 bg-white" placeholder={`اسم الفرع ${i+1}`}/>:<span className="text-sm font-semibold">{b.name}</span>}</div>)}</div>{error&&<div className="text-xs text-danger mt-2">{error}</div>}{edit&&<button disabled={busy} onClick={save} className="mt-3 w-full h-11 rounded-10 bg-primary text-white text-sm font-bold">حفظ الفروع</button>}</div>
+
+    <div className="bg-white border border-border rounded-16 p-4"><button onClick={()=>{setPinOpen(x=>!x);setPinError('')}} className="w-full flex items-center justify-between"><div className="text-right"><b className="text-sm">رمز الدخول</b><div className="text-[10px] text-muted mt-1">تغيير PIN المكون من 6 أرقام</div></div><Icon name="chevron" className={`w-4 h-4 text-muted transition-transform ${pinOpen?'rotate-90':''}`}/></button>{pinOpen&&<div className="mt-4 pt-4 border-t border-border grid gap-3 fade-in"><input value={pinForm.current} onChange={e=>setPinForm(f=>({...f,current:toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6)}))} type="password" inputMode="numeric" placeholder="الرمز الحالي" className="h-11 rounded-10 border border-border px-3 text-center tracking-[.35em] outline-none focus:border-accent"/><input value={pinForm.next} onChange={e=>setPinForm(f=>({...f,next:toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6)}))} type="password" inputMode="numeric" placeholder="الرمز الجديد" className="h-11 rounded-10 border border-border px-3 text-center tracking-[.35em] outline-none focus:border-accent"/><input value={pinForm.confirm} onChange={e=>setPinForm(f=>({...f,confirm:toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6)}))} type="password" inputMode="numeric" placeholder="تأكيد الرمز الجديد" className="h-11 rounded-10 border border-border px-3 text-center tracking-[.35em] outline-none focus:border-accent"/>{pinError&&<div className="text-xs text-danger">{pinError}</div>}<button disabled={pinBusy} onClick={submitPin} className="h-11 rounded-10 bg-primary text-white text-sm font-bold flex items-center justify-center">{pinBusy?<Spinner/>:'تغيير رمز الدخول'}</button></div>}</div>
+
+    <button onClick={onLogout} className="h-12 rounded-12 border border-danger/20 bg-dangerSoft text-danger font-bold flex items-center justify-center gap-2"><Icon name="logout" className="w-5 h-5"/>تسجيل الخروج</button>
+  </div>;
+}
+
+function CustomerApp({user,profile,onProfileUpdate}){
+  const [loading,setLoading]=useState(true),[products,setProducts]=useState([]),[baseCategories,setBaseCategories]=useState({}),[overrides,setOverrides]=useState({}),[meta,setMeta]=useState({}),[query,setQuery]=useState(''),[activeCategory,setActiveCategory]=useState('الكل'),[page,setPage]=useState('home'),[pageCount,setPageCount]=useState(PAGE_SIZE),[cart,setCart]=useState({}),[allocItem,setAllocItem]=useState(null),[zoom,setZoom]=useState(null),[toast,setToast]=useState(null),[checkout,setCheckout]=useState(false),[orders,setOrders]=useState([]),[drafts,setDrafts]=useState([]),[historyLoading,setHistoryLoading]=useState(false),[savingDraft,setSavingDraft]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[validationErrors,setValidationErrors]=useState([]);
+  const cartKey='customer_cart_v1_'+user.uid;
+  useEffect(()=>{try{setCart(JSON.parse(localStorage.getItem(cartKey)||'{}'))}catch{setCart({})}},[cartKey]);
+  useEffect(()=>{localStorage.setItem(cartKey,JSON.stringify(cart))},[cart,cartKey]);
+  useEffect(()=>{
+    let alive=true,unsubO=null,unsubM=null;
+    Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv')]).then(([j,r,imgs,cats])=>{if(!alive)return;const images=buildImagesMap(imgs);const merged=mergeInventories(parseInventory(j),parseInventory(r)).filter(x=>x.allowedMax>=CART_STEP).map(x=>({...x,imageFile:images.get(x.cleanId)||''}));setProducts(merged);setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});
+    unsubO=db.collection(CATEGORY_OVERRIDES).onSnapshot(s=>{const x={};s.forEach(d=>{const v=d.data();const id=normalizeCleanId(v.cleanId||d.id);if(id)x[id]=v});if(alive)setOverrides(x)},()=>{});
+    unsubM=db.collection(CATEGORY_META).onSnapshot(s=>{const x={};s.forEach(d=>x[d.id]=d.data());if(alive)setMeta(x)},()=>{});
+    return()=>{alive=false;unsubO?.();unsubM?.()};
+  },[]);
+  const categories=useMemo(()=>effectiveCategories(baseCategories,overrides,meta),[baseCategories,overrides,meta]);const catLookup=useMemo(()=>categoryLookup(categories),[categories]);
+  const enriched=useMemo(()=>products.map(p=>({...p,category:catLookup[p.cleanId]||SPECIAL_UNCATEGORIZED})),[products,catLookup]);
+  const categoryNames=useMemo(()=>Object.keys(categories).filter(Boolean).sort((a,b)=>a.localeCompare(b,'ar')),[categories]);
+  const filtered=useMemo(()=>{let rows=enriched;if(activeCategory!== 'الكل') rows=activeCategory===SPECIAL_UNCATEGORIZED?rows.filter(p=>!catLookup[p.cleanId]):rows.filter(p=>catLookup[p.cleanId]===activeCategory);const q=query.trim();if(q){const clean=normalizeCleanId(q),text=normalizeText(q);rows=rows.filter(p=>(clean&&p.cleanId.includes(clean))||(text&&p.searchName.includes(text))||p.searchId.includes(toEnglishDigits(q).toLowerCase()))}return rows},[enriched,activeCategory,query,catLookup]);
+  useEffect(()=>setPageCount(PAGE_SIZE),[query,activeCategory]);
+  const branches=profile.branches||[];
+  const cartItems=useMemo(()=>Object.values(cart).map(c=>{const product=enriched.find(p=>p.cleanId===c.cleanId);const branchQuantities=c.branchQuantities||{};return {...(product||c),...c,allowedMax:product?.allowedMax??0,branchQuantities,totalQty:roundHalf(sum(Object.values(branchQuantities)))}}).filter(i=>i.totalQty>0),[cart,enriched]);
+  const cartCount=cartItems.length,totalCartons=sum(cartItems.map(i=>i.totalQty));
+  const saveAllocation=(item,q)=>{const clean={};Object.entries(q).forEach(([k,v])=>{const n=roundHalf(v);if(n>0)clean[k]=n});setCart(prev=>{const nx={...prev};const total=sum(Object.values(clean));if(total<=0)delete nx[item.cleanId];else nx[item.cleanId]={cleanId:item.cleanId,id:item.id,name:item.name,imageFile:item.imageFile||'',branchQuantities:clean};return nx});setAllocItem(null);setToast({type:'success',message:'تم تحديث طلب المنتج.'})};
+  const showLimit=max=>setToast({type:'info',message:`تم الوصول للحد الأقصى المسموح لهذا الصنف: ${NF.format(max)} كرتون.`});
+  const removeItem=id=>setCart(c=>{const n={...c};delete n[id];return n});
+  async function saveDraft(notes=''){
+    if(!cartItems.length)return;setSavingDraft(true);try{const ref=db.collection(DRAFT_COLLECTION).doc();const draftNo='D-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,draftNo,items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',branchQuantities:i.branchQuantities,totalQty:i.totalQty})),notes:String(notes||'').trim(),totalCartons,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});setToast({type:'success',message:`تم حفظ ${draftNo} كمسودة.`});await loadHistory()}catch(e){console.error(e);setToast({type:'error',message:'تعذر حفظ المسودة.'})}finally{setSavingDraft(false)}}
+  async function freshAllowedMap(){const [j,r]=await Promise.all([fetchText(DATA_PATH+'jeddah.tsv',{fresh:true}),fetchText(DATA_PATH+'riyadh.tsv',{fresh:true})]);return new Map(mergeInventories(parseInventory(j),parseInventory(r)).map(x=>[x.cleanId,x.allowedMax]))}
+  async function submitOrder(notes){
+    const cleanNotes=String(notes||'').trim();if(!cleanNotes){setToast({type:'error',message:'الملاحظات إلزامية قبل اعتماد الطلب.'});return}if(!cartItems.length)return;
+    setSubmitBusy(true);setValidationErrors([]);try{const allowed=await freshAllowedMap();const errors=cartItems.map(i=>({cleanId:i.cleanId,id:i.id,requested:i.totalQty,allowed:allowed.get(i.cleanId)||0})).filter(x=>x.requested>x.allowed+1e-9);if(errors.length){setValidationErrors(errors);setToast({type:'error',message:'تغير الحد المسموح لبعض الأصناف. راجع التنبيه.'});return}
+      const ref=db.collection(ORDER_COLLECTION).doc(),orderNo='BT-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,orderNo,customer:{name:profile.name,company:profile.company,phone:profile.phone},branches:branches.map(b=>({id:b.id,name:b.name})),items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,branchQuantities:i.branchQuantities,totalQty:i.totalQty})),notes:cleanNotes,totalCartons,status:'submitted',createdAt:firebase.firestore.FieldValue.serverTimestamp()});setCart({});setCheckout(false);setPage('orders');setToast({type:'success',message:`تم إرسال الطلب ${orderNo} بنجاح.`});await loadHistory()
+    }catch(e){console.error(e);setToast({type:'error',message:'تعذر اعتماد الطلب. تحقق من الاتصال وحاول مجددًا.'})}finally{setSubmitBusy(false)}}
+  async function loadHistory(){setHistoryLoading(true);try{const [o,d]=await Promise.all([db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).get(),db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).get()]);const cv=x=>x?.toMillis?.()||0;setOrders(o.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));setDrafts(d.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.updatedAt||b.createdAt)-cv(a.updatedAt||a.createdAt)))}catch(e){console.error(e)}finally{setHistoryLoading(false)}}
+  useEffect(()=>{if(page==='orders')loadHistory()},[page]);
+  async function deleteDraft(id){try{await db.collection(DRAFT_COLLECTION).doc(id).delete();setDrafts(x=>x.filter(d=>d.id!==id));setToast({type:'success',message:'تم حذف المسودة.'})}catch{setToast({type:'error',message:'تعذر حذف المسودة.'})}}
+  function loadDraft(d){const next={};(d.items||[]).forEach(i=>next[i.cleanId]={cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',branchQuantities:i.branchQuantities||{}});setCart(next);setCheckout(false);setPage('cart');setToast({type:'success',message:'تم تحميل المسودة إلى السلة.'})}
+  async function saveBranches(next){await db.collection(CUSTOMER_COLLECTION).doc(user.uid).update({branches:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});onProfileUpdate({...profile,branches:next});setToast({type:'success',message:'تم تحديث أسماء الفروع.'})}
+  async function changePin(currentPin,newPin){
+    try{
+      const credential=firebase.auth.EmailAuthProvider.credential(authEmailFromPhone(profile.phone),currentPin);
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPin);
+      setToast({type:'success',message:'تم تغيير رمز الدخول بنجاح.'});
+    }catch(e){
+      if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')throw new Error('رمز الدخول الحالي غير صحيح.');
+      if(e.code==='auth/too-many-requests')throw new Error('محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.');
+      throw new Error('تعذر تغيير رمز الدخول الآن.');
+    }
+  }
+  const nav=[['home','home','الرئيسية'],['categories','grid','الأقسام'],['cart','cart','السلة'],['orders','file','طلباتي'],['account','user','حسابي']];
+  if(checkout)return <><div className="min-h-[100dvh] bg-surface pb-8"><header className="bg-white border-b border-border sticky top-0 z-20"><div className="max-w-[900px] mx-auto p-4"><b>اعتماد طلب الشراء</b></div></header><main className="max-w-[760px] mx-auto p-4"><Checkout items={cartItems} branches={branches} profile={profile} onBack={()=>{setCheckout(false);setValidationErrors([])}} onDraft={saveDraft} onSubmit={submitOrder} busy={submitBusy} validationErrors={validationErrors}/></main></div><Toast toast={toast} onClose={()=>setToast(null)}/></>;
+  return <div className="min-h-[100dvh] bg-surface pb-[92px]">
+    <header className="bg-white border-b border-border sticky top-0 z-30 safe-top"><div className="max-w-[1100px] mx-auto px-4 py-3 flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-muted">بوابة العملاء</div><b className="text-sm block truncate">{profile.company}</b></div><div className="flex items-center gap-2"><div className="hidden sm:block text-left"><div className="text-[10px] text-muted">مرحبًا</div><div className="text-xs font-bold">{profile.name}</div></div><button onClick={()=>setPage('cart')} className="relative w-11 h-11 rounded-12 border border-border bg-white flex items-center justify-center"><Icon name="cart"/>{cartCount>0&&<span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[10px] flex items-center justify-center">{cartCount}</span>}</button></div></div></header>
+    <main className="max-w-[1100px] mx-auto p-4 sm:p-5">
+      {(page==='home'||page==='categories')&&<div className="fade-in">
+        {page==='home'&&<div className="mb-5 bg-primary text-white rounded-20 p-5 sm:p-6 overflow-hidden relative"><div className="relative z-10"><div className="text-xs text-white/65">أهلاً {profile.name}</div><h1 className="text-xl sm:text-2xl font-bold mt-1">المعرض الرقمي</h1><p className="text-sm text-white/70 mt-2 max-w-xl">ابحث عن منتجاتك، وزّع الكمية على فروعك، وأرسل الطلب مباشرة.</p><div className="mt-4 inline-flex gap-2 text-xs"><span className="px-3 py-2 rounded-full bg-white/10">{cartCount} صنف في السلة</span><span className="px-3 py-2 rounded-full bg-white/10 ltr">{NF.format(totalCartons)} كرتون</span></div></div></div>}
+        <div className="sticky top-[69px] z-20 bg-surface/95 backdrop-blur py-2"><div className="relative"><Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="ابحث برقم الصنف أو اسم المنتج..." className="w-full h-13 pr-12 pl-4 bg-white border border-border rounded-14 outline-none focus:border-accent shadow-card"/></div><div className="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1"><button onClick={()=>setActiveCategory('الكل')} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory==='الكل'?'bg-primary border-primary text-white':'bg-white border-border'}`}>الكل</button><button onClick={()=>setActiveCategory(SPECIAL_UNCATEGORIZED)} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory===SPECIAL_UNCATEGORIZED?'bg-primary border-primary text-white':'bg-white border-border'}`}>أخرى</button>{categoryNames.map(c=><button key={c} onClick={()=>setActiveCategory(c)} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory===c?'bg-primary border-primary text-white':'bg-white border-border'}`}>{c}</button>)}</div></div>
+        <div className="flex items-center justify-between mt-4 mb-3"><div><b className="text-sm">{activeCategory==='الكل'?'جميع المنتجات':activeCategory}</b><div className="text-[10px] text-muted">{filtered.length} منتج متاح للطلب</div></div></div>
+        {loading?<div className="py-24 flex justify-center"><Spinner/></div>:filtered.length===0?<Empty title="لا توجد منتجات مطابقة" note="جرّب رقم صنف آخر أو قسمًا مختلفًا." icon="search"/>:<><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">{filtered.slice(0,pageCount).map(item=><ProductCard key={item.cleanId} item={item} onAdd={setAllocItem} onZoom={setZoom}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-5 w-full h-12 rounded-12 border border-border bg-white font-bold text-sm">عرض المزيد</button>}</>}
+      </div>}
+      {page==='cart'&&<div className="fade-in"><div className="mb-4"><h2 className="text-xl font-bold">طلب الشراء</h2><p className="text-sm text-secondary">الكميات بخطوة نصف كرتون فقط، ولا توجد كتابة يدوية.</p></div><CartView cartItems={cartItems} branches={branches} onEdit={setAllocItem} onRemove={removeItem} onCheckout={()=>setCheckout(true)} onSaveDraft={()=>saveDraft('')} savingDraft={savingDraft}/></div>}
+      {page==='orders'&&<div className="fade-in"><div className="mb-4"><h2 className="text-xl font-bold">طلباتي</h2><p className="text-sm text-secondary">الطلبات المرسلة والمسودات المحفوظة في حسابك.</p></div><OrdersView orders={orders} drafts={drafts} onLoadDraft={loadDraft} onDeleteDraft={deleteDraft} loading={historyLoading}/></div>}
+      {page==='account'&&<div className="fade-in"><div className="mb-4"><h2 className="text-xl font-bold">حسابي</h2><p className="text-sm text-secondary">بيانات الشركة والفروع.</p></div><AccountView profile={profile} onLogout={()=>auth.signOut()} onSaveBranches={saveBranches} onChangePin={changePin}/></div>}
+    </main>
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-border safe-bottom"><div className="max-w-[700px] mx-auto grid grid-cols-5 px-1 pt-2">{nav.map(([id,icon,label])=><button key={id} onClick={()=>{setCheckout(false);setPage(id);if(id==='categories')setActiveCategory('الكل')}} className={`h-14 flex flex-col items-center justify-center gap-1 rounded-10 text-[10px] font-bold ${page===id?'text-accent':'text-muted'}`}><div className="relative"><Icon name={icon} className="w-5 h-5"/>{id==='cart'&&cartCount>0&&<span className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-accent text-white text-[8px] flex items-center justify-center">{cartCount}</span>}</div>{label}</button>)}</div></nav>
+    {allocItem&&<BranchAllocationModal item={allocItem} branches={branches} current={cart[allocItem.cleanId]?.branchQuantities||{}} onClose={()=>setAllocItem(null)} onSave={q=>saveAllocation(allocItem,q)} onLimit={showLimit}/>}<Lightbox item={zoom} onClose={()=>setZoom(null)}/><Toast toast={toast} onClose={()=>setToast(null)}/>
+  </div>
+}
+
+function Root(){
+  const [authState,setAuthState]=useState('loading'),[profile,setProfile]=useState(null),[screen,setScreen]=useState('choice'),[registration,setRegistration]=useState(null),[registering,setRegistering]=useState(false),[globalError,setGlobalError]=useState('');
+  const creatingAccountRef=useRef(false);
+
+  useEffect(()=>auth.onAuthStateChanged(async u=>{
+    if(creatingAccountRef.current) return;
+    if(!u){setProfile(null);setAuthState('guest');return;}
+    setAuthState('loading');
+    try{
+      const doc=await db.collection(CUSTOMER_COLLECTION).doc(u.uid).get();
+      if(!doc.exists){await auth.signOut();setGlobalError('الحساب موجود في المصادقة لكن ملف العميل غير مكتمل. تواصل مع الإدارة.');setAuthState('guest');return;}
+      const p={id:doc.id,...doc.data()};
+      if(p.status==='suspended'){await auth.signOut();setGlobalError('هذا الحساب موقوف حاليًا. تواصل مع الإدارة.');setAuthState('guest');return;}
+      setProfile(p);setAuthState('ready');
+      db.collection(CUSTOMER_COLLECTION).doc(u.uid).update({lastLoginAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+    }catch(e){console.error(e);setGlobalError('تعذر تحميل حساب العميل.');setAuthState('guest');}
+  }),[]);
+
+  const finishRegistration=async()=>{
+    if(!registration||registering)return;
+    setRegistering(true);setGlobalError('');creatingAccountRef.current=true;
+    let created=null;
+    try{
+      const cred=await auth.createUserWithEmailAndPassword(authEmailFromPhone(registration.phone),registration.pin);
+      created=cred.user;
+      const profileData={name:registration.name,company:registration.company,phone:registration.phone,branches:registration.branches,status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),schemaVersion:1};
+      await db.collection(CUSTOMER_COLLECTION).doc(created.uid).set(profileData);
+      const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
+      setProfile({id:created.uid,...doc.data()});
+      setRegistration(null);setAuthState('ready');setScreen('choice');
+    }catch(err){
+      console.error(err);
+      if(created){try{await created.delete()}catch{}}
+      if(err.code==='auth/email-already-in-use')setGlobalError('يوجد حساب مسجل بهذا الرقم بالفعل. اختر «مستخدم سابق».');
+      else if(err.code==='auth/operation-not-allowed')setGlobalError('يلزم تفعيل Email/Password من Firebase Authentication مرة واحدة قبل تسجيل العملاء.');
+      else if(err.code==='auth/weak-password')setGlobalError('رمز الدخول يجب أن يكون 6 أرقام.');
+      else setGlobalError('تعذر إنشاء الحساب. تحقق من الاتصال وحاول مرة أخرى.');
+      setScreen('choice');setRegistration(null);setAuthState('guest');
+    }finally{
+      creatingAccountRef.current=false;setRegistering(false);
+    }
+  };
+  if(authState==='loading'||registering)return <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 bg-surface"><Spinner/><div className="text-sm text-secondary">{registering?'جاري إنشاء حسابك...':'جاري تحميل البوابة...'}</div></div>;
+  if(authState==='ready'&&profile)return <CustomerApp user={auth.currentUser} profile={profile} onProfileUpdate={setProfile}/>;
+  if(screen==='register')return <RegistrationForm onBack={()=>setScreen('choice')} onReady={data=>{setRegistration(data);setScreen('liveness')}}/>;
+  if(screen==='liveness'&&registration)return <LivenessCheck registration={registration} onBack={()=>setScreen('register')} onSuccess={finishRegistration}/>;
+  if(screen==='login')return <ExistingLogin onBack={()=>setScreen('choice')}/>;
+  return <><AccessChoice onNew={()=>{setGlobalError('');setScreen('register')}} onExisting={()=>{setGlobalError('');setScreen('login')}}/>{globalError&&<div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-32px)] max-w-[560px] bg-danger text-white rounded-12 p-3 shadow-lift text-sm font-bold">{globalError}</div>}</>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+</script>
+</body>
+</html>
