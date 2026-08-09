@@ -197,9 +197,26 @@ function displayPhone(p){
   if(/^9665\d{8}$/.test(d)) return '0'+d.slice(3);
   return d;
 }
-function authEmailFromPhone(phone){ return `customer_${normalizePhone(phone)}@portal.batco.local`; }
+function authEmailFromPhone(phone){ return `customer_${normalizePhone(phone)}@example.com`; }
+function legacyAuthEmailFromPhone(phone){ return `customer_${normalizePhone(phone)}@portal.batco.local`; }
 function validPhone(phone){ const d=normalizePhone(phone); return /^\d{8,15}$/.test(d); }
 function validPin(pin){ return /^\d{6}$/.test(toEnglishDigits(pin)); }
+
+function registrationErrorMessage(err,stage='auth',cleanupFailed=false){
+  const code=String(err?.code||'');
+  const suffix=code?` (رمز: ${code.replace(/^firebase\//,'')})`:'';
+  if(code==='auth/email-already-in-use') return 'يوجد حساب مسجل بهذا الرقم بالفعل. اختر «لدي حساب».';
+  if(code==='auth/operation-not-allowed'||code==='auth/configuration-not-found') return 'خدمة إنشاء الحسابات غير مفعّلة في Firebase. فعّل Email/Password من Authentication ثم حاول مرة أخرى.'+suffix;
+  if(code==='auth/invalid-email') return 'تعذر تجهيز معرّف الحساب الداخلي. تم تصحيح هذه المشكلة في النسخة الجديدة؛ حدّث الصفحة وحاول مرة أخرى.'+suffix;
+  if(code==='auth/weak-password') return 'رمز الدخول غير مقبول حسب سياسة Firebase الحالية. استخدم 6 أرقام مختلفة مؤقتًا أو راجع سياسة كلمات المرور.'+suffix;
+  if(code==='auth/network-request-failed'||code==='unavailable'||code==='firestore/unavailable') return 'تعذر الوصول إلى خدمة الحسابات الآن. تحقق من الاتصال ثم حاول مرة أخرى.'+suffix;
+  if(code==='auth/too-many-requests'||code==='auth/quota-exceeded') return 'تم إيقاف إنشاء الحسابات مؤقتًا بسبب كثرة المحاولات. انتظر قليلًا ثم حاول مرة أخرى.'+suffix;
+  if(code==='auth/app-not-authorized'||code==='auth/unauthorized-domain') return 'نطاق الموقع غير مصرح له في Firebase Authentication. أضف نطاق Vercel ضمن Authorized domains.'+suffix;
+  if(code==='permission-denied'||code==='firestore/permission-denied') return 'تم إنشاء بيانات الدخول، لكن قواعد Firestore تمنع إنشاء ملف العميل. يلزم السماح لمجموعة customers للمستخدم المسجل.'+suffix+(cleanupFailed?' وتعذر تنظيف حساب المصادقة تلقائيًا؛ راجع Firebase Authentication.':'');
+  if(code==='failed-precondition'||code==='firestore/failed-precondition') return 'إعداد قاعدة البيانات غير مكتمل لهذه العملية. راجع Firestore ثم أعد المحاولة.'+suffix;
+  if(stage==='profile') return 'نجح إنشاء بيانات الدخول لكن تعذر حفظ ملف العميل في قاعدة البيانات.'+suffix+(cleanupFailed?' راجع Firebase Authentication قبل إعادة المحاولة.':'');
+  return 'تعذر إنشاء الحساب بسبب إعداد تقني غير متوقع.'+suffix;
+}
 
 async function fetchText(url,{fresh=false}={}){
   const key='customer_cache_'+url;
@@ -517,7 +534,24 @@ function ExistingLogin({onBack}){
   const [phone,setPhone]=useState(''),[pin,setPin]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const submit=async e=>{e.preventDefault();setError('');const p=normalizePhone(phone);if(!validPhone(p))return setError('تحقق من رقم الجوال.');if(!validPin(pin))return setError('رمز الدخول يجب أن يكون 6 أرقام.');
     const rateKey='cust_login_rate_'+p;let state={n:0,t:0};try{state=JSON.parse(localStorage.getItem(rateKey)||'{}')}catch{};const now=Date.now();if(state.t&&now-state.t<15*60*1000&&state.n>=6)return setError('تم إيقاف المحاولات مؤقتًا. حاول بعد 15 دقيقة.');
-    setBusy(true);try{sessionStorage.setItem('batco_customer_auth_reason','manual_login');await auth.signInWithEmailAndPassword(authEmailFromPhone(p),toEnglishDigits(pin));localStorage.removeItem(rateKey)}catch(err){const n=(state.t&&now-state.t<15*60*1000?state.n:0)+1;localStorage.setItem(rateKey,JSON.stringify({n,t:now}));if(err.code==='auth/operation-not-allowed')setError('خدمة تسجيل الدخول غير مفعّلة حاليًا.');else setError('رقم الجوال أو رمز الدخول غير صحيح.')}finally{setBusy(false)}};
+    setBusy(true);try{
+      sessionStorage.setItem('batco_customer_auth_reason','manual_login');
+      const password=toEnglishDigits(pin);
+      try{await auth.signInWithEmailAndPassword(authEmailFromPhone(p),password)}
+      catch(primaryErr){
+        const fallbackCodes=new Set(['auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials','auth/invalid-email']);
+        if(!fallbackCodes.has(primaryErr?.code)) throw primaryErr;
+        await auth.signInWithEmailAndPassword(legacyAuthEmailFromPhone(p),password);
+      }
+      localStorage.removeItem(rateKey)
+    }catch(err){
+      console.error('[Customer login]',err?.code,err?.message,err);
+      const n=(state.t&&now-state.t<15*60*1000?state.n:0)+1;localStorage.setItem(rateKey,JSON.stringify({n,t:now}));
+      if(err.code==='auth/operation-not-allowed'||err.code==='auth/configuration-not-found')setError('خدمة الحسابات غير مفعّلة في Firebase حاليًا.');
+      else if(err.code==='auth/network-request-failed')setError('تعذر الاتصال بخدمة تسجيل الدخول. تحقق من الشبكة وحاول مرة أخرى.');
+      else if(err.code==='auth/too-many-requests')setError('تم إيقاف المحاولات مؤقتًا للحماية. حاول بعد قليل.');
+      else setError('رقم الجوال أو رمز الدخول غير صحيح.');
+    }finally{setBusy(false)}};
   return <div className="min-h-[100dvh] ui-auth-bg flex items-center justify-center px-4 py-8 safe-top safe-bottom"><div className="w-full max-w-[500px]">
     <button type="button" onClick={onBack} className="ui-back mb-4"><Icon name="back" className="w-4 h-4"/>رجوع</button>
     <form onSubmit={submit} className="ui-panel fade-in">
@@ -725,7 +759,7 @@ function CustomerApp({user,profile,onProfileUpdate}){
   async function saveBranches(next){await db.collection(CUSTOMER_COLLECTION).doc(user.uid).update({branches:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});onProfileUpdate({...profile,branches:next});logCustomerEvent(user,'branches_updated','تحديث الفروع',{branches:next.map(b=>({id:b.id,name:b.name}))});setToast({type:'success',message:'تم تحديث أسماء الفروع.'})}
   async function changePin(currentPin,newPin){
     try{
-      const credential=firebase.auth.EmailAuthProvider.credential(authEmailFromPhone(profile.phone),currentPin);
+      const credential=firebase.auth.EmailAuthProvider.credential(auth.currentUser?.email || authEmailFromPhone(profile.phone),currentPin);
       await user.reauthenticateWithCredential(credential);
       await user.updatePassword(newPin);
       logCustomerEvent(user,'pin_changed','تم تغيير رمز الدخول');
@@ -783,14 +817,17 @@ function Root({registrationEnabled=true,loginEnabled=true}){
   const finishRegistration=async()=>{
     if(!registration||registering)return;
     setRegistering(true);setGlobalError('');creatingAccountRef.current=true;
-    let created=null;
+    let created=null,stage='auth',cleanupFailed=false;
     try{
       sessionStorage.setItem('batco_customer_auth_reason','account_created');
-      const cred=await auth.createUserWithEmailAndPassword(authEmailFromPhone(registration.phone),registration.pin);
-      created=cred.user;
-      const profileData={name:'',company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),schemaVersion:2};
+      const email=authEmailFromPhone(registration.phone);
+      console.info('[Customer registration] starting',{phone:registration.phone,emailHint:email.replace(/(.{4}).+(@.+)/,'$1***$2')});
+      const cred=await auth.createUserWithEmailAndPassword(email,registration.pin);
+      created=cred.user;stage='profile';
+      const profileData={name:'',company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),schemaVersion:3};
       await db.collection(CUSTOMER_COLLECTION).doc(created.uid).set(profileData);
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
+      if(!doc.exists) throw Object.assign(new Error('customer profile missing after create'),{code:'customer/profile-missing'});
       const createdProfile={id:created.uid,...doc.data()};setProfile(createdProfile);
       touchCustomerSession(created,createdProfile,'account_created');
       logCustomerEvent(created,'account_created','إنشاء حساب',{company:registration.company,phone:registration.phone,livenessVerified:true});
@@ -798,12 +835,12 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:created.uid,company:registration.company,phone:registration.phone,type:'account_created',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
       setRegistration(null);setAuthState('ready');setScreen('choice');
     }catch(err){
-      console.error(err);
-      if(created){try{await created.delete()}catch{}}
-      if(err.code==='auth/email-already-in-use')setGlobalError('يوجد حساب مسجل بهذا الرقم بالفعل. اختر «مستخدم سابق».');
-      else if(err.code==='auth/operation-not-allowed')setGlobalError('يلزم تفعيل Email/Password من Firebase Authentication مرة واحدة قبل تسجيل العملاء.');
-      else if(err.code==='auth/weak-password')setGlobalError('رمز الدخول يجب أن يكون 6 أرقام.');
-      else setGlobalError('تعذر إنشاء الحساب. تحقق من الاتصال وحاول مرة أخرى.');
+      console.error('[Customer registration]',{stage,code:err?.code,message:err?.message,error:err});
+      if(created&&stage==='profile'){
+        try{await created.delete();created=null}
+        catch(cleanErr){cleanupFailed=true;console.error('[Customer registration cleanup]',cleanErr);try{await auth.signOut()}catch{}}
+      }
+      setGlobalError(registrationErrorMessage(err,stage,cleanupFailed));
       setScreen('choice');setRegistration(null);setAuthState('guest');
     }finally{
       creatingAccountRef.current=false;setRegistering(false);
