@@ -325,6 +325,97 @@ const resolveEmployeeAccount = async (alias) => {
     }
     return null;
 };
+
+// العثور على سجل موظف قديم لم يُفعّل له حساب بعد.
+// يطابق الاسم مع وبدون المسافات حتى لا تتكرر حسابات مثل «عز الدين / عزالدين».
+const resolveLegacyEmployeeIdentity = async (alias) => {
+    const db = await getDb();
+    const wanted = new Set(employeeAliasVariants(alias));
+    if (!wanted.size) return null;
+    const snap = await db.collection('users').limit(600).get();
+    const matches = [];
+    snap.forEach(doc => {
+        const data = doc.data() || {};
+        const label = String(data.name || doc.id || '').trim();
+        const variants = employeeAliasVariants(label);
+        if (variants.some(v => wanted.has(v))) matches.push({ id: doc.id, ...data, name: label });
+    });
+    if (!matches.length) return null;
+
+    // إذا كان أحد السجلات مرتبطًا أصلًا بحساب، نعيد الحساب ونرمم alias تلقائيًا.
+    const linked = matches.find(x => x.employeeId);
+    if (linked?.employeeId) {
+        const accountDoc = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(linked.employeeId).get();
+        if (accountDoc.exists) {
+            const account = { id: accountDoc.id, ...accountDoc.data() };
+            const batch = db.batch();
+            employeeAliasVariants(alias).forEach(key => batch.set(
+                db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)),
+                { employeeId: account.id, canonicalName: account.canonicalName || linked.name, alias: key, status: account.status || 'active', updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+                { merge: true }
+            ));
+            batch.commit().catch(()=>{});
+            return { existingAccount: account, canonicalName: account.canonicalName || linked.name, aliases: [linked.name, alias], legacyUserIds: matches.map(x=>x.id) };
+        }
+    }
+
+    const names = [...new Set(matches.map(x => String(x.name || '').trim()).filter(Boolean))];
+    // نفضّل الاسم الأكثر وضوحًا/طولًا كاسم أساسي، مع إبقاء كل البقية أسماء دخول.
+    const canonicalName = [...names].sort((a,b) => (b.includes(' ') - a.includes(' ')) || (b.length - a.length))[0] || String(alias).trim();
+    return { canonicalName, aliases: [...new Set([canonicalName, ...names, String(alias).trim()].filter(Boolean))], legacyUserIds: matches.map(x=>x.id) };
+};
+
+const newEmployeeSalt = () => bytesToBase64(crypto.getRandomValues(new Uint8Array(16)));
+const validEmployeePin = (value) => /^\d{6}$/.test(toEnglishDigits(String(value || '')).replace(/\D/g, ''));
+
+const createSelfActivatedEmployeeAccount = async (candidate, enteredAlias, pin) => {
+    const cleanPin = toEnglishDigits(String(pin || '')).replace(/\D/g, '');
+    if (!validEmployeePin(cleanPin)) throw Object.assign(new Error('PIN_FORMAT'), { code: 'PIN_FORMAT' });
+    const db = await getDb();
+    const canonicalName = String(candidate?.canonicalName || enteredAlias || '').trim().replace(/\s+/g, ' ');
+    if (!canonicalName) throw new Error('NO_NAME');
+    const aliases = [...new Set([canonicalName, ...(candidate?.aliases || []), String(enteredAlias || '').trim()].filter(Boolean))];
+    const aliasKeys = [...new Set(aliases.flatMap(employeeAliasVariants))];
+    const accountRef = db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc();
+    const employeeId = accountRef.id;
+
+    for (const key of aliasKeys) {
+        const existing = await db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)).get();
+        if (existing.exists && existing.data()?.employeeId !== employeeId) {
+            const existingAccountId = existing.data()?.employeeId;
+            if (existingAccountId) {
+                const accountDoc = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(existingAccountId).get();
+                if (accountDoc.exists) return { id: accountDoc.id, ...accountDoc.data() };
+            }
+            throw Object.assign(new Error('ALIAS_CONFLICT'), { code: 'ALIAS_CONFLICT' });
+        }
+    }
+
+    const salt = newEmployeeSalt();
+    const passwordHash = await deriveEmployeePasswordHash(cleanPin, salt, 120000);
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+    const batch = db.batch();
+    batch.set(accountRef, {
+        canonicalName, aliases, aliasKeys, status: 'active',
+        passwordHash, passwordSalt: salt, passwordIterations: 120000,
+        passwordUpdatedAt: now, createdAt: now, updatedAt: now,
+        createdBy: 'self_activation', selfActivatedAt: now, loginCount: 0, schemaVersion: 2
+    });
+    aliasKeys.forEach(key => batch.set(
+        db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)),
+        { employeeId, canonicalName, alias: key, status: 'active', updatedAt: now },
+        { merge: true }
+    ));
+    (candidate?.legacyUserIds || []).forEach(id => batch.set(
+        db.collection('users').doc(id),
+        { employeeId, accountEnabled: true, accountStatus: 'active', canonicalName, updatedAt: now },
+        { merge: true }
+    ));
+    batch.set(db.collection('users').doc(toSafeDocId(canonicalName)), { employeeId, name: canonicalName, accountEnabled: true, accountStatus: 'active', canonicalName, updatedAt: now }, { merge: true });
+    await batch.commit();
+    return { id: employeeId, canonicalName, aliases, aliasKeys, status: 'active', passwordHash, passwordSalt: salt, passwordIterations: 120000, createdBy: 'self_activation' };
+};
+
 const captureSecurityPhoto = (video, maxWidth = 420, quality = 0.60) => {
     const sourceW = video?.videoWidth || 640;
     const sourceH = video?.videoHeight || 480;
@@ -1660,35 +1751,76 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     const [loading, setLoading] = useState(false);
     const [code, setCode] = useState('');
     const [employeeAccount, setEmployeeAccount] = useState(null);
+    const [activationCandidate, setActivationCandidate] = useState(null);
     const [enteredAlias, setEnteredAlias] = useState('');
     const codeRef = useRef(null);
+    const autoProbeRef = useRef(false);
 
-    useEffect(() => { if ((step === 'password' || step === 'employee_password') && codeRef.current) codeRef.current.focus(); }, [step]);
+    useEffect(() => { if ((step === 'password' || step === 'employee_password' || step === 'activate_password') && codeRef.current) codeRef.current.focus(); }, [step]);
+
+    const resolveNameFlow = async (trimmed) => {
+        if (isProtectedName(trimmed)) { setStep('password'); return; }
+        const account = await resolveEmployeeAccount(trimmed);
+        if (account) {
+            if (account.status === 'suspended') { setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
+            setEmployeeAccount(account);
+            setActivationCandidate(null);
+            setEnteredAlias(trimmed);
+            setStep('employee_password');
+            return;
+        }
+        const legacy = await resolveLegacyEmployeeIdentity(trimmed);
+        if (!legacy) {
+            setError('هذا الاسم غير موجود ضمن الموظفين المسجلين. جرّب اسمًا آخر تستخدمه في العمل أو راجع مهند.');
+            return;
+        }
+        if (legacy.existingAccount) {
+            if (legacy.existingAccount.status === 'suspended') { setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
+            setEmployeeAccount(legacy.existingAccount);
+            setActivationCandidate(null);
+            setEnteredAlias(trimmed);
+            setStep('employee_password');
+            return;
+        }
+        setEmployeeAccount(null);
+        setActivationCandidate(legacy);
+        setEnteredAlias(trimmed);
+        setStep('activate_password');
+    };
 
     const handleNameSubmit = async (e) => {
         e.preventDefault();
         const trimmed = name.trim();
         if (!trimmed || loading) return;
-        setError('');
-        setCode('');
-        if (isProtectedName(trimmed)) { setStep('password'); return; }
+        setError(''); setCode(''); setLoading(true);
+        try { await resolveNameFlow(trimmed); }
+        catch (err) { console.error(err); setError('تعذر التحقق من حساب الموظف. حاول مرة أخرى.'); }
+        finally { setLoading(false); }
+    };
+
+    // إذا كان الجهاز يحتفظ باسم موظف قديم لكنه لم يفعّل حسابه بعد، نأخذه مباشرة لشاشة اختيار PIN.
+    useEffect(() => {
+        if (autoProbeRef.current || !initialName || isProtectedName(initialName)) return;
+        autoProbeRef.current = true;
         setLoading(true);
+        resolveNameFlow(String(initialName).trim()).catch(()=>{}).finally(()=>setLoading(false));
+    }, []);
+
+    const handleSelfActivation = async (e) => {
+        e.preventDefault();
+        if (!activationCandidate || loading) return;
+        const pin = toEnglishDigits(String(code || '')).replace(/\D/g, '');
+        if (!validEmployeePin(pin)) { setError('اختر رمز دخول من 6 أرقام فقط.'); return; }
+        setLoading(true); setError('');
         try {
-            const account = await resolveEmployeeAccount(trimmed);
-            if (!account) {
-                setError('لم يتم تفعيل حساب موظف بهذا الاسم بعد. جرّب اسمًا آخر مسجلًا لك أو راجع مهند.');
-                return;
-            }
-            if (account.status === 'suspended') {
-                setError('هذا الحساب موقوف حاليًا. راجع الإدارة.');
-                return;
-            }
+            const account = await createSelfActivatedEmployeeAccount(activationCandidate, enteredAlias, pin);
             setEmployeeAccount(account);
-            setEnteredAlias(trimmed);
-            setStep('employee_password');
+            setActivationCandidate(null);
+            setCode('');
+            setStep('face');
         } catch (err) {
             console.error(err);
-            setError('تعذر التحقق من حساب الموظف. حاول مرة أخرى.');
+            setError(err?.code === 'ALIAS_CONFLICT' ? 'هذا الاسم مرتبط بحساب آخر. راجع مهند لدمج الحسابات.' : 'تعذر تفعيل الحساب الآن. حاول مرة أخرى أو راجع مهند.');
         } finally { setLoading(false); }
     };
 
@@ -1717,8 +1849,8 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     const handleEmployeePasswordSubmit = async (e) => {
         e.preventDefault();
         if (!employeeAccount || loading) return;
-        const password = String(code || '');
-        if (!password) return;
+        const password = toEnglishDigits(String(code || '')).replace(/\D/g, '');
+        if (!validEmployeePin(password)) { setError('رمز الدخول يجب أن يكون 6 أرقام.'); return; }
         setLoading(true); setError('');
         try {
             const ok = await verifyEmployeePassword(employeeAccount, password);
@@ -1803,7 +1935,9 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
 
         {step === 'password' && <form onSubmit={handleAdminSubmit} className="flex flex-col gap-16 w-full animate-flip"><div><label className="text-[13px] font-medium text-accent mb-8 flex items-center justify-center gap-6"><Icon.Lock className="w-14 h-14"/>رمز الإدارة</label><input ref={codeRef} type="password" value={code} onChange={e=>{setCode(e.target.value);setError('')}} className="w-full h-48 px-16 rounded-12 border border-accent bg-accentSoft/20 text-center font-bold outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-accent text-white rounded-12 font-semibold">{loading?'جاري الدخول...':'فتح النظام'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setError('')}} className="text-[12px] text-muted">العودة</button></form>}
 
-        {step === 'employee_password' && <form onSubmit={handleEmployeePasswordSubmit} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-48 h-48 rounded-full bg-accentSoft text-accent mx-auto flex items-center justify-center font-bold text-[18px]">{String(employeeAccount?.canonicalName||'?').trim().charAt(0)}</div><h2 className="text-[17px] font-bold mt-10">{employeeAccount?.canonicalName}</h2><p className="text-[10px] text-muted mt-4">دخلت باسم: {enteredAlias}</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">كلمة المرور</label><input ref={codeRef} type="password" autoComplete="current-password" value={code} onChange={e=>{setCode(e.target.value);setError('')}} placeholder="••••••" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-widest outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-primary text-white rounded-12 font-semibold">{loading?'جاري التحقق...':'دخول'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setEmployeeAccount(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
+        {step === 'activate_password' && <form onSubmit={handleSelfActivation} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-52 h-52 rounded-16 bg-successSoft text-success mx-auto flex items-center justify-center"><Icon.Lock className="w-24 h-24"/></div><div className="text-[11px] font-bold text-success mt-10">تفعيل سريع لأول مرة</div><h2 className="text-[18px] font-bold mt-4">{activationCandidate?.canonicalName || enteredAlias}</h2><p className="text-[11px] text-secondary mt-6 leading-5">حسابك موجود مسبقًا لكنه غير مفعّل. اختر رمزًا من 6 أرقام، وبعد لقطة تحقق سريعة تدخل مباشرة.</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اختر رمز الدخول</label><input ref={codeRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="new-password" value={code} onChange={e=>{setCode(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-52 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-[.35em] outline-none"/><p className="text-[10px] text-muted text-center mt-6">ستستخدم نفس الرمز في المرات القادمة.</p></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading||code.length!==6} className="w-full h-48 bg-primary text-white rounded-12 font-semibold disabled:opacity-40">{loading?'جاري التفعيل...':'حفظ الرمز والمتابعة'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setActivationCandidate(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
+
+        {step === 'employee_password' && <form onSubmit={handleEmployeePasswordSubmit} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-48 h-48 rounded-full bg-accentSoft text-accent mx-auto flex items-center justify-center font-bold text-[18px]">{String(employeeAccount?.canonicalName||'?').trim().charAt(0)}</div><h2 className="text-[17px] font-bold mt-10">{employeeAccount?.canonicalName}</h2><p className="text-[10px] text-muted mt-4">دخلت باسم: {enteredAlias}</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">رمز الدخول</label><input ref={codeRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="current-password" value={code} onChange={e=>{setCode(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-[.35em] outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-primary text-white rounded-12 font-semibold">{loading?'جاري التحقق...':'دخول'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setEmployeeAccount(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
 
         {step === 'face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('employee_password');setCode('')}} onVerified={finalizeEmployeeLogin}/>} 
         {loading && step === 'face' && <div className="mt-10 text-[11px] text-muted">جاري حفظ سجل الدخول...</div>}
@@ -3173,7 +3307,7 @@ const App = () => {
                             <span className="text-[11px] sm:text-[13px] font-extrabold text-[#047857] tracking-wider bidi-isolate">Korvi</span>
                         </div>
                         <span className="text-border text-[10px] sm:text-base">|</span>
-                        <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] text-primary font-bold hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">تطوير مهند الحزمي</a>
+                        <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] text-primary font-bold hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">تطوير مهند الحزمي · 0506762257</a>
                     </div>
                 </div>
             </div>
@@ -3398,7 +3532,7 @@ const App = () => {
                 </section>
 
                 <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
-                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي</a>
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي · 0506762257 · Korvi</a>
                 </footer>
             </div>
 
