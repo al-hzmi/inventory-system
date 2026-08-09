@@ -143,10 +143,17 @@ const STORAGE_KEYS = {
 };
 const ACCESS_GATE_VERSION = '1';
 
-// إطلاق بوابة العملاء التدريجي — توقيت السعودية (+03:00)
-// قبل هذا الموعد: البوابة مخفية عن العامة، ومهند يستطيع فتح المعاينة من داخل حساب الإدارة فقط.
-const CUSTOMER_PORTAL_RELEASE_AT = new Date('2026-08-09T08:00:00+03:00').getTime();
-const CUSTOMER_PORTAL_PREVIEW_KEY = 'batco_customer_portal_preview_v1';
+// التحكم المركزي في بوابة العملاء — من لوحة التحكم الإدارية فقط.
+// الوضع الافتراضي «متوقفة» حتى يتم تشغيلها صراحة من الإدارة.
+const CUSTOMER_PORTAL_PREVIEW_KEY = 'batco_customer_portal_preview_v2';
+const CUSTOMER_PORTAL_CONTROL_COLLECTION = 'system_controls';
+const CUSTOMER_PORTAL_CONTROL_DOC = 'customer_portal';
+const DEFAULT_CUSTOMER_PORTAL_CONTROL = {
+    enabled: false,
+    loginEnabled: true,
+    registrationEnabled: true,
+    maintenanceMessage: 'بوابة العملاء متوقفة مؤقتًا. سيتم إتاحتها عند جاهزية الخدمة.'
+};
 
 const VISIBILITY_RULES = {
     hideOutOfStockInGallery         : true,
@@ -175,24 +182,28 @@ const CATEGORY_COLLECTIONS = {
 
 const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 
-const useCustomerPortalRelease = () => {
-    const [released, setReleased] = useState(() => Date.now() >= CUSTOMER_PORTAL_RELEASE_AT);
+const useCustomerPortalControl = () => {
+    const [control, setControl] = useState(DEFAULT_CUSTOMER_PORTAL_CONTROL);
     useEffect(() => {
-        if (released) return;
-        const check = () => {
-            if (Date.now() >= CUSTOMER_PORTAL_RELEASE_AT) setReleased(true);
-        };
-        check();
-        const timer = setInterval(check, 15000);
-        return () => clearInterval(timer);
-    }, [released]);
-    return released;
+        let unsubscribe = null;
+        let active = true;
+        getDb().then(db => {
+            if (!active) return;
+            unsubscribe = db.collection(CUSTOMER_PORTAL_CONTROL_COLLECTION).doc(CUSTOMER_PORTAL_CONTROL_DOC)
+                .onSnapshot(doc => {
+                    if (!active) return;
+                    setControl({ ...DEFAULT_CUSTOMER_PORTAL_CONTROL, ...(doc.exists ? doc.data() : {}) });
+                }, () => {
+                    if (active) setControl(DEFAULT_CUSTOMER_PORTAL_CONTROL);
+                });
+        }).catch(() => { if (active) setControl(DEFAULT_CUSTOMER_PORTAL_CONTROL); });
+        return () => { active = false; if (unsubscribe) unsubscribe(); };
+    }, []);
+    return control;
 };
 
 const openCustomerPortalPreview = () => {
-    // هذه مجرد بوابة نشر مرحلية وليست طبقة مصادقة أمنية.
-    // الوصول للزر نفسه محصور داخل حساب الإدارة في واجهة الموظفين.
-    localStorage.setItem(CUSTOMER_PORTAL_PREVIEW_KEY, String(CUSTOMER_PORTAL_RELEASE_AT));
+    localStorage.setItem(CUSTOMER_PORTAL_PREVIEW_KEY, 'admin-preview');
     window.location.href = './customer.html';
 };
 
@@ -1421,7 +1432,8 @@ const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
 
 // ✨ نافذة الدخول بالتحقق الحيوي (Face ID) وتحديد الموقع (GPS) بالهوية البصرية الأصلية
 const LoginScreen = ({ onLogin, initialName = '' }) => {
-    const customerPortalReleased = useCustomerPortalRelease();
+    const customerPortalControl = useCustomerPortalControl();
+    const customerPortalReleased = !!customerPortalControl.enabled;
     const [name, setName] = useState(initialName);
     const [step, setStep] = useState('name'); 
     const [error, setError] = useState('');
@@ -2702,7 +2714,8 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
 // التطبيق الرئيسي
 // ============================================================
 const App = () => {
-    const customerPortalReleased = useCustomerPortalRelease();
+    const customerPortalControl = useCustomerPortalControl();
+    const customerPortalReleased = !!customerPortalControl.enabled;
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     
     useEffect(() => {
@@ -3109,17 +3122,10 @@ const App = () => {
                                 </button>
                             )}
                             {isAdmin && (
-                                <button onClick={() => { window.location.href = './security-center.html'; }} title="مركز الأمن والرقابة" className="relative flex items-center justify-center w-48 h-48 rounded-12 bg-primary border border-primary text-bg hover:opacity-90 transition-colors animate-flip">
-                                    <Icon.Shield className="w-20 h-20" />
-                                    <span className="absolute -top-4 -left-4 px-5 h-18 rounded-full bg-danger text-white text-[8px] font-bold flex items-center">أمن</span>
-                                </button>
-                            )}
-                            {isAdmin && (
-                                <button onClick={() => customerPortalReleased ? (window.location.href = './customer.html') : openCustomerPortalPreview()}
-                                        title={customerPortalReleased ? 'فتح بوابة العملاء' : 'معاينة بوابة العملاء قبل الإطلاق'}
-                                        className={`relative flex items-center justify-center w-48 h-48 rounded-12 border transition-colors animate-flip ${customerPortalReleased ? 'bg-surface border-border text-primary hover:text-accent' : 'bg-infoSoft border-info text-info hover:bg-info hover:text-white'}`}>
-                                    <Icon.Users className="w-20 h-20" />
-                                    {!customerPortalReleased && <span className="absolute -top-4 -left-4 px-5 h-18 rounded-full bg-info text-white text-[8px] font-bold flex items-center">تجربة</span>}
+                                <button onClick={() => { window.location.href = './admin-dashboard.html'; }} title="لوحة التحكم الإدارية"
+                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-primary border border-primary text-bg hover:opacity-90 transition-opacity animate-flip">
+                                    <Icon.Dashboard className="w-20 h-20" />
+                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">لوحة التحكم</span>
                                 </button>
                             )}
 
