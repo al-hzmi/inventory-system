@@ -140,6 +140,7 @@ const CUSTOMER_ACTIVITY_COLLECTION = 'customer_activity_logs';
 const CUSTOMER_SESSION_COLLECTION = 'customer_sessions';
 const CUSTOMER_LOGIN_COLLECTION = 'customer_login_logs';
 const CUSTOMER_SECURITY_PHOTO_COLLECTION = 'customer_security_photos';
+const CUSTOMER_DEVICE_COLLECTION = 'customer_devices';
 const CATEGORY_OVERRIDES = 'product_category_overrides';
 const CATEGORY_META = 'catalog_categories';
 const CATEGORY_UNASSIGNED = '__UNCATEGORIZED__';
@@ -183,11 +184,36 @@ const customerSessionId = (()=>{
     return id;
   }catch{return `cs_${Date.now().toString(36)}_${uidPart()}`}
 })();
+const CUSTOMER_DEVICE_INSTALL_KEY='batco_customer_device_install_v1';
+const compactHash=str=>{let h=2166136261>>>0;for(const ch of String(str||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h.toString(36)};
+function customerInstallId(){
+  try{let id=localStorage.getItem(CUSTOMER_DEVICE_INSTALL_KEY);if(!id){id=`dev_${Date.now().toString(36)}_${uidPart()}_${uidPart()}`;localStorage.setItem(CUSTOMER_DEVICE_INSTALL_KEY,id)}return id}catch{return `dev_${compactHash(navigator.userAgent||'browser')}`}
+}
+function customerFingerprint(){
+  const sw=Number(window.screen?.width||0),sh=Number(window.screen?.height||0),dims=[sw,sh].sort((a,b)=>a-b).join('x');
+  const parts=[navigator.platform||'',navigator.language||'',dims,window.devicePixelRatio||1,navigator.maxTouchPoints||0,navigator.hardwareConcurrency||0,navigator.deviceMemory||0,Intl.DateTimeFormat().resolvedOptions().timeZone||'',/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||'')?'m':'d'];
+  return `fp_${compactHash(parts.join('|'))}`;
+}
+const customerDeviceIdentity=()=>({deviceId:customerInstallId(),fingerprint:customerFingerprint()});
+const customerDeviceDocId=uid=>`${uid}__${customerFingerprint()}`;
 const customerDeviceInfo = () => ({
-  userAgent:navigator.userAgent||'', platform:navigator.platform||'', language:navigator.language||'',
-  viewport:`${window.innerWidth||0}x${window.innerHeight||0}`, standalone:Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches || navigator.standalone),
-  timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||''
+  ...customerDeviceIdentity(), userAgent:navigator.userAgent||'', platform:navigator.platform||'', language:navigator.language||'',
+  viewport:`${window.innerWidth||0}x${window.innerHeight||0}`, screen:`${window.screen?.width||0}x${window.screen?.height||0}`,
+  standalone:Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches || navigator.standalone), timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||''
 });
+async function ensureCustomerDeviceAllowed(user,profile){
+  if(!user?.uid)return {allowed:false};
+  const info=customerDeviceInfo(),ref=db.collection(CUSTOMER_DEVICE_COLLECTION).doc(customerDeviceDocId(user.uid));
+  const snap=await ref.get();
+  if(snap.exists){
+    const current=snap.data()||{};
+    if(current.status==='blocked'||current.blocked===true)return {allowed:false,device:{id:snap.id,...current}};
+    await ref.set({customerUid:user.uid,name:profile?.name||'',company:profile?.company||'',phone:profile?.phone||'',...info,installIds:firebase.firestore.FieldValue.arrayUnion(info.deviceId),lastSeen:firebase.firestore.FieldValue.serverTimestamp(),status:current.status||'active'},{merge:true});
+  }else{
+    await ref.set({customerUid:user.uid,name:profile?.name||'',company:profile?.company||'',phone:profile?.phone||'',...info,installIds:[info.deviceId],status:'active',firstSeen:firebase.firestore.FieldValue.serverTimestamp(),lastSeen:firebase.firestore.FieldValue.serverTimestamp()});
+  }
+  return {allowed:true,deviceId:ref.id,info};
+}
 async function logCustomerEvent(user,type,label='',data={}){
   if(!user?.uid)return;
   try{
@@ -753,6 +779,20 @@ function CustomerApp({user,profile,onProfileUpdate}){
   useEffect(()=>{try{setCart(JSON.parse(localStorage.getItem(cartKey)||'{}'))}catch{setCart({})}},[cartKey]);
   useEffect(()=>{localStorage.setItem(cartKey,JSON.stringify(cart))},[cart,cartKey]);
   useEffect(()=>{try{localStorage.setItem('customer_catalog_view_v2',viewMode)}catch{}},[viewMode]);
+  useEffect(()=>{
+    const unsub=db.collection(CUSTOMER_COLLECTION).doc(user.uid).onSnapshot(doc=>{
+      if(!doc.exists){auth.signOut().catch(()=>{});return}
+      const next={id:doc.id,...doc.data()};
+      if(next.status==='suspended'||next.status==='deleted'){auth.signOut().catch(()=>{});return}
+      onProfileUpdate(next);
+    },()=>{});
+    return()=>unsub();
+  },[user.uid]);
+  useEffect(()=>{
+    const ref=db.collection(CUSTOMER_DEVICE_COLLECTION).doc(customerDeviceDocId(user.uid));
+    const unsub=ref.onSnapshot(doc=>{if(doc.exists&&(doc.data()?.status==='blocked'||doc.data()?.blocked===true)){logCustomerEvent(user,'device_blocked','تم حظر الجهاز من الإدارة').finally(()=>auth.signOut().catch(()=>{}))}},()=>{});
+    return()=>unsub();
+  },[user.uid]);
   const markImageMissing=useCallback(cleanId=>setMissingImages(prev=>{const next=new Set(prev);next.add(cleanId);return next}),[]);
   useEffect(()=>{touchCustomerSession(user,profile,'active');const t=setInterval(()=>touchCustomerSession(user,profile,'heartbeat'),120000);return()=>clearInterval(t)},[user.uid,profile.name,profile.company,profile.phone]);
   useEffect(()=>{logCustomerEvent(user,'page_view',page,{company:profile.company})},[page]);
@@ -871,6 +911,12 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       if(!doc.exists){await auth.signOut();setGlobalError('الحساب موجود في المصادقة لكن ملف العميل غير مكتمل. تواصل مع الإدارة.');setAuthState('guest');return;}
       const p={id:doc.id,...doc.data()};
       if(p.status==='suspended'){await auth.signOut();setGlobalError('هذا الحساب موقوف حاليًا. تواصل مع الإدارة.');setAuthState('guest');return;}
+      if(p.status==='deleted'){await auth.signOut();setGlobalError('هذا الحساب لم يعد متاحًا. تواصل مع الإدارة عند الحاجة.');setAuthState('guest');return;}
+      const deviceCheck=await ensureCustomerDeviceAllowed(u,p);
+      if(!deviceCheck.allowed){
+        db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:u.uid,company:p.company||'',phone:p.phone||'',type:'device_blocked',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+        await auth.signOut();setGlobalError('هذا الجهاز غير مصرح له بالدخول إلى الحساب. تواصل مع الإدارة.');setAuthState('guest');return;
+      }
       setProfile(p);setAuthState('ready');
       const reason=sessionStorage.getItem('batco_customer_auth_reason')||'session_restore';sessionStorage.removeItem('batco_customer_auth_reason');
       db.collection(CUSTOMER_COLLECTION).doc(u.uid).update({lastLoginAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
@@ -894,7 +940,9 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       await db.collection(CUSTOMER_COLLECTION).doc(created.uid).set(profileData);
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
       if(!doc.exists) throw Object.assign(new Error('customer profile missing after create'),{code:'customer/profile-missing'});
-      const createdProfile={id:created.uid,...doc.data()};setProfile(createdProfile);
+      const createdProfile={id:created.uid,...doc.data()};
+      await ensureCustomerDeviceAllowed(created,createdProfile);
+      setProfile(createdProfile);
       if(facePhotoDataUrl){
         try{
           await db.collection(CUSTOMER_SECURITY_PHOTO_COLLECTION).add({
