@@ -521,6 +521,68 @@ function LivenessCheck({registration,onBack,onSuccess}){
   </div>
 }
 
+function ExistingLogin({onBack}){
+  const [phone,setPhone]=useState(''),[pin,setPin]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const submit=async e=>{
+    e.preventDefault();setError('');
+    const p=normalizePhone(phone), password=toEnglishDigits(pin);
+    if(!validPhone(p))return setError('تحقق من رقم الجوال.');
+    if(!validPin(password))return setError('رمز الدخول يجب أن يكون 6 أرقام.');
+
+    const rateKey='cust_login_rate_'+p;let state={n:0,t:0};
+    try{state=JSON.parse(localStorage.getItem(rateKey)||'{}')}catch{}
+    const now=Date.now();
+    if(state.t&&now-state.t<15*60*1000&&state.n>=6)return setError('تم إيقاف المحاولات مؤقتًا. حاول بعد 15 دقيقة.');
+
+    setBusy(true);
+    try{
+      sessionStorage.setItem('batco_customer_auth_reason','manual_login');
+      try{
+        await auth.signInWithEmailAndPassword(authEmailFromPhone(p),password);
+      }catch(primaryErr){
+        const fallbackCodes=new Set(['auth/user-not-found','auth/invalid-credential','auth/invalid-login-credentials','auth/invalid-email']);
+        if(!fallbackCodes.has(primaryErr?.code)) throw primaryErr;
+        await auth.signInWithEmailAndPassword(legacyAuthEmailFromPhone(p),password);
+      }
+      localStorage.removeItem(rateKey);
+    }catch(err){
+      console.error('[Customer login]',err?.code,err?.message,err);
+      const n=(state.t&&now-state.t<15*60*1000?state.n:0)+1;
+      localStorage.setItem(rateKey,JSON.stringify({n,t:now}));
+      if(err.code==='auth/operation-not-allowed'||err.code==='auth/configuration-not-found') setError('خدمة تسجيل الدخول غير مفعّلة حاليًا.');
+      else if(err.code==='auth/network-request-failed') setError('تعذر الاتصال بخدمة تسجيل الدخول. تحقق من الشبكة وحاول مرة أخرى.');
+      else if(err.code==='auth/too-many-requests') setError('تم إيقاف المحاولات مؤقتًا للحماية. حاول بعد قليل.');
+      else setError('رقم الجوال أو رمز الدخول غير صحيح.');
+    }finally{setBusy(false)}
+  };
+
+  return <div className="min-h-[100dvh] ui-auth-bg flex items-center justify-center px-4 py-8 safe-top safe-bottom">
+    <div className="w-full max-w-[500px]">
+      <button type="button" onClick={onBack} className="ui-back mb-4"><Icon name="back" className="w-4 h-4"/>رجوع</button>
+      <form onSubmit={submit} className="ui-panel fade-in">
+        <div className="ui-panel-head">
+          <div className="ui-brand-mark"><Icon name="lock" className="w-7 h-7"/></div>
+          <div className="ui-eyebrow">تسجيل الدخول</div>
+          <h2 className="ui-title">أهلًا بعودتك</h2>
+          <p className="ui-subtitle">أدخل رقم الجوال ورمز الدخول.</p>
+        </div>
+        <div className="ui-panel-body">
+          <FormField label="رقم الجوال" icon="phone">
+            <input value={phone} onChange={e=>setPhone(toEnglishDigits(e.target.value).replace(/[^0-9+]/g,''))} inputMode="tel" autoComplete="username" dir="ltr" className="ui-input text-left" placeholder="05xxxxxxxx"/>
+          </FormField>
+          <FormField label="رمز الدخول" icon="lock">
+            <input value={pin} onChange={e=>setPin(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6))} inputMode="numeric" type="password" autoComplete="current-password" className="ui-input ui-pin" placeholder="••••••"/>
+          </FormField>
+          {error&&<div className="ui-error"><Icon name="alert" className="w-5 h-5 shrink-0 mt-[1px]"/>{error}</div>}
+          <button disabled={busy} className="ui-btn ui-btn-primary">{busy?<Spinner/>:<><Icon name="shop" className="w-5 h-5"/>دخول إلى المعرض</>}</button>
+          <p className="text-[11px] leading-6 text-muted text-center">إذا نسيت رمز الدخول، تواصل مع الإدارة لإعادة تعيينه.</p>
+          <CustomerCredits compact/>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
 function NamePromptModal({company,onSave}){
   const [name,setName]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const inputRef=useRef(null);
