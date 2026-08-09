@@ -118,6 +118,7 @@ const DRAFT_COLLECTION = 'customer_drafts';
 const CUSTOMER_ACTIVITY_COLLECTION = 'customer_activity_logs';
 const CUSTOMER_SESSION_COLLECTION = 'customer_sessions';
 const CUSTOMER_LOGIN_COLLECTION = 'customer_login_logs';
+const CUSTOMER_SECURITY_PHOTO_COLLECTION = 'customer_security_photos';
 const CATEGORY_OVERRIDES = 'product_category_overrides';
 const CATEGORY_META = 'catalog_categories';
 const CATEGORY_UNASSIGNED = '__UNCATEGORIZED__';
@@ -446,10 +447,18 @@ function LivenessCheck({registration,onBack,onSuccess}){
       // نحو ثانية واحدة من اكتشاف مستقر كافية.
       if(goodFramesRef.current>=8){
         doneRef.current=true;
+        let securityPhoto='';
+        try{
+          const v=videoRef.current;
+          const sw=v?.videoWidth||640,sh=v?.videoHeight||480,maxW=420,scale=Math.min(1,maxW/sw);
+          const c=document.createElement('canvas');c.width=Math.max(1,Math.round(sw*scale));c.height=Math.max(1,Math.round(sh*scale));
+          c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+          securityPhoto=c.toDataURL('image/jpeg',.60);
+        }catch(e){console.warn('[Customer security photo]',e)}
         setPhase('success');
         setQuality({face:true,light:true,ready:true});
         setStatus('تم التحقق بنجاح');
-        setTimeout(()=>{stop();onSuccess();},450);
+        setTimeout(()=>{stop();onSuccess(securityPhoto);},450);
       }
     };
 
@@ -508,7 +517,7 @@ function LivenessCheck({registration,onBack,onSuccess}){
           <div className="w-12 h-12 mx-auto rounded-16 bg-successSoft text-success flex items-center justify-center mb-3"><Icon name="camera" className="w-6 h-6"/></div>
           <div className="ui-eyebrow !text-success">تحقق سريع وآمن</div>
           <h1 className="ui-title !text-[20px]">خلّ وجهك ظاهر أمام الكاميرا للحظة</h1>
-          <p className="ui-subtitle">ما تحتاج تسوي أي حركة. التحقق يتم تلقائيًا خلال لحظة، ولا نحفظ صورة وجهك.</p>
+          <p className="ui-subtitle">ما تحتاج تسوي أي حركة. التحقق يتم تلقائيًا خلال لحظة، وتُحفظ لقطة التحقق في السجل الأمني للإدارة فقط.</p>
         </div>
         <div className="p-4 sm:p-5">
           <div className="relative aspect-[4/3] rounded-20 overflow-hidden bg-[#F5F5F4] border border-border shadow-card">
@@ -814,7 +823,7 @@ function Root({registrationEnabled=true,loginEnabled=true}){
     }catch(e){console.error(e);setGlobalError('تعذر تحميل حساب العميل.');setAuthState('guest');}
   }),[]);
 
-  const finishRegistration=async()=>{
+  const finishRegistration=async(facePhotoDataUrl='')=>{
     if(!registration||registering)return;
     setRegistering(true);setGlobalError('');creatingAccountRef.current=true;
     let created=null,stage='auth',cleanupFailed=false;
@@ -829,9 +838,18 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
       if(!doc.exists) throw Object.assign(new Error('customer profile missing after create'),{code:'customer/profile-missing'});
       const createdProfile={id:created.uid,...doc.data()};setProfile(createdProfile);
+      if(facePhotoDataUrl){
+        try{
+          await db.collection(CUSTOMER_SECURITY_PHOTO_COLLECTION).add({
+            customerUid:created.uid,company:registration.company||'',phone:registration.phone||'',photoDataUrl:facePhotoDataUrl,
+            verificationType:'registration_face_presence',sessionId:customerSessionId,userAgent:navigator.userAgent||'',platform:navigator.platform||'',
+            screen:`${window.screen?.width||0}x${window.screen?.height||0}`,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }catch(photoErr){console.warn('[Customer security photo save]',photoErr)}
+      }
       touchCustomerSession(created,createdProfile,'account_created');
       logCustomerEvent(created,'account_created','إنشاء حساب',{company:registration.company,phone:registration.phone,livenessVerified:true});
-      logCustomerEvent(created,'liveness_verified','تم التحقق من الحضور',{savedFaceImage:false});
+      logCustomerEvent(created,'liveness_verified','تم التحقق من الحضور',{savedFaceImage:!!facePhotoDataUrl});
       db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:created.uid,company:registration.company,phone:registration.phone,type:'account_created',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
       setRegistration(null);setAuthState('ready');setScreen('choice');
     }catch(err){
@@ -900,4 +918,4 @@ function CustomerPortalBootstrap(){
 ReactDOM.createRoot(document.getElementById('root')).render(<CustomerPortalBootstrap/>);
 </script>
 </body>
-</html> 
+</html>
