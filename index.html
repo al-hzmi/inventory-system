@@ -1606,139 +1606,224 @@ const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
 // بوابة دخول الموظفين — حساب موحد + أسماء بديلة + كلمة مرور + تحقق وجه سريع
 const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified }) => {
     const videoRef = useRef(null);
-    const miniCanvasRef = useRef(null);
     const streamRef = useRef(null);
     const meshRef = useRef(null);
-    const timerRef = useRef(null);
-    const goodFramesRef = useRef(0);
+    const loopRef = useRef(null);
+    const fallbackRef = useRef(null);
+    const detectedFramesRef = useRef(0);
     const doneRef = useRef(false);
+    const onVerifiedRef = useRef(onVerified);
+    useEffect(() => { onVerifiedRef.current = onVerified; }, [onVerified]);
     const [status, setStatus] = useState('جاري تشغيل الكاميرا...');
-    const [quality, setQuality] = useState({ face: false, light: false, ready: false });
+    const [cameraReady, setCameraReady] = useState(false);
+    const [faceDetected, setFaceDetected] = useState(false);
+    const [manualReady, setManualReady] = useState(false);
     const [error, setError] = useState('');
 
     const stop = useCallback(() => {
-        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+        if (loopRef.current) { clearTimeout(loopRef.current); loopRef.current = null; }
+        if (fallbackRef.current) { clearTimeout(fallbackRef.current); fallbackRef.current = null; }
         try { streamRef.current?.getTracks?.().forEach(t => t.stop()); } catch (e) {}
         streamRef.current = null;
         meshRef.current = null;
         if (videoRef.current) videoRef.current.srcObject = null;
     }, []);
 
+    const captureAndContinue = useCallback(() => {
+        if (doneRef.current || !videoRef.current || videoRef.current.readyState < 2) return;
+        doneRef.current = true;
+        try {
+            const photoDataUrl = captureSecurityPhoto(videoRef.current, 420, .60);
+            setStatus('تم التقاط الصورة بنجاح');
+            setTimeout(() => { stop(); onVerifiedRef.current?.(photoDataUrl); }, 180);
+        } catch (e) {
+            doneRef.current = false;
+            setError('تعذر التقاط الصورة. حاول مرة أخرى.');
+        }
+    }, [stop]);
+
     useEffect(() => {
         let cancelled = false;
         let processing = false;
 
-        const processResults = (results) => {
+        const onResults = (results) => {
             if (cancelled || doneRef.current) return;
-            const faces = results.multiFaceLandmarks || [];
-            let lightOk = true;
-            try {
-                const c = miniCanvasRef.current, ctx = c.getContext('2d', { willReadFrequently: true });
-                c.width = 40; c.height = 30;
-                ctx.drawImage(videoRef.current, 0, 0, 40, 30);
-                const d = ctx.getImageData(0, 0, 40, 30).data;
-                let total = 0;
-                for (let i = 0; i < d.length; i += 4) total += (d[i] + d[i+1] + d[i+2]) / 3;
-                const avg = total / (d.length / 4);
-                lightOk = avg > 18 && avg < 252;
-            } catch (e) {}
-
-            if (faces.length !== 1) {
-                goodFramesRef.current = 0;
-                setQuality({ face: false, light: lightOk, ready: false });
-                setStatus(faces.length > 1 ? 'خلّ شخص واحد فقط أمام الكاميرا' : 'وجّه الكاميرا على وجهك');
-                return;
-            }
-
-            const lm = faces[0], left = lm[234], right = lm[454], top = lm[10], bottom = lm[152];
-            const faceW = Math.abs(right.x - left.x), faceH = Math.abs(bottom.y - top.y);
-            const faceSizeOk = faceW > .11 && faceW < .94 && faceH > .14 && faceH < .97;
-
-            if (!lightOk) {
-                goodFramesRef.current = 0;
-                setQuality({ face: true, light: false, ready: false });
-                setStatus('ارفع الإضاءة قليلًا');
-                return;
-            }
-            if (!faceSizeOk) {
-                goodFramesRef.current = 0;
-                setQuality({ face: true, light: true, ready: false });
-                setStatus(faceW <= .11 ? 'قرّب الجوال قليلًا' : 'أبعد الجوال قليلًا');
-                return;
-            }
-
-            goodFramesRef.current += 1;
-            const ready = goodFramesRef.current >= 3;
-            setQuality({ face: true, light: true, ready });
-            setStatus(goodFramesRef.current < 3 ? 'ممتاز، ثبّت الجوال لحظة...' : 'جاري إنهاء التحقق...');
-
-            if (goodFramesRef.current >= 8) {
-                doneRef.current = true;
-                try {
-                    const photoDataUrl = captureSecurityPhoto(videoRef.current, 420, .60);
-                    setQuality({ face: true, light: true, ready: true });
-                    setStatus('تم التحقق بنجاح');
-                    setTimeout(() => { stop(); onVerified(photoDataUrl); }, 350);
-                } catch (e) {
-                    setError('تعذر حفظ لقطة التحقق. حاول مرة أخرى.');
-                    doneRef.current = false;
-                    goodFramesRef.current = 0;
-                }
+            const faces = results?.multiFaceLandmarks || [];
+            if (faces.length >= 1) {
+                detectedFramesRef.current += 1;
+                setFaceDetected(true);
+                setStatus('ممتاز، تم العثور على الوجه');
+                // إطاران فقط يكفيان. لا إضاءة، لا حجم وجه، لا حركة، لا رمشة.
+                if (detectedFramesRef.current >= 2) captureAndContinue();
+            } else {
+                detectedFramesRef.current = 0;
+                setFaceDetected(false);
+                setStatus('خلّ وجهك ظاهر أمام الكاميرا');
             }
         };
 
         const loop = () => {
             if (cancelled || doneRef.current) return;
-            timerRef.current = setTimeout(async () => {
+            loopRef.current = setTimeout(async () => {
                 if (!cancelled && !doneRef.current && !processing && meshRef.current && videoRef.current?.readyState >= 2) {
                     processing = true;
-                    try { await meshRef.current.send({ image: videoRef.current }); } catch (e) {}
+                    try { await meshRef.current.send({ image: videoRef.current }); } catch (e) {
+                        // لا نوقف الموظف إذا تعطل المحرك؛ زر الالتقاط اليدوي يبقى متاحًا.
+                        setManualReady(true);
+                    }
                     processing = false;
                 }
                 loop();
-            }, 110);
+            }, 180);
         };
 
         const start = async () => {
             try {
-                if (!window.FaceMesh) throw new Error('FACE_MODULE');
+                if (!navigator.mediaDevices?.getUserMedia) throw new Error('CAMERA_UNSUPPORTED');
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
                 if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
                 streamRef.current = stream;
                 videoRef.current.srcObject = stream;
                 await videoRef.current.play();
-                const mesh = new FaceMesh({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}` });
-                mesh.setOptions({ maxNumFaces: 2, refineLandmarks: false, minDetectionConfidence: .5, minTrackingConfidence: .5 });
-                mesh.onResults(processResults);
-                meshRef.current = mesh;
-                setStatus('وجّه الكاميرا على وجهك');
-                loop();
+                setCameraReady(true);
+                setStatus('خلّ وجهك ظاهر أمام الكاميرا');
+
+                // بعد لحظة قصيرة نتيح المتابعة اليدوية دائمًا حتى لا يعلق أي جهاز.
+                fallbackRef.current = setTimeout(() => {
+                    if (!cancelled && !doneRef.current) setManualReady(true);
+                }, 1400);
+
+                if (window.FaceMesh) {
+                    try {
+                        const mesh = new FaceMesh({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}` });
+                        mesh.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: .35, minTrackingConfidence: .35 });
+                        mesh.onResults(onResults);
+                        meshRef.current = mesh;
+                        loop();
+                    } catch (e) {
+                        setManualReady(true);
+                        setStatus('الكاميرا جاهزة — اضغط التقاط والمتابعة');
+                    }
+                } else {
+                    setManualReady(true);
+                    setStatus('الكاميرا جاهزة — اضغط التقاط والمتابعة');
+                }
             } catch (err) {
                 console.error(err); stop();
                 if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') setError('اسمح باستخدام الكاميرا لإكمال الدخول.');
-                else setError('تعذر تشغيل التحقق على هذا الجهاز. حاول مرة أخرى.');
+                else if (err?.name === 'NotFoundError') setError('لم يتم العثور على كاميرا أمامية.');
+                else setError('تعذر تشغيل الكاميرا على هذا الجهاز.');
             }
         };
         start();
         return () => { cancelled = true; stop(); };
-    }, [onVerified, stop]);
+    }, [captureAndContinue, stop]);
 
-    const checks = [['face','الوجه ظاهر'],['light','الصورة واضحة'],['ready','اكتمل التحقق']];
     return <div className="w-full animate-flip">
         <div className="text-center mb-16">
             <div className="w-48 h-48 mx-auto rounded-16 bg-successSoft text-success flex items-center justify-center"><Icon.Camera className="w-22 h-22"/></div>
-            <h2 className="text-[17px] font-bold text-primary mt-12">تحقق سريع للدخول</h2>
-            <p className="text-[12px] text-secondary mt-4">{account?.canonicalName || 'الموظف'} · فقط خلّ وجهك ظاهر للحظة، بدون رمشة أو حركات.</p>
+            <h2 className="text-[17px] font-bold text-primary mt-12">لقطة تحقق سريعة</h2>
+            <p className="text-[12px] text-secondary mt-4">{account?.canonicalName || 'الموظف'} · فقط خلّ وجهك ظاهر. غالبًا يتم الالتقاط تلقائيًا فورًا.</p>
         </div>
         <div className="relative aspect-[4/3] rounded-20 overflow-hidden bg-surface border border-border shadow-card">
             <video ref={videoRef} muted playsInline className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"/>
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[76%] rounded-[46%] border-[3px] border-white pointer-events-none" style={{boxShadow:'0 0 0 999px rgba(28,25,23,.10)'}}></div>
+            <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[58%] h-[82%] rounded-[44%] border-[3px] pointer-events-none transition-colors ${faceDetected?'border-success':'border-white'}`} style={{boxShadow:'0 0 0 999px rgba(28,25,23,.08)'}}></div>
             <div className="absolute left-8 right-8 bottom-8 flex justify-center"><div className={`rounded-full px-12 py-8 text-[11px] font-bold shadow-card ${error?'bg-danger text-white':'bg-white/95 text-primary'}`}>{error || status}</div></div>
         </div>
-        <canvas ref={miniCanvasRef} className="hidden"/>
-        <div className="grid grid-cols-3 gap-6 mt-12">{checks.map(([key,label])=><div key={key} className={`rounded-10 border p-8 text-center text-[10px] font-bold ${quality[key]?'bg-successSoft text-success border-success/20':'bg-surface text-muted border-border'}`}>{quality[key]?'✓ ':''}{label}</div>)}</div>
-        <div className="mt-12 rounded-12 bg-surface border border-border p-10 text-[10px] text-secondary leading-5">تُحفظ لقطة التحقق في السجل الأمني للإدارة فقط مع وقت الدخول والجهاز.</div>
-        <button type="button" onClick={() => { stop(); onBack(); }} className="w-full h-44 mt-12 rounded-12 border border-border bg-bg text-secondary text-[12px] font-bold">العودة</button>
+        <div className="grid grid-cols-2 gap-6 mt-12">
+            <div className={`rounded-10 border p-9 text-center text-[10px] font-bold ${cameraReady?'bg-successSoft text-success border-success/20':'bg-surface text-muted border-border'}`}>{cameraReady?'✓ ':''}الكاميرا جاهزة</div>
+            <div className={`rounded-10 border p-9 text-center text-[10px] font-bold ${faceDetected?'bg-successSoft text-success border-success/20':'bg-surface text-muted border-border'}`}>{faceDetected?'✓ ':''}الوجه ظاهر</div>
+        </div>
+        {manualReady && !error && <button type="button" onClick={captureAndContinue} className="w-full h-46 mt-12 rounded-12 bg-primary text-white text-[12px] font-bold">التقاط والمتابعة</button>}
+        <div className="mt-10 rounded-12 bg-surface border border-border p-10 text-[10px] text-secondary leading-5">إذا لم يلتقط النظام تلقائيًا، استخدم «التقاط والمتابعة». تُحفظ الصورة في السجل الأمني للإدارة فقط.</div>
+        <button type="button" onClick={() => { stop(); onBack(); }} className="w-full h-42 mt-10 rounded-12 border border-border bg-bg text-secondary text-[12px] font-bold">العودة</button>
+    </div>;
+};
+
+// ترقية الحسابات القديمة بدون تسجيل خروج: الموظف يبقى داخل النظام وتظهر له نافذة PIN فقط.
+const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
+    const [pin, setPin] = useState('');
+    const [candidate, setCandidate] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const pinRef = useRef(null);
+    const onActivatedRef = useRef(onActivated);
+    useEffect(() => { onActivatedRef.current = onActivated; }, [onActivated]);
+
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            try {
+                const existing = await resolveEmployeeAccount(sessionName);
+                if (!alive) return;
+                if (existing?.passwordHash && existing.status !== 'suspended') {
+                    localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, existing.id);
+                    localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
+                    onActivatedRef.current?.(existing);
+                    return;
+                }
+                const legacy = await resolveLegacyEmployeeIdentity(sessionName);
+                if (!alive) return;
+                if (legacy?.existingAccount?.passwordHash && legacy.existingAccount.status !== 'suspended') {
+                    localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, legacy.existingAccount.id);
+                    localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
+                    onActivatedRef.current?.(legacy.existingAccount);
+                    return;
+                }
+                if (!legacy) {
+                    setError('تعذر العثور على حسابك القديم تلقائيًا. راجع الإدارة لربط اسمك بحساب الموظف.');
+                    setCandidate(null);
+                    return;
+                }
+                setCandidate(legacy);
+            } catch (e) {
+                console.error(e);
+                setError('تعذر تحميل بيانات الحساب الآن. تقدر تكمل مؤقتًا والمحاولة لاحقًا.');
+            } finally {
+                if (alive) setLoading(false);
+            }
+        })();
+        return () => { alive = false; };
+    }, [sessionName]);
+
+    useEffect(() => { if (!loading && pinRef.current) setTimeout(() => pinRef.current?.focus(), 80); }, [loading]);
+
+    const save = async (e) => {
+        e.preventDefault();
+        const clean = toEnglishDigits(String(pin || '')).replace(/\D/g, '');
+        if (!validEmployeePin(clean)) { setError('اختر رمزًا من 6 أرقام فقط.'); return; }
+        if (!candidate || saving) return;
+        setSaving(true); setError('');
+        try {
+            const account = await createSelfActivatedEmployeeAccount(candidate, sessionName, clean);
+            // إذا أعاد helper حسابًا موجودًا نتحقق أنه فعّال؛ الحسابات غير المفعلة تُنشأ عادةً هنا لأول مرة.
+            localStorage.setItem(STORAGE_KEYS.NAME, account.canonicalName || sessionName);
+            localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, account.id);
+            localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
+            onActivatedRef.current?.(account);
+        } catch (err) {
+            console.error(err);
+            setError(err?.code === 'ALIAS_CONFLICT' ? 'هذا الاسم مرتبط بحساب آخر. راجع الإدارة لدمجه.' : 'تعذر حفظ الرمز الآن. حاول مرة أخرى.');
+        } finally { setSaving(false); }
+    };
+
+    return <div className="fixed inset-0 z-[120] bg-black/35 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-16" role="dialog" aria-modal="true">
+        <form onSubmit={save} className="w-full sm:max-w-[420px] bg-bg rounded-t-20 sm:rounded-20 border border-border shadow-lift p-20 sm:p-24 animate-card">
+            <div className="flex items-start gap-12">
+                <div className="w-48 h-48 rounded-14 bg-accentSoft text-accent flex items-center justify-center flex-shrink-0"><Icon.Lock className="w-22 h-22"/></div>
+                <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-bold text-accent">تحديث سريع لحسابك</div>
+                    <h2 className="text-[17px] font-bold text-primary mt-2">اختر رمز دخول من 6 أرقام</h2>
+                    <p className="text-[11px] text-secondary mt-4 leading-5">أنت ما زلت داخل حسابك ولن يتم تسجيل خروجك. هذا الرمز تستخدمه فقط في المرات القادمة.</p>
+                </div>
+            </div>
+            {loading ? <div className="py-24 text-center text-[12px] text-muted">جاري تجهيز حسابك...</div> : <>
+                <input ref={pinRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="new-password" value={pin} onChange={e=>{setPin(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-54 mt-18 px-16 rounded-12 border border-border bg-surface focus:border-accent text-center font-bold tracking-[.38em] outline-none"/>
+                {error && <div className="mt-10 rounded-10 bg-dangerSoft text-danger p-10 text-[11px] text-center">{error}</div>}
+                <button disabled={saving || pin.length !== 6} className="w-full h-48 mt-12 rounded-12 bg-primary text-white font-bold text-[13px] disabled:opacity-40">{saving?'جاري الحفظ...':'حفظ الرمز'}</button>
+            </>}
+        </form>
     </div>;
 };
 
@@ -1927,7 +2012,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         {step === 'name' && <div className="w-full">
             {customerPortalReleased && <div className="grid grid-cols-2 gap-4 bg-surface border border-border rounded-12 p-4 mb-16"><div className="h-40 rounded-10 bg-primary text-bg flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>الموظفون</div><a href="./customer.html" className="h-40 rounded-10 bg-bg text-secondary border border-border flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>العملاء</a></div>}
             <form onSubmit={handleNameSubmit} className="flex flex-col gap-16">
-                <div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اسم الموظف</label><input type="text" autoComplete="username" value={name} onChange={e=>{setName(e.target.value);setError('')}} placeholder="مثال: عز أو عز الدين" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none text-center font-bold"/><p className="text-[10px] text-muted text-center mt-6">استخدم اسمك الأساسي أو أي اسم بديل سجّلته لك الإدارة.</p></div>
+                <div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اسم الموظف</label><input type="text" autoComplete="username" value={name} onChange={e=>{setName(e.target.value);setError('')}} placeholder="اسمك هنا.." className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none text-center font-bold"/><p className="text-[10px] text-muted text-center mt-6">استخدم اسمك الأساسي أو أي اسم بديل سجّلته لك الإدارة.</p></div>
                 {error&&<p className="text-[12px] text-danger text-center">{error}</p>}
                 <button disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] disabled:opacity-50">{loading?'جاري التحقق...':'متابعة'}</button>
             </form>
@@ -3014,7 +3099,7 @@ const App = () => {
     }, [sessionName]);
 
     useEffect(() => {
-        if (!sessionName || (!isAdmin && !accessVerified)) return;
+        if (!sessionName) return;
         
         let isTracking = true;
         const initSession = async () => {
@@ -3268,7 +3353,7 @@ const App = () => {
     const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
     const totalCategoryCount  = categoryNames.length + 1 + (isAdmin ? 1 : 0);
 
-    if (!sessionName || (!isAdmin && !accessVerified)) {
+    if (!sessionName) {
         return (
             <LoginScreen
                 initialName={sessionName}
@@ -3289,6 +3374,19 @@ const App = () => {
 
     return (
         <div className="min-h-screen font-sans">
+            {!isAdmin && !accessVerified && (
+                <EmployeeInlinePinSetup
+                    sessionName={sessionName}
+                    onActivated={(account) => {
+                        const canonical = account?.canonicalName || sessionName;
+                        localStorage.setItem(STORAGE_KEYS.NAME, canonical);
+                        if (account?.id) localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, account.id);
+                        localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
+                        if (canonical !== sessionName) setSessionName(canonical);
+                        setAccessVerified(true);
+                    }}
+                />
+            )}
             {/* ✨ الشريط العلوي - بصمة كورفي واسمك */}
             <div className="border-b border-border bg-surface">
                 <div className="max-w-[1024px] mx-auto px-16 h-44 flex items-center justify-between gap-12">
@@ -3307,7 +3405,7 @@ const App = () => {
                             <span className="text-[11px] sm:text-[13px] font-extrabold text-[#047857] tracking-wider bidi-isolate">Korvi</span>
                         </div>
                         <span className="text-border text-[10px] sm:text-base">|</span>
-                        <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] text-primary font-bold hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">تطوير مهند الحزمي · 0506762257</a>
+                        <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] text-primary font-bold hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">تطوير مهند الحزمي</a>
                     </div>
                 </div>
             </div>
@@ -3532,7 +3630,7 @@ const App = () => {
                 </section>
 
                 <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
-                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي · 0506762257 · Korvi</a>
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي · Korvi</a>
                 </footer>
             </div>
 
