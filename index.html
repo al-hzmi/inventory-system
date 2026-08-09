@@ -73,6 +73,9 @@
         .lightbox-backdrop { background: rgba(28,25,23,0.9); backdrop-filter: blur(4px); }
         input[type="text"], input[type="password"], input[type="number"], textarea { font-size: 16px; }
         .bidi-isolate { unicode-bidi: isolate; direction: ltr; display: inline-block; }
+        @keyframes developerHint { 0%,88%,100%{opacity:1} 92%{opacity:.62} 96%{opacity:.86} }
+        .developer-link { animation: developerHint 5.5s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce){ .developer-link{animation:none} }
     </style>
 
     <meta name="theme-color" content="#FFFFFF">
@@ -366,7 +369,7 @@ const resolveLegacyEmployeeIdentity = async (alias) => {
 };
 
 const newEmployeeSalt = () => bytesToBase64(crypto.getRandomValues(new Uint8Array(16)));
-const validEmployeePin = (value) => /^\d{6}$/.test(toEnglishDigits(String(value || '')).replace(/\D/g, ''));
+const validEmployeePin = (value) => /^(?:\d{4}|\d{6})$/.test(toEnglishDigits(String(value || '')).replace(/\D/g, ''));
 
 const createSelfActivatedEmployeeAccount = async (candidate, enteredAlias, pin) => {
     const cleanPin = toEnglishDigits(String(pin || '')).replace(/\D/g, '');
@@ -1070,7 +1073,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
 
                     <div className="mb-16">
                         <label className="text-[12px] font-semibold text-primary mb-6 block">ملاحظات الطلب (اختياري)</label>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="مثال: خصم، شحن، أو ملاحظة أخرى..."
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="اكتب الملاحظة المطلوبة..."
                                className="w-full h-64 p-12 rounded-8 border border-border bg-bg outline-none focus:border-accent text-[13px] resize-none" />
                     </div>
 
@@ -1603,7 +1606,7 @@ const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
     </div>
 );
 
-// بوابة دخول الموظفين — حساب موحد + أسماء بديلة + كلمة مرور + تحقق وجه سريع
+// بوابة دخول الموظفين — حساب موحد + أسماء بديلة + رمز دخول + تحقق وجه سريع
 const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified }) => {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
@@ -1792,7 +1795,7 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
     const save = async (e) => {
         e.preventDefault();
         const clean = toEnglishDigits(String(pin || '')).replace(/\D/g, '');
-        if (!validEmployeePin(clean)) { setError('اختر رمزًا من 6 أرقام فقط.'); return; }
+        if (!validEmployeePin(clean)) { setError('أنشئ رمز دخول جديدًا من 4 أو 6 أرقام.'); return; }
         if (!candidate || saving) return;
         setSaving(true); setError('');
         try {
@@ -1813,15 +1816,15 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
             <div className="flex items-start gap-12">
                 <div className="w-48 h-48 rounded-14 bg-accentSoft text-accent flex items-center justify-center flex-shrink-0"><Icon.Lock className="w-22 h-22"/></div>
                 <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-bold text-accent">تحديث سريع لحسابك</div>
-                    <h2 className="text-[17px] font-bold text-primary mt-2">اختر رمز دخول من 6 أرقام</h2>
+                    <div className="text-[11px] font-bold text-accent">إعداد رمز الدخول</div>
+                    <h2 className="text-[17px] font-bold text-primary mt-2">أنشئ رمز دخول جديدًا لحسابك</h2><p className="text-[11px] text-secondary mt-5 leading-5">لا نطلب منك رمزًا قديمًا. اختر الآن رمزًا جديدًا من 4 أو 6 أرقام وسيتم حفظه لحسابك.</p>
                     <p className="text-[11px] text-secondary mt-4 leading-5">أنت ما زلت داخل حسابك ولن يتم تسجيل خروجك. هذا الرمز تستخدمه فقط في المرات القادمة.</p>
                 </div>
             </div>
             {loading ? <div className="py-24 text-center text-[12px] text-muted">جاري تجهيز حسابك...</div> : <>
                 <input ref={pinRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="new-password" value={pin} onChange={e=>{setPin(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-54 mt-18 px-16 rounded-12 border border-border bg-surface focus:border-accent text-center font-bold tracking-[.38em] outline-none"/>
                 {error && <div className="mt-10 rounded-10 bg-dangerSoft text-danger p-10 text-[11px] text-center">{error}</div>}
-                <button disabled={saving || pin.length !== 6} className="w-full h-48 mt-12 rounded-12 bg-primary text-white font-bold text-[13px] disabled:opacity-40">{saving?'جاري الحفظ...':'حفظ الرمز'}</button>
+                <button disabled={saving || ![4,6].includes(pin.length)} className="w-full h-48 mt-12 rounded-12 bg-primary text-white font-bold text-[13px] disabled:opacity-40">{saving?'جاري الحفظ...':'حفظ الرمز'}</button>
             </>}
         </form>
     </div>;
@@ -1895,7 +1898,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         e.preventDefault();
         if (!activationCandidate || loading) return;
         const pin = toEnglishDigits(String(code || '')).replace(/\D/g, '');
-        if (!validEmployeePin(pin)) { setError('اختر رمز دخول من 6 أرقام فقط.'); return; }
+        if (!validEmployeePin(pin)) { setError('أنشئ رمز دخول جديدًا من 4 أو 6 أرقام.'); return; }
         setLoading(true); setError('');
         try {
             const account = await createSelfActivatedEmployeeAccount(activationCandidate, enteredAlias, pin);
@@ -1935,7 +1938,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         e.preventDefault();
         if (!employeeAccount || loading) return;
         const password = toEnglishDigits(String(code || '')).replace(/\D/g, '');
-        if (!validEmployeePin(password)) { setError('رمز الدخول يجب أن يكون 6 أرقام.'); return; }
+        if (!validEmployeePin(password)) { setError('رمز الدخول يجب أن يكون 4 أو 6 أرقام.'); return; }
         setLoading(true); setError('');
         try {
             const ok = await verifyEmployeePassword(employeeAccount, password);
@@ -2012,7 +2015,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         {step === 'name' && <div className="w-full">
             {customerPortalReleased && <div className="grid grid-cols-2 gap-4 bg-surface border border-border rounded-12 p-4 mb-16"><div className="h-40 rounded-10 bg-primary text-bg flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>الموظفون</div><a href="./customer.html" className="h-40 rounded-10 bg-bg text-secondary border border-border flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>العملاء</a></div>}
             <form onSubmit={handleNameSubmit} className="flex flex-col gap-16">
-                <div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اسم الموظف</label><input type="text" autoComplete="username" value={name} onChange={e=>{setName(e.target.value);setError('')}} placeholder="اسمك هنا.." className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none text-center font-bold"/><p className="text-[10px] text-muted text-center mt-6">استخدم اسمك الأساسي أو أي اسم بديل سجّلته لك الإدارة.</p></div>
+                <div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اسم الموظف</label><input type="text" autoComplete="username" value={name} onChange={e=>{setName(e.target.value);setError('')}} placeholder="اكتب اسم الدخول" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none text-center font-bold"/><p className="text-[10px] text-muted text-center mt-6">استخدم اسمك الأساسي أو أي اسم بديل سجّلته لك الإدارة.</p></div>
                 {error&&<p className="text-[12px] text-danger text-center">{error}</p>}
                 <button disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] disabled:opacity-50">{loading?'جاري التحقق...':'متابعة'}</button>
             </form>
@@ -2020,7 +2023,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
 
         {step === 'password' && <form onSubmit={handleAdminSubmit} className="flex flex-col gap-16 w-full animate-flip"><div><label className="text-[13px] font-medium text-accent mb-8 flex items-center justify-center gap-6"><Icon.Lock className="w-14 h-14"/>رمز الإدارة</label><input ref={codeRef} type="password" value={code} onChange={e=>{setCode(e.target.value);setError('')}} className="w-full h-48 px-16 rounded-12 border border-accent bg-accentSoft/20 text-center font-bold outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-accent text-white rounded-12 font-semibold">{loading?'جاري الدخول...':'فتح النظام'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setError('')}} className="text-[12px] text-muted">العودة</button></form>}
 
-        {step === 'activate_password' && <form onSubmit={handleSelfActivation} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-52 h-52 rounded-16 bg-successSoft text-success mx-auto flex items-center justify-center"><Icon.Lock className="w-24 h-24"/></div><div className="text-[11px] font-bold text-success mt-10">تفعيل سريع لأول مرة</div><h2 className="text-[18px] font-bold mt-4">{activationCandidate?.canonicalName || enteredAlias}</h2><p className="text-[11px] text-secondary mt-6 leading-5">حسابك موجود مسبقًا لكنه غير مفعّل. اختر رمزًا من 6 أرقام، وبعد لقطة تحقق سريعة تدخل مباشرة.</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اختر رمز الدخول</label><input ref={codeRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="new-password" value={code} onChange={e=>{setCode(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-52 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-[.35em] outline-none"/><p className="text-[10px] text-muted text-center mt-6">ستستخدم نفس الرمز في المرات القادمة.</p></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading||code.length!==6} className="w-full h-48 bg-primary text-white rounded-12 font-semibold disabled:opacity-40">{loading?'جاري التفعيل...':'حفظ الرمز والمتابعة'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setActivationCandidate(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
+        {step === 'activate_password' && <form onSubmit={handleSelfActivation} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-52 h-52 rounded-16 bg-successSoft text-success mx-auto flex items-center justify-center"><Icon.Lock className="w-24 h-24"/></div><div className="text-[11px] font-bold text-success mt-10">إنشاء رمز دخول لأول مرة</div><h2 className="text-[18px] font-bold mt-4">{activationCandidate?.canonicalName || enteredAlias}</h2><p className="text-[11px] text-secondary mt-6 leading-5">حسابك موجود مسبقًا. أنشئ الآن رمز دخول جديدًا من 4 أو 6 أرقام لاستخدامه في المرات القادمة.</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">أنشئ رمز دخول جديد</label><input ref={codeRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="new-password" value={code} onChange={e=>{setCode(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-52 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-[.35em] outline-none"/><p className="text-[10px] text-muted text-center mt-6">هذا رمز جديد تنشئه الآن، وليس رمزًا سابقًا. ستستخدمه في المرات القادمة.</p></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading||![4,6].includes(code.length)} className="w-full h-48 bg-primary text-white rounded-12 font-semibold disabled:opacity-40">{loading?'جاري التفعيل...':'حفظ الرمز والمتابعة'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setActivationCandidate(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
 
         {step === 'employee_password' && <form onSubmit={handleEmployeePasswordSubmit} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-48 h-48 rounded-full bg-accentSoft text-accent mx-auto flex items-center justify-center font-bold text-[18px]">{String(employeeAccount?.canonicalName||'?').trim().charAt(0)}</div><h2 className="text-[17px] font-bold mt-10">{employeeAccount?.canonicalName}</h2><p className="text-[10px] text-muted mt-4">دخلت باسم: {enteredAlias}</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">رمز الدخول</label><input ref={codeRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="current-password" value={code} onChange={e=>{setCode(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-[.35em] outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-primary text-white rounded-12 font-semibold">{loading?'جاري التحقق...':'دخول'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setEmployeeAccount(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
 
@@ -3405,7 +3408,7 @@ const App = () => {
                             <span className="text-[11px] sm:text-[13px] font-extrabold text-[#047857] tracking-wider bidi-isolate">Korvi</span>
                         </div>
                         <span className="text-border text-[10px] sm:text-base">|</span>
-                        <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] text-primary font-bold hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">تطوير مهند الحزمي</a>
+                        <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link text-[10px] sm:text-[11px] text-primary font-bold hover:text-accent transition-colors flex-shrink-0 cursor-pointer" title="تواصل مع المطور عبر واتساب">تطوير مهند الحزمي</a>
                     </div>
                 </div>
             </div>
@@ -3630,7 +3633,7 @@ const App = () => {
                 </section>
 
                 <footer className="mt-64 pt-24 border-t border-border flex justify-center pb-24">
-                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي · Korvi</a>
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link text-[12px] text-muted hover:text-accent transition-colors cursor-pointer" title="تواصل مع المطور عبر واتساب">© 2026 تطوير مهند الحزمي · Korvi</a>
                 </footer>
             </div>
 
