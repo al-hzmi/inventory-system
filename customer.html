@@ -808,7 +808,7 @@ function CustomerApp({user,profile,onProfileUpdate}){
     let firstOrders=false,firstDrafts=false;setHistoryLoading(true);
     const done=()=>{if(firstOrders&&firstDrafts)setHistoryLoading(false)};
     const cv=x=>x?.toMillis?.()||0;
-    const unsubOrders=db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).onSnapshot(snap=>{firstOrders=true;setOrders(snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));done()},e=>{console.warn('[Orders realtime]',e);firstOrders=true;done()});
+    const unsubOrders=db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).onSnapshot(snap=>{firstOrders=true;setOrders(snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.recordStatus!=='deleted'&&!x.deletedAt).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));done()},e=>{console.warn('[Orders realtime]',e);firstOrders=true;done()});
     const unsubDrafts=db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).onSnapshot(snap=>{firstDrafts=true;setDrafts(snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.updatedAt||b.createdAt)-cv(a.updatedAt||a.createdAt)));done()},e=>{console.warn('[Drafts realtime]',e);firstDrafts=true;done()});
     return()=>{unsubOrders();unsubDrafts()};
   },[user.uid]);
