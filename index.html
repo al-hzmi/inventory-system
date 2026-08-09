@@ -28,6 +28,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
     
     <script>
         tailwind.config = {
@@ -139,9 +140,15 @@ const STORAGE_KEYS = {
     NAME: 'inventory_user_name_v2',
     TOKEN: 'inventory_admin_token_v2',
     ACCESS_GATE_VERSION: 'inventory_access_gate_version_v1',
-    ACCESS_APPROVED_NAME: 'inventory_access_approved_name_v1'
+    ACCESS_APPROVED_NAME: 'inventory_access_approved_name_v1',
+    EMPLOYEE_ID: 'inventory_employee_id_v2',
+    EMPLOYEE_AUTH_VERSION: 'inventory_employee_auth_version_v2'
 };
 const ACCESS_GATE_VERSION = '1';
+const EMPLOYEE_AUTH_VERSION = '2';
+const EMPLOYEE_ACCOUNT_COLLECTION = 'employee_accounts';
+const EMPLOYEE_ALIAS_COLLECTION = 'employee_aliases';
+const EMPLOYEE_SECURITY_PHOTO_COLLECTION = 'employee_security_photos';
 
 // التحكم المركزي في بوابة العملاء — من لوحة التحكم الإدارية فقط.
 // الوضع الافتراضي «متوقفة» حتى يتم تشغيلها صراحة من الإدارة.
@@ -253,6 +260,81 @@ const isProtectedName = (name) => Object.prototype.hasOwnProperty.call(PROTECTED
 const verifyCode = (name, code) => {
     const expected = PROTECTED_ACCOUNTS[normalizeText(name)];
     return Boolean(expected) && hashCode(toEnglishDigits(String(code)).trim()) === expected;
+};
+
+
+// حسابات الموظفين: الاسم الأساسي هو الهوية، وكل Alias يشير لنفس Employee ID.
+const employeeAliasVariants = (value) => {
+    const base = normalizeText(value);
+    if (!base) return [];
+    return [...new Set([base, base.replace(/\s+/g, '')])];
+};
+const employeeAliasDocId = (value) => toSafeDocId(String(value || '').slice(0, 180));
+
+const bytesToBase64 = (bytes) => {
+    let bin = '';
+    bytes.forEach(b => { bin += String.fromCharCode(b); });
+    return btoa(bin);
+};
+const base64ToBytes = (b64) => {
+    const bin = atob(String(b64 || ''));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+};
+const deriveEmployeePasswordHash = async (password, saltB64, iterations = 120000) => {
+    if (!window.crypto?.subtle) throw new Error('WEB_CRYPTO_UNAVAILABLE');
+    const key = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(String(password)), { name: 'PBKDF2' }, false, ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits({
+        name: 'PBKDF2', hash: 'SHA-256', salt: base64ToBytes(saltB64), iterations: Number(iterations) || 120000
+    }, key, 256);
+    return bytesToBase64(new Uint8Array(bits));
+};
+const constantTimeStringEqual = (a, b) => {
+    const aa = String(a || ''), bb = String(b || '');
+    let diff = aa.length ^ bb.length;
+    const len = Math.max(aa.length, bb.length);
+    for (let i = 0; i < len; i++) diff |= (aa.charCodeAt(i) || 0) ^ (bb.charCodeAt(i) || 0);
+    return diff === 0;
+};
+const verifyEmployeePassword = async (account, password) => {
+    if (!account?.passwordHash || !account?.passwordSalt) return false;
+    const derived = await deriveEmployeePasswordHash(password, account.passwordSalt, account.passwordIterations || 120000);
+    return constantTimeStringEqual(derived, account.passwordHash);
+};
+const resolveEmployeeAccount = async (alias) => {
+    const db = await getDb();
+    const variants = employeeAliasVariants(alias);
+    for (const key of variants) {
+        const aliasDoc = await db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)).get();
+        if (aliasDoc.exists) {
+            const info = aliasDoc.data();
+            if (!info?.employeeId) continue;
+            const accountDoc = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(info.employeeId).get();
+            if (accountDoc.exists) return { id: accountDoc.id, ...accountDoc.data(), matchedAlias: key };
+        }
+    }
+    // fallback مفيد عند ترحيل حساب قديم لم تُبنَ له alias docs بعد.
+    for (const key of variants) {
+        try {
+            const snap = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).where('aliasKeys', 'array-contains', key).limit(1).get();
+            if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data(), matchedAlias: key };
+        } catch (e) {}
+    }
+    return null;
+};
+const captureSecurityPhoto = (video, maxWidth = 420, quality = 0.60) => {
+    const sourceW = video?.videoWidth || 640;
+    const sourceH = video?.videoHeight || 480;
+    const scale = Math.min(1, maxWidth / sourceW);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sourceW * scale));
+    canvas.height = Math.max(1, Math.round(sourceH * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
 };
 
 const fetchText = async (url) => {
@@ -1430,46 +1512,190 @@ const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
     </div>
 );
 
-// ✨ نافذة الدخول بالتحقق الحيوي (Face ID) وتحديد الموقع (GPS) بالهوية البصرية الأصلية
+// بوابة دخول الموظفين — حساب موحد + أسماء بديلة + كلمة مرور + تحقق وجه سريع
+const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified }) => {
+    const videoRef = useRef(null);
+    const miniCanvasRef = useRef(null);
+    const streamRef = useRef(null);
+    const meshRef = useRef(null);
+    const timerRef = useRef(null);
+    const goodFramesRef = useRef(0);
+    const doneRef = useRef(false);
+    const [status, setStatus] = useState('جاري تشغيل الكاميرا...');
+    const [quality, setQuality] = useState({ face: false, light: false, ready: false });
+    const [error, setError] = useState('');
+
+    const stop = useCallback(() => {
+        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+        try { streamRef.current?.getTracks?.().forEach(t => t.stop()); } catch (e) {}
+        streamRef.current = null;
+        meshRef.current = null;
+        if (videoRef.current) videoRef.current.srcObject = null;
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        let processing = false;
+
+        const processResults = (results) => {
+            if (cancelled || doneRef.current) return;
+            const faces = results.multiFaceLandmarks || [];
+            let lightOk = true;
+            try {
+                const c = miniCanvasRef.current, ctx = c.getContext('2d', { willReadFrequently: true });
+                c.width = 40; c.height = 30;
+                ctx.drawImage(videoRef.current, 0, 0, 40, 30);
+                const d = ctx.getImageData(0, 0, 40, 30).data;
+                let total = 0;
+                for (let i = 0; i < d.length; i += 4) total += (d[i] + d[i+1] + d[i+2]) / 3;
+                const avg = total / (d.length / 4);
+                lightOk = avg > 18 && avg < 252;
+            } catch (e) {}
+
+            if (faces.length !== 1) {
+                goodFramesRef.current = 0;
+                setQuality({ face: false, light: lightOk, ready: false });
+                setStatus(faces.length > 1 ? 'خلّ شخص واحد فقط أمام الكاميرا' : 'وجّه الكاميرا على وجهك');
+                return;
+            }
+
+            const lm = faces[0], left = lm[234], right = lm[454], top = lm[10], bottom = lm[152];
+            const faceW = Math.abs(right.x - left.x), faceH = Math.abs(bottom.y - top.y);
+            const faceSizeOk = faceW > .11 && faceW < .94 && faceH > .14 && faceH < .97;
+
+            if (!lightOk) {
+                goodFramesRef.current = 0;
+                setQuality({ face: true, light: false, ready: false });
+                setStatus('ارفع الإضاءة قليلًا');
+                return;
+            }
+            if (!faceSizeOk) {
+                goodFramesRef.current = 0;
+                setQuality({ face: true, light: true, ready: false });
+                setStatus(faceW <= .11 ? 'قرّب الجوال قليلًا' : 'أبعد الجوال قليلًا');
+                return;
+            }
+
+            goodFramesRef.current += 1;
+            const ready = goodFramesRef.current >= 3;
+            setQuality({ face: true, light: true, ready });
+            setStatus(goodFramesRef.current < 3 ? 'ممتاز، ثبّت الجوال لحظة...' : 'جاري إنهاء التحقق...');
+
+            if (goodFramesRef.current >= 8) {
+                doneRef.current = true;
+                try {
+                    const photoDataUrl = captureSecurityPhoto(videoRef.current, 420, .60);
+                    setQuality({ face: true, light: true, ready: true });
+                    setStatus('تم التحقق بنجاح');
+                    setTimeout(() => { stop(); onVerified(photoDataUrl); }, 350);
+                } catch (e) {
+                    setError('تعذر حفظ لقطة التحقق. حاول مرة أخرى.');
+                    doneRef.current = false;
+                    goodFramesRef.current = 0;
+                }
+            }
+        };
+
+        const loop = () => {
+            if (cancelled || doneRef.current) return;
+            timerRef.current = setTimeout(async () => {
+                if (!cancelled && !doneRef.current && !processing && meshRef.current && videoRef.current?.readyState >= 2) {
+                    processing = true;
+                    try { await meshRef.current.send({ image: videoRef.current }); } catch (e) {}
+                    processing = false;
+                }
+                loop();
+            }, 110);
+        };
+
+        const start = async () => {
+            try {
+                if (!window.FaceMesh) throw new Error('FACE_MODULE');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+                if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+                streamRef.current = stream;
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+                const mesh = new FaceMesh({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}` });
+                mesh.setOptions({ maxNumFaces: 2, refineLandmarks: false, minDetectionConfidence: .5, minTrackingConfidence: .5 });
+                mesh.onResults(processResults);
+                meshRef.current = mesh;
+                setStatus('وجّه الكاميرا على وجهك');
+                loop();
+            } catch (err) {
+                console.error(err); stop();
+                if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') setError('اسمح باستخدام الكاميرا لإكمال الدخول.');
+                else setError('تعذر تشغيل التحقق على هذا الجهاز. حاول مرة أخرى.');
+            }
+        };
+        start();
+        return () => { cancelled = true; stop(); };
+    }, [onVerified, stop]);
+
+    const checks = [['face','الوجه ظاهر'],['light','الصورة واضحة'],['ready','اكتمل التحقق']];
+    return <div className="w-full animate-flip">
+        <div className="text-center mb-16">
+            <div className="w-48 h-48 mx-auto rounded-16 bg-successSoft text-success flex items-center justify-center"><Icon.Camera className="w-22 h-22"/></div>
+            <h2 className="text-[17px] font-bold text-primary mt-12">تحقق سريع للدخول</h2>
+            <p className="text-[12px] text-secondary mt-4">{account?.canonicalName || 'الموظف'} · فقط خلّ وجهك ظاهر للحظة، بدون رمشة أو حركات.</p>
+        </div>
+        <div className="relative aspect-[4/3] rounded-20 overflow-hidden bg-surface border border-border shadow-card">
+            <video ref={videoRef} muted playsInline className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"/>
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[52%] h-[76%] rounded-[46%] border-[3px] border-white pointer-events-none" style={{boxShadow:'0 0 0 999px rgba(28,25,23,.10)'}}></div>
+            <div className="absolute left-8 right-8 bottom-8 flex justify-center"><div className={`rounded-full px-12 py-8 text-[11px] font-bold shadow-card ${error?'bg-danger text-white':'bg-white/95 text-primary'}`}>{error || status}</div></div>
+        </div>
+        <canvas ref={miniCanvasRef} className="hidden"/>
+        <div className="grid grid-cols-3 gap-6 mt-12">{checks.map(([key,label])=><div key={key} className={`rounded-10 border p-8 text-center text-[10px] font-bold ${quality[key]?'bg-successSoft text-success border-success/20':'bg-surface text-muted border-border'}`}>{quality[key]?'✓ ':''}{label}</div>)}</div>
+        <div className="mt-12 rounded-12 bg-surface border border-border p-10 text-[10px] text-secondary leading-5">تُحفظ لقطة التحقق في السجل الأمني للإدارة فقط مع وقت الدخول والجهاز.</div>
+        <button type="button" onClick={() => { stop(); onBack(); }} className="w-full h-44 mt-12 rounded-12 border border-border bg-bg text-secondary text-[12px] font-bold">العودة</button>
+    </div>;
+};
+
 const LoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
     const [name, setName] = useState(initialName);
-    const [step, setStep] = useState('name'); 
+    const [step, setStep] = useState('name');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    
     const [code, setCode] = useState('');
+    const [employeeAccount, setEmployeeAccount] = useState(null);
+    const [enteredAlias, setEnteredAlias] = useState('');
     const codeRef = useRef(null);
-    
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const [stream, setStream] = useState(null);
-    const [requestId, setRequestId] = useState(null);
 
-    useEffect(() => { if (step === 'password' && codeRef.current) codeRef.current.focus(); }, [step]);
+    useEffect(() => { if ((step === 'password' || step === 'employee_password') && codeRef.current) codeRef.current.focus(); }, [step]);
 
     const handleNameSubmit = async (e) => {
         e.preventDefault();
         const trimmed = name.trim();
-        if (!trimmed) return;
-
+        if (!trimmed || loading) return;
         setError('');
-        
-        if (isProtectedName(trimmed)) {
-            setStep('password');
-            return;
-        }
-
-        setStep('scan');
-        startCamera();
+        setCode('');
+        if (isProtectedName(trimmed)) { setStep('password'); return; }
+        setLoading(true);
+        try {
+            const account = await resolveEmployeeAccount(trimmed);
+            if (!account) {
+                setError('لم يتم تفعيل حساب موظف بهذا الاسم بعد. جرّب اسمًا آخر مسجلًا لك أو راجع مهند.');
+                return;
+            }
+            if (account.status === 'suspended') {
+                setError('هذا الحساب موقوف حاليًا. راجع الإدارة.');
+                return;
+            }
+            setEmployeeAccount(account);
+            setEnteredAlias(trimmed);
+            setStep('employee_password');
+        } catch (err) {
+            console.error(err);
+            setError('تعذر التحقق من حساب الموظف. حاول مرة أخرى.');
+        } finally { setLoading(false); }
     };
 
     const handleAdminSubmit = async (e) => {
         e.preventDefault();
         const trimmed = name.trim();
         if (!verifyCode(trimmed, code)) { setError('رمز الدخول غير صحيح.'); return; }
-        
         setLoading(true);
         try {
             const db = await getDb();
@@ -1478,244 +1704,110 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
             const info = { userAgent: navigator.userAgent, lastLogin: firebase.firestore.FieldValue.serverTimestamp() };
             if (doc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
             else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
-            
             await db.collection('login_logs').add({ name: trimmed, isAdmin: true, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
         } catch (err) {}
-
         localStorage.setItem(STORAGE_KEYS.NAME, trimmed);
         localStorage.setItem(STORAGE_KEYS.TOKEN, hashCode(toEnglishDigits(String(code)).trim()));
+        localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);
+        localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);
         setLoading(false);
         onLogin(trimmed, true);
     };
 
-    const startCamera = async () => {
+    const handleEmployeePasswordSubmit = async (e) => {
+        e.preventDefault();
+        if (!employeeAccount || loading) return;
+        const password = String(code || '');
+        if (!password) return;
+        setLoading(true); setError('');
         try {
-            const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
+            const ok = await verifyEmployeePassword(employeeAccount, password);
+            const db = await getDb();
+            db.collection('employee_login_attempts').add({
+                employeeId: employeeAccount.id,
+                canonicalName: employeeAccount.canonicalName || '',
+                enteredAlias,
+                success: !!ok,
+                time: firebase.firestore.FieldValue.serverTimestamp(),
+                userAgent: navigator.userAgent
+            }).catch(()=>{});
+            if (!ok) { setError('كلمة المرور غير صحيحة.'); return; }
+            setStep('face');
         } catch (err) {
-            setError('تعذر الوصول للكاميرا. يرجى إعطاء الصلاحية للمتصفح للمتابعة.');
-            setStep('name');
-        }
+            console.error(err); setError('تعذر التحقق من كلمة المرور. حاول مرة أخرى.');
+        } finally { setLoading(false); }
     };
 
-    const stopCamera = useCallback(() => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-        }
-    }, [stream]);
-
-    const captureAndRequest = async () => {
-        if (!videoRef.current) return;
-        setLoading(true);
-        setError('');
-
+    const finalizeEmployeeLogin = async (photoDataUrl) => {
+        if (!employeeAccount) return;
+        setLoading(true); setError('');
+        const canonicalName = employeeAccount.canonicalName || enteredAlias;
         try {
-            const canvas = canvasRef.current;
-            const context = canvas.getContext('2d');
-            const sourceW = videoRef.current.videoWidth || 640;
-            const sourceH = videoRef.current.videoHeight || 480;
-            const maxW = 640;
-            const scale = Math.min(1, maxW / sourceW);
-            canvas.width = Math.max(1, Math.round(sourceW * scale));
-            canvas.height = Math.max(1, Math.round(sourceH * scale));
-            context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-            // حجم مضبوط ليبقى أرشيف الصور عملياً داخل Firestore.
-            const photoDataUrl = canvas.toDataURL('image/jpeg', 0.68); 
-            
-            stopCamera();
-
-            let lat = null, lng = null;
-            try {
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-                });
-                lat = pos.coords.latitude;
-                lng = pos.coords.longitude;
-            } catch (gpsErr) {
-                console.warn("GPS Denied or Timeout");
-            }
-
             const db = await getDb();
-            const docRef = await db.collection('access_requests').add({
-                name: name.trim(),
+            const photoRef = await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).add({
+                employeeId: employeeAccount.id,
+                canonicalName,
+                enteredAlias,
                 photoDataUrl,
-                latitude: lat,
-                longitude: lng,
-                status: 'pending',
+                verificationType: 'login_face_presence',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                userAgent: navigator.userAgent,
+                platform: navigator.platform || '',
+                screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`
+            });
+            const userRef = db.collection('users').doc(toSafeDocId(canonicalName));
+            const userDoc = await userRef.get();
+            const info = { employeeId: employeeAccount.id, name: canonicalName, lastLogin: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent };
+            if (userDoc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
+            else await userRef.set({ ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
+            await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).set({
+                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastEnteredAlias: enteredAlias,
+                loginCount: firebase.firestore.FieldValue.increment(1)
+            }, { merge: true });
+            await db.collection('login_logs').add({
+                name: canonicalName,
+                employeeId: employeeAccount.id,
+                enteredAlias,
+                isAdmin: false,
+                faceVerified: true,
+                securityPhotoId: photoRef.id,
+                time: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
             });
-
-            setRequestId(docRef.id);
-            setStep('wait');
-            setLoading(false);
-
+            localStorage.setItem(STORAGE_KEYS.NAME, canonicalName);
+            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+            localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, employeeAccount.id);
+            localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
+            localStorage.removeItem(STORAGE_KEYS.ACCESS_GATE_VERSION);
+            localStorage.removeItem(STORAGE_KEYS.ACCESS_APPROVED_NAME);
+            onLogin(canonicalName, false);
         } catch (err) {
             console.error(err);
-            setError('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
-            setLoading(false);
-            setStep('name');
-        }
+            setError('تم التحقق لكن تعذر حفظ سجل الدخول. حاول مرة أخرى.');
+            setStep('employee_password');
+        } finally { setLoading(false); }
     };
 
-    useEffect(() => {
-        if (step === 'wait' && requestId) {
-            let unsubscribe;
-            getDb().then(db => {
-                unsubscribe = db.collection('access_requests').doc(requestId).onSnapshot(async (doc) => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        if (data.status === 'approved') {
-                            const trimmed = name.trim();
-                            const userRef = db.collection('users').doc(toSafeDocId(trimmed));
-                            const userDoc = await userRef.get();
-                            const info = { userAgent: navigator.userAgent, lastLogin: firebase.firestore.FieldValue.serverTimestamp() };
-                            if (userDoc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
-                            else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
-                            
-                            await db.collection('login_logs').add({ name: trimmed, isAdmin: false, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
-                            
-                            localStorage.setItem(STORAGE_KEYS.NAME, trimmed);
-                            localStorage.removeItem(STORAGE_KEYS.TOKEN);
-                            // تصريح أمني لهذا الجهاز/المستخدم بعد موافقة المشرف.
-                            localStorage.setItem(STORAGE_KEYS.ACCESS_GATE_VERSION, ACCESS_GATE_VERSION);
-                            localStorage.setItem(STORAGE_KEYS.ACCESS_APPROVED_NAME, normalizeText(trimmed));
-                            onLogin(trimmed, false);
-                        } else if (data.status === 'rejected') {
-                            setStep('rejected');
-                        }
-                    }
-                });
-            });
-            return () => { if (unsubscribe) unsubscribe(); };
-        }
-    }, [step, requestId, name, onLogin]);
+    return <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans"><div className="animate-card w-full max-w-[400px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32 flex flex-col items-center">
+        <div className="text-center mb-24 w-full"><h1 className="text-[22px] font-bold text-primary leading-tight">مخزون شركة بيت الأواني الطيبة</h1><p className="text-[13px] text-secondary mt-4">دخول الموظفين</p></div>
 
-    useEffect(() => {
-        return () => stopCamera();
-    }, [stopCamera]);
+        {step === 'name' && <div className="w-full">
+            {customerPortalReleased && <div className="grid grid-cols-2 gap-4 bg-surface border border-border rounded-12 p-4 mb-16"><div className="h-40 rounded-10 bg-primary text-bg flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>الموظفون</div><a href="./customer.html" className="h-40 rounded-10 bg-bg text-secondary border border-border flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>العملاء</a></div>}
+            <form onSubmit={handleNameSubmit} className="flex flex-col gap-16">
+                <div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اسم الموظف</label><input type="text" autoComplete="username" value={name} onChange={e=>{setName(e.target.value);setError('')}} placeholder="مثال: عز أو عز الدين" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none text-center font-bold"/><p className="text-[10px] text-muted text-center mt-6">استخدم اسمك الأساسي أو أي اسم بديل سجّلته لك الإدارة.</p></div>
+                {error&&<p className="text-[12px] text-danger text-center">{error}</p>}
+                <button disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] disabled:opacity-50">{loading?'جاري التحقق...':'متابعة'}</button>
+            </form>
+        </div>}
 
-    return (
-        <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans">
-            <div className="animate-card w-full max-w-[380px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32 flex flex-col items-center">
-                
-                <div className="text-center mb-24 w-full">
-                    <div className="flex items-center justify-center gap-8 mb-4">
-                        <h1 className="text-[22px] font-bold text-primary leading-tight">مخزون شركة بيت الأواني الطيبة</h1>
-                    </div>
-                    <p className="text-[13px] text-secondary mt-2">البوابة الأمنية </p>
-                </div>
+        {step === 'password' && <form onSubmit={handleAdminSubmit} className="flex flex-col gap-16 w-full animate-flip"><div><label className="text-[13px] font-medium text-accent mb-8 flex items-center justify-center gap-6"><Icon.Lock className="w-14 h-14"/>رمز الإدارة</label><input ref={codeRef} type="password" value={code} onChange={e=>{setCode(e.target.value);setError('')}} className="w-full h-48 px-16 rounded-12 border border-accent bg-accentSoft/20 text-center font-bold outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-accent text-white rounded-12 font-semibold">{loading?'جاري الدخول...':'فتح النظام'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setError('')}} className="text-[12px] text-muted">العودة</button></form>}
 
-                {step === 'name' && (
-                    <div className="w-full">
-                        {customerPortalReleased && (
-                            <div className="grid grid-cols-2 gap-4 bg-surface border border-border rounded-12 p-4 mb-16 animate-flip">
-                                <div className="h-40 rounded-10 bg-primary text-bg flex items-center justify-center gap-6 text-[12px] font-bold">
-                                    <Icon.Shield className="w-14 h-14" /> الموظفون
-                                </div>
-                                <a href="./customer.html" className="h-40 rounded-10 bg-bg text-secondary border border-border flex items-center justify-center gap-6 text-[12px] font-bold hover:border-accent hover:text-accent transition-colors">
-                                    <Icon.Users className="w-14 h-14" /> العملاء
-                                </a>
-                            </div>
-                        )}
-                        <form onSubmit={handleNameSubmit} className="flex flex-col gap-16 w-full">
-                        <div>
-                            <label htmlFor="employeeName" className="text-[13px] font-medium text-primary mb-8 block text-center">أدخل الإسم الكريم للمطابقة</label>
-                            <input id="employeeName" type="text" required autoComplete="name" value={name}
-                                   onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="اكتب اسمك هنا..."
-                                   className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none transition-colors text-center font-bold" />
-                        </div>
-                        {error  && <p className="text-[13px] text-danger flex items-center justify-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
-                        <button type="submit" className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] hover:opacity-90 transition-opacity flex items-center justify-center gap-8 mt-4">
-                            المتابعة <Icon.Shield className="w-16 h-16" />
-                        </button>
-                        </form>
-                    </div>
-                )}
+        {step === 'employee_password' && <form onSubmit={handleEmployeePasswordSubmit} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-48 h-48 rounded-full bg-accentSoft text-accent mx-auto flex items-center justify-center font-bold text-[18px]">{String(employeeAccount?.canonicalName||'?').trim().charAt(0)}</div><h2 className="text-[17px] font-bold mt-10">{employeeAccount?.canonicalName}</h2><p className="text-[10px] text-muted mt-4">دخلت باسم: {enteredAlias}</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">كلمة المرور</label><input ref={codeRef} type="password" autoComplete="current-password" value={code} onChange={e=>{setCode(e.target.value);setError('')}} placeholder="••••••" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-widest outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-primary text-white rounded-12 font-semibold">{loading?'جاري التحقق...':'دخول'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setEmployeeAccount(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
 
-                {step === 'password' && (
-                    <form onSubmit={handleAdminSubmit} className="flex flex-col gap-16 w-full animate-flip">
-                        <div>
-                            <label htmlFor="accessCode" className="text-[13px] font-medium text-accent mb-8 flex items-center justify-center gap-6">
-                                <Icon.Lock className="w-14 h-14 flex-shrink-0" /> بوابة الإدارة السرية
-                            </label>
-                            <input ref={codeRef} id="accessCode" type="password" inputMode="numeric" autoComplete="off" value={code}
-                                   onChange={(e) => { setCode(e.target.value); setError(''); }} placeholder="••••"
-                                   className="w-full h-48 px-16 rounded-12 border border-accent bg-accentSoft/20 focus:border-accent text-primary outline-none transition-colors tracking-widest text-center font-bold" />
-                        </div>
-                        {error  && <p className="text-[13px] text-danger flex items-center justify-center gap-6"><Icon.Alert className="w-14 h-14 flex-shrink-0" />{error}</p>}
-                        <button type="submit" disabled={loading} className="w-full h-48 bg-accent text-white rounded-12 font-semibold text-[15px] hover:opacity-90 disabled:opacity-50 transition-opacity">
-                            {loading ? "جاري الدخول..." : "فتح النظام"}
-                        </button>
-                        <button type="button" onClick={() => setStep('name')} className="text-[12px] text-muted hover:text-primary mt-4">العودة</button>
-                    </form>
-                )}
-
-                {step === 'scan' && (
-                    <div className="flex flex-col items-center gap-16 w-full animate-flip">
-                        <div className="text-center">
-                            <p className="text-[14px] font-bold text-primary">التحقق الحيوي والمكاني</p>
-                            <p className="text-[11px] text-secondary mt-2">يرجى وضع وجهك داخل الإطار للمطابقة</p>
-                        </div>
-                        
-                        <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-full overflow-hidden border-[6px] border-border shadow-inner bg-black">
-                            <video ref={videoRef} autoPlay playsInline muted className="object-cover w-full h-full transform scale-x-[-1] opacity-90" />
-                            <div className="absolute inset-0 border-[4px] border-dashed border-accent/40 rounded-full animate-pulse" style={{ margin: '10%' }}></div>
-                            <div className="absolute left-0 w-full h-[2px] bg-accent shadow-[0_0_15px_3px_#B45309] animate-laser"></div>
-                        </div>
-                        
-                        <canvas ref={canvasRef} className="hidden" />
-
-                        <button onClick={captureAndRequest} disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[14px] hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-8 mt-4">
-                            {loading ? "جاري التقاط البيانات..." : <><Icon.Camera className="w-18 h-18" /> التقاط البصمة وإرسال الطلب</>}
-                        </button>
-                        <div className="flex items-center gap-4 text-[10px] text-secondary">
-                            <Icon.MapPin className="w-12 h-12" /> سيتم إرفاق موقعك الجغرافي للضرورة الأمنية
-                        </div>
-                    </div>
-                )}
-
-                {step === 'wait' && (
-                    <div className="flex flex-col items-center gap-16 w-full animate-flip text-center py-16">
-                        <div className="w-64 h-64 border-4 border-border border-t-accent rounded-full animate-spin"></div>
-                        <div>
-                            <h3 className="text-[16px] font-bold text-primary mb-4">في غرفة الانتظار الأمنية</h3>
-                            <p className="text-[13px] text-secondary leading-relaxed">
-                                تم إرسال هويتك الحيوية .<br/>
-                                يرجى البقاء في هذه الصفحة حتى يقوم مشرف النظام بالموافقة على دخولك.
-                            </p>
-                        </div>
-                        <div className="bg-accentSoft text-accent px-16 py-8 rounded-8 text-[11px] font-bold mt-8 flex items-center gap-6">
-                            <Icon.Shield className="w-14 h-14" /> الطلب قيد المراجعة اللحظية...
-                        </div>
-                    </div>
-                )}
-
-                {step === 'rejected' && (
-                    <div className="flex flex-col items-center gap-16 w-full animate-flip text-center py-16">
-                        <div className="w-64 h-64 bg-dangerSoft text-danger rounded-full flex items-center justify-center mb-8">
-                            <Icon.Close className="w-32 h-32" />
-                        </div>
-                        <div>
-                            <h3 className="text-[18px] font-bold text-danger mb-4">تم رفض الدخول</h3>
-                            <p className="text-[13px] text-secondary leading-relaxed">
-                                تم رفض طلب وصولك من قبل الإدارة.<br/>
-                                يرجى مراجعة المسؤول المباشر.
-                            </p>
-                        </div>
-                        <button onClick={() => { setStep('name'); setName(''); }} className="w-full h-48 bg-surface text-primary border border-border rounded-12 font-semibold text-[13px] hover:bg-border transition-colors mt-8">
-                            العودة للرئيسية
-                        </button>
-                    </div>
-                )}
-
-            </div>
-        </div>
-    );
+        {step === 'face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('employee_password');setCode('')}} onVerified={finalizeEmployeeLogin}/>} 
+        {loading && step === 'face' && <div className="mt-10 text-[11px] text-muted">جاري حفظ سجل الدخول...</div>}
+    </div></div>;
 };
 
 // ============================================================
@@ -2146,8 +2238,8 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
 // ============================================================
 // لوحة تحكم الإدارة (خاصة بالمدير فقط - مهند) ✨ التجميع الذكي للجلسات وطلبات الدخول
 // ============================================================
-const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categories, currentCategoryById, categoryMeta }) => {
-    const [activeTab, setActiveTab] = useState('access_requests'); 
+const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categories, currentCategoryById, categoryMeta, initialTab = 'access_requests' }) => {
+    const [activeTab, setActiveTab] = useState(initialTab); 
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     
@@ -2737,33 +2829,23 @@ const App = () => {
         return Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
     });
 
-    // الحاجز الأمني V1:
-    // المستخدمون القدامى كان يكفي عندهم وجود NAME في localStorage، لذلك كانوا يتجاوزون شاشة التحقق.
-    // الآن أي موظف غير إداري لا يدخل إلا إذا كان لديه تصريح صادر بعد موافقة المشرف.
+    // الجلسات القديمة لا تتجاوز نظام الحسابات الجديد. الموظف يدخل بكلمة المرور ثم تحقق الوجه السريع.
     const [accessVerified, setAccessVerified] = useState(() => {
         const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
         const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
         const admin = Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
         if (admin) return true;
-
-        const gateVersion = localStorage.getItem(STORAGE_KEYS.ACCESS_GATE_VERSION) || '';
-        const approvedName = localStorage.getItem(STORAGE_KEYS.ACCESS_APPROVED_NAME) || '';
-        return Boolean(n) && gateVersion === ACCESS_GATE_VERSION && approvedName === normalizeText(n);
+        const employeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
+        const authVersion = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION) || '';
+        return Boolean(n && employeeId) && authVersion === EMPLOYEE_AUTH_VERSION;
     });
 
-    // إذا تغيّر الاسم يدويًا/من جلسة سابقة لا نسمح بإعادة استخدام تصريح مستخدم آخر.
     useEffect(() => {
-        if (isAdmin) {
-            setAccessVerified(true);
-            return;
-        }
-        if (!sessionName) {
-            setAccessVerified(false);
-            return;
-        }
-        const gateVersion = localStorage.getItem(STORAGE_KEYS.ACCESS_GATE_VERSION) || '';
-        const approvedName = localStorage.getItem(STORAGE_KEYS.ACCESS_APPROVED_NAME) || '';
-        setAccessVerified(gateVersion === ACCESS_GATE_VERSION && approvedName === normalizeText(sessionName));
+        if (isAdmin) { setAccessVerified(true); return; }
+        if (!sessionName) { setAccessVerified(false); return; }
+        const employeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
+        const authVersion = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION) || '';
+        setAccessVerified(Boolean(employeeId) && authVersion === EMPLOYEE_AUTH_VERSION);
     }, [sessionName, isAdmin]);
 
     const [sessionId] = useState(() => Date.now().toString() + Math.random().toString(36).substr(2, 5));
@@ -2780,7 +2862,7 @@ const App = () => {
     
     const [showCart, setShowCart] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
-    const [showAdmin, setShowAdmin] = useState(false);
+    const [showAdmin, setShowAdmin] = useState(null);
     const [showDrafts, setShowDrafts] = useState(false);
 
     useEffect(() => {
@@ -2806,6 +2888,7 @@ const App = () => {
                 const db = await getDb();
                 await db.collection('site_sessions').doc(sessionId).set({
                     name: sessionName,
+                    employeeId: isAdmin ? null : (localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || null),
                     startTime: firebase.firestore.FieldValue.serverTimestamp(),
                     lastActive: firebase.firestore.FieldValue.serverTimestamp(),
                     durationMinutes: 0,
@@ -3117,8 +3200,10 @@ const App = () => {
                         
                         <div className="flex items-center gap-8 flex-shrink-0">
                             {isAdmin && (
-                                <button onClick={() => setShowAdmin(true)} title="لوحة الإدارة" className="flex items-center justify-center w-48 h-48 rounded-12 bg-accentSoft border border-accent text-accent hover:bg-accent hover:text-white transition-colors animate-flip">
+                                <button onClick={() => setShowAdmin('product_categories')} title="إدارة المنتجات والأقسام"
+                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-accentSoft border border-accent text-accent hover:bg-accent hover:text-white transition-colors animate-flip">
                                     <Icon.Dashboard className="w-20 h-20" />
+                                    <span className="hidden lg:inline text-[12px] font-bold whitespace-nowrap">إدارة المنتجات</span>
                                 </button>
                             )}
                             {isAdmin && (
@@ -3323,7 +3408,8 @@ const App = () => {
             {showCart && <OrderInvoiceModal cart={cart} setCart={setCart} drafts={drafts} setDrafts={setDrafts} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />}
             {showHistory && <OrderHistoryModal onClose={() => setShowHistory(false)} sessionName={sessionName} />}
             {showAdmin && isAdmin && <AdminDashboardModal
-                onClose={() => setShowAdmin(false)}
+                initialTab={showAdmin}
+                onClose={() => setShowAdmin(null)}
                 catalogItems={catalogItems}
                 imagesList={imagesList}
                 categories={categories}
@@ -3339,4 +3425,4 @@ const App = () => {
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
-    </html>  
+    </html> 
