@@ -76,10 +76,20 @@
         @keyframes developerHint { 0%,88%,100%{opacity:1} 92%{opacity:.62} 96%{opacity:.86} }
         .developer-link { animation: developerHint 5.5s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce){ .developer-link{animation:none} }
+    
+/* ===== Brand boot screen ===== */
+#app-loader{position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .28s ease,visibility .28s ease}
+#app-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+#app-loader img{width:92px;height:92px;object-fit:contain;filter:drop-shadow(0 8px 22px rgba(28,25,23,.08));animation:brandBoot 1.45s ease-in-out infinite}
+@keyframes brandBoot{0%,100%{opacity:.72;transform:scale(.985)}50%{opacity:1;transform:scale(1.025)}}
+@media(prefers-reduced-motion:reduce){#app-loader img{animation:none}}
+
     </style>
 
     <meta name="theme-color" content="#FFFFFF">
-    <link rel="icon" href="./icons/icon-192.png" type="image/png">
+    <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
+    <link rel="icon" href="./icons/icon-512.png" sizes="512x512" type="image/png">
+    <link rel="shortcut icon" href="./icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="./icons/icon-192.png">
     <link rel="manifest" href="./manifest.json">
 
@@ -132,7 +142,7 @@
 </script>
 </head>
 <body class="min-h-screen bg-bg">
-    <div id="root"></div>
+    <div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./icons/icon-512.png" onerror="this.onerror=null;this.src='./icons/icon-192.png'" alt="بيت الأواني الطيبة"></div><div id="root"></div>
 
 <script type="text/babel">
 
@@ -389,7 +399,9 @@ const createSelfActivatedEmployeeAccount = async (candidate, enteredAlias, pin) 
     if (!canonicalName) throw new Error('NO_NAME');
     const aliases = [...new Set([canonicalName, ...(candidate?.aliases || []), String(enteredAlias || '').trim()].filter(Boolean))];
     const aliasKeys = [...new Set(aliases.flatMap(employeeAliasVariants))];
-    const accountRef = db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc();
+    const accountRef = candidate?.existingAccountId
+        ? db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(candidate.existingAccountId)
+        : db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc();
     const employeeId = accountRef.id;
 
     for (const key of aliasKeys) {
@@ -408,12 +420,15 @@ const createSelfActivatedEmployeeAccount = async (candidate, enteredAlias, pin) 
     const passwordHash = await deriveEmployeePasswordHash(cleanPin, salt, 120000);
     const now = firebase.firestore.FieldValue.serverTimestamp();
     const batch = db.batch();
-    batch.set(accountRef, {
+    const accountPayload = {
         canonicalName, aliases, aliasKeys, status: 'active',
-        passwordHash, passwordSalt: salt, passwordIterations: 120000,
-        passwordUpdatedAt: now, createdAt: now, updatedAt: now,
-        createdBy: 'self_activation', selfActivatedAt: now, loginCount: 0, schemaVersion: 2
-    });
+        passwordHash, passwordSalt: salt, passwordIterations: 120000, passwordPending: false,
+        passwordUpdatedAt: now, updatedAt: now, selfActivatedAt: now, schemaVersion: 2
+    };
+    if (!candidate?.existingAccountId) {
+        accountPayload.createdAt = now; accountPayload.createdBy = 'self_activation'; accountPayload.loginCount = 0;
+    }
+    batch.set(accountRef, accountPayload, { merge: true });
     aliasKeys.forEach(key => batch.set(
         db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)),
         { employeeId, canonicalName, alias: key, status: 'active', updatedAt: now },
@@ -1776,12 +1791,20 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
                     onActivatedRef.current?.(existing);
                     return;
                 }
+                if (existing && existing.status !== 'suspended') {
+                    setCandidate({ existingAccountId: existing.id, canonicalName: existing.canonicalName || sessionName, aliases: existing.aliases || [sessionName], aliasKeys: existing.aliasKeys || employeeAliasVariants(sessionName), legacyUserIds: [] });
+                    return;
+                }
                 const legacy = await resolveLegacyEmployeeIdentity(sessionName);
                 if (!alive) return;
                 if (legacy?.existingAccount?.passwordHash && legacy.existingAccount.status !== 'suspended') {
                     localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, legacy.existingAccount.id);
                     localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
                     onActivatedRef.current?.(legacy.existingAccount);
+                    return;
+                }
+                if (legacy?.existingAccount && legacy.existingAccount.status !== 'suspended') {
+                    setCandidate({ existingAccountId: legacy.existingAccount.id, canonicalName: legacy.existingAccount.canonicalName || sessionName, aliases: legacy.existingAccount.aliases || legacy.aliases || [sessionName], aliasKeys: legacy.existingAccount.aliasKeys || employeeAliasVariants(sessionName), legacyUserIds: legacy.legacyUserIds || [] });
                     return;
                 }
                 if (!legacy) {
@@ -1861,10 +1884,16 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         const account = await resolveEmployeeAccount(trimmed);
         if (account) {
             if (account.status === 'suspended') { setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
-            setEmployeeAccount(account);
-            setActivationCandidate(null);
             setEnteredAlias(trimmed);
-            setStep('employee_password');
+            if (!account.passwordHash || !account.passwordSalt) {
+                setEmployeeAccount(account);
+                setActivationCandidate({ existingAccountId: account.id, canonicalName: account.canonicalName || trimmed, aliases: account.aliases || [trimmed], aliasKeys: account.aliasKeys || employeeAliasVariants(trimmed), legacyUserIds: [] });
+                setStep('activate_password');
+            } else {
+                setEmployeeAccount(account);
+                setActivationCandidate(null);
+                setStep('employee_password');
+            }
             return;
         }
         const legacy = await resolveLegacyEmployeeIdentity(trimmed);
@@ -1874,10 +1903,16 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         }
         if (legacy.existingAccount) {
             if (legacy.existingAccount.status === 'suspended') { setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
-            setEmployeeAccount(legacy.existingAccount);
-            setActivationCandidate(null);
             setEnteredAlias(trimmed);
-            setStep('employee_password');
+            if (!legacy.existingAccount.passwordHash || !legacy.existingAccount.passwordSalt) {
+                setEmployeeAccount(legacy.existingAccount);
+                setActivationCandidate({ existingAccountId: legacy.existingAccount.id, canonicalName: legacy.existingAccount.canonicalName || trimmed, aliases: legacy.existingAccount.aliases || legacy.aliases || [trimmed], aliasKeys: legacy.existingAccount.aliasKeys || employeeAliasVariants(trimmed), legacyUserIds: legacy.legacyUserIds || [] });
+                setStep('activate_password');
+            } else {
+                setEmployeeAccount(legacy.existingAccount);
+                setActivationCandidate(null);
+                setStep('employee_password');
+            }
             return;
         }
         setEmployeeAccount(null);
@@ -3668,6 +3703,7 @@ const App = () => {
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden'),320);
 </script>
 </body>
     </html> 
