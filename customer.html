@@ -141,6 +141,7 @@ const DEFAULT_CUSTOMER_PORTAL_CONTROL = {
 
 const DATA_PATH = './data/';
 const IMAGES_PATH = './images/';
+const GUEST_NAME_KEY = 'customer_guest_name_v1';
 const CART_STEP = 0.5;
 const PAGE_SIZE = 48;
 const CUSTOMER_COLLECTION = 'customers';
@@ -335,7 +336,13 @@ function mergeInventories(a,b){
 }
 function buildImagesMap(text){
   const map=new Map();
-  String(text||'').split(/\r?\n/).forEach(line=>{const f=line.trim();if(!f)return;const id=normalizeCleanId(f.replace(/\.[^.]+$/,''));if(id&&!map.has(id))map.set(id,f)});
+  String(text||'').split(/\r?\n/).forEach(line=>{
+    const raw=line.trim();if(!raw||raw.startsWith('#'))return;
+    const parts=raw.split(/\t/);let id='',file='';
+    if(parts.length>=2){id=normalizeCleanId(parts[0]);file=parts.slice(1).join('\t').trim()}
+    else{file=raw;const base=file.split('/').pop().split('?')[0];id=normalizeCleanId(base.replace(/\.[^.]+$/,''))}
+    if(id&&file)map.set(id,file);
+  });
   return map;
 }
 function parseCategories(text){
@@ -356,7 +363,7 @@ function effectiveCategories(base,overrides,meta){
   Object.keys(out).forEach(k=>out[k]=[...new Set(out[k])]); return out;
 }
 function categoryLookup(cats){const out={};Object.entries(cats||{}).forEach(([c,ids])=>ids.forEach(id=>out[id]=c));return out}
-function imageUrl(file){return file?new URL(IMAGES_PATH+file,window.location.href).href:''}
+function imageUrl(file){if(!file)return'';if(/^https?:\/\//i.test(file))return file;return new URL(IMAGES_PATH+file,window.location.href).href}
 
 const Icon=({name,className='w-5 h-5'})=>{
   const paths={
@@ -632,6 +639,14 @@ function NamePromptModal({company,onSave}){
   </form></div>
 }
 
+function GuestNamePromptModal({onSave}){
+  const [name,setName]=useState(''),[error,setError]=useState('');
+  const inputRef=useRef(null);
+  useEffect(()=>{const t=setTimeout(()=>inputRef.current?.focus(),180);return()=>clearTimeout(t)},[]);
+  const submit=e=>{e.preventDefault();const clean=name.trim().replace(/\s+/g,' ');if(clean.length<2){setError('اكتب اسمك الكريم للمتابعة.');return}onSave(clean)};
+  return <div className="ui-modal-overlay"><form onSubmit={submit} className="ui-modal" onClick={e=>e.stopPropagation()}><div className="ui-modal-head"><div className="ui-eyebrow">خطوة سريعة</div><h2 className="ui-title text-[20px]">اسمك الكريم</h2><p className="ui-subtitle">نحفظ الاسم على هذا الجهاز لتسهيل إعداد الطلب لاحقًا.</p></div><div className="ui-modal-body"><FormField label="الاسم" icon="user"><input ref={inputRef} value={name} onChange={e=>setName(e.target.value)} autoComplete="name" className="ui-input" placeholder="اكتب اسمك الكريم"/></FormField>{error&&<div className="ui-error"><Icon name="alert" className="w-5 h-5 shrink-0"/>{error}</div>}</div><div className="ui-modal-actions"><button className="ui-btn ui-btn-primary w-full">حفظ ومتابعة</button></div></form></div>
+}
+
 function FirstBranchModal({item,onClose,onCreate}){
   const [mode,setMode]=useState('choice'),[name,setName]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const customRef=useRef(null);
@@ -787,6 +802,9 @@ function InstallNudge(){
 function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth}){
   const safeProfile=profile||{name:'',company:'',phone:'',branches:[]};
   const [loading,setLoading]=useState(true),[products,setProducts]=useState([]),[baseCategories,setBaseCategories]=useState({}),[overrides,setOverrides]=useState({}),[meta,setMeta]=useState({}),[query,setQuery]=useState(''),[activeCategory,setActiveCategory]=useState('الكل'),[categoryBrowse,setCategoryBrowse]=useState(null),[page,setPage]=useState('home'),[pageCount,setPageCount]=useState(PAGE_SIZE),[viewMode,setViewMode]=useState(()=>{try{return localStorage.getItem('customer_catalog_view_v2')||'grid'}catch{return'grid'}}),[missingImages,setMissingImages]=useState(()=>new Set()),[cart,setCart]=useState({}),[guestBranches,setGuestBranches]=useState(()=>{try{return JSON.parse(localStorage.getItem('customer_guest_branches_v1')||'[]')}catch{return[]}}),[allocItem,setAllocItem]=useState(null),[firstBranchItem,setFirstBranchItem]=useState(null),[zoom,setZoom]=useState(null),[toast,setToast]=useState(null),[checkout,setCheckout]=useState(()=>{try{return !guestMode&&sessionStorage.getItem('customer_pending_after_auth')==='checkout'}catch{return false}}),[orders,setOrders]=useState([]),[drafts,setDrafts]=useState([]),[historyLoading,setHistoryLoading]=useState(false),[savingDraft,setSavingDraft]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[validationErrors,setValidationErrors]=useState([]);
+  const [guestName,setGuestName]=useState(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}}),[showGuestNamePrompt,setShowGuestNamePrompt]=useState(false);
+  useEffect(()=>{if(!guestMode||guestName)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),900);return()=>clearTimeout(t)},[guestMode,guestName]);
+  const saveGuestName=clean=>{try{localStorage.setItem(GUEST_NAME_KEY,clean)}catch{}setGuestName(clean);setShowGuestNamePrompt(false)};
   const pendingResumeRef=useRef(false);
   const cartKey=guestMode?'customer_guest_cart_v1':'customer_cart_v1_'+user.uid;
   useEffect(()=>{
@@ -947,6 +965,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     <footer className="rights-footer max-w-[1100px] mx-auto px-4 sm:px-5 pb-5"><div className="border-t border-border pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-muted"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link font-bold text-secondary">© 2026 تطوير مهند الحزمي</a><span>بوابة العملاء · جزء من منظومة <b className="text-[#047857] ltr tracking-wide">Korvi</b></span></div></footer>
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-border safe-bottom"><div className="max-w-[700px] mx-auto grid grid-cols-5 px-1 pt-2">{nav.map(([id,icon,label])=><button key={id} onClick={()=>{if(guestMode&&(id==='orders'||id==='account')){onRequireAuth?.(id);return;}setCheckout(false);setPage(id);if(id==='categories'){setCategoryBrowse(null);setQuery('')}if(id==='home'&&!activeCategory)setActiveCategory('الكل')}} className={`h-14 flex flex-col items-center justify-center gap-1 rounded-10 text-[10px] font-bold ${page===id?'text-accent':'text-muted'}`}><div className="relative"><Icon name={icon} className="w-5 h-5"/>{id==='cart'&&cartCount>0&&<span className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-accent text-white text-[8px] flex items-center justify-center">{cartCount}</span>}</div>{label}</button>)}</div></nav>
     {!guestMode&&!String(safeProfile.name||'').trim()&&<NamePromptModal company={safeProfile.company} onSave={saveCustomerName}/>}
+    {guestMode&&showGuestNamePrompt&&!guestName&&<GuestNamePromptModal onSave={saveGuestName}/>}
     {firstBranchItem&&<FirstBranchModal item={firstBranchItem} onClose={()=>setFirstBranchItem(null)} onCreate={createFirstBranch}/>}
     <InstallNudge/>{allocItem&&<BranchAllocationModal item={allocItem} branches={branches} current={cart[allocItem.cleanId]?.branchQuantities||{}} onClose={()=>setAllocItem(null)} onSave={q=>saveAllocation(allocItem,q)} onLimit={showLimit}/>}<Lightbox item={zoom} onClose={()=>setZoom(null)}/><Toast toast={toast} onClose={()=>setToast(null)}/>
   </div>
@@ -964,6 +983,8 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(u.uid).get();
       if(!doc.exists){await auth.signOut();setGlobalError('الحساب موجود في المصادقة لكن ملف العميل غير مكتمل. تواصل مع الإدارة.');setAuthState('guest');return;}
       const p={id:doc.id,...doc.data()};
+      const savedGuestNameForProfile=(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}})();
+      if(!String(p.name||'').trim()&&savedGuestNameForProfile){p.name=savedGuestNameForProfile;db.collection(CUSTOMER_COLLECTION).doc(u.uid).update({name:savedGuestNameForProfile,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});}
       if(p.status==='suspended'){await auth.signOut();setGlobalError('هذا الحساب موقوف حاليًا. تواصل مع الإدارة.');setAuthState('guest');return;}
       if(p.status==='deleted'){await auth.signOut();setGlobalError('هذا الحساب لم يعد متاحًا. تواصل مع الإدارة عند الحاجة.');setAuthState('guest');return;}
       const deviceCheck=await ensureCustomerDeviceAllowed(u,p);
@@ -1003,7 +1024,7 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       console.info('[Customer registration] starting',{phone:registration.phone,emailHint:email.replace(/(.{4}).+(@.+)/,'$1***$2')});
       const cred=await auth.createUserWithEmailAndPassword(email,registration.pin);
       created=cred.user;stage='profile';
-      const profileData={name:'',company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),schemaVersion:3};
+      const savedGuestName=(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}})();const profileData={name:savedGuestName,company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),schemaVersion:3};
       await db.collection(CUSTOMER_COLLECTION).doc(created.uid).set(profileData);
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
       if(!doc.exists) throw Object.assign(new Error('customer profile missing after create'),{code:'customer/profile-missing'});
