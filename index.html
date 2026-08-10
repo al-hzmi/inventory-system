@@ -135,8 +135,8 @@
   try{
     const params=new URLSearchParams(location.search);
     const forceEmployee=params.get('employee')==='1';
-    const knownEmployee=Boolean(localStorage.getItem('inventory_user_name_v2'));
-    if(!forceEmployee&&!knownEmployee){ location.replace('./customer.html'); }
+    // الرابط العام مخصص للعملاء. دخول الموظفين يكون صريحًا فقط عبر ?employee=1.
+    if(!forceEmployee){ location.replace('./customer.html'); }
   }catch(e){}
 })();
 </script>
