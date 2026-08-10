@@ -150,26 +150,20 @@ const EntryChooser = () => {
                 </div>
 
                 <div className="bg-bg border border-border rounded-20 shadow-lift p-16 flex flex-col gap-12">
-                    <button onClick={goCustomer} className="group w-full min-h-[92px] rounded-16 border border-border bg-surface hover:border-accent/40 hover:bg-accentSoft/30 active:scale-[.995] transition-all px-16 flex items-center gap-14 text-right">
-                        <div className="w-48 h-48 rounded-14 bg-accentSoft text-accent flex items-center justify-center flex-shrink-0">
-                            <svg viewBox="0 0 24 24" className="w-23 h-23" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5L12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9 20v-6h6v6"/></svg>
-                        </div>
+                    <button onClick={goCustomer} className="group w-full min-h-[88px] rounded-16 border border-border bg-white hover:border-accent/40 hover:bg-accentSoft/20 active:scale-[.995] transition-all px-18 flex items-center gap-12 text-right">
                         <div className="min-w-0 flex-1">
                             <div className="text-[17px] font-bold text-primary">دخول العملاء</div>
                             <div className="text-[12px] text-muted mt-3">فتح المعرض الرقمي مباشرة</div>
                         </div>
-                        <span className="text-muted text-[22px] leading-none group-hover:text-accent transition-colors">‹</span>
+                        <span className="w-32 h-32 rounded-full border border-border text-muted flex items-center justify-center text-[20px] leading-none group-hover:border-accent/30 group-hover:text-accent transition-colors">‹</span>
                     </button>
 
-                    <button onClick={goEmployee} className="group w-full min-h-[92px] rounded-16 border border-border bg-bg hover:border-primary/25 hover:bg-surface active:scale-[.995] transition-all px-16 flex items-center gap-14 text-right">
-                        <div className="w-48 h-48 rounded-14 bg-primary text-bg flex items-center justify-center flex-shrink-0">
-                            <svg viewBox="0 0 24 24" className="w-23 h-23" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21a8 8 0 00-16 0"/><circle cx="12" cy="7" r="4"/></svg>
-                        </div>
+                    <button onClick={goEmployee} className="group w-full min-h-[88px] rounded-16 border border-border bg-white hover:border-primary/25 hover:bg-surface active:scale-[.995] transition-all px-18 flex items-center gap-12 text-right">
                         <div className="min-w-0 flex-1">
                             <div className="text-[17px] font-bold text-primary">دخول الموظفين</div>
                             <div className="text-[12px] text-muted mt-3">فتح النظام الداخلي للموظفين</div>
                         </div>
-                        <span className="text-muted text-[22px] leading-none group-hover:text-primary transition-colors">‹</span>
+                        <span className="w-32 h-32 rounded-full border border-border text-muted flex items-center justify-center text-[20px] leading-none group-hover:border-primary/20 group-hover:text-primary transition-colors">‹</span>
                     </button>
                 </div>
 
@@ -611,11 +605,20 @@ const reportCleanIdCollisions = (items, warehouseKey) => {};
 
 const buildImagesMap = (imagesText) => {
     const map = new Map();
-    imagesText.split('\n').forEach((line) => {
-        const fileName = line.trim();
-        if (!fileName) return;
-        const clean = normalizeCleanId(fileName.replace(/\.[^.]+$/, ''));
-        if (clean && !map.has(clean)) map.set(clean, fileName);
+    String(imagesText || '').split(/\r?\n/).forEach((line) => {
+        const raw = line.trim();
+        if (!raw || raw.startsWith('#')) return;
+        const parts = raw.split(/\t/);
+        let clean = '', fileName = '';
+        if (parts.length >= 2) {
+            clean = normalizeCleanId(parts[0]);
+            fileName = parts.slice(1).join('\t').trim();
+        } else {
+            fileName = raw;
+            const base = fileName.split('/').pop().split('?')[0];
+            clean = normalizeCleanId(base.replace(/\.[^.]+$/, ''));
+        }
+        if (clean && fileName) map.set(clean, fileName);
     });
     return map;
 };
