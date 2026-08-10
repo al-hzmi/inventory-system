@@ -130,21 +130,56 @@
             return __fbPromise;
         }
     </script>
-<script>
-(function(){
-  try{
-    const params=new URLSearchParams(location.search);
-    const forceEmployee=params.get('employee')==='1';
-    // الرابط العام مخصص للعملاء. دخول الموظفين يكون صريحًا فقط عبر ?employee=1.
-    if(!forceEmployee){ location.replace('./customer.html'); }
-  }catch(e){}
-})();
-</script>
 </head>
 <body class="min-h-screen bg-bg">
     <div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./icons/icon-512.png" onerror="this.onerror=null;this.src='./icons/icon-192.png'" alt="بيت الأواني الطيبة"></div><div id="root"></div>
 
 <script type="text/babel">
+
+
+const EntryChooser = () => {
+    const goCustomer = () => { window.location.href = './customer.html'; };
+    const goEmployee = () => { window.location.href = './index.html?employee=1'; };
+    return (
+        <div className="min-h-screen bg-bg flex items-center justify-center px-20 py-32 font-sans">
+            <div className="w-full max-w-[440px]">
+                <div className="flex flex-col items-center text-center mb-28">
+                    <img src="./icons/icon-512.png" onError={(e)=>{e.currentTarget.src='./icons/icon-192.png'}} alt="بيت الأواني الطيبة" className="w-[88px] h-[88px] object-contain mb-16 drop-shadow-sm" />
+                    <h1 className="text-[27px] sm:text-[30px] font-bold text-primary tracking-tight">بيت الأواني الطيبة</h1>
+                    <p className="text-[13px] text-muted mt-6">حدد نوع الدخول للمتابعة</p>
+                </div>
+
+                <div className="bg-bg border border-border rounded-20 shadow-lift p-16 flex flex-col gap-12">
+                    <button onClick={goCustomer} className="group w-full min-h-[92px] rounded-16 border border-border bg-surface hover:border-accent/40 hover:bg-accentSoft/30 active:scale-[.995] transition-all px-16 flex items-center gap-14 text-right">
+                        <div className="w-48 h-48 rounded-14 bg-accentSoft text-accent flex items-center justify-center flex-shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-23 h-23" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5L12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9 20v-6h6v6"/></svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="text-[17px] font-bold text-primary">دخول العملاء</div>
+                            <div className="text-[12px] text-muted mt-3">فتح المعرض الرقمي مباشرة</div>
+                        </div>
+                        <span className="text-muted text-[22px] leading-none group-hover:text-accent transition-colors">‹</span>
+                    </button>
+
+                    <button onClick={goEmployee} className="group w-full min-h-[92px] rounded-16 border border-border bg-bg hover:border-primary/25 hover:bg-surface active:scale-[.995] transition-all px-16 flex items-center gap-14 text-right">
+                        <div className="w-48 h-48 rounded-14 bg-primary text-bg flex items-center justify-center flex-shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-23 h-23" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21a8 8 0 00-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="text-[17px] font-bold text-primary">دخول الموظفين</div>
+                            <div className="text-[12px] text-muted mt-3">فتح النظام الداخلي للموظفين</div>
+                        </div>
+                        <span className="text-muted text-[22px] leading-none group-hover:text-primary transition-colors">‹</span>
+                    </button>
+                </div>
+
+                <div className="mt-20 text-center">
+                    <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link text-[11px] text-muted hover:text-accent transition-colors">© 2026 تطوير مهند الحزمي · Korvi</a>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const DATA_PATH   = "./data/";
 const IMAGES_PATH = "./images/";
@@ -3702,7 +3737,9 @@ const App = () => {
     );
 };
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+const __entryParams = new URLSearchParams(window.location.search);
+const __employeeMode = __entryParams.get('employee') === '1';
+ReactDOM.createRoot(document.getElementById('root')).render(__employeeMode ? <App /> : <EntryChooser />);
 setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden'),320);
 </script>
 </body>
