@@ -1,0 +1,115 @@
+name: BATCO Customer Fix V30.2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/batco-customer-fix-v302.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-customer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch customer portal
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('customer.html')
+          text = path.read_text(encoding='utf-8')
+
+          # 1) Product image lightbox: developer credit directly under product details.
+          start = text.find('function Lightbox({item,onClose})')
+          end = text.find('\n\nfunction CartView', start)
+          if start == -1 or end == -1:
+              raise SystemExit('Lightbox block was not found; refusing to make a partial patch.')
+
+          lightbox = '''function Lightbox({item,onClose}){if(!item)return null;return <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={onClose}><button className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center"><Icon name="close"/></button><div className="max-w-4xl w-full" onClick={e=>e.stopPropagation()}><ProductImage file={item.imageFile} alt={item.name} className="max-h-[76dvh] w-full object-contain"/><div className="text-white text-center mt-3"><b className="ltr inline-block">{item.id}</b><div className="text-sm text-white/70">{item.name}</div><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-white/55 hover:text-white" aria-label="التواصل مع المطور عبر واتساب">تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a></div></div></div>}'''
+          text = text[:start] + lightbox + text[end:]
+
+          # 2) Every existing visible developer credit gets the subtle clickable arrow.
+          text = re.sub(
+              r'(تطوير مهند الحزمي)(</a>)',
+              r'\1 <span aria-hidden="true" className="text-[11px]">↗</span>\2',
+              text
+          )
+
+          # 3) Force future service-worker updates to bypass the HTTP cache.
+          text = text.replace(
+              "navigator.serviceWorker.register('./customer-sw.js')",
+              "navigator.serviceWorker.register('./customer-sw.js?v=30.2',{updateViaCache:'none'})"
+          )
+
+          if 'تطوير مهند الحزمي</a>' in text:
+              raise SystemExit('A developer credit still has no arrow.')
+          if 'function Lightbox' not in text or 'text-white/55 hover:text-white' not in text:
+              raise SystemExit('Lightbox branding verification failed.')
+
+          path.write_text(text, encoding='utf-8')
+
+          # 4) Network-first service worker so customer.html never gets stuck on an old PWA shell.
+          sw = r'''const CACHE = 'batco-customer-v30-2';
+const CUSTOMER_PAGE = './customer.html';
+
+self.addEventListener('install', event => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (req.mode === 'navigate' || req.destination === 'document') {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const fresh = await fetch(new Request(req, { cache: 'no-store' }));
+        if (fresh && fresh.ok) await cache.put(req, fresh.clone());
+        return fresh;
+      } catch (error) {
+        return (await cache.match(req)) || (await cache.match(CUSTOMER_PAGE)) || Response.error();
+      }
+    })());
+    return;
+  }
+
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    try {
+      const fresh = await fetch(req);
+      if (fresh && fresh.ok) await cache.put(req, fresh.clone());
+      return fresh;
+    } catch (error) {
+      return (await cache.match(req)) || Response.error();
+    }
+  })());
+});
+'''
+          Path('customer-sw.js').write_text(sw, encoding='utf-8')
+
+          print('Customer portal V30.2 patch prepared successfully.')
+
+      - name: Commit fixed customer portal
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer.html customer-sw.js
+          git rm .github/workflows/batco-customer-fix-v302.yml
+          git commit -m "Fix customer branding arrows, lightbox credit, and stale PWA cache"
+          git push origin HEAD:main
