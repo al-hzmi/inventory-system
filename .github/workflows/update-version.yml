@@ -15,6 +15,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Repair patch marker
+        run: |
+          sed -i "s/function CustomerManagerModal({customer,devices,busy,onClose/function CustomerManagerModal({customer,devices=[],busy=false,onClose/" .github/scripts/employee_messages_patch_v31.py
+
       - name: Apply employee messages patch
         run: python3 .github/scripts/employee_messages_patch_v31.py
 
