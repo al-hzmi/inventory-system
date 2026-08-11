@@ -214,6 +214,16 @@ const DEFAULT_CUSTOMER_PORTAL_CONTROL = {
     maintenanceMessage: 'بوابة العملاء متوقفة مؤقتًا. سيتم إتاحتها عند جاهزية الخدمة.'
 };
 
+// تحكم لحظي في وصول الموظفين — الإدارة تبقى مستثناة دائمًا.
+const EMPLOYEE_SITE_CONTROL_DOC = 'employee_site_access';
+const EMPLOYEE_SITE_CONTROL_CACHE_KEY = 'batco_employee_site_access_v1';
+const DEFAULT_EMPLOYEE_SITE_CONTROL = {
+    mode: 'open',
+    allowedEmployeeIds: [],
+    allowedEmployeeNames: [],
+    maintenanceMessage: 'النظام متوقف مؤقتًا من الإدارة.'
+};
+
 const VISIBILITY_RULES = {
     hideOutOfStockInGallery         : true,
     hideOutOfStockInSearchWithImage : true,
@@ -265,6 +275,64 @@ const openCustomerPortalPreview = () => {
     localStorage.setItem(CUSTOMER_PORTAL_PREVIEW_KEY, 'admin-preview');
     window.location.href = './customer.html';
 };
+
+const sanitizeEmployeeSiteControl = (raw = {}) => ({
+    ...DEFAULT_EMPLOYEE_SITE_CONTROL,
+    ...raw,
+    mode: ['open','restricted','closed'].includes(raw?.mode) ? raw.mode : 'open',
+    allowedEmployeeIds: Array.isArray(raw?.allowedEmployeeIds) ? raw.allowedEmployeeIds.filter(Boolean) : [],
+    allowedEmployeeNames: Array.isArray(raw?.allowedEmployeeNames) ? raw.allowedEmployeeNames.filter(Boolean) : []
+});
+
+const readCachedEmployeeSiteControl = () => {
+    try { return sanitizeEmployeeSiteControl(JSON.parse(localStorage.getItem(EMPLOYEE_SITE_CONTROL_CACHE_KEY) || '{}')); }
+    catch { return DEFAULT_EMPLOYEE_SITE_CONTROL; }
+};
+
+const useEmployeeSiteControl = () => {
+    const [control, setControl] = useState(() => ({ ...readCachedEmployeeSiteControl(), __loading: true }));
+    useEffect(() => {
+        let unsubscribe = null;
+        let active = true;
+        getDb().then(db => {
+            if (!active) return;
+            unsubscribe = db.collection('system_controls').doc(EMPLOYEE_SITE_CONTROL_DOC).onSnapshot(doc => {
+                if (!active) return;
+                const next = sanitizeEmployeeSiteControl(doc.exists ? doc.data() : DEFAULT_EMPLOYEE_SITE_CONTROL);
+                setControl({ ...next, __loading: false });
+                try { localStorage.setItem(EMPLOYEE_SITE_CONTROL_CACHE_KEY, JSON.stringify({mode:next.mode,allowedEmployeeIds:next.allowedEmployeeIds,allowedEmployeeNames:next.allowedEmployeeNames,maintenanceMessage:next.maintenanceMessage})); } catch {}
+            }, () => {
+                if (active) setControl({ ...readCachedEmployeeSiteControl(), __loading: false });
+            });
+        }).catch(() => { if (active) setControl({ ...readCachedEmployeeSiteControl(), __loading: false }); });
+        return () => { active = false; if (unsubscribe) unsubscribe(); };
+    }, []);
+    return control;
+};
+
+const employeeSiteAccessAllowed = (control, { name = '', employeeId = '', isAdmin = false } = {}) => {
+    if (isAdmin) return true;
+    const mode = control?.mode || 'open';
+    if (mode === 'open') return true;
+    if (mode === 'closed') return false;
+    const ids = new Set(Array.isArray(control?.allowedEmployeeIds) ? control.allowedEmployeeIds : []);
+    if (employeeId && ids.has(employeeId)) return true;
+    const normalizedName = normalizeText(name);
+    return Boolean(normalizedName) && (Array.isArray(control?.allowedEmployeeNames) ? control.allowedEmployeeNames : []).some(x => normalizeText(x) === normalizedName);
+};
+
+const EmployeeSiteBlocked = ({ control, onSwitchAccount }) => (
+    <div className="min-h-screen bg-bg flex items-center justify-center px-20 py-32 font-sans">
+        <div className="w-full max-w-[430px] bg-white border border-border rounded-20 shadow-lift p-24 text-center animate-card">
+            <div className="w-56 h-56 mx-auto rounded-16 bg-dangerSoft text-danger flex items-center justify-center"><Icon.Lock className="w-24 h-24"/></div>
+            <div className="text-[11px] text-danger font-bold mt-16">إدارة الوصول</div>
+            <h1 className="text-[21px] font-bold text-primary mt-4">النظام متوقف لهذا الحساب</h1>
+            <p className="text-[12px] text-secondary leading-6 mt-8">{control?.maintenanceMessage || DEFAULT_EMPLOYEE_SITE_CONTROL.maintenanceMessage}</p>
+            <p className="text-[10px] text-muted leading-5 mt-8">سيعود النظام تلقائيًا فور سماح الإدارة للحساب.</p>
+            <button onClick={onSwitchAccount} className="w-full h-46 rounded-12 border border-border bg-white text-secondary text-[12px] font-bold mt-18">استخدام حساب آخر</button>
+        </div>
+    </div>
+);
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('en-US');
 
@@ -1904,6 +1972,7 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
 const LoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
+    const employeeSiteControl = useEmployeeSiteControl();
     const [name, setName] = useState(initialName);
     const [step, setStep] = useState('name');
     const [error, setError] = useState('');
@@ -1917,11 +1986,19 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
 
     useEffect(() => { if ((step === 'password' || step === 'employee_password' || step === 'activate_password') && codeRef.current) codeRef.current.focus(); }, [step]);
 
+    const deniedBySiteControl = (account, fallbackName='') => {
+        const allowed = employeeSiteAccessAllowed(employeeSiteControl,{employeeId:account?.id||'',name:account?.canonicalName||fallbackName,isAdmin:false});
+        if (allowed) return false;
+        setError(employeeSiteControl?.maintenanceMessage || DEFAULT_EMPLOYEE_SITE_CONTROL.maintenanceMessage);
+        return true;
+    };
+
     const resolveNameFlow = async (trimmed) => {
         if (isProtectedName(trimmed)) { setStep('password'); return; }
         const account = await resolveEmployeeAccount(trimmed);
         if (account) {
             if (account.status === 'suspended') { setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
+            if (deniedBySiteControl(account, trimmed)) return;
             setEnteredAlias(trimmed);
             if (!account.passwordHash || !account.passwordSalt) {
                 setEmployeeAccount(account);
@@ -1941,6 +2018,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         }
         if (legacy.existingAccount) {
             if (legacy.existingAccount.status === 'suspended') { setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
+            if (deniedBySiteControl(legacy.existingAccount, trimmed)) return;
             setEnteredAlias(trimmed);
             if (!legacy.existingAccount.passwordHash || !legacy.existingAccount.passwordSalt) {
                 setEmployeeAccount(legacy.existingAccount);
@@ -1953,6 +2031,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
             }
             return;
         }
+        if (deniedBySiteControl(null, legacy.canonicalName || trimmed)) return;
         setEmployeeAccount(null);
         setActivationCandidate(legacy);
         setEnteredAlias(trimmed);
@@ -3113,6 +3192,7 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
 const App = () => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
+    const employeeSiteControl = useEmployeeSiteControl();
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     
     useEffect(() => {
@@ -3438,6 +3518,8 @@ const App = () => {
     const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
     const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
     const totalCategoryCount  = categoryNames.length + 1 + (isAdmin ? 1 : 0);
+    const currentEmployeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
+    const currentSiteAccessAllowed = employeeSiteAccessAllowed(employeeSiteControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
 
     if (!sessionName) {
         return (
@@ -3454,6 +3536,16 @@ const App = () => {
                 }}
             />
         );
+    }
+
+    if (!currentSiteAccessAllowed) {
+        return <EmployeeSiteBlocked control={employeeSiteControl} onSwitchAccount={()=>{
+            localStorage.removeItem(STORAGE_KEYS.NAME);
+            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);
+            localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);
+            window.location.href='./index.html?employee=1';
+        }}/>;
     }
 
     const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`;
@@ -3740,9 +3832,30 @@ const App = () => {
     );
 };
 
+const EmployeeBootstrap = () => {
+    const control = useEmployeeSiteControl();
+    const name = localStorage.getItem(STORAGE_KEYS.NAME) || '';
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
+    const admin = Boolean(token) && PROTECTED_ACCOUNTS[normalizeText(name)] === token;
+    const employeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
+    if (control.__loading) {
+        return <div className="min-h-screen bg-bg flex items-center justify-center px-20 font-sans"><div className="text-center"><img src="./icons/icon-192.png" className="w-64 h-64 object-contain mx-auto opacity-80"/><div className="text-[12px] text-muted mt-12">جاري التحقق من صلاحية الدخول...</div></div></div>;
+    }
+    if (name && !employeeSiteAccessAllowed(control,{name,employeeId,isAdmin:admin})) {
+        return <EmployeeSiteBlocked control={control} onSwitchAccount={()=>{
+            localStorage.removeItem(STORAGE_KEYS.NAME);
+            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);
+            localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);
+            window.location.reload();
+        }}/>;
+    }
+    return <App/>;
+};
+
 const __entryParams = new URLSearchParams(window.location.search);
 const __employeeMode = __entryParams.get('employee') === '1';
-ReactDOM.createRoot(document.getElementById('root')).render(__employeeMode ? <App /> : <EntryChooser />);
+ReactDOM.createRoot(document.getElementById('root')).render(__employeeMode ? <EmployeeBootstrap /> : <EntryChooser />);
 setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden'),320);
 </script>
 </body>
