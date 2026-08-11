@@ -201,6 +201,7 @@ const EMPLOYEE_AUTH_VERSION = '2';
 const EMPLOYEE_ACCOUNT_COLLECTION = 'employee_accounts';
 const EMPLOYEE_ALIAS_COLLECTION = 'employee_aliases';
 const EMPLOYEE_SECURITY_PHOTO_COLLECTION = 'employee_security_photos';
+const EMPLOYEE_NOTIFICATION_COLLECTION = 'employee_notifications';
 
 // التحكم المركزي في بوابة العملاء — من لوحة التحكم الإدارية فقط.
 // الوضع الافتراضي «متوقفة» حتى يتم تشغيلها صراحة من الإدارة.
@@ -3186,6 +3187,34 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
     );
 });
 
+
+const EmployeeAdminMessageScreen = ({notification,onClose}) => (
+    <div className="min-h-screen bg-bg flex items-center justify-center px-20 py-32 font-sans">
+        <div className="w-full max-w-[480px] bg-white border border-border rounded-20 shadow-lift overflow-hidden animate-card">
+            <div className="p-24 border-b border-border text-center"><div className="w-52 h-52 rounded-16 bg-accentSoft text-accent mx-auto flex items-center justify-center text-[22px] font-bold">!</div><div className="text-[11px] text-accent font-bold mt-16">رسالة من الإدارة</div><h1 className="text-[20px] font-bold text-primary mt-4">{notification?.title || 'رسالة من الإدارة'}</h1></div>
+            <div className="p-24"><p className="text-[14px] text-secondary leading-8 whitespace-pre-wrap text-center">{notification?.message || ''}</p><button onClick={onClose} className="w-full h-48 rounded-12 bg-primary text-white text-[13px] font-bold mt-24">تم</button></div>
+        </div>
+    </div>
+);
+
+const useEmployeeAdminMessages = ({sessionName,employeeId,isAdmin}) => {
+    const [notification,setNotification]=useState(null);
+    const rowsRef=useRef([]),currentRef=useRef(null),claimedRef=useRef(new Set()),dbRef=useRef(null);
+    useEffect(()=>{currentRef.current=notification},[notification]);
+    useEffect(()=>{
+        if(!sessionName||isAdmin){setNotification(null);currentRef.current=null;return;}
+        let active=true,unsubscribe=null,timer=null;
+        const targetKeys=employeeAliasVariants(sessionName);
+        const matchesTarget=row=>{if(employeeId&&row.employeeId&&row.employeeId===employeeId)return true;const keys=Array.isArray(row.targetKeys)?row.targetKeys:[row.targetKey].filter(Boolean);return keys.some(k=>targetKeys.includes(k))};
+        const due=row=>{if(row.status!=='active')return false;const max=Math.max(1,Number(row.maxShows)||1),shown=Math.max(0,Number(row.shownCount)||0);if(shown>=max)return false;if(row.deliveryMode==='scheduled'){const ms=row.scheduledAt?.toMillis?row.scheduledAt.toMillis():new Date(row.scheduledAt||0).getTime();if(!ms||ms>Date.now())return false;}return matchesTarget(row)};
+        const evaluate=async()=>{if(!active||currentRef.current||!dbRef.current)return;const candidates=rowsRef.current.filter(due).filter(r=>!claimedRef.current.has(r.id)).sort((a,b)=>{const at=x=>x?.toMillis?x.toMillis():new Date(x||0).getTime()||0;return (a.deliveryMode==='scheduled'?at(a.scheduledAt):at(a.createdAt))-(b.deliveryMode==='scheduled'?at(b.scheduledAt):at(b.createdAt))});for(const candidate of candidates){if(!active||currentRef.current)return;const ref=dbRef.current.collection(EMPLOYEE_NOTIFICATION_COLLECTION).doc(candidate.id);try{let shownDoc=null;await dbRef.current.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)throw new Error('SKIP');const row={id:snap.id,...snap.data()};if(!due(row))throw new Error('SKIP');const shown=Math.max(0,Number(row.shownCount)||0),max=Math.max(1,Number(row.maxShows)||1),next=shown+1;tx.set(ref,{shownCount:next,lastShownAt:firebase.firestore.FieldValue.serverTimestamp(),lastShownName:sessionName,status:next>=max?'completed':'active',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});shownDoc={...row,shownCount:next,status:next>=max?'completed':'active'}});if(shownDoc){claimedRef.current.add(candidate.id);currentRef.current=shownDoc;setNotification(shownDoc);return}}catch(e){if(e?.message!=='SKIP')console.warn('[Employee notification]',e)}}};
+        getDb().then(db=>{if(!active)return;dbRef.current=db;unsubscribe=db.collection(EMPLOYEE_NOTIFICATION_COLLECTION).limit(150).onSnapshot(snap=>{if(!active)return;rowsRef.current=snap.docs.map(d=>({id:d.id,...d.data()}));if(currentRef.current&&!rowsRef.current.some(r=>r.id===currentRef.current.id)){currentRef.current=null;setNotification(null)}evaluate()},e=>console.warn('[Employee notifications realtime]',e));timer=setInterval(evaluate,15000)}).catch(e=>console.warn('[Employee notifications]',e));
+        return()=>{active=false;if(timer)clearInterval(timer);try{unsubscribe?.()}catch{}};
+    },[sessionName,employeeId,isAdmin]);
+    const dismiss=()=>{currentRef.current=null;setNotification(null)};
+    return {employeeAdminMessage:notification,dismissEmployeeAdminMessage:dismiss};
+};
+
 // ============================================================
 // التطبيق الرئيسي
 // ============================================================
@@ -3520,6 +3549,7 @@ const App = () => {
     const totalCategoryCount  = categoryNames.length + 1 + (isAdmin ? 1 : 0);
     const currentEmployeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
     const currentSiteAccessAllowed = employeeSiteAccessAllowed(employeeSiteControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
+    const { employeeAdminMessage, dismissEmployeeAdminMessage } = useEmployeeAdminMessages({sessionName,employeeId:currentEmployeeId,isAdmin});
 
     if (!sessionName) {
         return (
@@ -3549,6 +3579,10 @@ const App = () => {
     }
 
     const chip = (active) => `px-14 py-10 rounded-full text-[13px] font-medium border transition-colors duration-200 ${active ? 'bg-primary text-bg border-primary' : 'bg-bg text-secondary border-border hover:border-muted hover:text-primary'}`;
+
+    if (employeeAdminMessage) {
+        return <EmployeeAdminMessageScreen notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />;
+    }
 
     return (
         <div className="min-h-screen font-sans">

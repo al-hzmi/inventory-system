@@ -1,31 +1,34 @@
-name: BATCO Employee Messages V31 Runner
+name: Update Version
 
 on:
   push:
     paths:
-      - '.github/workflows/update-version.yml'
+      - 'data/jeddah.tsv'
+      - 'data/riyadh.tsv'
 
 permissions:
   contents: write
 
 jobs:
-  patch:
+  update-version:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Repair patch marker
+      - name: Update version.json
         run: |
-          sed -i "s/function CustomerManagerModal({customer,devices,busy,onClose/function CustomerManagerModal({customer,devices=[],busy=false,onClose/" .github/scripts/employee_messages_patch_v31.py
+          DATE=$(TZ=Asia/Riyadh date +"%Y-%m-%d %H:%M")
+          echo "{\"lastUpdate\":\"$DATE\"}" > data/version.json
 
-      - name: Apply employee messages patch
-        run: python3 .github/scripts/employee_messages_patch_v31.py
-
-      - name: Commit patched site
+      - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Add employee one-time and scheduled in-app messages"
-          git push origin HEAD:main
+
+          git add data/version.json
+
+          git diff --cached --quiet || git commit -m "Auto update version.json"
+
+          git push
