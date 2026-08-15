@@ -57,7 +57,7 @@ jobs:
                   r=subprocess.run(['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/out.js'],capture_output=True,text=True)
                   if r.returncode: print(r.stderr); sys.exit(1)
           idx=Path('index.html').read_text(); adm=Path('admin-dashboard.html').read_text()
-          assert \"window.location.href = './admin-stocktake.html'\" in idx
+          assert "window.location.href = './admin-stocktake.html'" in idx
           assert '>إدارة الجرد</span>' in idx
           assert 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx
           assert './admin-stocktake.html' in adm and 'إدارة الجرد' in adm
