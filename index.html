@@ -311,6 +311,45 @@ const useEmployeeSiteControl = () => {
     return control;
 };
 
+const STOCKTAKE_CONTROL_DOC = 'stocktake_feature';
+const DEFAULT_STOCKTAKE_CONTROL = { enabled:false, accessMode:'none', allowedEmployeeIds:[], allowedEmployeeNames:[], activeCampaignId:'' };
+const useStocktakeControl = () => {
+    const [control, setControl] = useState(DEFAULT_STOCKTAKE_CONTROL);
+    useEffect(() => {
+        let active = true, unsubscribe = null;
+        (async () => {
+            try {
+                const db = await getDb();
+                if (!active) return;
+                unsubscribe = db.collection('system_controls').doc(STOCKTAKE_CONTROL_DOC).onSnapshot(doc => {
+                    const raw = doc.exists ? doc.data() : {};
+                    if (active) setControl({
+                        ...DEFAULT_STOCKTAKE_CONTROL,
+                        ...raw,
+                        enabled: !!raw.enabled,
+                        accessMode: ['none','admin_only','selected','all'].includes(raw.accessMode) ? raw.accessMode : 'none',
+                        allowedEmployeeIds: Array.isArray(raw.allowedEmployeeIds) ? raw.allowedEmployeeIds : [],
+                        allowedEmployeeNames: Array.isArray(raw.allowedEmployeeNames) ? raw.allowedEmployeeNames : [],
+                        activeCampaignId: String(raw.activeCampaignId || '')
+                    });
+                }, () => active && setControl(DEFAULT_STOCKTAKE_CONTROL));
+            } catch (e) { if (active) setControl(DEFAULT_STOCKTAKE_CONTROL); }
+        })();
+        return () => { active = false; if (unsubscribe) unsubscribe(); };
+    }, []);
+    return control;
+};
+const stocktakeAccessAllowed = (control, { name = '', employeeId = '', isAdmin = false } = {}) => {
+    if (isAdmin) return true;
+    if (!control?.enabled) return false;
+    const mode = control?.accessMode || 'none';
+    if (mode === 'all') return true;
+    if (mode !== 'selected') return false;
+    const ids = new Set(Array.isArray(control?.allowedEmployeeIds) ? control.allowedEmployeeIds : []);
+    const names = new Set((Array.isArray(control?.allowedEmployeeNames) ? control.allowedEmployeeNames : []).map(normalizeText));
+    return ids.has(employeeId) || names.has(normalizeText(name));
+};
+
 const employeeSiteAccessAllowed = (control, { name = '', employeeId = '', isAdmin = false } = {}) => {
     if (isAdmin) return true;
     const mode = control?.mode || 'open';
@@ -1974,6 +2013,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
     const employeeSiteControl = useEmployeeSiteControl();
+    const stocktakeControl = useStocktakeControl();
     const [name, setName] = useState(initialName);
     const [step, setStep] = useState('name');
     const [error, setError] = useState('');
@@ -3548,6 +3588,7 @@ const App = () => {
     const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
     const totalCategoryCount  = categoryNames.length + 1 + (isAdmin ? 1 : 0);
     const currentEmployeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
+    const currentStocktakeAccessAllowed = stocktakeAccessAllowed(stocktakeControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
     const currentSiteAccessAllowed = employeeSiteAccessAllowed(employeeSiteControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
     const { employeeAdminMessage, dismissEmployeeAdminMessage } = useEmployeeAdminMessages({sessionName,employeeId:currentEmployeeId,isAdmin});
 
@@ -3648,6 +3689,13 @@ const App = () => {
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-accentSoft border border-accent text-accent hover:bg-accent hover:text-white transition-colors animate-flip">
                                     <Icon.Dashboard className="w-20 h-20" />
                                     <span className="hidden lg:inline text-[12px] font-bold whitespace-nowrap">إدارة المنتجات</span>
+                                </button>
+                            )}
+                            {currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (
+                                <button onClick={() => { window.location.href = './stocktake.html'; }} title="فتح الجرد"
+                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
+                                    <Icon.Archive className="w-20 h-20" />
+                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">الجرد</span>
                                 </button>
                             )}
                             {isAdmin && (
