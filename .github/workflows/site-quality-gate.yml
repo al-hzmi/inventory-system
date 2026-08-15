@@ -29,7 +29,7 @@ jobs:
           failures=[]
           text_ext={'.html','.js','.json','.css','.md','.txt','.tsv','.yml','.yaml'}
           for p in Path('.').rglob('*'):
-              if not p.is_file() or '.git' in p.parts: continue
+              if not p.is_file() or '.git' in p.parts or 'node_modules' in p.parts: continue
               if p.suffix.lower() in text_ext:
                   try: s=p.read_text(errors='strict')
                   except Exception as e: failures.append(f'UTF8 {p}: {e}'); continue
@@ -38,10 +38,9 @@ jobs:
           for p in Path('.').glob('*.json'):
               try: json.loads(p.read_text())
               except Exception as e: failures.append(f'JSON {p}: {e}')
-          # Check local root-level references from HTML. Ignore dynamic/templates, anchors, data/blob/mail/tel and external URLs.
           for p in Path('.').glob('*.html'):
               s=p.read_text(errors='replace')
-              for attr,val in re.findall(r'\b(?:src|href)=["\']([^"\']+)["\']',s,re.I):
+              for val in re.findall(r'\b(?:src|href)=["\']([^"\']+)["\']',s,re.I):
                   v=val.strip()
                   if not v or v.startswith(('#','http:','https:','//','data:','blob:','mailto:','tel:','javascript:')): continue
                   if any(ch in v for ch in ['{','}','`','$']): continue
@@ -83,10 +82,11 @@ jobs:
               count+=1
               r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
               if r.returncode: failures.append(f'{p}:\n{r.stderr}')
-          for p in sorted(Path('api').glob('*.js')) if Path('api').exists() else []:
-              count+=1
-              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
-              if r.returncode: failures.append(f'{p}:\n{r.stderr}')
+          if Path('api').exists():
+              for p in sorted(Path('api').glob('*.js')):
+                  count+=1
+                  r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+                  if r.returncode: failures.append(f'{p}:\n{r.stderr}')
           if failures:
               print('\n'.join(failures));sys.exit(1)
           print('SYNTAX_AUDIT_OK scripts=',count)
@@ -105,10 +105,9 @@ jobs:
           if min(app,hook,use)<0 or not (app<hook<use): failures.append('index: stocktake hook must be declared inside App before use')
           login=idx.find('const LoginScreen =');
           if login>=0 and app>login and 'const stocktakeControl = useStocktakeControl();' in idx[login:app]: failures.append('index: stocktake hook leaked into LoginScreen')
-          required=['index.html','customer.html','admin-dashboard.html','stocktake.html','admin-stocktake.html']
+          required=['index.html','customer.html','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html']
           for f in required:
               if not Path(f).exists() or Path(f).stat().st_size<1000: failures.append(f'{f}: missing or suspiciously small')
-          # Known catastrophic self-reference pattern.
           for p in Path('.').glob('*.html'):
               s=p.read_text(errors='replace')
               for m in re.finditer(r'\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*[+\-*/]',s): failures.append(f'{p}: self-reference {m.group(1)}')
@@ -125,13 +124,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m http.server 4173 >/tmp/http.log 2>&1 &
-          cat > /tmp/audit.mjs <<'JS'
+          cat > .audit-runtime.mjs <<'JS'
           import { chromium } from 'playwright';
           import fs from 'fs';
           const base='http://127.0.0.1:4173';
           const admin={inventory_user_name_v2:'مهند',inventory_admin_token_v2:'1jh297-spgf2z'};
           const employee={inventory_user_name_v2:'اختبار تقني',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
-          const primary=[
+          const scenarios=[
             ['entry','/index.html',{}],
             ['employee','/index.html?employee=1',employee],
             ['admin-employee','/index.html?employee=1',admin],
@@ -142,10 +141,10 @@ jobs:
             ['security-center','/security-center.html',admin],
           ];
           const htmls=fs.readdirSync('.').filter(x=>x.endsWith('.html'));
-          const covered=new Set(primary.map(x=>x[1].split('?')[0].slice(1)));
-          for(const f of htmls) if(!covered.has(f)) primary.push([`all-html:${f}`,`/${f}`,{}]);
+          const covered=new Set(scenarios.map(x=>x[1].split('?')[0].slice(1)));
+          for(const f of htmls) if(!covered.has(f)) scenarios.push([`all-html:${f}`,`/${f}`,{}]);
           const browser=await chromium.launch({headless:true}); let failed=false;
-          for(const [name,path,store] of primary){
+          for(const [name,path,store] of scenarios){
             const context=await browser.newContext();
             await context.addInitScript(store=>{for(const [k,v] of Object.entries(store))localStorage.setItem(k,v)},store);
             const page=await context.newPage(); const pageErrors=[];
@@ -164,4 +163,5 @@ jobs:
           }
           await browser.close(); if(failed)process.exit(1); console.log('BROWSER_RUNTIME_OK');
           JS
-          node /tmp/audit.mjs
+          node .audit-runtime.mjs
+          rm -f .audit-runtime.mjs
