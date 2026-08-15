@@ -1,0 +1,161 @@
+name: Stocktake V34
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/stocktake-v34.yml'
+permissions:
+  contents: write
+jobs:
+  build-verify-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Build stocktake pages and patch integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip
+
+          stock_b64 = Path('.github/stocktake-v34-stock.b64').read_text().strip()
+          admin_b64 = Path('.github/stocktake-v34-admin.b64').read_text().strip()
+          Path('stocktake.html').write_bytes(gzip.decompress(base64.b64decode(stock_b64)))
+          Path('admin-stocktake.html').write_bytes(gzip.decompress(base64.b64decode(admin_b64)))
+
+          index_path = Path('index.html')
+          index = index_path.read_text()
+          if 'const STOCKTAKE_CONTROL_DOC=' not in index:
+              marker = "const employeeSiteAccessAllowed = (control, { name = '', employeeId = '', isAdmin = false } = {}) => {"
+              if marker not in index:
+                  raise SystemExit('index access marker missing')
+              helper = r'''const STOCKTAKE_CONTROL_DOC = 'stocktake_feature';
+          const DEFAULT_STOCKTAKE_CONTROL = { enabled:false, accessMode:'none', allowedEmployeeIds:[], allowedEmployeeNames:[], activeCampaignId:'' };
+          const useStocktakeControl = () => {
+              const [control, setControl] = useState(DEFAULT_STOCKTAKE_CONTROL);
+              useEffect(() => {
+                  let active = true, unsubscribe = null;
+                  (async () => {
+                      try {
+                          const db = await getDb();
+                          if (!active) return;
+                          unsubscribe = db.collection('system_controls').doc(STOCKTAKE_CONTROL_DOC).onSnapshot(doc => {
+                              const raw = doc.exists ? doc.data() : {};
+                              if (active) setControl({
+                                  ...DEFAULT_STOCKTAKE_CONTROL,
+                                  ...raw,
+                                  enabled: !!raw.enabled,
+                                  accessMode: ['none','admin_only','selected','all'].includes(raw.accessMode) ? raw.accessMode : 'none',
+                                  allowedEmployeeIds: Array.isArray(raw.allowedEmployeeIds) ? raw.allowedEmployeeIds : [],
+                                  allowedEmployeeNames: Array.isArray(raw.allowedEmployeeNames) ? raw.allowedEmployeeNames : [],
+                                  activeCampaignId: String(raw.activeCampaignId || '')
+                              });
+                          }, () => active && setControl(DEFAULT_STOCKTAKE_CONTROL));
+                      } catch (e) { if (active) setControl(DEFAULT_STOCKTAKE_CONTROL); }
+                  })();
+                  return () => { active = false; if (unsubscribe) unsubscribe(); };
+              }, []);
+              return control;
+          };
+          const stocktakeAccessAllowed = (control, { name = '', employeeId = '', isAdmin = false } = {}) => {
+              if (isAdmin) return true;
+              if (!control?.enabled) return false;
+              const mode = control?.accessMode || 'none';
+              if (mode === 'all') return true;
+              if (mode !== 'selected') return false;
+              const ids = new Set(Array.isArray(control?.allowedEmployeeIds) ? control.allowedEmployeeIds : []);
+              const names = new Set((Array.isArray(control?.allowedEmployeeNames) ? control.allowedEmployeeNames : []).map(normalizeText));
+              return ids.has(employeeId) || names.has(normalizeText(name));
+          };
+
+          '''
+              index = index.replace(marker, helper + marker, 1)
+
+          app_marker = "    const employeeSiteControl = useEmployeeSiteControl();\n"
+          if 'const stocktakeControl = useStocktakeControl();' not in index:
+              if app_marker not in index:
+                  raise SystemExit('index app marker missing')
+              index = index.replace(app_marker, app_marker + "    const stocktakeControl = useStocktakeControl();\n", 1)
+
+          current_marker = "    const currentEmployeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';\n"
+          if 'const currentStocktakeAccessAllowed' not in index:
+              if current_marker not in index:
+                  raise SystemExit('index employee id marker missing')
+              index = index.replace(current_marker, current_marker + "    const currentStocktakeAccessAllowed = stocktakeAccessAllowed(stocktakeControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});\n", 1)
+
+          admin_btn_marker = '''                            {isAdmin && (
+                                <button onClick={() => { window.location.href = './admin-dashboard.html'; }} title="لوحة التحكم الإدارية"'''
+          if "window.location.href = './stocktake.html'" not in index:
+              if admin_btn_marker not in index:
+                  raise SystemExit('index toolbar marker missing')
+              stock_btn = '''                            {currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (
+                                <button onClick={() => { window.location.href = './stocktake.html'; }} title="فتح الجرد"
+                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
+                                    <Icon.Archive className="w-20 h-20" />
+                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">الجرد</span>
+                                </button>
+                            )}
+
+          '''
+              index = index.replace(admin_btn_marker, stock_btn + admin_btn_marker, 1)
+          index_path.write_text(index)
+
+          admin_path = Path('admin-dashboard.html')
+          admin = admin_path.read_text()
+          if "window.location.href='./admin-stocktake.html'" not in admin:
+              marker = '''          <button onClick={()=>openArea('customers','live')} className="bg-white border border-border rounded-2xl p-5 text-right shadow-card hover:border-[#D6D3D1] press"><div className="flex items-start justify-between"><div className="w-12 h-12 rounded-2xl bg-accentSoft text-accent flex items-center justify-center"><Icon name="building" className="w-6 h-6"/></div><Pill tone={control.enabled?'ok':'bad'}>{control.enabled?'البوابة تعمل':'متوقفة'}</Pill></div><h3 className="text-lg font-bold mt-5">إدارة العملاء</h3><p className="text-[11px] text-secondary mt-1 leading-5">الشركات، الحسابات، النشاط، الجلسات، الطلبات والمسودات والتحكم الكامل بالبوابة.</p><div className="grid grid-cols-3 gap-2 mt-5"><Mini label="الشركات" value={companies.length}/><Mini label="العملاء" value={customers.length}/><Mini label="متصل الآن" value={customerOnlineCount}/></div><div className="text-[11px] text-accent font-bold mt-5">فتح مركز العملاء ←</div></button>
+          </div>'''
+              if marker not in admin:
+                  raise SystemExit('admin domain home marker missing')
+              replacement = marker[:-8] + '''          <button onClick={()=>{window.location.href='./admin-stocktake.html'}} className="md:col-span-2 bg-white border border-border rounded-2xl p-5 text-right shadow-card hover:border-[#D6D3D1] press"><div className="flex items-start justify-between"><div className="w-12 h-12 rounded-2xl bg-successSoft text-success flex items-center justify-center"><Icon name="file" className="w-6 h-6"/></div><Pill tone="info">موسمي</Pill></div><h3 className="text-lg font-bold mt-5">إدارة الجرد</h3><p className="text-[11px] text-secondary mt-1 leading-5">حملات الجرد، الفرق، رفع ملفات Excel، صلاحيات الموظفين، النواقص، الملاحظات وسجل التعديلات.</p><div className="text-[11px] text-accent font-bold mt-5">فتح مركز الجرد ←</div></button>
+          </div>'''
+              admin = admin.replace(marker, replacement, 1)
+          admin_path.write_text(admin)
+          PY
+      - name: Syntax and invariant checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          for fn in ['stocktake.html','admin-stocktake.html']:
+              s=Path(fn).read_text()
+              st=s.rfind('<script>')+len('<script>')
+              en=s.rfind('</script>')
+              Path('/tmp/'+fn+'.js').write_text(s[st:en])
+          for fn in ['index.html','admin-dashboard.html']:
+              s=Path(fn).read_text()
+              start=s.find('<script type="text/babel">')
+              if start<0: raise SystemExit(fn+' babel script missing')
+              start += len('<script type="text/babel">')
+              end=s.rfind('</script>')
+              Path('/tmp/'+fn+'.jsx').write_text(s[start:end])
+          PY
+          node --check /tmp/stocktake.html.js
+          node --check /tmp/admin-stocktake.html.js
+          npx --yes esbuild@0.25.9 /tmp/index.html.jsx --loader:.jsx=jsx --outfile=/tmp/index-check.js >/dev/null
+          npx --yes esbuild@0.25.9 /tmp/admin-dashboard.html.jsx --loader:.jsx=jsx --outfile=/tmp/admin-check.js >/dev/null
+          grep -q "stocktake_feature" stocktake.html
+          grep -q "accessMode:'selected'" admin-stocktake.html
+          grep -q "stocktake_audit" stocktake.html
+          grep -q "مرفوض:.*صنف موجود في فرق أخرى" admin-stocktake.html
+          grep -q "draft')return toast('الاستيراد متاح قبل بدء الحملة فقط'" admin-stocktake.html
+          grep -q "data-full" stocktake.html
+          grep -q "النواقص" stocktake.html
+          grep -q "ملاحظات" stocktake.html
+          grep -q "./stocktake.html" index.html
+          grep -q "./admin-stocktake.html" admin-dashboard.html
+      - name: Commit verified stocktake module
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "BATCO Automation"
+          git config user.email "actions@users.noreply.github.com"
+          rm -f .github/stocktake-v34-stock.b64 .github/stocktake-v34-admin.b64 .github/placeholder.tmp
+          rm -f .github/workflows/stocktake-v34.yml
+          git add -A
+          git commit -m "Add controlled year-end stocktake module V34"
+          git push origin main
