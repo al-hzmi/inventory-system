@@ -124,7 +124,7 @@
 window.__customerInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window.__customerInstallPrompt = e; window.dispatchEvent(new Event('customerinstallready')); });
 window.addEventListener('appinstalled', function(){ window.__customerInstallPrompt = null; });
-if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=32.0',{updateViaCache:'none'}).catch(function(){}); }); }
+if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=33.0',{updateViaCache:'none'}).catch(function(){}); }); }
 </script>
 <script type="text/babel">
 
@@ -142,6 +142,7 @@ const DEFAULT_CUSTOMER_PORTAL_CONTROL = {
 const DATA_PATH = './data/';
 const IMAGES_PATH = './images/';
 const GUEST_NAME_KEY = 'customer_guest_name_v1';
+const CUSTOMER_VISITOR_KEY = 'batco_customer_visitor_id_v1';
 const LAST_SUBMITTED_ORDER_KEY = 'customer_last_submitted_order_v2';
 const PENDING_CHECKOUT_SNAPSHOT_KEY = 'customer_pending_checkout_snapshot_v2';
 const CART_STEP = 0.5;
@@ -197,6 +198,17 @@ const customerSessionId = (()=>{
     return id;
   }catch{return `cs_${Date.now().toString(36)}_${uidPart()}`}
 })();
+const customerVisitorId=(()=>{
+  try{
+    let id=localStorage.getItem(CUSTOMER_VISITOR_KEY);
+    if(!id){id=`cv_${Date.now().toString(36)}_${uidPart()}_${uidPart()}`;localStorage.setItem(CUSTOMER_VISITOR_KEY,id)}
+    return id;
+  }catch{return `cv_${Date.now().toString(36)}_${uidPart()}`}
+})();
+const currentGuestName=()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}};
+const customerIdentity=user=>user?.uid
+  ? {key:`u_${user.uid}`,customerUid:user.uid,visitorId:customerVisitorId,identityType:'account'}
+  : {key:`g_${customerVisitorId}`,customerUid:'',visitorId:customerVisitorId,identityType:'guest'};
 const CUSTOMER_DEVICE_INSTALL_KEY='batco_customer_device_install_v1';
 const compactHash=str=>{let h=2166136261>>>0;for(const ch of String(str||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h.toString(36)};
 function customerInstallId(){
@@ -228,41 +240,44 @@ async function ensureCustomerDeviceAllowed(user,profile){
   return {allowed:true,deviceId:ref.id,info};
 }
 async function logCustomerEvent(user,type,label='',data={}){
-  if(!user?.uid)return {activity:false,profile:false};
-  const device=customerDeviceInfo();
+  const identity=customerIdentity(user),device=customerDeviceInfo(),guestName=currentGuestName();
   const activityWrite=db.collection(CUSTOMER_ACTIVITY_COLLECTION).add({
-    customerUid:user.uid,sessionId:customerSessionId,type,label:String(label||''),data:data||{},device,
+    customerUid:identity.customerUid,visitorId:identity.visitorId,identityType:identity.identityType,
+    name:user?.uid?'':guestName,sessionId:customerSessionId,type,label:String(label||''),data:data||{},device,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
-  const profileWrite=db.collection(CUSTOMER_COLLECTION).doc(user.uid).set({
-    lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:String(type||'activity'),
-    lastActivityLabel:String(label||''),lastSessionId:customerSessionId,lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),
-    lastDevice:{deviceId:device.deviceId||'',fingerprint:device.fingerprint||'',userAgent:device.userAgent||'',platform:device.platform||'',viewport:device.viewport||'',screen:device.screen||'',standalone:!!device.standalone,timezone:device.timezone||''},
-    telemetryVersion:4
-  },{merge:true});
-  const results=await Promise.allSettled([activityWrite,profileWrite]);
-  if(results[0].status==='rejected')console.warn('[Customer telemetry activity]',results[0].reason?.message||results[0].reason);
-  if(results[1].status==='rejected')console.warn('[Customer telemetry profile]',results[1].reason?.message||results[1].reason);
-  return {activity:results[0].status==='fulfilled',profile:results[1].status==='fulfilled'};
+  const writes=[activityWrite];
+  if(user?.uid){
+    writes.push(db.collection(CUSTOMER_COLLECTION).doc(user.uid).set({
+      visitorId:identity.visitorId,lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:String(type||'activity'),
+      lastActivityLabel:String(label||''),lastSessionId:customerSessionId,lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),
+      lastDevice:{deviceId:device.deviceId||'',fingerprint:device.fingerprint||'',userAgent:device.userAgent||'',platform:device.platform||'',viewport:device.viewport||'',screen:device.screen||'',standalone:!!device.standalone,timezone:device.timezone||''},
+      telemetryVersion:5
+    },{merge:true}));
+  }
+  const results=await Promise.allSettled(writes);
+  results.forEach((r,i)=>{if(r.status==='rejected')console.warn('[Customer telemetry]',i,r.reason?.message||r.reason)});
+  return {activity:results[0]?.status==='fulfilled',profile:user?.uid?(results[1]?.status==='fulfilled'):false};
 }
 async function touchCustomerSession(user,profile,event='active'){
-  if(!user?.uid)return {session:false,profile:false};
-  const device=customerDeviceInfo();
+  const identity=customerIdentity(user),device=customerDeviceInfo();
   try{
-    const key='batco_customer_session_started_'+customerSessionId;
+    const key='batco_customer_session_started_'+identity.key+'_'+customerSessionId;
     const first=!sessionStorage.getItem(key);
-    const payload={customerUid:user.uid,sessionId:customerSessionId,name:profile?.name||'',company:profile?.company||'',phone:profile?.phone||'',event,lastActive:firebase.firestore.FieldValue.serverTimestamp(),device};
+    const resolvedName=String(profile?.name||(!user?.uid?currentGuestName():'')).trim();
+    const payload={customerUid:identity.customerUid,visitorId:identity.visitorId,identityType:identity.identityType,sessionId:customerSessionId,name:resolvedName,company:profile?.company||'',phone:profile?.phone||'',event,lastActive:firebase.firestore.FieldValue.serverTimestamp(),device,userAgent:device.userAgent||'',platform:device.platform||''};
     if(first){payload.startedAt=firebase.firestore.FieldValue.serverTimestamp();sessionStorage.setItem(key,'1')}
-    const sessionWrite=db.collection(CUSTOMER_SESSION_COLLECTION).doc(`${user.uid}_${customerSessionId}`).set(payload,{merge:true});
-    const profileWrite=db.collection(CUSTOMER_COLLECTION).doc(user.uid).set({
-      lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),lastSessionId:customerSessionId,
-      lastSessionEvent:String(event||'active'),lastDevice:{deviceId:device.deviceId||'',fingerprint:device.fingerprint||'',userAgent:device.userAgent||'',platform:device.platform||'',viewport:device.viewport||'',screen:device.screen||'',standalone:!!device.standalone,timezone:device.timezone||''},
-      telemetryVersion:4
-    },{merge:true});
-    const results=await Promise.allSettled([sessionWrite,profileWrite]);
-    if(results[0].status==='rejected')console.warn('[Customer session log]',results[0].reason?.message||results[0].reason);
-    if(results[1].status==='rejected')console.warn('[Customer session profile]',results[1].reason?.message||results[1].reason);
-    return {session:results[0].status==='fulfilled',profile:results[1].status==='fulfilled'};
+    const sessionWrite=db.collection(CUSTOMER_SESSION_COLLECTION).doc(`${identity.key}_${customerSessionId}`).set(payload,{merge:true});
+    const writes=[sessionWrite];
+    if(user?.uid){
+      writes.push(db.collection(CUSTOMER_COLLECTION).doc(user.uid).set({
+        visitorId:identity.visitorId,lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),lastSessionId:customerSessionId,
+        lastSessionEvent:String(event||'active'),lastDevice:{deviceId:device.deviceId||'',fingerprint:device.fingerprint||'',userAgent:device.userAgent||'',platform:device.platform||'',viewport:device.viewport||'',screen:device.screen||'',standalone:!!device.standalone,timezone:device.timezone||''},telemetryVersion:5
+      },{merge:true}));
+    }
+    const results=await Promise.allSettled(writes);
+    results.forEach((r,i)=>{if(r.status==='rejected')console.warn('[Customer session]',i,r.reason?.message||r.reason)});
+    return {session:results[0]?.status==='fulfilled',profile:user?.uid?(results[1]?.status==='fulfilled'):false};
   }catch(e){console.warn('[Customer session]',e?.message||e);return {session:false,profile:false}}
 }
 
@@ -743,7 +758,7 @@ function ProductMeta({item}){
   return <div className="catalog-meta"><span className="ltr font-bold text-secondary">{item.id}</span><span className="catalog-chip">الشد: <b className="ltr mr-1">{item.pack||'—'}</b></span></div>
 }
 function ApproxPrice({item}){
-  return <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[10px] text-muted">السعر التقريبي للحبة</span><b className="text-[12px] text-accent ltr">{item.approxPrice>0?`≈ ${PRICE_NF.format(item.approxPrice)} ⃁`:'—'}</b></div>
+  return <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[10px] text-muted">السعر التقريبي للحبة</span><b className="text-[12px] text-accent ltr">{item.approxPrice>0?`≈ ${PRICE_NF.format(item.approxPrice)} ر.س`:'—'}</b></div>
 }
 function ProductCard({item,onAdd,onZoom,onImageMissing}){
   return <article className="catalog-card bg-white border border-border rounded-16 overflow-hidden flex flex-col shadow-card"><button onClick={()=>onZoom(item)} className="catalog-media"><ProductImage file={item.imageFile} alt={item.name} onMissing={onImageMissing} className="w-full h-full object-contain bg-surface"/></button><div className="p-2.5 flex-1 flex flex-col"><ProductMeta item={item}/><h3 className="text-[9px] sm:text-[10px] font-medium leading-4 line-clamp-1 text-secondary mt-1">{item.name||'---'}</h3><ApproxPrice item={item}/><button onClick={()=>onAdd(item)} className="mt-2 h-9 rounded-10 bg-primary text-white text-[11px] font-bold flex items-center justify-center gap-1.5"><Icon name="plus" className="w-3.5 h-3.5"/>إضافة</button></div></article>
@@ -756,16 +771,16 @@ function Lightbox({item,onClose}){if(!item)return null;return <div className="fi
 
 function CartView({cartItems,branches,onEdit,onRemove,onCheckout,onSaveDraft,savingDraft}){
   const totalCartons=sum(cartItems.map(i=>i.totalQty)); const estimatedTotal=sum(cartItems.map(i=>(Number(i.cartonPrice)||0)*Number(i.totalQty||0))); if(!cartItems.length)return <Empty title="طلبك فارغ" note="أضف المنتجات من المعرض، ثم وزّع الكمية على الفروع." icon="cart"/>;
-  return <div className="grid gap-4"><div className="bg-white border border-border rounded-16 p-4 flex items-center justify-between"><div><div className="text-xs text-muted">ملخص طلب الشراء</div><b>{cartItems.length} صنف</b></div><div className="text-left"><div className="text-xs text-muted">إجمالي الكراتين</div><b className="ltr">{NF.format(totalCartons)}</b>{estimatedTotal>0&&<div className="text-[10px] text-accent font-bold ltr mt-1">≈ {PRICE_NF.format(estimatedTotal)} ⃁</div>}</div></div>
-    {cartItems.map(item=><div key={item.cleanId} className="bg-white border border-border rounded-16 p-3"><div className="flex gap-3"><div className="w-20 h-20 rounded-12 overflow-hidden border border-border shrink-0"><ProductImage file={item.imageFile} alt={item.name} className="w-full h-full object-contain bg-surface"/></div><div className="min-w-0 flex-1"><div className="text-[11px] text-muted ltr">{item.id}</div><b className="text-sm line-clamp-2">{item.name}</b><div className="text-xs mt-2 flex flex-wrap gap-x-3 gap-y-1"><span>الإجمالي: <b className="ltr">{NF.format(item.totalQty)} كرتون</b></span>{Number(item.cartonPrice)>0&&<span>سعر الكرتون: <b className="ltr text-accent">{PRICE_NF.format(item.cartonPrice)} ⃁</b></span>}</div></div></div><div className="mt-3 bg-surface rounded-12 p-3 grid gap-2">{branches.filter(b=>(item.branchQuantities[b.id]||0)>0).map(b=><div key={b.id} className="flex items-center justify-between text-xs"><span>{b.name}</span><b className="ltr">{NF.format(item.branchQuantities[b.id])}</b></div>)}</div><div className="mt-3 grid grid-cols-2 gap-2"><button onClick={()=>onEdit(item)} className="h-10 rounded-10 border border-border text-xs font-bold flex items-center justify-center gap-2"><Icon name="edit" className="w-4 h-4"/>تعديل التوزيع</button><button onClick={()=>onRemove(item.cleanId)} className="h-10 rounded-10 border border-danger/20 bg-dangerSoft text-danger text-xs font-bold">إزالة</button></div></div>)}
+  return <div className="grid gap-4"><div className="bg-white border border-border rounded-16 p-4 flex items-center justify-between"><div><div className="text-xs text-muted">ملخص طلب الشراء</div><b>{cartItems.length} صنف</b></div><div className="text-left"><div className="text-xs text-muted">إجمالي الكراتين</div><b className="ltr">{NF.format(totalCartons)}</b>{estimatedTotal>0&&<div className="text-[10px] text-accent font-bold ltr mt-1">≈ {PRICE_NF.format(estimatedTotal)} ر.س</div>}</div></div>
+    {cartItems.map(item=><div key={item.cleanId} className="bg-white border border-border rounded-16 p-3"><div className="flex gap-3"><div className="w-20 h-20 rounded-12 overflow-hidden border border-border shrink-0"><ProductImage file={item.imageFile} alt={item.name} className="w-full h-full object-contain bg-surface"/></div><div className="min-w-0 flex-1"><div className="text-[11px] text-muted ltr">{item.id}</div><b className="text-sm line-clamp-2">{item.name}</b><div className="text-xs mt-2 flex flex-wrap gap-x-3 gap-y-1"><span>الإجمالي: <b className="ltr">{NF.format(item.totalQty)} كرتون</b></span>{Number(item.cartonPrice)>0&&<span>سعر الكرتون: <b className="ltr text-accent">{PRICE_NF.format(item.cartonPrice)} ر.س</b></span>}</div></div></div><div className="mt-3 bg-surface rounded-12 p-3 grid gap-2">{branches.filter(b=>(item.branchQuantities[b.id]||0)>0).map(b=><div key={b.id} className="flex items-center justify-between text-xs"><span>{b.name}</span><b className="ltr">{NF.format(item.branchQuantities[b.id])}</b></div>)}</div><div className="mt-3 grid grid-cols-2 gap-2"><button onClick={()=>onEdit(item)} className="h-10 rounded-10 border border-border text-xs font-bold flex items-center justify-center gap-2"><Icon name="edit" className="w-4 h-4"/>تعديل التوزيع</button><button onClick={()=>onRemove(item.cleanId)} className="h-10 rounded-10 border border-danger/20 bg-dangerSoft text-danger text-xs font-bold">إزالة</button></div></div>)}
     <div className="sticky bottom-[76px] bg-white/95 backdrop-blur border border-border rounded-16 p-3 shadow-lift grid grid-cols-2 gap-2"><button disabled={savingDraft} onClick={onSaveDraft} className="h-12 rounded-12 border border-border font-bold text-sm flex items-center justify-center gap-2">{savingDraft?<Spinner/>:<><Icon name="save" className="w-4 h-4"/>حفظ مسودة</>}</button><button onClick={onCheckout} className="h-12 rounded-12 bg-primary text-white font-bold text-sm">متابعة الاعتماد</button></div>
   </div>
 }
 
 function Checkout({items,branches,profile,onBack,onDraft,onSubmit,busy,validationErrors,guestMode=false,initialNotes=''}){
   const [notes,setNotes]=useState(initialNotes||''); const total=sum(items.map(i=>i.totalQty)); const estimatedTotal=sum(items.map(i=>(Number(i.cartonPrice)||0)*Number(i.totalQty||0))); const byBranch=branches.map(b=>({branch:b,items:items.map(i=>({...i,qty:i.branchQuantities[b.id]||0})).filter(i=>i.qty>0)})).filter(x=>x.items.length);
-  return <div className="grid gap-4"><button onClick={onBack} className="w-fit h-10 px-3 rounded-10 border border-border bg-white flex items-center gap-2 text-sm"><Icon name="back" className="w-4 h-4"/>العودة للسلة</button><div className="bg-white border border-border rounded-16 p-4">{guestMode?<><div className="text-xs text-muted">مراجعة الطلب</div><b className="block mt-1">راجع الكميات قبل الإرسال</b><div className="mt-2 text-[11px] text-secondary bg-surface border border-border rounded-10 p-2">لن نطلب بياناتك إلا عند حفظ المسودة أو إرسال الطلب.</div></>:<><div className="text-xs text-muted">العميل</div><b>{profile.name}</b><div className="text-sm text-secondary">{profile.company}</div></>}<div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الأصناف</div><b>{items.length}</b></div><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الفروع</div><b>{byBranch.length}</b></div><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الكراتين</div><b className="ltr">{NF.format(total)}</b></div><div className="bg-accentSoft/50 rounded-10 p-2"><div className="text-[10px] text-muted">القيمة التقريبية</div><b className="ltr text-accent">{estimatedTotal>0?`${PRICE_NF.format(estimatedTotal)} ⃁`:'—'}</b></div></div></div>
-    {byBranch.map(({branch,items:rows})=><div key={branch.id} className="bg-white border border-border rounded-16 overflow-hidden"><div className="p-3 bg-surface border-b border-border font-bold text-sm">{branch.name}</div><div className="divide-y divide-border">{rows.map(i=><div key={i.cleanId} className="p-3 flex justify-between gap-3 text-sm"><div><span className="ltr text-[11px] text-muted block">{i.id}</span><span className="text-[10px] text-secondary line-clamp-1">{i.name}</span>{Number(i.cartonPrice)>0&&<span className="text-[10px] text-accent block ltr mt-1">{PRICE_NF.format(i.cartonPrice)} ⃁ / كرتون</span>}</div><b className="ltr shrink-0">{NF.format(i.qty)}</b></div>)}</div></div>)}
+  return <div className="grid gap-4"><button onClick={onBack} className="w-fit h-10 px-3 rounded-10 border border-border bg-white flex items-center gap-2 text-sm"><Icon name="back" className="w-4 h-4"/>العودة للسلة</button><div className="bg-white border border-border rounded-16 p-4">{guestMode?<><div className="text-xs text-muted">مراجعة الطلب</div><b className="block mt-1">راجع الكميات قبل الإرسال</b><div className="mt-2 text-[11px] text-secondary bg-surface border border-border rounded-10 p-2">لن نطلب بياناتك إلا عند حفظ المسودة أو إرسال الطلب.</div></>:<><div className="text-xs text-muted">العميل</div><b>{profile.name}</b><div className="text-sm text-secondary">{profile.company}</div></>}<div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الأصناف</div><b>{items.length}</b></div><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الفروع</div><b>{byBranch.length}</b></div><div className="bg-surface rounded-10 p-2"><div className="text-[10px] text-muted">الكراتين</div><b className="ltr">{NF.format(total)}</b></div><div className="bg-accentSoft/50 rounded-10 p-2"><div className="text-[10px] text-muted">القيمة التقريبية</div><b className="ltr text-accent">{estimatedTotal>0?`${PRICE_NF.format(estimatedTotal)} ر.س`:'—'}</b></div></div></div>
+    {byBranch.map(({branch,items:rows})=><div key={branch.id} className="bg-white border border-border rounded-16 overflow-hidden"><div className="p-3 bg-surface border-b border-border font-bold text-sm">{branch.name}</div><div className="divide-y divide-border">{rows.map(i=><div key={i.cleanId} className="p-3 flex justify-between gap-3 text-sm"><div><span className="ltr text-[11px] text-muted block">{i.id}</span><span className="text-[10px] text-secondary line-clamp-1">{i.name}</span>{Number(i.cartonPrice)>0&&<span className="text-[10px] text-accent block ltr mt-1">{PRICE_NF.format(i.cartonPrice)} ر.س / كرتون</span>}</div><b className="ltr shrink-0">{NF.format(i.qty)}</b></div>)}</div></div>)}
     {validationErrors?.length>0&&<div className="bg-dangerSoft border border-danger/20 rounded-16 p-4 text-danger"><b className="text-sm flex gap-2"><Icon name="alert" className="w-5 h-5"/>تغير الحد المسموح لبعض الأصناف</b><div className="mt-2 grid gap-1 text-xs">{validationErrors.map(e=><div key={e.cleanId}><span className="ltr">{e.id}</span> — المطلوب {NF.format(e.requested)}، الحد المسموح حاليًا {NF.format(e.allowed)} كرتون</div>)}</div></div>}
     <div className="bg-white border border-border rounded-16 p-4"><label className="text-sm font-bold">ملاحظات الطلب <span className="text-danger">*</span></label><p className="text-xs text-secondary mt-1 mb-3">اكتب طريقة الشحن أو الاستلام وأي تعليمات مهمة.</p><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows="5" className="w-full rounded-12 border border-border p-3 outline-none focus:border-accent resize-none" placeholder="اكتب تعليمات الشحن أو الاستلام المطلوبة..."/></div>
     <div className="grid sm:grid-cols-2 gap-2"><button disabled={busy} onClick={()=>onDraft(notes)} className="h-12 rounded-12 border border-border font-bold flex items-center justify-center gap-2"><Icon name="save" className="w-4 h-4"/>حفظ كمسودة</button><button disabled={busy||!notes.trim()} onClick={()=>onSubmit(notes)} className="h-12 rounded-12 bg-primary text-white font-bold disabled:opacity-40 flex items-center justify-center gap-2">{busy?<Spinner/>:<><Icon name="check" className="w-4 h-4"/>اعتماد وإرسال الطلب</>}</button></div>
@@ -779,7 +794,7 @@ function OrderSuccessScreen({order,onWhatsApp,onClose}){
   return <div className="min-h-[100dvh] ui-auth-bg safe-top safe-bottom px-4 py-6 flex items-center justify-center"><div className="w-full max-w-[560px] ui-panel fade-in">
     <div className="ui-panel-head"><div className="ui-success-dot"><Icon name="check" className="w-6 h-6"/></div><div className="ui-eyebrow !text-success">تم حفظ الطلب بنجاح</div><h1 className="ui-title">طلبك محفوظ ولن يضيع</h1><p className="ui-subtitle">تم تسجيل الطلب داخل حسابك. الآن يمكنك فتح واتساب وإرسال نسخة منه، ويمكنك الرجوع له لاحقًا من «طلباتي».</p></div>
     <div className="ui-panel-body">
-      <div className="rounded-16 border border-border bg-surface p-4"><div className="flex items-center justify-between gap-3"><div><div className="text-[10px] text-muted">رقم الطلب</div><b className="ltr text-base">{order.orderNo||'—'}</b></div><div className="text-left"><div className="text-[10px] text-muted">الكراتين</div><b className="ltr">{NF.format(totalCartons)}</b></div></div><div className="grid grid-cols-2 gap-2 mt-3"><div className="bg-white border border-border rounded-12 p-3 text-center"><div className="text-[10px] text-muted">الأصناف</div><b>{itemCount}</b></div><div className="bg-white border border-border rounded-12 p-3 text-center"><div className="text-[10px] text-muted">القيمة التقريبية</div><b className="ltr text-accent">{estimatedTotal>0?`${PRICE_NF.format(estimatedTotal)} ⃁`:'—'}</b></div></div></div>
+      <div className="rounded-16 border border-border bg-surface p-4"><div className="flex items-center justify-between gap-3"><div><div className="text-[10px] text-muted">رقم الطلب</div><b className="ltr text-base">{order.orderNo||'—'}</b></div><div className="text-left"><div className="text-[10px] text-muted">الكراتين</div><b className="ltr">{NF.format(totalCartons)}</b></div></div><div className="grid grid-cols-2 gap-2 mt-3"><div className="bg-white border border-border rounded-12 p-3 text-center"><div className="text-[10px] text-muted">الأصناف</div><b>{itemCount}</b></div><div className="bg-white border border-border rounded-12 p-3 text-center"><div className="text-[10px] text-muted">القيمة التقريبية</div><b className="ltr text-accent">{estimatedTotal>0?`${PRICE_NF.format(estimatedTotal)} ر.س`:'—'}</b></div></div></div>
       <button onClick={()=>onWhatsApp(order)} className="ui-btn ui-btn-primary w-full"><Icon name="file" className="w-5 h-5"/>إرسال الطلب عبر واتساب</button>
       <button onClick={onClose} className="ui-btn ui-btn-secondary w-full">الانتقال إلى طلباتي</button>
       <div className="rounded-12 bg-infoSoft border border-info/10 p-3 text-[10px] leading-5 text-info">فتح واتساب يجهز نص الطلب تلقائيًا. الإرسال النهائي يتم من داخل واتساب حتى يختار العميل المحادثة المناسبة.</div>
@@ -878,8 +893,34 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   const [submittedOrder,setSubmittedOrder]=useState(()=>{try{return JSON.parse(sessionStorage.getItem(LAST_SUBMITTED_ORDER_KEY)||'null')}catch{return null}});
   const [guestName,setGuestName]=useState(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}}),[showGuestNamePrompt,setShowGuestNamePrompt]=useState(false);
   useEffect(()=>{if(!guestMode||guestName)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),900);return()=>clearTimeout(t)},[guestMode,guestName]);
-  const saveGuestName=clean=>{try{localStorage.setItem(GUEST_NAME_KEY,clean)}catch{}setGuestName(clean);setShowGuestNamePrompt(false)};
+  const saveGuestName=async clean=>{
+    try{localStorage.setItem(GUEST_NAME_KEY,clean)}catch{}
+    setGuestName(clean);setShowGuestNamePrompt(false);
+    await Promise.allSettled([
+      touchCustomerSession(null,{name:clean,company:'',phone:''},'guest_name_captured'),
+      logCustomerEvent(null,'guest_name_captured',clean,{name:clean,source:'name_prompt'})
+    ]);
+  };
   const pendingResumeRef=useRef(false);
+  useEffect(()=>{
+    if(!guestMode)return;
+    const profileNow=()=>({name:currentGuestName(),company:'',phone:''});
+    const enterKey='batco_guest_enter_logged_'+customerSessionId;
+    try{
+      if(!sessionStorage.getItem(enterKey)){
+        sessionStorage.setItem(enterKey,'1');
+        touchCustomerSession(null,profileNow(),'guest_enter');
+        logCustomerEvent(null,'guest_enter','فتح بوابة العملاء',{source:'customer_portal'});
+      }else touchCustomerSession(null,profileNow(),'guest_active');
+    }catch{touchCustomerSession(null,profileNow(),'guest_enter')}
+    const heartbeat=setInterval(()=>touchCustomerSession(null,profileNow(),'guest_active'),45000);
+    const onVisible=()=>{if(document.visibilityState==='visible')touchCustomerSession(null,profileNow(),'guest_active')};
+    const onPageHide=()=>{touchCustomerSession(null,profileNow(),'guest_exit')};
+    document.addEventListener('visibilitychange',onVisible);
+    window.addEventListener('pagehide',onPageHide);
+    return()=>{clearInterval(heartbeat);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('pagehide',onPageHide)};
+  },[guestMode]);
+
   const cartKey=guestMode?'customer_guest_cart_v1':'customer_cart_v1_'+user.uid;
   useEffect(()=>{
     try{
@@ -1170,7 +1211,7 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       console.info('[Customer registration] starting',{phone:registration.phone,emailHint:email.replace(/(.{4}).+(@.+)/,'$1***$2')});
       const cred=await auth.createUserWithEmailAndPassword(email,registration.pin);
       created=cred.user;stage='profile';
-      const savedGuestName=(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}})();const deviceAtRegistration=customerDeviceInfo();const profileData={name:savedGuestName,company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:'account_created',lastActivityLabel:'إنشاء حساب',lastSessionId:customerSessionId,lastDevice:{deviceId:deviceAtRegistration.deviceId||'',fingerprint:deviceAtRegistration.fingerprint||'',userAgent:deviceAtRegistration.userAgent||'',platform:deviceAtRegistration.platform||'',viewport:deviceAtRegistration.viewport||'',screen:deviceAtRegistration.screen||'',standalone:!!deviceAtRegistration.standalone,timezone:deviceAtRegistration.timezone||''},createdSource:'customer_portal',telemetryVersion:4,schemaVersion:4};
+      const savedGuestName=(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}})();const deviceAtRegistration=customerDeviceInfo();const profileData={visitorId:customerVisitorId,guestSessionId:customerSessionId,name:savedGuestName,company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:'account_created',lastActivityLabel:'إنشاء حساب',lastSessionId:customerSessionId,lastDevice:{deviceId:deviceAtRegistration.deviceId||'',fingerprint:deviceAtRegistration.fingerprint||'',userAgent:deviceAtRegistration.userAgent||'',platform:deviceAtRegistration.platform||'',viewport:deviceAtRegistration.viewport||'',screen:deviceAtRegistration.screen||'',standalone:!!deviceAtRegistration.standalone,timezone:deviceAtRegistration.timezone||''},createdSource:'customer_portal',telemetryVersion:4,schemaVersion:4};
       await db.collection(CUSTOMER_COLLECTION).doc(created.uid).set(profileData);
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
       if(!doc.exists) throw Object.assign(new Error('customer profile missing after create'),{code:'customer/profile-missing'});
