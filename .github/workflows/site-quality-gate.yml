@@ -1,0 +1,167 @@
+name: Site Quality Gate
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.html'
+      - '*.js'
+      - '*.json'
+      - 'api/**'
+      - 'data/**'
+      - '.github/workflows/site-quality-gate.yml'
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  full-site-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repository structural audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re,sys
+          failures=[]
+          text_ext={'.html','.js','.json','.css','.md','.txt','.tsv','.yml','.yaml'}
+          for p in Path('.').rglob('*'):
+              if not p.is_file() or '.git' in p.parts: continue
+              if p.suffix.lower() in text_ext:
+                  try: s=p.read_text(errors='strict')
+                  except Exception as e: failures.append(f'UTF8 {p}: {e}'); continue
+                  if any(x in s for x in ['<<<<<<< HEAD','=======\n>>>>>>>','<<<<<<<','>>>>>>>']): failures.append(f'MERGE_MARKER {p}')
+                  if '... (truncated)' in s: failures.append(f'TRUNCATED_PLACEHOLDER {p}')
+          for p in Path('.').glob('*.json'):
+              try: json.loads(p.read_text())
+              except Exception as e: failures.append(f'JSON {p}: {e}')
+          # Check local root-level references from HTML. Ignore dynamic/templates, anchors, data/blob/mail/tel and external URLs.
+          for p in Path('.').glob('*.html'):
+              s=p.read_text(errors='replace')
+              for attr,val in re.findall(r'\b(?:src|href)=["\']([^"\']+)["\']',s,re.I):
+                  v=val.strip()
+                  if not v or v.startswith(('#','http:','https:','//','data:','blob:','mailto:','tel:','javascript:')): continue
+                  if any(ch in v for ch in ['{','}','`','$']): continue
+                  v=v.split('?')[0].split('#')[0]
+                  if not v: continue
+                  target=(p.parent/v).resolve()
+                  try: target.relative_to(Path('.').resolve())
+                  except Exception: continue
+                  if not target.exists(): failures.append(f'BROKEN_LOCAL_REF {p}: {val}')
+          if failures:
+              print('\n'.join(sorted(set(failures)))); sys.exit(1)
+          print('STRUCTURAL_AUDIT_OK')
+          PY
+      - name: Syntax audit for every HTML and JS file
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          failures=[]; count=0
+          for p in sorted(Path('.').glob('*.html')):
+              s=p.read_text(errors='replace')
+              scripts=re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)
+              for i,m in enumerate(scripts):
+                  attrs,code=m.group(1),m.group(2)
+                  if not code.strip(): continue
+                  count+=1
+                  is_babel=bool(re.search(r'type=["\']text/babel["\']',attrs,re.I))
+                  ext='.jsx' if is_babel else '.js'; f=Path('/tmp')/f'{p.stem}-{i}{ext}';f.write_text(code)
+                  if is_babel:
+                      r=subprocess.run(['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/out.js'],capture_output=True,text=True)
+                  else:
+                      r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+                  if r.returncode: failures.append(f'{p.name} script#{i}:\n{r.stderr}')
+          for p in sorted(Path('.').glob('*.js')):
+              count+=1
+              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode: failures.append(f'{p}:\n{r.stderr}')
+          for p in sorted(Path('api').glob('*.js')) if Path('api').exists() else []:
+              count+=1
+              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode: failures.append(f'{p}:\n{r.stderr}')
+          if failures:
+              print('\n'.join(failures));sys.exit(1)
+          print('SYNTAX_AUDIT_OK scripts=',count)
+          PY
+      - name: Critical semantic invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys,re
+          failures=[]
+          idx=Path('index.html').read_text()
+          if idx.count('const stocktakeControl = useStocktakeControl();')!=1: failures.append('index: stocktake hook count must be exactly one')
+          app=idx.find('const App = () => {'); hook=idx.find('const stocktakeControl = useStocktakeControl();'); use=idx.find('const currentStocktakeAccessAllowed = stocktakeAccessAllowed(stocktakeControl')
+          if min(app,hook,use)<0 or not (app<hook<use): failures.append('index: stocktake hook must be declared inside App before use')
+          login=idx.find('const LoginScreen =');
+          if login>=0 and app>login and 'const stocktakeControl = useStocktakeControl();' in idx[login:app]: failures.append('index: stocktake hook leaked into LoginScreen')
+          required=['index.html','customer.html','admin-dashboard.html','stocktake.html','admin-stocktake.html']
+          for f in required:
+              if not Path(f).exists() or Path(f).stat().st_size<1000: failures.append(f'{f}: missing or suspiciously small')
+          # Known catastrophic self-reference pattern.
+          for p in Path('.').glob('*.html'):
+              s=p.read_text(errors='replace')
+              for m in re.finditer(r'\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*[+\-*/]',s): failures.append(f'{p}: self-reference {m.group(1)}')
+          if failures:
+              print('\n'.join(failures));sys.exit(1)
+          print('SEMANTIC_INVARIANTS_OK')
+          PY
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Browser runtime audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 >/tmp/http.log 2>&1 &
+          cat > /tmp/audit.mjs <<'JS'
+          import { chromium } from 'playwright';
+          import fs from 'fs';
+          const base='http://127.0.0.1:4173';
+          const admin={inventory_user_name_v2:'مهند',inventory_admin_token_v2:'1jh297-spgf2z'};
+          const employee={inventory_user_name_v2:'اختبار تقني',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
+          const primary=[
+            ['entry','/index.html',{}],
+            ['employee','/index.html?employee=1',employee],
+            ['admin-employee','/index.html?employee=1',admin],
+            ['customer','/customer.html',{}],
+            ['admin-dashboard','/admin-dashboard.html',admin],
+            ['stocktake-employee','/stocktake.html',employee],
+            ['admin-stocktake','/admin-stocktake.html',admin],
+            ['security-center','/security-center.html',admin],
+          ];
+          const htmls=fs.readdirSync('.').filter(x=>x.endsWith('.html'));
+          const covered=new Set(primary.map(x=>x[1].split('?')[0].slice(1)));
+          for(const f of htmls) if(!covered.has(f)) primary.push([`all-html:${f}`,`/${f}`,{}]);
+          const browser=await chromium.launch({headless:true}); let failed=false;
+          for(const [name,path,store] of primary){
+            const context=await browser.newContext();
+            await context.addInitScript(store=>{for(const [k,v] of Object.entries(store))localStorage.setItem(k,v)},store);
+            const page=await context.newPage(); const pageErrors=[];
+            page.on('pageerror',e=>pageErrors.push(String(e?.stack||e)));
+            try{
+              const resp=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});
+              await page.waitForTimeout(4500);
+              const text=(await page.locator('body').innerText().catch(()=>'' )).trim();
+              const visible=text.replace(/\s+/g,' ').length;
+              console.log(`RUNTIME ${name} http=${resp?.status()} final=${page.url()} text=${visible}`);
+              if(!resp || resp.status()>=400){failed=true;console.error(`HTTP_FAIL ${name}`)}
+              if(pageErrors.length){failed=true;console.error(`PAGEERROR ${name}:\n${pageErrors.join('\n---\n')}`)}
+              if(visible<10){failed=true;console.error(`BLANK_PAGE ${name}`)}
+            }catch(e){failed=true;console.error(`NAV_FAIL ${name}: ${e?.stack||e}`)}
+            await context.close();
+          }
+          await browser.close(); if(failed)process.exit(1); console.log('BROWSER_RUNTIME_OK');
+          JS
+          node /tmp/audit.mjs
