@@ -3691,13 +3691,19 @@ const App = () => {
                                     <span className="hidden lg:inline text-[12px] font-bold whitespace-nowrap">إدارة المنتجات</span>
                                 </button>
                             )}
-                            {currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (
+                            {isAdmin ? (
+                                <button onClick={() => { window.location.href = './admin-stocktake.html'; }} title="إدارة الجرد"
+                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
+                                    <Icon.Archive className="w-20 h-20" />
+                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">إدارة الجرد</span>
+                                </button>
+                            ) : (currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (
                                 <button onClick={() => { window.location.href = './stocktake.html'; }} title="فتح الجرد"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
                                     <Icon.Archive className="w-20 h-20" />
                                     <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">الجرد</span>
                                 </button>
-                            )}
+                            ))}
                             {isAdmin && (
                                 <button onClick={() => { window.location.href = './admin-dashboard.html'; }} title="لوحة التحكم الإدارية"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-primary border border-primary text-bg hover:opacity-90 transition-opacity animate-flip">
