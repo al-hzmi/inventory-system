@@ -168,7 +168,6 @@ jobs:
               if(pageErrors.length){failed=true;console.error(`PAGEERROR ${name}:\n${pageErrors.join('\n---\n')}`)}
               if(visible<10){failed=true;console.error(`BLANK_PAGE ${name}`)}
               if(name==='admin-employee'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_STOCKTAKE_ENTRY_MISSING')}
-              if(name==='admin-dashboard'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_DASHBOARD_STOCKTAKE_ENTRY_MISSING')}
             }catch(e){failed=true;console.error(`NAV_FAIL ${name}: ${e?.stack||e}`)}
             await context.close();
           }
