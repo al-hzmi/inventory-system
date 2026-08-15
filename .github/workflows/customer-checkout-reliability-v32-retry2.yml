@@ -1,0 +1,107 @@
+name: Customer Checkout Reliability V32 Retry 2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/customer-checkout-reliability-v32-retry2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Repair patch runner and harden pending resume
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # Fix an internal slicing error in the temporary patch runner.
+          sp=Path('.github/scripts/customer_checkout_reliability_v32.py')
+          s=sp.read_text(encoding='utf-8')
+          bad="customer = customer[:save_start] + new_save + customer[fresh_start:submit_start]"
+          good="customer = customer[:save_start] + new_save + customer[fresh_start:]"
+          if bad in s:
+              s=s.replace(bad,good,1)
+              sp.write_text(s,encoding='utf-8')
+              print('Patch-runner slicing repaired.')
+          elif good not in s:
+              raise SystemExit('Patch-runner slicing marker not found')
+
+          # Remove the old premature cleanup from the live source before the
+          # idempotent patch runner evaluates that block.
+          cp=Path('customer.html')
+          t=cp.read_text(encoding='utf-8')
+          start=t.find('    pendingResumeRef.current=true;')
+          timer=t.find('    const t=setTimeout(async()=>{',start)
+          if start < 0 or timer < 0:
+              raise SystemExit('Pending resume block not found')
+          middle=t[start:timer]
+          if "sessionStorage.removeItem('customer_pending_action')" in middle:
+              t=t[:start]+'    pendingResumeRef.current=true;\n'+t[timer:]
+              cp.write_text(t,encoding='utf-8')
+              print('Premature pending cleanup removed.')
+          else:
+              print('Pending resume already hardened.')
+          PY
+
+      - name: Apply customer checkout reliability patch
+        run: python3 .github/scripts/customer_checkout_reliability_v32.py
+
+      - name: Extract Babel scripts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for src,out in [('customer.html','/tmp/customer.jsx'),('admin-dashboard.html','/tmp/admin.jsx')]:
+              text=Path(src).read_text(encoding='utf-8')
+              matches=re.findall(r'<script\s+type=["\']text/babel["\']>(.*?)</script>',text,re.S|re.I)
+              if not matches:
+                  raise SystemExit(f'No Babel script in {src}')
+              Path(out).write_text('\n'.join(matches),encoding='utf-8')
+          PY
+
+      - name: Validate JSX syntax
+        run: |
+          npx --yes esbuild@0.25.8 /tmp/customer.jsx --loader:.jsx=jsx --outfile=/tmp/customer-built.js --log-level=error
+          npx --yes esbuild@0.25.8 /tmp/admin.jsx --loader:.jsx=jsx --outfile=/tmp/admin-built.js --log-level=error
+
+      - name: Verify business-critical behavior
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          c=Path('customer.html').read_text(encoding='utf-8')
+          a=Path('admin-dashboard.html').read_text(encoding='utf-8')
+          checks={
+            'receipt screen':'OrderSuccessScreen' in c and 'setSubmittedOrder(receipt)' in c,
+            'WhatsApp handoff':'buildOrderWhatsAppText' in c and 'onWhatsApp?.(row)' in c,
+            'pending recovery':'customer_pending_checkout_snapshot_v2' in c and 'checkout_snapshot_recovered' in c,
+            'pending action retained until success':"pendingResumeRef.current=true;\n    const t=setTimeout" in c,
+            'cart cleared only after receipt':c.find('setSubmittedOrder(receipt)') < c.find('setCart({});setCheckout(false);setPage(\'orders\')'),
+            'registration fallback activity':"lastActivityType:'account_created'" in c,
+            'order fallback activity':"lastActivityType:'order_submitted'" in c,
+            'admin activity fallback':'customerProfileActivityFallback' in a,
+            'admin live fallback':'قراءة احتياطية من ملف العميل' in a,
+            'admin account last activity':'آخر نشاط: {dateTime(c.lastActivityAt' in a,
+          }
+          failed=[k for k,v in checks.items() if not v]
+          if failed:
+              raise SystemExit('Failed checks: '+', '.join(failed))
+          print('All business-critical checks passed.')
+          PY
+
+      - name: Commit verified fix and remove temporary tooling
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer.html admin-dashboard.html
+          git rm -f .github/scripts/customer_checkout_reliability_v32.py \
+                    .github/workflows/customer-checkout-reliability-v32.yml \
+                    .github/workflows/customer-checkout-reliability-v32-retry.yml \
+                    .github/workflows/customer-checkout-reliability-v32-retry2.yml
+          git commit -m "Fix customer checkout WhatsApp handoff and activity tracking"
+          git push origin HEAD:main
