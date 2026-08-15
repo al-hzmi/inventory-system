@@ -1,0 +1,97 @@
+name: Site Runtime Audit V35
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/site-runtime-audit-v35.yml'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static syntax audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile, sys
+          failures=[]
+          htmls=sorted(Path('.').glob('*.html'))
+          print('HTML files:', ', '.join(p.name for p in htmls))
+          for p in htmls:
+              s=p.read_text(errors='replace')
+              babel=re.findall(r'<script[^>]*type=["\']text/babel["\'][^>]*>(.*?)</script>',s,re.S|re.I)
+              plain=re.findall(r'<script(?![^>]*type=["\']text/babel["\'])[^>]*>(.*?)</script>',s,re.S|re.I)
+              for i,code in enumerate(babel):
+                  f=Path('/tmp')/f'{p.stem}-babel-{i}.jsx'; f.write_text(code)
+                  r=subprocess.run(['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/out.js'],capture_output=True,text=True)
+                  if r.returncode: failures.append(f'{p.name} babel#{i}: {r.stderr}')
+              for i,code in enumerate(plain):
+                  if not code.strip(): continue
+                  f=Path('/tmp')/f'{p.stem}-js-{i}.js'; f.write_text(code)
+                  r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+                  if r.returncode: failures.append(f'{p.name} js#{i}: {r.stderr}')
+          if failures:
+              print('\n'.join(failures)); sys.exit(1)
+          print('STATIC_SYNTAX_OK',len(htmls))
+          PY
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Browser runtime smoke audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 >/tmp/http.log 2>&1 &
+          echo $! >/tmp/http.pid
+          cat > /tmp/audit.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const base='http://127.0.0.1:4173';
+          const ADMIN_HASH='1jh297-spgf2z';
+          const adminStore={inventory_user_name_v2:'مهند',inventory_admin_token_v2:ADMIN_HASH};
+          const employeeStore={inventory_user_name_v2:'اختبار تقني',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
+          const scenarios=[
+            ['entry','/index.html',{}],
+            ['employee','/index.html?employee=1',employeeStore],
+            ['admin-employee','/index.html?employee=1',adminStore],
+            ['customer','/customer.html',{}],
+            ['admin-dashboard','/admin-dashboard.html',adminStore],
+            ['stocktake-employee','/stocktake.html',employeeStore],
+            ['admin-stocktake','/admin-stocktake.html',adminStore],
+            ['security-center','/security-center.html',adminStore],
+          ];
+          const browser=await chromium.launch({headless:true});
+          let failed=false;
+          for(const [name,path,store] of scenarios){
+            const context=await browser.newContext();
+            await context.addInitScript((store)=>{for(const [k,v] of Object.entries(store))localStorage.setItem(k,v)},store);
+            const page=await context.newPage();
+            const pageErrors=[]; const consoleErrors=[];
+            page.on('pageerror',e=>pageErrors.push(String(e?.stack||e)));
+            page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
+            try{
+              const resp=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});
+              await page.waitForTimeout(5000);
+              const text=(await page.locator('body').innerText().catch(()=>'' )).trim();
+              const rootHtml=await page.locator('#root').innerHTML().catch(()=>null);
+              const appHtml=await page.locator('#app').innerHTML().catch(()=>null);
+              const meaningful=((rootHtml??appHtml??'').replace(/\s+/g,' ').trim().length>20) || text.length>40;
+              console.log(`SCENARIO ${name} status=${resp?.status()} url=${page.url()} text=${text.length} meaningful=${meaningful}`);
+              if(pageErrors.length){failed=true;console.error(`PAGEERROR ${name}:\n${pageErrors.join('\n---\n')}`)}
+              if(!meaningful){failed=true;console.error(`BLANK_OR_EMPTY ${name} body=${JSON.stringify(text.slice(0,300))}`)}
+              if(consoleErrors.length) console.log(`CONSOLE_ERRORS ${name}: ${consoleErrors.slice(0,8).join(' | ')}`);
+            }catch(e){failed=true;console.error(`NAV_FAIL ${name}`,e)}
+            await context.close();
+          }
+          await browser.close();
+          if(failed)process.exit(1);
+          console.log('BROWSER_RUNTIME_OK');
+          JS
+          node /tmp/audit.mjs
