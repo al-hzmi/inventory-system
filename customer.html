@@ -124,7 +124,7 @@
 window.__customerInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window.__customerInstallPrompt = e; window.dispatchEvent(new Event('customerinstallready')); });
 window.addEventListener('appinstalled', function(){ window.__customerInstallPrompt = null; });
-if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=30.2',{updateViaCache:'none'}).catch(function(){}); }); }
+if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=32.0',{updateViaCache:'none'}).catch(function(){}); }); }
 </script>
 <script type="text/babel">
 
@@ -142,6 +142,8 @@ const DEFAULT_CUSTOMER_PORTAL_CONTROL = {
 const DATA_PATH = './data/';
 const IMAGES_PATH = './images/';
 const GUEST_NAME_KEY = 'customer_guest_name_v1';
+const LAST_SUBMITTED_ORDER_KEY = 'customer_last_submitted_order_v2';
+const PENDING_CHECKOUT_SNAPSHOT_KEY = 'customer_pending_checkout_snapshot_v2';
 const CART_STEP = 0.5;
 const PAGE_SIZE = 48;
 const CUSTOMER_COLLECTION = 'customers';
@@ -226,23 +228,42 @@ async function ensureCustomerDeviceAllowed(user,profile){
   return {allowed:true,deviceId:ref.id,info};
 }
 async function logCustomerEvent(user,type,label='',data={}){
-  if(!user?.uid)return;
-  try{
-    await db.collection(CUSTOMER_ACTIVITY_COLLECTION).add({
-      customerUid:user.uid, sessionId:customerSessionId, type, label:String(label||''), data:data||{},
-      device:customerDeviceInfo(), createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }catch(e){console.warn('[Customer telemetry]',e?.message||e)}
+  if(!user?.uid)return {activity:false,profile:false};
+  const device=customerDeviceInfo();
+  const activityWrite=db.collection(CUSTOMER_ACTIVITY_COLLECTION).add({
+    customerUid:user.uid,sessionId:customerSessionId,type,label:String(label||''),data:data||{},device,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  const profileWrite=db.collection(CUSTOMER_COLLECTION).doc(user.uid).set({
+    lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:String(type||'activity'),
+    lastActivityLabel:String(label||''),lastSessionId:customerSessionId,lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),
+    lastDevice:{deviceId:device.deviceId||'',fingerprint:device.fingerprint||'',userAgent:device.userAgent||'',platform:device.platform||'',viewport:device.viewport||'',screen:device.screen||'',standalone:!!device.standalone,timezone:device.timezone||''},
+    telemetryVersion:4
+  },{merge:true});
+  const results=await Promise.allSettled([activityWrite,profileWrite]);
+  if(results[0].status==='rejected')console.warn('[Customer telemetry activity]',results[0].reason?.message||results[0].reason);
+  if(results[1].status==='rejected')console.warn('[Customer telemetry profile]',results[1].reason?.message||results[1].reason);
+  return {activity:results[0].status==='fulfilled',profile:results[1].status==='fulfilled'};
 }
 async function touchCustomerSession(user,profile,event='active'){
-  if(!user?.uid)return;
+  if(!user?.uid)return {session:false,profile:false};
+  const device=customerDeviceInfo();
   try{
     const key='batco_customer_session_started_'+customerSessionId;
     const first=!sessionStorage.getItem(key);
-    const payload={customerUid:user.uid,sessionId:customerSessionId,name:profile?.name||'',company:profile?.company||'',phone:profile?.phone||'',event,lastActive:firebase.firestore.FieldValue.serverTimestamp(),device:customerDeviceInfo()};
+    const payload={customerUid:user.uid,sessionId:customerSessionId,name:profile?.name||'',company:profile?.company||'',phone:profile?.phone||'',event,lastActive:firebase.firestore.FieldValue.serverTimestamp(),device};
     if(first){payload.startedAt=firebase.firestore.FieldValue.serverTimestamp();sessionStorage.setItem(key,'1')}
-    await db.collection(CUSTOMER_SESSION_COLLECTION).doc(`${user.uid}_${customerSessionId}`).set(payload,{merge:true});
-  }catch(e){console.warn('[Customer session]',e?.message||e)}
+    const sessionWrite=db.collection(CUSTOMER_SESSION_COLLECTION).doc(`${user.uid}_${customerSessionId}`).set(payload,{merge:true});
+    const profileWrite=db.collection(CUSTOMER_COLLECTION).doc(user.uid).set({
+      lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),lastSessionId:customerSessionId,
+      lastSessionEvent:String(event||'active'),lastDevice:{deviceId:device.deviceId||'',fingerprint:device.fingerprint||'',userAgent:device.userAgent||'',platform:device.platform||'',viewport:device.viewport||'',screen:device.screen||'',standalone:!!device.standalone,timezone:device.timezone||''},
+      telemetryVersion:4
+    },{merge:true});
+    const results=await Promise.allSettled([sessionWrite,profileWrite]);
+    if(results[0].status==='rejected')console.warn('[Customer session log]',results[0].reason?.message||results[0].reason);
+    if(results[1].status==='rejected')console.warn('[Customer session profile]',results[1].reason?.message||results[1].reason);
+    return {session:results[0].status==='fulfilled',profile:results[1].status==='fulfilled'};
+  }catch(e){console.warn('[Customer session]',e?.message||e);return {session:false,profile:false}}
 }
 
 function normalizePhone(raw){
@@ -261,6 +282,42 @@ function authEmailFromPhone(phone){ return `customer_${normalizePhone(phone)}@ex
 function legacyAuthEmailFromPhone(phone){ return `customer_${normalizePhone(phone)}@portal.batco.local`; }
 function validPhone(phone){ const d=normalizePhone(phone); return /^\d{8,15}$/.test(d); }
 function validPin(pin){ return /^\d{6}$/.test(toEnglishDigits(pin)); }
+
+function buildOrderWhatsAppText(order){
+  const c=order?.customer||{},branches=Array.isArray(order?.branches)?order.branches:[],items=Array.isArray(order?.items)?order.items:[];
+  const totalCartons=Number(order?.totalCartons)||sum(items.map(i=>Number(i.totalQty)||0));
+  const estimatedTotal=Number(order?.estimatedTotal)||sum(items.map(i=>(Number(i.cartonPrice)||0)*(Number(i.totalQty)||0)));
+  const lines=['طلب شراء - بيت الأواني الطيبة',`رقم الطلب: ${order?.orderNo||'—'}`];
+  if(c.name)lines.push(`الاسم: ${c.name}`);
+  if(c.company)lines.push(`الجهة: ${c.company}`);
+  if(c.phone)lines.push(`الجوال: ${displayPhone(c.phone)}`);
+  lines.push(`إجمالي الكراتين: ${NF.format(totalCartons)}`);
+  if(estimatedTotal>0)lines.push(`القيمة التقريبية: ${PRICE_NF.format(estimatedTotal)} ريال`);
+  branches.forEach((branch,index)=>{
+    const rows=items.map(item=>({...item,qty:Number(item.branchQuantities?.[branch.id]||0)})).filter(item=>item.qty>0);
+    if(!rows.length)return;
+    lines.push('',`${index+1}) ${branch.name||'فرع'}`);
+    rows.forEach(item=>lines.push(`• ${item.id||item.cleanId||'—'} — ${NF.format(item.qty)} كرتون`));
+  });
+  if(order?.notes)lines.push('','ملاحظات:',String(order.notes));
+  lines.push('','تم إعداد الطلب عبر بوابة عملاء بيت الأواني الطيبة.');
+  return lines.join('\n');
+}
+function openOrderWhatsApp(order){
+  const url='https://wa.me/?text='+encodeURIComponent(buildOrderWhatsAppText(order));
+  const opened=window.open(url,'_blank');
+  if(opened){try{opened.opener=null}catch{};return true}
+  window.location.href=url;return false;
+}
+function clearCustomerPendingAction(){
+  try{
+    sessionStorage.removeItem('customer_pending_action');
+    sessionStorage.removeItem('customer_pending_notes');
+    sessionStorage.removeItem('customer_pending_after_auth');
+    localStorage.removeItem(PENDING_CHECKOUT_SNAPSHOT_KEY);
+  }catch{}
+}
+
 
 function registrationErrorMessage(err,stage='auth',cleanupFailed=false){
   const code=String(err?.code||'');
@@ -715,7 +772,23 @@ function Checkout({items,branches,profile,onBack,onDraft,onSubmit,busy,validatio
   </div>
 }
 
-function OrdersView({orders,drafts,onLoadDraft,onDeleteDraft,loading}){
+
+function OrderSuccessScreen({order,onWhatsApp,onClose}){
+  if(!order)return null;
+  const itemCount=order.items?.length||0,totalCartons=Number(order.totalCartons)||0,estimatedTotal=Number(order.estimatedTotal)||0;
+  return <div className="min-h-[100dvh] ui-auth-bg safe-top safe-bottom px-4 py-6 flex items-center justify-center"><div className="w-full max-w-[560px] ui-panel fade-in">
+    <div className="ui-panel-head"><div className="ui-success-dot"><Icon name="check" className="w-6 h-6"/></div><div className="ui-eyebrow !text-success">تم حفظ الطلب بنجاح</div><h1 className="ui-title">طلبك محفوظ ولن يضيع</h1><p className="ui-subtitle">تم تسجيل الطلب داخل حسابك. الآن يمكنك فتح واتساب وإرسال نسخة منه، ويمكنك الرجوع له لاحقًا من «طلباتي».</p></div>
+    <div className="ui-panel-body">
+      <div className="rounded-16 border border-border bg-surface p-4"><div className="flex items-center justify-between gap-3"><div><div className="text-[10px] text-muted">رقم الطلب</div><b className="ltr text-base">{order.orderNo||'—'}</b></div><div className="text-left"><div className="text-[10px] text-muted">الكراتين</div><b className="ltr">{NF.format(totalCartons)}</b></div></div><div className="grid grid-cols-2 gap-2 mt-3"><div className="bg-white border border-border rounded-12 p-3 text-center"><div className="text-[10px] text-muted">الأصناف</div><b>{itemCount}</b></div><div className="bg-white border border-border rounded-12 p-3 text-center"><div className="text-[10px] text-muted">القيمة التقريبية</div><b className="ltr text-accent">{estimatedTotal>0?`${PRICE_NF.format(estimatedTotal)} ⃁`:'—'}</b></div></div></div>
+      <button onClick={()=>onWhatsApp(order)} className="ui-btn ui-btn-primary w-full"><Icon name="file" className="w-5 h-5"/>إرسال الطلب عبر واتساب</button>
+      <button onClick={onClose} className="ui-btn ui-btn-secondary w-full">الانتقال إلى طلباتي</button>
+      <div className="rounded-12 bg-infoSoft border border-info/10 p-3 text-[10px] leading-5 text-info">فتح واتساب يجهز نص الطلب تلقائيًا. الإرسال النهائي يتم من داخل واتساب حتى يختار العميل المحادثة المناسبة.</div>
+      <CustomerCredits compact/>
+    </div>
+  </div></div>;
+}
+
+function OrdersView({orders,drafts,onLoadDraft,onDeleteDraft,loading,onWhatsApp}){
   const [tab,setTab]=useState('orders');
   const [expanded,setExpanded]=useState(null);
   useEffect(()=>setExpanded(null),[tab]);
@@ -736,7 +809,7 @@ function OrdersView({orders,drafts,onLoadDraft,onDeleteDraft,loading}){
     <div className="bg-surface border border-border rounded-12 p-1 grid grid-cols-2 mb-4"><button onClick={()=>setTab('orders')} className={`h-10 rounded-10 text-sm font-bold ${tab==='orders'?'bg-white shadow-card':'text-secondary'}`}>الطلبات المرسلة</button><button onClick={()=>setTab('drafts')} className={`h-10 rounded-10 text-sm font-bold ${tab==='drafts'?'bg-white shadow-card':'text-secondary'}`}>المسودات</button></div>
     {loading?<div className="py-20 flex justify-center"><Spinner/></div>:!rows.length?<Empty title={tab==='orders'?'لا توجد طلبات بعد':'لا توجد مسودات'} icon="file"/>:<div className="grid gap-3">{rows.map(row=>{
       const isOpen=expanded===row.id;
-      return <div key={row.id} className="bg-white border border-border rounded-16 p-4"><div className="flex items-start justify-between gap-3"><div><span className={`inline-block text-[10px] font-bold rounded-full px-2 py-1 ${tab==='orders'?'bg-successSoft text-success':'bg-accentSoft text-accent'}`}>{tab==='orders'?'تم الإرسال':'مسودة'}</span><b className="block mt-2 ltr text-sm">{row.orderNo||row.draftNo||row.id.slice(0,8)}</b><div className="text-xs text-secondary mt-1">{row.items?.length||0} صنف · {NF.format(row.totalCartons||0)} كرتون</div><div className="text-[10px] text-muted mt-1">{row.createdAt?.toDate?row.createdAt.toDate().toLocaleString('ar-SA'):row.updatedAt?.toDate?row.updatedAt.toDate().toLocaleString('ar-SA'):'—'}</div></div><div className="flex gap-2">{tab==='orders'?<button onClick={()=>setExpanded(isOpen?null:row.id)} className="h-9 px-3 rounded-10 border border-border text-xs font-bold">{isOpen?'إخفاء':'التفاصيل'}</button>:<><button onClick={()=>onLoadDraft(row)} className="h-9 px-3 rounded-10 bg-primary text-white text-xs font-bold">استكمال</button><button onClick={()=>onDeleteDraft(row.id)} className="w-9 h-9 rounded-10 border border-danger/20 text-danger flex items-center justify-center"><Icon name="trash" className="w-4 h-4"/></button></>}</div></div>{tab==='orders'&&isOpen&&details(row)}{tab==='drafts'&&row.notes&&<div className="mt-3 bg-surface rounded-10 p-2 text-xs text-secondary">{row.notes}</div>}</div>})}</div>}
+      return <div key={row.id} className="bg-white border border-border rounded-16 p-4"><div className="flex items-start justify-between gap-3"><div><span className={`inline-block text-[10px] font-bold rounded-full px-2 py-1 ${tab==='orders'?'bg-successSoft text-success':'bg-accentSoft text-accent'}`}>{tab==='orders'?'تم الإرسال':'مسودة'}</span><b className="block mt-2 ltr text-sm">{row.orderNo||row.draftNo||row.id.slice(0,8)}</b><div className="text-xs text-secondary mt-1">{row.items?.length||0} صنف · {NF.format(row.totalCartons||0)} كرتون</div><div className="text-[10px] text-muted mt-1">{row.createdAt?.toDate?row.createdAt.toDate().toLocaleString('ar-SA'):row.updatedAt?.toDate?row.updatedAt.toDate().toLocaleString('ar-SA'):'—'}</div></div><div className="flex gap-2">{tab==='orders'?<><button onClick={()=>onWhatsApp?.(row)} className="h-9 px-3 rounded-10 bg-successSoft text-success border border-success/10 text-xs font-bold">واتساب</button><button onClick={()=>setExpanded(isOpen?null:row.id)} className="h-9 px-3 rounded-10 border border-border text-xs font-bold">{isOpen?'إخفاء':'التفاصيل'}</button></>:<><button onClick={()=>onLoadDraft(row)} className="h-9 px-3 rounded-10 bg-primary text-white text-xs font-bold">استكمال</button><button onClick={()=>onDeleteDraft(row.id)} className="w-9 h-9 rounded-10 border border-danger/20 text-danger flex items-center justify-center"><Icon name="trash" className="w-4 h-4"/></button></>}</div></div>{tab==='orders'&&isOpen&&details(row)}{tab==='drafts'&&row.notes&&<div className="mt-3 bg-surface rounded-10 p-2 text-xs text-secondary">{row.notes}</div>}</div>})}</div>}
   </div>;
 }
 
@@ -802,6 +875,7 @@ function InstallNudge(){
 function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth}){
   const safeProfile=profile||{name:'',company:'',phone:'',branches:[]};
   const [loading,setLoading]=useState(true),[products,setProducts]=useState([]),[baseCategories,setBaseCategories]=useState({}),[overrides,setOverrides]=useState({}),[meta,setMeta]=useState({}),[query,setQuery]=useState(''),[activeCategory,setActiveCategory]=useState('الكل'),[categoryBrowse,setCategoryBrowse]=useState(null),[page,setPage]=useState('home'),[pageCount,setPageCount]=useState(PAGE_SIZE),[viewMode,setViewMode]=useState(()=>{try{return localStorage.getItem('customer_catalog_view_v2')||'grid'}catch{return'grid'}}),[missingImages,setMissingImages]=useState(()=>new Set()),[cart,setCart]=useState({}),[guestBranches,setGuestBranches]=useState(()=>{try{return JSON.parse(localStorage.getItem('customer_guest_branches_v1')||'[]')}catch{return[]}}),[allocItem,setAllocItem]=useState(null),[firstBranchItem,setFirstBranchItem]=useState(null),[zoom,setZoom]=useState(null),[toast,setToast]=useState(null),[checkout,setCheckout]=useState(()=>{try{return !guestMode&&sessionStorage.getItem('customer_pending_after_auth')==='checkout'}catch{return false}}),[orders,setOrders]=useState([]),[drafts,setDrafts]=useState([]),[historyLoading,setHistoryLoading]=useState(false),[savingDraft,setSavingDraft]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[validationErrors,setValidationErrors]=useState([]);
+  const [submittedOrder,setSubmittedOrder]=useState(()=>{try{return JSON.parse(sessionStorage.getItem(LAST_SUBMITTED_ORDER_KEY)||'null')}catch{return null}});
   const [guestName,setGuestName]=useState(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}}),[showGuestNamePrompt,setShowGuestNamePrompt]=useState(false);
   useEffect(()=>{if(!guestMode||guestName)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),900);return()=>clearTimeout(t)},[guestMode,guestName]);
   const saveGuestName=clean=>{try{localStorage.setItem(GUEST_NAME_KEY,clean)}catch{}setGuestName(clean);setShowGuestNamePrompt(false)};
@@ -904,15 +978,72 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   const removeItem=id=>{const found=cart[id];logCustomerEvent(user,'cart_item_removed',found?.id||id,{cleanId:id,name:found?.name||''});setCart(c=>{const n={...c};delete n[id];return n})};
   async function saveDraft(notes=''){
     if(!cartItems.length)return;
-    if(guestMode){try{sessionStorage.setItem('customer_pending_after_auth','checkout');sessionStorage.setItem('customer_pending_action','draft');sessionStorage.setItem('customer_pending_notes',String(notes||''))}catch{};onRequireAuth?.('draft');return;}
-    setSavingDraft(true);try{const ref=db.collection(DRAFT_COLLECTION).doc();const draftNo='D-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,draftNo,items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',cartonPrice:Number(i.cartonPrice)||0,pack:i.pack||'',branchQuantities:i.branchQuantities,totalQty:i.totalQty})),estimatedTotal:sum(cartItems.map(i=>(Number(i.cartonPrice)||0)*Number(i.totalQty||0))),notes:String(notes||'').trim(),totalCartons,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});setToast({type:'success',message:`تم حفظ ${draftNo} كمسودة.`});logCustomerEvent(user,'draft_saved',draftNo,{draftId:ref.id,itemCount:cartItems.length,totalCartons})}catch(e){console.error(e);setToast({type:'error',message:'تعذر حفظ المسودة.'})}finally{setSavingDraft(false)}}
+    if(guestMode){
+      try{
+        sessionStorage.setItem('customer_pending_after_auth','checkout');sessionStorage.setItem('customer_pending_action','draft');sessionStorage.setItem('customer_pending_notes',String(notes||''));
+        localStorage.setItem(PENDING_CHECKOUT_SNAPSHOT_KEY,JSON.stringify({kind:'draft',cart,branches,notes:String(notes||''),createdAt:Date.now()}));
+      }catch{}
+      onRequireAuth?.('draft');return;
+    }
+    setSavingDraft(true);
+    try{
+      const ref=db.collection(DRAFT_COLLECTION).doc(),draftNo='D-'+ref.id.slice(0,7).toUpperCase();
+      await ref.set({customerUid:user.uid,draftNo,items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',cartonPrice:Number(i.cartonPrice)||0,pack:i.pack||'',branchQuantities:i.branchQuantities,totalQty:i.totalQty})),estimatedTotal:sum(cartItems.map(i=>(Number(i.cartonPrice)||0)*Number(i.totalQty||0))),notes:String(notes||'').trim(),totalCartons,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      clearCustomerPendingAction();
+      setToast({type:'success',message:`تم حفظ ${draftNo} كمسودة.`});
+      await logCustomerEvent(user,'draft_saved',draftNo,{draftId:ref.id,itemCount:cartItems.length,totalCartons});
+    }catch(e){console.error(e);setToast({type:'error',message:'تعذر حفظ المسودة. لم نفقد محتويات السلة، ويمكنك المحاولة مرة أخرى.'})}
+    finally{setSavingDraft(false)}
+  }
   async function freshAllowedMap(){const [j,r]=await Promise.all([fetchText(DATA_PATH+'jeddah.tsv',{fresh:true}),fetchText(DATA_PATH+'riyadh.tsv',{fresh:true})]);return new Map(mergeInventories(parseInventory(j),parseInventory(r)).map(x=>[x.cleanId,x.allowedMax]))}
   async function submitOrder(notes){
-    const cleanNotes=String(notes||'').trim();if(!cleanNotes){setToast({type:'error',message:'الملاحظات إلزامية قبل اعتماد الطلب.'});return}if(!cartItems.length)return;
-    if(guestMode){try{sessionStorage.setItem('customer_pending_after_auth','checkout');sessionStorage.setItem('customer_pending_action','submit');sessionStorage.setItem('customer_pending_notes',cleanNotes)}catch{};onRequireAuth?.('submit');return;}
-    setSubmitBusy(true);setValidationErrors([]);try{const allowed=await freshAllowedMap();const errors=cartItems.map(i=>({cleanId:i.cleanId,id:i.id,requested:i.totalQty,allowed:allowed.get(i.cleanId)||0})).filter(x=>x.requested>x.allowed+1e-9);if(errors.length){setValidationErrors(errors);setToast({type:'error',message:'تغير الحد المسموح لبعض الأصناف. راجع التنبيه.'});return}
-      const ref=db.collection(ORDER_COLLECTION).doc(),orderNo='BT-'+ref.id.slice(0,7).toUpperCase();await ref.set({customerUid:user.uid,orderNo,customer:{name:safeProfile.name,company:safeProfile.company,phone:safeProfile.phone},branches:branches.map(b=>({id:b.id,name:b.name})),items:cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,cartonPrice:Number(i.cartonPrice)||0,pack:i.pack||'',branchQuantities:i.branchQuantities,totalQty:i.totalQty})),notes:cleanNotes,totalCartons,estimatedTotal:sum(cartItems.map(i=>(Number(i.cartonPrice)||0)*Number(i.totalQty||0))),status:'submitted',createdAt:firebase.firestore.FieldValue.serverTimestamp()});setCart({});setCheckout(false);setPage('orders');setToast({type:'success',message:`تم إرسال الطلب ${orderNo} بنجاح.`});logCustomerEvent(user,'order_submitted',orderNo,{orderId:ref.id,itemCount:cartItems.length,totalCartons,notesLength:cleanNotes.length,branches:branches.map(b=>b.name)})
-    }catch(e){console.error(e);setToast({type:'error',message:'تعذر اعتماد الطلب. تحقق من الاتصال وحاول مجددًا.'})}finally{setSubmitBusy(false)}}
+    const cleanNotes=String(notes||'').trim();
+    if(!cleanNotes){setToast({type:'error',message:'الملاحظات إلزامية قبل اعتماد الطلب.'});return}
+    if(!cartItems.length){setToast({type:'error',message:'السلة فارغة. لم يتم إنشاء أي طلب.'});return}
+    if(guestMode){
+      try{
+        sessionStorage.setItem('customer_pending_after_auth','checkout');sessionStorage.setItem('customer_pending_action','submit');sessionStorage.setItem('customer_pending_notes',cleanNotes);
+        localStorage.setItem(PENDING_CHECKOUT_SNAPSHOT_KEY,JSON.stringify({kind:'submit',cart,branches,notes:cleanNotes,createdAt:Date.now()}));
+      }catch{}
+      onRequireAuth?.('submit');return;
+    }
+    setSubmitBusy(true);setValidationErrors([]);
+    try{
+      const allowed=await freshAllowedMap();
+      const errors=cartItems.map(i=>({cleanId:i.cleanId,id:i.id,requested:i.totalQty,allowed:allowed.get(i.cleanId)||0})).filter(x=>x.requested>x.allowed+1e-9);
+      if(errors.length){setValidationErrors(errors);setToast({type:'error',message:'تغير الحد المسموح لبعض الأصناف. السلة محفوظة؛ عدّل الكميات ثم أعد الاعتماد.'});return}
+      const ref=db.collection(ORDER_COLLECTION).doc(),orderNo='BT-'+ref.id.slice(0,7).toUpperCase();
+      const orderItems=cartItems.map(i=>({cleanId:i.cleanId,id:i.id,name:i.name,cartonPrice:Number(i.cartonPrice)||0,pack:i.pack||'',branchQuantities:i.branchQuantities,totalQty:i.totalQty}));
+      const orderCore={customerUid:user.uid,orderNo,customer:{name:safeProfile.name,company:safeProfile.company,phone:safeProfile.phone},branches:branches.map(b=>({id:b.id,name:b.name})),items:orderItems,notes:cleanNotes,totalCartons,estimatedTotal:sum(cartItems.map(i=>(Number(i.cartonPrice)||0)*Number(i.totalQty||0))),status:'submitted'};
+      await ref.set({...orderCore,createdAt:firebase.firestore.FieldValue.serverTimestamp(),checkoutVersion:4});
+      const receipt={id:ref.id,...orderCore,createdAtLocal:Date.now()};
+      try{sessionStorage.setItem(LAST_SUBMITTED_ORDER_KEY,JSON.stringify(receipt))}catch{}
+      setSubmittedOrder(receipt);
+      clearCustomerPendingAction();
+      setCart({});setCheckout(false);setPage('orders');
+      await Promise.allSettled([
+        logCustomerEvent(user,'order_submitted',orderNo,{orderId:ref.id,itemCount:cartItems.length,totalCartons,notesLength:cleanNotes.length,branches:branches.map(b=>b.name)}),
+        touchCustomerSession(user,safeProfile,'order_submitted'),
+        db.collection(CUSTOMER_COLLECTION).doc(user.uid).set({lastOrderNo:orderNo,lastOrderId:ref.id,lastOrderAt:firebase.firestore.FieldValue.serverTimestamp(),orderCount:firebase.firestore.FieldValue.increment(1),lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:'order_submitted'},{merge:true})
+      ]);
+    }catch(e){
+      console.error(e);
+      setToast({type:'error',message:'تعذر اعتماد الطلب. السلة والفاتورة لم تُحذف؛ تحقق من الاتصال وحاول مجددًا.'});
+    }finally{setSubmitBusy(false)}
+  }
+  async function shareOrderWhatsApp(order){
+    if(!order)return;
+    openOrderWhatsApp(order);
+    if(!user?.uid)return;
+    const orderId=order.id||'';
+    const writes=[logCustomerEvent(user,'whatsapp_share_opened',order.orderNo||orderId,{orderId})];
+    if(orderId)writes.push(db.collection(ORDER_COLLECTION).doc(orderId).set({whatsappShareOpenedAt:firebase.firestore.FieldValue.serverTimestamp(),whatsappShareOpenCount:firebase.firestore.FieldValue.increment(1)},{merge:true}));
+    Promise.allSettled(writes).catch(()=>{});
+  }
+  function closeSubmittedOrder(){
+    try{sessionStorage.removeItem(LAST_SUBMITTED_ORDER_KEY)}catch{}
+    setSubmittedOrder(null);setCheckout(false);setPage('orders');
+  }
   async function loadHistory(){setHistoryLoading(true);try{const [o,d]=await Promise.all([db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).get(),db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).get()]);const cv=x=>x?.toMillis?.()||0;setOrders(o.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));setDrafts(d.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.updatedAt||b.createdAt)-cv(a.updatedAt||a.createdAt)))}catch(e){console.error(e)}finally{setHistoryLoading(false)}}
   async function deleteDraft(id){try{const row=drafts.find(x=>x.id===id);await db.collection(DRAFT_COLLECTION).doc(id).delete();setDrafts(x=>x.filter(d=>d.id!==id));logCustomerEvent(user,'draft_deleted',row?.draftNo||id,{draftId:id});setToast({type:'success',message:'تم حذف المسودة.'})}catch{setToast({type:'error',message:'تعذر حذف المسودة.'})}}
   function loadDraft(d){logCustomerEvent(user,'draft_loaded',d.draftNo||d.id,{draftId:d.id,itemCount:d.items?.length||0});const next={};(d.items||[]).forEach(i=>next[i.cleanId]={cleanId:i.cleanId,id:i.id,name:i.name,imageFile:i.imageFile||'',cartonPrice:Number(i.cartonPrice)||0,pack:i.pack||'',branchQuantities:i.branchQuantities||{}});setCart(next);setCheckout(false);setPage('cart');setToast({type:'success',message:'تم تحميل المسودة إلى السلة.'})}
@@ -931,12 +1062,24 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     }
   }
   useEffect(()=>{
+    if(guestMode||!user?.uid||loading||cartItems.length)return;
+    let action='';try{action=sessionStorage.getItem('customer_pending_action')||''}catch{}
+    if(!action)return;
+    try{
+      const snapshot=JSON.parse(localStorage.getItem(PENDING_CHECKOUT_SNAPSHOT_KEY)||'null');
+      if(snapshot?.cart&&Object.keys(snapshot.cart).length){
+        setCart(snapshot.cart);
+        if(snapshot.notes)sessionStorage.setItem('customer_pending_notes',String(snapshot.notes));
+        logCustomerEvent(user,'checkout_snapshot_recovered','استعادة السلة بعد تسجيل الدخول',{kind:snapshot.kind||action,itemCount:Object.keys(snapshot.cart).length});
+      }
+    }catch(e){console.warn('[Checkout recovery]',e)}
+  },[guestMode,user?.uid,loading,cartItems.length]);
+  useEffect(()=>{
     if(guestMode||!user?.uid||loading||pendingResumeRef.current||!cartItems.length||!String(safeProfile.name||'').trim())return;
     let action='',notes='';
     try{action=sessionStorage.getItem('customer_pending_action')||'';notes=sessionStorage.getItem('customer_pending_notes')||''}catch{}
     if(!action)return;
     pendingResumeRef.current=true;
-    try{sessionStorage.removeItem('customer_pending_action');sessionStorage.removeItem('customer_pending_notes');sessionStorage.removeItem('customer_pending_after_auth')}catch{}
     const t=setTimeout(async()=>{
       try{if(action==='draft')await saveDraft(notes);else if(action==='submit')await submitOrder(notes)}
       finally{pendingResumeRef.current=false}
@@ -945,6 +1088,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   },[guestMode,user?.uid,loading,cartItems.length,safeProfile.name]);
 
   const nav=[['home','home','الرئيسية'],['categories','grid','الأقسام'],['cart','cart','السلة'],['orders','file','طلباتي'],['account','user','حسابي']];
+  if(submittedOrder)return <><OrderSuccessScreen order={submittedOrder} onWhatsApp={shareOrderWhatsApp} onClose={closeSubmittedOrder}/><Toast toast={toast} onClose={()=>setToast(null)}/></>;
   if(checkout)return <><div className="min-h-[100dvh] bg-surface pb-8"><header className="bg-white border-b border-border sticky top-0 z-20"><div className="rights-bar bg-primary text-white"><div className="max-w-[900px] mx-auto h-8 px-4 flex items-center justify-between text-[10px] font-bold"><a href="https://wa.me/966506762257" target="_blank" className="developer-link text-white">تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><span className="text-[#6EE7B7] font-extrabold ltr">Korvi</span></div></div><div className="max-w-[900px] mx-auto p-4"><b>اعتماد طلب الشراء</b></div></header><main className="max-w-[760px] mx-auto p-4"><Checkout items={cartItems} branches={branches} profile={safeProfile} guestMode={guestMode} initialNotes={(()=>{try{return sessionStorage.getItem('customer_pending_notes')||''}catch{return''}})()} onBack={()=>{setCheckout(false);setValidationErrors([])}} onDraft={saveDraft} onSubmit={submitOrder} busy={submitBusy} validationErrors={validationErrors}/></main><footer className="rights-footer max-w-[760px] mx-auto px-4 pb-5"><div className="border-t border-border pt-4 flex items-center justify-between gap-3 text-[10px] text-muted"><a href="https://wa.me/966506762257" target="_blank" className="developer-link font-bold text-secondary">© 2026 تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><span>جزء من منظومة <b className="text-[#047857] ltr">Korvi</b></span></div></footer></div><Toast toast={toast} onClose={()=>setToast(null)}/></>;
   return <div className="min-h-[100dvh] bg-surface pb-[92px]">
     <header className="bg-white border-b border-border sticky top-0 z-30 safe-top"><div className="rights-bar bg-primary text-white"><div className="max-w-[1100px] mx-auto h-8 px-4 flex items-center justify-between gap-3 text-[10px]"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link text-white font-bold truncate">تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><div className="flex items-center gap-1.5 shrink-0"><span className="text-white/55">ضمن منظومة</span><b className="text-[#6EE7B7] ltr tracking-wide">Korvi</b></div></div></div><div className="max-w-[1100px] mx-auto px-4 py-3 flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-muted">بوابة العملاء</div><b className="text-sm block truncate">{guestMode?'المعرض الرقمي':safeProfile.company}</b></div><div className="flex items-center gap-2"><div className="hidden sm:block text-left"><div className="text-[10px] text-muted">مرحبًا</div><div className="text-xs font-bold">{guestMode?'تصفح مباشر':(safeProfile.name||'عميل')}</div></div><button onClick={()=>setPage('cart')} className="relative w-11 h-11 rounded-12 border border-border bg-white flex items-center justify-center"><Icon name="cart"/>{cartCount>0&&<span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[10px] flex items-center justify-center">{cartCount}</span>}</button></div></div></header>
@@ -959,7 +1103,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
         {!categoryBrowse?<><div className="ui-section-head"><h2>الأقسام</h2><p>اختر القسم أولًا لعرض محتواه بصورة مباشرة ومنظمة.</p></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{categoryCards.map(c=><button key={c.name} onClick={()=>{setCategoryBrowse(c.name);setQuery('');setPageCount(PAGE_SIZE)}} className="category-tile shadow-card"><div className="flex items-start justify-between gap-2"><div className="w-10 h-10 rounded-12 bg-accentSoft text-accent flex items-center justify-center"><Icon name="grid" className="w-5 h-5"/></div><Icon name="chevron" className="w-4 h-4 text-muted"/></div><div><b className="text-[14px] block line-clamp-2">{c.name}</b><span className="text-[10px] text-muted mt-1 block">فتح القسم</span></div></button>)}</div></>:<><div className="flex items-center justify-between gap-3 mb-4"><button onClick={()=>{setCategoryBrowse(null);setQuery('')}} className="h-10 px-3 rounded-10 border border-border bg-white text-xs font-bold flex items-center gap-2"><Icon name="back" className="w-4 h-4"/>كل الأقسام</button><div className="text-left"><b className="text-sm block">{categoryBrowse}</b><span className="text-[10px] text-muted">تصفح القسم</span></div></div><div className="sticky top-[92px] z-20 bg-surface/95 backdrop-blur py-2"><div className="relative"><Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`ابحث داخل ${categoryBrowse}...`} className="w-full h-[52px] pr-12 pl-4 bg-white border border-border rounded-16 outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 shadow-card"/></div></div><div className="flex items-center justify-end mb-3"><div className="flex p-1 bg-white border border-border rounded-10"><button onClick={()=>setViewMode('grid')} className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='grid'?'bg-primary text-white':'text-muted'}`}><Icon name="grid" className="w-4 h-4"/></button><button onClick={()=>setViewMode('list')} className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='list'?'bg-primary text-white':'text-muted'}`}><Icon name="list" className="w-4 h-4"/></button></div></div>{loading?<div className="py-24 flex justify-center"><Spinner/></div>:filtered.length===0?<Empty title="لا توجد منتجات في هذا القسم" note="قد تكون المنتجات بانتظار إضافة صور أو تحديث التصنيف." icon="grid"/>:<><div className={viewMode==='grid'?'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4':'grid gap-3'}>{filtered.slice(0,pageCount).map(item=>viewMode==='grid'?<ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>:<ProductListCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-5 w-full h-12 rounded-12 border border-border bg-white font-bold text-sm">عرض المزيد</button>}</>}</>}
       </div>}
       {page==='cart'&&<div className="fade-in"><div className="ui-section-head"><h2>طلب الشراء</h2><p>عدّل الكمية بنصف كرتون ووزّعها على فروعك بدون كتابة يدوية.</p></div><CartView cartItems={cartItems} branches={branches} onEdit={setAllocItem} onRemove={removeItem} onCheckout={()=>setCheckout(true)} onSaveDraft={()=>saveDraft('')} savingDraft={savingDraft}/></div>}
-      {page==='orders'&&!guestMode&&<div className="fade-in"><div className="ui-section-head"><h2>طلباتي</h2><p>كل الطلبات المرسلة والمسودات المحفوظة في مكان واحد.</p></div><OrdersView orders={orders} drafts={drafts} onLoadDraft={loadDraft} onDeleteDraft={deleteDraft} loading={historyLoading}/></div>}
+      {page==='orders'&&!guestMode&&<div className="fade-in"><div className="ui-section-head"><h2>طلباتي</h2><p>كل الطلبات المرسلة والمسودات المحفوظة في مكان واحد.</p></div><OrdersView orders={orders} drafts={drafts} onLoadDraft={loadDraft} onDeleteDraft={deleteDraft} loading={historyLoading} onWhatsApp={shareOrderWhatsApp}/></div>}
       {page==='account'&&!guestMode&&<div className="fade-in"><div className="ui-section-head"><h2>حسابي</h2><p>بيانات الحساب، الفروع، ورمز الدخول.</p></div><AccountView profile={safeProfile} onLogout={()=>{logCustomerEvent(user,'logout','تسجيل خروج');touchCustomerSession(user,safeProfile,'logout');auth.signOut()}} onSaveBranches={saveBranches} onChangePin={changePin}/></div>}
     </main>
     <footer className="rights-footer max-w-[1100px] mx-auto px-4 sm:px-5 pb-5"><div className="border-t border-border pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-muted"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link font-bold text-secondary">© 2026 تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><span>بوابة العملاء · جزء من منظومة <b className="text-[#047857] ltr tracking-wide">Korvi</b></span></div></footer>
@@ -1008,9 +1152,11 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       setProfile(p);setAuthState('ready');setAuthPrompt(false);
       const reason=sessionStorage.getItem('batco_customer_auth_reason')||'session_restore';sessionStorage.removeItem('batco_customer_auth_reason');
       db.collection(CUSTOMER_COLLECTION).doc(u.uid).update({lastLoginAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
-      touchCustomerSession(u,p,reason);
-      logCustomerEvent(u,reason==='manual_login'?'login_success':'session_restored',reason,{company:p.company,phone:p.phone});
-      db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:u.uid,company:p.company||'',phone:p.phone||'',type:reason==='manual_login'?'login_success':'session_restore',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+      await Promise.allSettled([
+        touchCustomerSession(u,p,reason),
+        logCustomerEvent(u,reason==='manual_login'?'login_success':'session_restored',reason,{company:p.company,phone:p.phone}),
+        db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:u.uid,name:p.name||'',company:p.company||'',phone:p.phone||'',type:reason==='manual_login'?'login_success':'session_restore',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+      ]);
     }catch(e){console.error(e);setGlobalError('تعذر تحميل حساب العميل.');setAuthState('guest');}
   }),[]);
 
@@ -1024,7 +1170,7 @@ function Root({registrationEnabled=true,loginEnabled=true}){
       console.info('[Customer registration] starting',{phone:registration.phone,emailHint:email.replace(/(.{4}).+(@.+)/,'$1***$2')});
       const cred=await auth.createUserWithEmailAndPassword(email,registration.pin);
       created=cred.user;stage='profile';
-      const savedGuestName=(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}})();const profileData={name:savedGuestName,company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),schemaVersion:3};
+      const savedGuestName=(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}})();const deviceAtRegistration=customerDeviceInfo();const profileData={name:savedGuestName,company:registration.company,phone:registration.phone,branches:[],status:'active',livenessVerified:true,livenessVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:'account_created',lastActivityLabel:'إنشاء حساب',lastSessionId:customerSessionId,lastDevice:{deviceId:deviceAtRegistration.deviceId||'',fingerprint:deviceAtRegistration.fingerprint||'',userAgent:deviceAtRegistration.userAgent||'',platform:deviceAtRegistration.platform||'',viewport:deviceAtRegistration.viewport||'',screen:deviceAtRegistration.screen||'',standalone:!!deviceAtRegistration.standalone,timezone:deviceAtRegistration.timezone||''},createdSource:'customer_portal',telemetryVersion:4,schemaVersion:4};
       await db.collection(CUSTOMER_COLLECTION).doc(created.uid).set(profileData);
       const doc=await db.collection(CUSTOMER_COLLECTION).doc(created.uid).get();
       if(!doc.exists) throw Object.assign(new Error('customer profile missing after create'),{code:'customer/profile-missing'});
@@ -1040,10 +1186,12 @@ function Root({registrationEnabled=true,loginEnabled=true}){
           });
         }catch(photoErr){console.warn('[Customer security photo save]',photoErr)}
       }
-      touchCustomerSession(created,createdProfile,'account_created');
-      logCustomerEvent(created,'account_created','إنشاء حساب',{company:registration.company,phone:registration.phone,livenessVerified:true});
-      logCustomerEvent(created,'liveness_verified','تم التحقق من الحضور',{savedFaceImage:!!facePhotoDataUrl});
-      db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:created.uid,company:registration.company,phone:registration.phone,type:'account_created',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+      await Promise.allSettled([
+        touchCustomerSession(created,createdProfile,'account_created'),
+        logCustomerEvent(created,'account_created','إنشاء حساب',{company:registration.company,phone:registration.phone,livenessVerified:true}),
+        logCustomerEvent(created,'liveness_verified','تم التحقق من الحضور',{savedFaceImage:!!facePhotoDataUrl}),
+        db.collection(CUSTOMER_LOGIN_COLLECTION).add({customerUid:created.uid,name:createdProfile.name||'',company:registration.company,phone:registration.phone,type:'account_created',sessionId:customerSessionId,device:customerDeviceInfo(),createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+      ]);
       setRegistration(null);setAuthState('ready');setAuthPrompt(false);setScreen('choice');
     }catch(err){
       console.error('[Customer registration]',{stage,code:err?.code,message:err?.message,error:err});
