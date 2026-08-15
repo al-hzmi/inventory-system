@@ -1,0 +1,75 @@
+name: Stocktake Admin Entry V36
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/stocktake-entry-v36.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch stocktake entry and harden quality gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          idxp=Path('index.html')
+          s=idxp.read_text()
+          old='''                            {currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (\n                                <button onClick={() => { window.location.href = './stocktake.html'; }} title="فتح الجرد"\n                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">\n                                    <Icon.Archive className="w-20 h-20" />\n                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">الجرد</span>\n                                </button>\n                            )}'''
+          new='''                            {isAdmin ? (\n                                <button onClick={() => { window.location.href = './admin-stocktake.html'; }} title="إدارة الجرد"\n                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">\n                                    <Icon.Archive className="w-20 h-20" />\n                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">إدارة الجرد</span>\n                                </button>\n                            ) : (currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (\n                                <button onClick={() => { window.location.href = './stocktake.html'; }} title="فتح الجرد"\n                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">\n                                    <Icon.Archive className="w-20 h-20" />\n                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">الجرد</span>\n                                </button>\n                            ))}'''
+          if s.count(old)!=1:
+              raise SystemExit(f'Expected exactly one old stocktake button block, found {s.count(old)}')
+          idxp.write_text(s.replace(old,new,1))
+
+          q=Path('.github/workflows/site-quality-gate.yml')
+          qs=q.read_text()
+          semantic_marker="""          if login>=0 and app>login and 'const stocktakeControl = useStocktakeControl();' in idx[login:app]: failures.append('index: stocktake hook leaked into LoginScreen')\n"""
+          semantic_add="""          if login>=0 and app>login and 'const stocktakeControl = useStocktakeControl();' in idx[login:app]: failures.append('index: stocktake hook leaked into LoginScreen')\n          if \"window.location.href = './admin-stocktake.html'\" not in idx or '>إدارة الجرد</span>' not in idx: failures.append('index: admin stocktake management entry must always exist')\n          if 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' not in idx: failures.append('index: employee stocktake entry must remain campaign/access gated')\n          adm=Path('admin-dashboard.html').read_text()\n          if './admin-stocktake.html' not in adm or 'إدارة الجرد' not in adm: failures.append('admin dashboard: stocktake management card missing')\n"""
+          if 'admin stocktake management entry must always exist' not in qs:
+              if semantic_marker not in qs: raise SystemExit('Quality gate semantic marker not found')
+              qs=qs.replace(semantic_marker,semantic_add,1)
+          runtime_marker="""              if(visible<10){failed=true;console.error(`BLANK_PAGE ${name}`)}\n"""
+          runtime_add="""              if(visible<10){failed=true;console.error(`BLANK_PAGE ${name}`)}\n              if(name==='admin-employee'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_STOCKTAKE_ENTRY_MISSING')}\n              if(name==='admin-dashboard'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_DASHBOARD_STOCKTAKE_ENTRY_MISSING')}\n"""
+          if 'ADMIN_STOCKTAKE_ENTRY_MISSING' not in qs:
+              if runtime_marker not in qs: raise SystemExit('Quality gate runtime marker not found')
+              qs=qs.replace(runtime_marker,runtime_add,1)
+          q.write_text(qs)
+          PY
+      - name: Validate patched files
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          for name in ['index.html','admin-dashboard.html']:
+              s=Path(name).read_text()
+              blocks=re.findall(r'<script[^>]*type=["\']text/babel["\'][^>]*>(.*?)</script>',s,re.S|re.I)
+              for i,code in enumerate(blocks):
+                  f=Path('/tmp')/f'{name}-{i}.jsx'; f.write_text(code)
+                  r=subprocess.run(['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/out.js'],capture_output=True,text=True)
+                  if r.returncode: print(r.stderr); sys.exit(1)
+          idx=Path('index.html').read_text(); adm=Path('admin-dashboard.html').read_text()
+          assert \"window.location.href = './admin-stocktake.html'\" in idx
+          assert '>إدارة الجرد</span>' in idx
+          assert 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx
+          assert './admin-stocktake.html' in adm and 'إدارة الجرد' in adm
+          print('STOCKTAKE_ENTRY_V36_OK')
+          PY
+      - name: Commit repair and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/stocktake-entry-v36.yml
+          git add index.html .github/workflows/site-quality-gate.yml
+          git commit -m "Expose stocktake management to admin V36"
+          git push origin main
