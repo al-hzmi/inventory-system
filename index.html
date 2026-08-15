@@ -2013,7 +2013,6 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
     const employeeSiteControl = useEmployeeSiteControl();
-    const stocktakeControl = useStocktakeControl();
     const [name, setName] = useState(initialName);
     const [step, setStep] = useState('name');
     const [error, setError] = useState('');
@@ -3262,6 +3261,7 @@ const App = () => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
     const employeeSiteControl = useEmployeeSiteControl();
+    const stocktakeControl = useStocktakeControl();
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     
     useEffect(() => {
