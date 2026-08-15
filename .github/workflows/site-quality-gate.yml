@@ -11,6 +11,7 @@ on:
       - '.github/workflows/site-quality-gate.yml'
   pull_request:
     branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -109,6 +110,10 @@ jobs:
           if min(app,hook,use)<0 or not (app<hook<use): failures.append('index: stocktake hook must be declared inside App before use')
           login=idx.find('const LoginScreen =');
           if login>=0 and app>login and 'const stocktakeControl = useStocktakeControl();' in idx[login:app]: failures.append('index: stocktake hook leaked into LoginScreen')
+          if "window.location.href = './admin-stocktake.html'" not in idx or '>إدارة الجرد</span>' not in idx: failures.append('index: admin stocktake management entry must always exist')
+          if 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' not in idx: failures.append('index: employee stocktake entry must remain campaign/access gated')
+          adm=Path('admin-dashboard.html').read_text()
+          if './admin-stocktake.html' not in adm or 'إدارة الجرد' not in adm: failures.append('admin dashboard: stocktake management card missing')
           required=['index.html','customer.html','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html']
           for f in required:
               if not Path(f).exists() or Path(f).stat().st_size<1000: failures.append(f'{f}: missing or suspiciously small')
@@ -162,6 +167,8 @@ jobs:
               if(!resp || resp.status()>=400){failed=true;console.error(`HTTP_FAIL ${name}`)}
               if(pageErrors.length){failed=true;console.error(`PAGEERROR ${name}:\n${pageErrors.join('\n---\n')}`)}
               if(visible<10){failed=true;console.error(`BLANK_PAGE ${name}`)}
+              if(name==='admin-employee'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_STOCKTAKE_ENTRY_MISSING')}
+              if(name==='admin-dashboard'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_DASHBOARD_STOCKTAKE_ENTRY_MISSING')}
             }catch(e){failed=true;console.error(`NAV_FAIL ${name}: ${e?.stack||e}`)}
             await context.close();
           }
