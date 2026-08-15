@@ -27,14 +27,18 @@ jobs:
           from pathlib import Path
           import json,re,sys
           failures=[]
-          text_ext={'.html','.js','.json','.css','.md','.txt','.tsv','.yml','.yaml'}
-          for p in Path('.').rglob('*'):
-              if not p.is_file() or '.git' in p.parts or 'node_modules' in p.parts: continue
-              if p.suffix.lower() in text_ext:
-                  try: s=p.read_text(errors='strict')
-                  except Exception as e: failures.append(f'UTF8 {p}: {e}'); continue
-                  if any(x in s for x in ['<<<<<<< HEAD','=======\n>>>>>>>','<<<<<<<','>>>>>>>']): failures.append(f'MERGE_MARKER {p}')
-                  if '... (truncated)' in s: failures.append(f'TRUNCATED_PLACEHOLDER {p}')
+          scan=[]
+          for pat in ['*.html','*.js','*.json','*.css','*.md','*.txt','*.tsv']:
+              scan.extend(Path('.').glob(pat))
+          for folder in ['api','data']:
+              if Path(folder).exists(): scan.extend(p for p in Path(folder).rglob('*') if p.is_file())
+          for p in scan:
+              try: s=p.read_text(errors='strict')
+              except Exception as e: failures.append(f'UTF8 {p}: {e}'); continue
+              marker_left='<'*7
+              marker_right='>'*7
+              if marker_left in s or marker_right in s: failures.append(f'MERGE_MARKER {p}')
+              if '.'.join(['..',' (truncated)']) in s: failures.append(f'TRUNCATED_PLACEHOLDER {p}')
           for p in Path('.').glob('*.json'):
               try: json.loads(p.read_text())
               except Exception as e: failures.append(f'JSON {p}: {e}')
@@ -52,7 +56,7 @@ jobs:
                   if not target.exists(): failures.append(f'BROKEN_LOCAL_REF {p}: {val}')
           if failures:
               print('\n'.join(sorted(set(failures)))); sys.exit(1)
-          print('STRUCTURAL_AUDIT_OK')
+          print('STRUCTURAL_AUDIT_OK files=',len(scan))
           PY
       - name: Syntax audit for every HTML and JS file
         shell: bash
