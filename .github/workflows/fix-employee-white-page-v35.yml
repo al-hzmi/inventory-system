@@ -1,0 +1,77 @@
+name: Fix Employee White Page V35
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-employee-white-page-v35.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair stocktake hook placement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          line="    const stocktakeControl = useStocktakeControl();\n"
+          login=s.find('const LoginScreen =')
+          app=s.find('const App = () => {')
+          if login<0 or app<0 or app<=login: raise SystemExit('critical component markers missing')
+          login_block=s[login:app]
+          if line in login_block:
+              login_block=login_block.replace(line,'',1)
+              s=s[:login]+login_block+s[app:]
+          app=s.find('const App = () => {')
+          app_end=s.find('const currentEmployeeId',app)
+          if app_end<0: raise SystemExit('App employee marker missing')
+          app_head=s[app:app_end]
+          if line not in app_head:
+              marker="    const employeeSiteControl = useEmployeeSiteControl();\n"
+              if marker not in app_head: raise SystemExit('App employeeSiteControl marker missing')
+              app_head=app_head.replace(marker,marker+line,1)
+              s=s[:app]+app_head+s[app_end:]
+          if s.count('const stocktakeControl = useStocktakeControl();')!=1:
+              raise SystemExit('stocktakeControl hook must exist exactly once')
+          app=s.find('const App = () => {')
+          hook=s.find('const stocktakeControl = useStocktakeControl();')
+          if hook<app: raise SystemExit('stocktakeControl hook is not inside App')
+          use=s.find('const currentStocktakeAccessAllowed = stocktakeAccessAllowed(stocktakeControl',app)
+          if use<0 or hook>use: raise SystemExit('stocktakeControl use ordering invalid')
+          p.write_text(s)
+          print('REPAIRED_HOOK_PLACEMENT_OK')
+          PY
+      - name: Validate employee and admin syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          for fn in ['index.html','admin-dashboard.html','customer.html']:
+              s=Path(fn).read_text()
+              start=s.find('<script type="text/babel">')
+              if start<0: continue
+              start+=len('<script type="text/babel">')
+              end=s.rfind('</script>')
+              Path('/tmp/'+fn+'.jsx').write_text(s[start:end])
+          PY
+          npx esbuild /tmp/index.html.jsx --loader:.jsx=jsx --outfile=/tmp/index.js >/dev/null
+          npx esbuild /tmp/admin-dashboard.html.jsx --loader:.jsx=jsx --outfile=/tmp/admin.js >/dev/null
+          npx esbuild /tmp/customer.html.jsx --loader:.jsx=jsx --outfile=/tmp/customer.js >/dev/null
+      - name: Commit repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "BATCO Automation"
+          git config user.email "actions@users.noreply.github.com"
+          rm -f .github/workflows/fix-employee-white-page-v35.yml
+          git add -A
+          git commit -m "Fix employee white page caused by stocktake hook placement"
+          git push origin main
