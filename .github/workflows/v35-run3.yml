@@ -1,0 +1,39 @@
+name: V35 Run3
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v35-run3.yml'
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python3 .github/v35_patch.py
+      - name: Verify syntax
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,sys
+          for fn in ['index.html','customer.html','admin-dashboard.html']:
+            s=Path(fn).read_text(); a=s.find('<script type="text/babel">')+len('<script type="text/babel">'); b=s.rfind('</script>')
+            f='/tmp/'+fn+'.jsx'; Path(f).write_text(s[a:b]); r=subprocess.run(['npx','esbuild',f,'--loader:.jsx=jsx','--outfile=/tmp/out.js'],capture_output=True,text=True)
+            if r.returncode: print(r.stderr); sys.exit(1)
+          r=subprocess.run(['node','--check','customer-sw.js'],capture_output=True,text=True)
+          if r.returncode: print(r.stderr); sys.exit(1)
+          print('V35_SYNTAX_OK')
+          PY
+      - name: Commit verified code
+        run: |
+          git config user.name "BATCO Automation"
+          git config user.email "actions@users.noreply.github.com"
+          rm -rf node_modules package.json package-lock.json
+          rm -f .github/placeholder.tmp .github/employee-routing-v35-started.txt .github/v35-failure.txt .github/v35_patch.py .github/workflows/employee-routing-v35.yml .github/workflows/v35-apply.yml .github/workflows/v35-run3.yml
+          git add -A
+          git commit -m "Add employee-first routing and isolated customer view V35"
+          git push origin main
