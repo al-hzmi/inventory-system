@@ -1,10 +1,12 @@
 V35 FULL SITE AUDIT
-result=FAIL
-tested_sha=8896abbce0fdafc608692848a8a2b4cb6fb759c7
-run_id=32161745237
+result=PASS
+production_code_sha=590f8d12efd72d61837ea44dd1985d236228abd0
+browser_tested_sha=43050baf45d0b81a5c35b5350ef5bf1f2e842188
+run_id=32162011296
 structural=success
 syntax_dependencies=success
 syntax=success
 semantic_regression=success
 browser_dependencies=success
-browser_runtime=failure
+browser_runtime=success
+note=first browser harness failure was module-resolution only; this rerun executes from repository root
