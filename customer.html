@@ -124,7 +124,7 @@
 window.__customerInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window.__customerInstallPrompt = e; window.dispatchEvent(new Event('customerinstallready')); });
 window.addEventListener('appinstalled', function(){ window.__customerInstallPrompt = null; });
-if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=33.0',{updateViaCache:'none'}).catch(function(){}); }); }
+if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=35.0',{updateViaCache:'none'}).catch(function(){}); }); }
 </script>
 <script type="text/babel">
 
@@ -143,6 +143,13 @@ const DATA_PATH = './data/';
 const IMAGES_PATH = './images/';
 const GUEST_NAME_KEY = 'customer_guest_name_v1';
 const CUSTOMER_VISITOR_KEY = 'batco_customer_visitor_id_v1';
+const EMPLOYEE_CUSTOMER_ROUTE = new URLSearchParams(window.location.search);
+const EMPLOYEE_CUSTOMER_SESSION = (() => { try { const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(); const employeeId=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(); const authVersion=String(localStorage.getItem('inventory_employee_auth_version_v2')||''); return {valid:Boolean(name&&employeeId&&authVersion==='2'),name,employeeId}; } catch { return {valid:false,name:'',employeeId:''}; } })();
+const EMPLOYEE_CUSTOMER_VIEW = EMPLOYEE_CUSTOMER_SESSION.valid && EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1';
+const EMPLOYEE_CUSTOMER_AUTO_ROUTE = EMPLOYEE_CUSTOMER_SESSION.valid && !EMPLOYEE_CUSTOMER_VIEW;
+window.__employeeCustomerView = EMPLOYEE_CUSTOMER_VIEW;
+if(EMPLOYEE_CUSTOMER_AUTO_ROUTE) window.location.replace('./index.html?employee=1');
+
 const LAST_SUBMITTED_ORDER_KEY = 'customer_last_submitted_order_v2';
 const PENDING_CHECKOUT_SNAPSHOT_KEY = 'customer_pending_checkout_snapshot_v2';
 const CART_STEP = 0.5;
@@ -240,6 +247,7 @@ async function ensureCustomerDeviceAllowed(user,profile){
   return {allowed:true,deviceId:ref.id,info};
 }
 async function logCustomerEvent(user,type,label='',data={}){
+  if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};
   const identity=customerIdentity(user),device=customerDeviceInfo(),guestName=currentGuestName();
   const activityWrite=db.collection(CUSTOMER_ACTIVITY_COLLECTION).add({
     customerUid:identity.customerUid,visitorId:identity.visitorId,identityType:identity.identityType,
@@ -260,6 +268,7 @@ async function logCustomerEvent(user,type,label='',data={}){
   return {activity:results[0]?.status==='fulfilled',profile:user?.uid?(results[1]?.status==='fulfilled'):false};
 }
 async function touchCustomerSession(user,profile,event='active'){
+  if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};
   const identity=customerIdentity(user),device=customerDeviceInfo();
   try{
     const key='batco_customer_session_started_'+identity.key+'_'+customerSessionId;
@@ -889,6 +898,7 @@ function InstallNudge(){
 
 function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth}){
   const safeProfile=profile||{name:'',company:'',phone:'',branches:[]};
+  const employeeViewNotice='أنت تستعرض بوابة العملاء بحساب موظف. إنشاء الطلبات وحفظها يتم من نظام الموظفين.';
   const [loading,setLoading]=useState(true),[products,setProducts]=useState([]),[baseCategories,setBaseCategories]=useState({}),[overrides,setOverrides]=useState({}),[meta,setMeta]=useState({}),[query,setQuery]=useState(''),[activeCategory,setActiveCategory]=useState('الكل'),[categoryBrowse,setCategoryBrowse]=useState(null),[page,setPage]=useState('home'),[pageCount,setPageCount]=useState(PAGE_SIZE),[viewMode,setViewMode]=useState(()=>{try{return localStorage.getItem('customer_catalog_view_v2')||'grid'}catch{return'grid'}}),[missingImages,setMissingImages]=useState(()=>new Set()),[cart,setCart]=useState({}),[guestBranches,setGuestBranches]=useState(()=>{try{return JSON.parse(localStorage.getItem('customer_guest_branches_v1')||'[]')}catch{return[]}}),[allocItem,setAllocItem]=useState(null),[firstBranchItem,setFirstBranchItem]=useState(null),[zoom,setZoom]=useState(null),[toast,setToast]=useState(null),[checkout,setCheckout]=useState(()=>{try{return !guestMode&&sessionStorage.getItem('customer_pending_after_auth')==='checkout'}catch{return false}}),[orders,setOrders]=useState([]),[drafts,setDrafts]=useState([]),[historyLoading,setHistoryLoading]=useState(false),[savingDraft,setSavingDraft]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[validationErrors,setValidationErrors]=useState([]);
   const [submittedOrder,setSubmittedOrder]=useState(()=>{try{return JSON.parse(sessionStorage.getItem(LAST_SUBMITTED_ORDER_KEY)||'null')}catch{return null}});
   const [guestName,setGuestName]=useState(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}}),[showGuestNamePrompt,setShowGuestNamePrompt]=useState(false);
@@ -903,7 +913,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   };
   const pendingResumeRef=useRef(false);
   useEffect(()=>{
-    if(!guestMode)return;
+    if(!guestMode||EMPLOYEE_CUSTOMER_VIEW)return;
     const profileNow=()=>({name:currentGuestName(),company:'',phone:''});
     const enterKey='batco_guest_enter_logged_'+customerSessionId;
     try{
@@ -1006,7 +1016,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     const item=firstBranchItem;
     const branch={id:`b_${Date.now().toString(36)}_${uidPart()}`,name:String(name||'').trim()};
     if(guestMode){
-      const next=[branch];setGuestBranches(next);try{localStorage.setItem('customer_guest_branches_v1',JSON.stringify(next))}catch{}
+      const next=[branch];setGuestBranches(next);if(!EMPLOYEE_CUSTOMER_VIEW){try{localStorage.setItem('customer_guest_branches_v1',JSON.stringify(next))}catch{}}
     }else{
       await db.collection(CUSTOMER_COLLECTION).doc(user.uid).update({branches:[branch],updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
       onProfileUpdate({...safeProfile,branches:[branch]});
@@ -1020,6 +1030,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   async function saveDraft(notes=''){
     if(!cartItems.length)return;
     if(guestMode){
+      if(EMPLOYEE_CUSTOMER_VIEW){setToast({type:'info',message:employeeViewNotice});return;}
       try{
         sessionStorage.setItem('customer_pending_after_auth','checkout');sessionStorage.setItem('customer_pending_action','draft');sessionStorage.setItem('customer_pending_notes',String(notes||''));
         localStorage.setItem(PENDING_CHECKOUT_SNAPSHOT_KEY,JSON.stringify({kind:'draft',cart,branches,notes:String(notes||''),createdAt:Date.now()}));
@@ -1042,6 +1053,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     if(!cleanNotes){setToast({type:'error',message:'الملاحظات إلزامية قبل اعتماد الطلب.'});return}
     if(!cartItems.length){setToast({type:'error',message:'السلة فارغة. لم يتم إنشاء أي طلب.'});return}
     if(guestMode){
+      if(EMPLOYEE_CUSTOMER_VIEW){setToast({type:'info',message:employeeViewNotice});return;}
       try{
         sessionStorage.setItem('customer_pending_after_auth','checkout');sessionStorage.setItem('customer_pending_action','submit');sessionStorage.setItem('customer_pending_notes',cleanNotes);
         localStorage.setItem(PENDING_CHECKOUT_SNAPSHOT_KEY,JSON.stringify({kind:'submit',cart,branches,notes:cleanNotes,createdAt:Date.now()}));
@@ -1132,7 +1144,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   if(submittedOrder)return <><OrderSuccessScreen order={submittedOrder} onWhatsApp={shareOrderWhatsApp} onClose={closeSubmittedOrder}/><Toast toast={toast} onClose={()=>setToast(null)}/></>;
   if(checkout)return <><div className="min-h-[100dvh] bg-surface pb-8"><header className="bg-white border-b border-border sticky top-0 z-20"><div className="rights-bar bg-primary text-white"><div className="max-w-[900px] mx-auto h-8 px-4 flex items-center justify-between text-[10px] font-bold"><a href="https://wa.me/966506762257" target="_blank" className="developer-link text-white">تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><span className="text-[#6EE7B7] font-extrabold ltr">Korvi</span></div></div><div className="max-w-[900px] mx-auto p-4"><b>اعتماد طلب الشراء</b></div></header><main className="max-w-[760px] mx-auto p-4"><Checkout items={cartItems} branches={branches} profile={safeProfile} guestMode={guestMode} initialNotes={(()=>{try{return sessionStorage.getItem('customer_pending_notes')||''}catch{return''}})()} onBack={()=>{setCheckout(false);setValidationErrors([])}} onDraft={saveDraft} onSubmit={submitOrder} busy={submitBusy} validationErrors={validationErrors}/></main><footer className="rights-footer max-w-[760px] mx-auto px-4 pb-5"><div className="border-t border-border pt-4 flex items-center justify-between gap-3 text-[10px] text-muted"><a href="https://wa.me/966506762257" target="_blank" className="developer-link font-bold text-secondary">© 2026 تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><span>جزء من منظومة <b className="text-[#047857] ltr">Korvi</b></span></div></footer></div><Toast toast={toast} onClose={()=>setToast(null)}/></>;
   return <div className="min-h-[100dvh] bg-surface pb-[92px]">
-    <header className="bg-white border-b border-border sticky top-0 z-30 safe-top"><div className="rights-bar bg-primary text-white"><div className="max-w-[1100px] mx-auto h-8 px-4 flex items-center justify-between gap-3 text-[10px]"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link text-white font-bold truncate">تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><div className="flex items-center gap-1.5 shrink-0"><span className="text-white/55">ضمن منظومة</span><b className="text-[#6EE7B7] ltr tracking-wide">Korvi</b></div></div></div><div className="max-w-[1100px] mx-auto px-4 py-3 flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-muted">بوابة العملاء</div><b className="text-sm block truncate">{guestMode?'المعرض الرقمي':safeProfile.company}</b></div><div className="flex items-center gap-2"><div className="hidden sm:block text-left"><div className="text-[10px] text-muted">مرحبًا</div><div className="text-xs font-bold">{guestMode?'تصفح مباشر':(safeProfile.name||'عميل')}</div></div><button onClick={()=>setPage('cart')} className="relative w-11 h-11 rounded-12 border border-border bg-white flex items-center justify-center"><Icon name="cart"/>{cartCount>0&&<span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[10px] flex items-center justify-center">{cartCount}</span>}</button></div></div></header>
+    <header className="bg-white border-b border-border sticky top-0 z-30 safe-top"><div className="rights-bar bg-primary text-white"><div className="max-w-[1100px] mx-auto h-8 px-4 flex items-center justify-between gap-3 text-[10px]"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link text-white font-bold truncate">تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><div className="flex items-center gap-1.5 shrink-0"><span className="text-white/55">ضمن منظومة</span><b className="text-[#6EE7B7] ltr tracking-wide">Korvi</b></div></div></div><div className="max-w-[1100px] mx-auto px-4 py-3 flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-muted">بوابة العملاء</div><b className="text-sm block truncate">{guestMode?'المعرض الرقمي':safeProfile.company}</b></div><div className="flex items-center gap-2"><div className="hidden sm:block text-left"><div className="text-[10px] text-muted">مرحبًا</div><div className="text-xs font-bold">{EMPLOYEE_CUSTOMER_VIEW?(EMPLOYEE_CUSTOMER_SESSION.name||'موظف'):(guestMode?'تصفح مباشر':(safeProfile.name||'عميل'))}</div></div>{EMPLOYEE_CUSTOMER_VIEW&&<button onClick={()=>{window.location.href='./index.html?employee=1'}} title="العودة لنظام الموظفين" className="h-9 px-3 rounded-10 border border-border bg-surface text-[10px] font-bold text-secondary hover:text-accent whitespace-nowrap">الموظفين</button>}<button onClick={()=>setPage('cart')} className="relative w-11 h-11 rounded-12 border border-border bg-white flex items-center justify-center"><Icon name="cart"/>{cartCount>0&&<span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[10px] flex items-center justify-center">{cartCount}</span>}</button></div></div></header>
     <main className="max-w-[1100px] mx-auto p-4 sm:p-5">
       {page==='home'&&<div className="fade-in">
         <div className="mb-4 bg-white border border-border rounded-16 p-4 shadow-card"><div className="flex items-end justify-between gap-3"><div><h1 className="text-[20px] sm:text-[22px] font-bold">المعرض الرقمي</h1></div><div className="text-left text-[10px] text-muted"><div>{cartCount} صنف في السلة</div><b className="ltr text-primary">{NF.format(totalCartons)} كرتون</b></div></div></div>
@@ -1143,16 +1155,16 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
       {page==='categories'&&<div className="fade-in">
         {!categoryBrowse?<><div className="ui-section-head"><h2>الأقسام</h2><p>اختر القسم أولًا لعرض محتواه بصورة مباشرة ومنظمة.</p></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{categoryCards.map(c=><button key={c.name} onClick={()=>{setCategoryBrowse(c.name);setQuery('');setPageCount(PAGE_SIZE)}} className="category-tile shadow-card"><div className="flex items-start justify-between gap-2"><div className="w-10 h-10 rounded-12 bg-accentSoft text-accent flex items-center justify-center"><Icon name="grid" className="w-5 h-5"/></div><Icon name="chevron" className="w-4 h-4 text-muted"/></div><div><b className="text-[14px] block line-clamp-2">{c.name}</b><span className="text-[10px] text-muted mt-1 block">فتح القسم</span></div></button>)}</div></>:<><div className="flex items-center justify-between gap-3 mb-4"><button onClick={()=>{setCategoryBrowse(null);setQuery('')}} className="h-10 px-3 rounded-10 border border-border bg-white text-xs font-bold flex items-center gap-2"><Icon name="back" className="w-4 h-4"/>كل الأقسام</button><div className="text-left"><b className="text-sm block">{categoryBrowse}</b><span className="text-[10px] text-muted">تصفح القسم</span></div></div><div className="sticky top-[92px] z-20 bg-surface/95 backdrop-blur py-2"><div className="relative"><Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`ابحث داخل ${categoryBrowse}...`} className="w-full h-[52px] pr-12 pl-4 bg-white border border-border rounded-16 outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 shadow-card"/></div></div><div className="flex items-center justify-end mb-3"><div className="flex p-1 bg-white border border-border rounded-10"><button onClick={()=>setViewMode('grid')} className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='grid'?'bg-primary text-white':'text-muted'}`}><Icon name="grid" className="w-4 h-4"/></button><button onClick={()=>setViewMode('list')} className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='list'?'bg-primary text-white':'text-muted'}`}><Icon name="list" className="w-4 h-4"/></button></div></div>{loading?<div className="py-24 flex justify-center"><Spinner/></div>:filtered.length===0?<Empty title="لا توجد منتجات في هذا القسم" note="قد تكون المنتجات بانتظار إضافة صور أو تحديث التصنيف." icon="grid"/>:<><div className={viewMode==='grid'?'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4':'grid gap-3'}>{filtered.slice(0,pageCount).map(item=>viewMode==='grid'?<ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>:<ProductListCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-5 w-full h-12 rounded-12 border border-border bg-white font-bold text-sm">عرض المزيد</button>}</>}</>}
       </div>}
-      {page==='cart'&&<div className="fade-in"><div className="ui-section-head"><h2>طلب الشراء</h2><p>عدّل الكمية بنصف كرتون ووزّعها على فروعك بدون كتابة يدوية.</p></div><CartView cartItems={cartItems} branches={branches} onEdit={setAllocItem} onRemove={removeItem} onCheckout={()=>setCheckout(true)} onSaveDraft={()=>saveDraft('')} savingDraft={savingDraft}/></div>}
+      {page==='cart'&&<div className="fade-in"><div className="ui-section-head"><h2>طلب الشراء</h2><p>عدّل الكمية بنصف كرتون ووزّعها على فروعك بدون كتابة يدوية.</p></div><CartView cartItems={cartItems} branches={branches} onEdit={setAllocItem} onRemove={removeItem} onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)} onSaveDraft={()=>saveDraft('')} savingDraft={savingDraft}/></div>}
       {page==='orders'&&!guestMode&&<div className="fade-in"><div className="ui-section-head"><h2>طلباتي</h2><p>كل الطلبات المرسلة والمسودات المحفوظة في مكان واحد.</p></div><OrdersView orders={orders} drafts={drafts} onLoadDraft={loadDraft} onDeleteDraft={deleteDraft} loading={historyLoading} onWhatsApp={shareOrderWhatsApp}/></div>}
       {page==='account'&&!guestMode&&<div className="fade-in"><div className="ui-section-head"><h2>حسابي</h2><p>بيانات الحساب، الفروع، ورمز الدخول.</p></div><AccountView profile={safeProfile} onLogout={()=>{logCustomerEvent(user,'logout','تسجيل خروج');touchCustomerSession(user,safeProfile,'logout');auth.signOut()}} onSaveBranches={saveBranches} onChangePin={changePin}/></div>}
     </main>
     <footer className="rights-footer max-w-[1100px] mx-auto px-4 sm:px-5 pb-5"><div className="border-t border-border pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-muted"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link font-bold text-secondary">© 2026 تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><span>بوابة العملاء · جزء من منظومة <b className="text-[#047857] ltr tracking-wide">Korvi</b></span></div></footer>
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-border safe-bottom"><div className="max-w-[700px] mx-auto grid grid-cols-5 px-1 pt-2">{nav.map(([id,icon,label])=><button key={id} onClick={()=>{if(guestMode&&(id==='orders'||id==='account')){onRequireAuth?.(id);return;}setCheckout(false);setPage(id);if(id==='categories'){setCategoryBrowse(null);setQuery('')}if(id==='home'&&!activeCategory)setActiveCategory('الكل')}} className={`h-14 flex flex-col items-center justify-center gap-1 rounded-10 text-[10px] font-bold ${page===id?'text-accent':'text-muted'}`}><div className="relative"><Icon name={icon} className="w-5 h-5"/>{id==='cart'&&cartCount>0&&<span className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-accent text-white text-[8px] flex items-center justify-center">{cartCount}</span>}</div>{label}</button>)}</div></nav>
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-border safe-bottom"><div className="max-w-[700px] mx-auto grid grid-cols-5 px-1 pt-2">{nav.map(([id,icon,label])=><button key={id} onClick={()=>{if(EMPLOYEE_CUSTOMER_VIEW&&(id==='orders'||id==='account')){setToast({type:'info',message:employeeViewNotice});return;}if(guestMode&&(id==='orders'||id==='account')){onRequireAuth?.(id);return;}setCheckout(false);setPage(id);if(id==='categories'){setCategoryBrowse(null);setQuery('')}if(id==='home'&&!activeCategory)setActiveCategory('الكل')}} className={`h-14 flex flex-col items-center justify-center gap-1 rounded-10 text-[10px] font-bold ${page===id?'text-accent':'text-muted'}`}><div className="relative"><Icon name={icon} className="w-5 h-5"/>{id==='cart'&&cartCount>0&&<span className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-accent text-white text-[8px] flex items-center justify-center">{cartCount}</span>}</div>{label}</button>)}</div></nav>
     {!guestMode&&!String(safeProfile.name||'').trim()&&<NamePromptModal company={safeProfile.company} onSave={saveCustomerName}/>}
-    {guestMode&&showGuestNamePrompt&&!guestName&&<GuestNamePromptModal onSave={saveGuestName}/>}
+    {!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt&&!guestName&&<GuestNamePromptModal onSave={saveGuestName}/>}
     {firstBranchItem&&<FirstBranchModal item={firstBranchItem} onClose={()=>setFirstBranchItem(null)} onCreate={createFirstBranch}/>}
-    <InstallNudge/>{allocItem&&<BranchAllocationModal item={allocItem} branches={branches} current={cart[allocItem.cleanId]?.branchQuantities||{}} onClose={()=>setAllocItem(null)} onSave={q=>saveAllocation(allocItem,q)} onLimit={showLimit}/>}<Lightbox item={zoom} onClose={()=>setZoom(null)}/><Toast toast={toast} onClose={()=>setToast(null)}/>
+    {!EMPLOYEE_CUSTOMER_VIEW&&<InstallNudge/>}{allocItem&&<BranchAllocationModal item={allocItem} branches={branches} current={cart[allocItem.cleanId]?.branchQuantities||{}} onClose={()=>setAllocItem(null)} onSave={q=>saveAllocation(allocItem,q)} onLimit={showLimit}/>}<Lightbox item={zoom} onClose={()=>setZoom(null)}/><Toast toast={toast} onClose={()=>setToast(null)}/>
   </div>
 }
 
@@ -1274,11 +1286,11 @@ function CustomerPortalBootstrap(){
     return()=>unsubscribe();
   },[]);
 
-  if(control.__loading){
+  if(control.__loading&&!EMPLOYEE_CUSTOMER_VIEW){
     return <div className="min-h-[100dvh] ui-auth-bg flex flex-col items-center justify-center gap-4 px-4"><div className="ui-brand-mark !mb-0"><Icon name="shop" className="w-7 h-7"/></div><Spinner/><div className="text-sm font-semibold text-secondary">جاري التحقق من حالة البوابة...</div></div>;
   }
 
-  if(!control.enabled&&!previewAllowed){
+  if(!control.enabled&&!previewAllowed&&!EMPLOYEE_CUSTOMER_VIEW){
     return <div className="min-h-[100dvh] ui-auth-bg flex items-center justify-center p-5 font-sans safe-top safe-bottom">
       <div className="w-full max-w-[440px] ui-panel fade-in">
         <div className="ui-panel-head">
@@ -1297,7 +1309,7 @@ function CustomerPortalBootstrap(){
   const effectiveLogin=previewAllowed?true:control.loginEnabled!==false;
   return <>
     {previewAllowed&&!control.enabled&&<div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] px-3 py-2 rounded-full bg-info text-white shadow-lift text-[11px] font-bold whitespace-nowrap">معاينة الإدارة — البوابة متوقفة للعامة</div>}
-    <Root registrationEnabled={effectiveRegistration} loginEnabled={effectiveLogin}/>
+    {EMPLOYEE_CUSTOMER_VIEW?<CustomerApp user={null} profile={{name:EMPLOYEE_CUSTOMER_SESSION.name,company:'',phone:'',branches:[]}} guestMode={true} onProfileUpdate={()=>{}} onRequireAuth={()=>{}}/>:<Root registrationEnabled={effectiveRegistration} loginEnabled={effectiveLogin}/>}
   </>;
 }
 

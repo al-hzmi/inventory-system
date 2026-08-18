@@ -137,6 +137,9 @@
 <script type="text/babel">
 
 
+const EMPLOYEE_DIRECT_SESSION = { nameKey:'inventory_user_name_v2', employeeIdKey:'inventory_employee_id_v2', authVersionKey:'inventory_employee_auth_version_v2', authVersion:'2' };
+const hasRememberedEmployeeSession = () => { try { const name=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.nameKey)||'').trim(); const employeeId=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.employeeIdKey)||'').trim(); const authVersion=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.authVersionKey)||''); return Boolean(name&&employeeId&&authVersion===EMPLOYEE_DIRECT_SESSION.authVersion); } catch { return false; } };
+
 const EntryChooser = () => {
     const goCustomer = () => { window.location.href = './customer.html'; };
     const goEmployee = () => { window.location.href = './index.html?employee=1'; };
@@ -3691,6 +3694,12 @@ const App = () => {
                                     <span className="hidden lg:inline text-[12px] font-bold whitespace-nowrap">إدارة المنتجات</span>
                                 </button>
                             )}
+                            {!isAdmin && currentEmployeeId && (
+                                <button onClick={() => { window.location.href = './customer.html?employeeView=1'; }} title="عرض بوابة العملاء" className="flex items-center justify-center gap-6 h-48 px-10 rounded-12 bg-bg border border-border text-secondary hover:border-accent/30 hover:text-accent transition-colors animate-flip">
+                                    <Icon.Eye className="w-18 h-18" />
+                                    <span className="hidden sm:inline text-[11px] font-bold whitespace-nowrap">واجهة العملاء</span>
+                                </button>
+                            )}
                             {isAdmin ? (
                                 <button onClick={() => { window.location.href = './admin-stocktake.html'; }} title="إدارة الجرد"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
@@ -3942,7 +3951,7 @@ const EmployeeBootstrap = () => {
 };
 
 const __entryParams = new URLSearchParams(window.location.search);
-const __employeeMode = __entryParams.get('employee') === '1';
+const __employeeMode = __entryParams.get('employee') === '1' || (__entryParams.get('chooser') !== '1' && hasRememberedEmployeeSession());
 ReactDOM.createRoot(document.getElementById('root')).render(__employeeMode ? <EmployeeBootstrap /> : <EntryChooser />);
 setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden'),320);
 </script>
