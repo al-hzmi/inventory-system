@@ -1,0 +1,265 @@
+name: V37 Employee Routing and Notification Fix
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v37-routing-notification.yml'
+permissions:
+  contents: write
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Apply V37 routing and notification patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          idxp=Path('index.html'); idx=idxp.read_text()
+          custp=Path('customer.html'); cust=custp.read_text()
+          swp=Path('customer-sw.js'); sw=swp.read_text()
+          gatep=Path('.github/workflows/site-quality-gate.yml'); gate=gatep.read_text()
+
+          # 1) Returning employee identity: the employee-only name key is the durable routing signal.
+          start=idx.index("const EMPLOYEE_DIRECT_SESSION =")
+          end=idx.index("const EntryChooser =", start)
+          identity="""const EMPLOYEE_DIRECT_SESSION = { nameKey:'inventory_user_name_v2', employeeIdKey:'inventory_employee_id_v2', authVersionKey:'inventory_employee_auth_version_v2', tokenKey:'inventory_admin_token_v2', authVersion:'2' };
+          const getRememberedEmployeeIdentity = () => { try { const name=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.nameKey)||'').trim(); const employeeId=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.employeeIdKey)||'').trim(); const authVersion=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.authVersionKey)||''); const token=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.tokenKey)||''); return {valid:Boolean(name),name,employeeId,authVersion,token,modern:Boolean(name&&employeeId&&authVersion===EMPLOYEE_DIRECT_SESSION.authVersion)}; } catch { return {valid:false,name:'',employeeId:'',authVersion:'',token:'',modern:false}; } };
+          const hasRememberedEmployeeSession = () => getRememberedEmployeeIdentity().valid;
+
+          """
+          idx=idx[:start]+identity+idx[end:]
+
+          old_mode="const __employeeMode = __entryParams.get('employee') === '1' || (__entryParams.get('chooser') !== '1' && hasRememberedEmployeeSession());"
+          new_mode="const __employeeMode = hasRememberedEmployeeSession() || __entryParams.get('employee') === '1';"
+          if old_mode not in idx: raise SystemExit('employee mode marker missing')
+          idx=idx.replace(old_mode,new_mode,1)
+
+          # Keep the customer SW current even when an employee only opens index.html.
+          sw_refresh="""\n<script>\nif ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(reg => reg.update().catch(() => {}))).catch(() => {}); }); }\n</script>\n"""
+          if "navigator.serviceWorker.getRegistrations()" not in idx:
+              idx=idx.replace('</head>',sw_refresh+'</head>',1)
+
+          # 2) Replace blocking full-page management message with a natural non-blocking banner.
+          mstart=idx.index('const EmployeeAdminMessageScreen =')
+          mend=idx.index('const useEmployeeAdminMessages =',mstart)
+          notice="""const EmployeeAdminNotification = ({notification,onClose}) => {
+              useEffect(() => {
+                  if (!notification?.id) return;
+                  const timer = setTimeout(() => onClose?.(), 10000);
+                  return () => clearTimeout(timer);
+              }, [notification?.id, onClose]);
+              return (
+                  <div className=\"fixed inset-x-0 top-0 z-[80] pointer-events-none safe-top px-12 pt-10 font-sans\" aria-live=\"polite\">
+                      <div role=\"status\" className=\"pointer-events-auto mx-auto w-full max-w-[440px] bg-white/95 backdrop-blur border border-border rounded-16 shadow-lift px-12 py-11 flex items-start gap-10 animate-card\">
+                          <div className=\"w-38 h-38 rounded-12 bg-successSoft text-success flex items-center justify-center flex-shrink-0\" aria-hidden=\"true\">
+                              <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" strokeWidth=\"1.8\" className=\"w-20 h-20\"><path d=\"M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z\"/><path d=\"M8 9h8M8 13h5\"/></svg>
+                          </div>
+                          <div className=\"min-w-0 flex-1\">
+                              <div className=\"flex items-center gap-6 text-[10px] text-muted\"><span className=\"font-bold text-success\">الإدارة</span><span>الآن</span></div>
+                              <div className=\"text-[13px] font-bold text-primary mt-1 truncate\">{notification?.title || 'رسالة من الإدارة'}</div>
+                              <div className=\"text-[11px] text-secondary leading-5 mt-2 line-clamp-2 whitespace-pre-wrap\">{notification?.message || ''}</div>
+                          </div>
+                          <button type=\"button\" onClick={onClose} aria-label=\"إغلاق الإشعار\" title=\"إغلاق\" className=\"w-30 h-30 rounded-10 flex items-center justify-center text-muted hover:text-primary hover:bg-surface flex-shrink-0\">×</button>
+                      </div>
+                  </div>
+              );
+          };
+
+          """
+          idx=idx[:mstart]+notice+idx[mend:]
+          blocking="""    if (employeeAdminMessage) {
+                  return <EmployeeAdminMessageScreen notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />;
+              }
+
+          """
+          if blocking not in idx: raise SystemExit('blocking employee message marker missing')
+          idx=idx.replace(blocking,'',1)
+          apppos=idx.index('const App = () => {')
+          root_marker='<div className="min-h-screen font-sans">'
+          rootpos=idx.index(root_marker,apppos)
+          insert=root_marker+"\n            {employeeAdminMessage && <EmployeeAdminNotification notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />}"
+          idx=idx[:rootpos]+idx[rootpos:].replace(root_marker,insert,1)
+
+          # Compact but visible manual switch to customer view.
+          old_switch="""                            {!isAdmin && currentEmployeeId && (
+                                      <button onClick={() => { window.location.href = './customer.html?employeeView=1'; }} title=\"عرض بوابة العملاء\" className=\"flex items-center justify-center gap-6 h-48 px-10 rounded-12 bg-bg border border-border text-secondary hover:border-accent/30 hover:text-accent transition-colors animate-flip\">
+                                          <Icon.Eye className=\"w-18 h-18\" />
+                                          <span className=\"hidden sm:inline text-[11px] font-bold whitespace-nowrap\">واجهة العملاء</span>
+                                      </button>
+                                  )}
+          """
+          new_switch="""                            {!isAdmin && currentEmployeeId && (
+                                      <button onClick={() => { window.location.href = './customer.html?employeeView=1'; }} title=\"التبديل إلى واجهة العملاء\" aria-label=\"التبديل إلى واجهة العملاء\" className=\"flex items-center justify-center gap-5 h-40 px-9 rounded-10 bg-bg border border-border text-secondary hover:border-accent/30 hover:text-accent transition-colors animate-flip\">
+                                          <Icon.Eye className=\"w-16 h-16\" />
+                                          <span className=\"text-[10px] font-bold whitespace-nowrap\">عملاء</span>
+                                      </button>
+                                  )}
+          """
+          if old_switch not in idx: raise SystemExit('employee customer switch marker missing')
+          idx=idx.replace(old_switch,new_switch,1)
+          idxp.write_text(idx)
+
+          # 3) Customer page: redirect remembered employees immediately unless they deliberately chose employeeView=1.
+          early="""<script>
+          (function(){
+            try {
+              const params=new URLSearchParams(window.location.search);
+              const employeeName=String(localStorage.getItem('inventory_user_name_v2')||'').trim();
+              if(employeeName && params.get('employeeView')!=='1') window.location.replace('./index.html?employee=1');
+            } catch (_) {}
+          })();
+          </script>
+          """
+          if 'employeeName && params.get(\'employeeView\')' not in cust:
+              cust=cust.replace('<script src="https://cdn.tailwindcss.com"></script>',early+'<script src="https://cdn.tailwindcss.com"></script>',1)
+
+          cstart=cust.index('const EMPLOYEE_CUSTOMER_SESSION = (() =>')
+          cend=cust.index('const EMPLOYEE_CUSTOMER_VIEW =',cstart)
+          csession="""const EMPLOYEE_CUSTOMER_SESSION = (() => { try { const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(); const employeeId=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(); const authVersion=String(localStorage.getItem('inventory_employee_auth_version_v2')||''); const token=String(localStorage.getItem('inventory_admin_token_v2')||''); const modern=Boolean(name&&employeeId&&authVersion==='2'); const remembered=Boolean(name); return {valid:remembered,name,employeeId,authVersion,token,modern}; } catch { return {valid:false,name:'',employeeId:'',authVersion:'',token:'',modern:false}; } })();
+          """
+          cust=cust[:cstart]+csession+cust[cend:]
+          cust=cust.replace("customer-sw.js?v=35.0","customer-sw.js?v=37.0")
+          custp.write_text(cust)
+
+          # 4) Customer service worker must not cache/control employee/admin HTML navigation.
+          sw=sw.replace("const CACHE = 'batco-customer-v35-0';","const CACHE = 'batco-customer-v37-0';")
+          marker="""  if (url.origin !== self.location.origin) return;
+            if (req.mode === 'navigate' || req.destination === 'document') {
+          """
+          repl="""  if (url.origin !== self.location.origin) return;
+            const isDocument = req.mode === 'navigate' || req.destination === 'document';
+            const isCustomerDocument = /\\/customer\\.html$/.test(url.pathname);
+            if (isDocument && !isCustomerDocument) return;
+            if (isDocument) {
+          """
+          if marker not in sw: raise SystemExit('service worker document marker missing')
+          sw=sw.replace(marker,repl,1)
+          swp.write_text(sw)
+
+          # 5) Keep the permanent quality gate aligned with V37 requirements.
+          gate=gate.replace("'index: employee auto route': \"__entryParams.get('chooser') !== '1' && hasRememberedEmployeeSession()\" in idx,","'index: employee auto route': \"const __employeeMode = hasRememberedEmployeeSession() || __entryParams.get('employee') === '1';\" in idx,")
+          gate=gate.replace("'customer: service worker v35': 'customer-sw.js?v=35.0' in cust and 'batco-customer-v35-0' in sw,","'customer: service worker v37': 'customer-sw.js?v=37.0' in cust and 'batco-customer-v37-0' in sw,")
+          gate=gate.replace("'index: manual customer-view switch': \"./customer.html?employeeView=1\" in idx and 'واجهة العملاء' in idx,","'index: manual customer-view switch': \"./customer.html?employeeView=1\" in idx and '>عملاء</span>' in idx,")
+          anchor="'index: remembered employee detection': 'hasRememberedEmployeeSession' in idx and \"inventory_employee_auth_version_v2\" in idx,"
+          if anchor in gate and "employee notification overlay" not in gate:
+              gate=gate.replace(anchor,anchor+"\n            'index: employee notification overlay': 'EmployeeAdminNotification' in idx and 'employeeAdminMessage && <EmployeeAdminNotification' in idx and 'EmployeeAdminMessageScreen' not in idx,")
+          gate=gate.replace("const employee={inventory_user_name_v2:'اختبار تقني',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};","const employee={inventory_user_name_v2:'اختبار تقني',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};\n          const legacyEmployee={inventory_user_name_v2:'اختبار قديم'};")
+          gate=gate.replace("['employee-auto','/index.html',employee],","['employee-auto','/index.html',employee],\n            ['employee-legacy-auto','/index.html',legacyEmployee],")
+          gate=gate.replace("['employee-customer-direct','/customer.html',employee],","['employee-customer-direct','/customer.html',employee],\n            ['employee-legacy-customer-direct','/customer.html',legacyEmployee],")
+          gate=gate.replace("if(name==='employee-auto'&&text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('EMPLOYEE_AUTO_ROUTING_FAILED')}","if((name==='employee-auto'||name==='employee-legacy-auto')&&text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('EMPLOYEE_AUTO_ROUTING_FAILED')}")
+          gate=gate.replace("if(name==='employee-customer-direct'&&!final.includes('/index.html?employee=1')){failed=true;console.error('EMPLOYEE_DIRECT_CUSTOMER_GUARD_FAILED')}","if((name==='employee-customer-direct'||name==='employee-legacy-customer-direct')&&!final.includes('/index.html?employee=1')){failed=true;console.error('EMPLOYEE_DIRECT_CUSTOMER_GUARD_FAILED')}")
+          gatep.write_text(gate)
+          PY
+      - name: Syntax and semantic verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys,json
+          failures=[]; count=0
+          for p in sorted(Path('.').glob('*.html')):
+              s=p.read_text(errors='replace')
+              if '<<<<<<<' in s or '>>>>>>>' in s or '... (truncated)' in s: failures.append(f'bad marker {p}')
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+                  attrs,code=m.group(1),m.group(2)
+                  if not code.strip(): continue
+                  count+=1; babel=bool(re.search(r'type=["\']text/babel["\']',attrs,re.I)); f=Path('/tmp')/f'{p.stem}-{i}.{"jsx" if babel else "js"}';f.write_text(code)
+                  cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/out.js'] if babel else ['node','--check',str(f)]
+                  r=subprocess.run(cmd,capture_output=True,text=True)
+                  if r.returncode: failures.append(f'{p} script#{i}: {r.stderr}')
+          for p in list(Path('.').glob('*.js'))+list(Path('api').glob('*.js')):
+              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode: failures.append(f'{p}: {r.stderr}')
+          idx=Path('index.html').read_text();cust=Path('customer.html').read_text();sw=Path('customer-sw.js').read_text();adm=Path('admin-dashboard.html').read_text();stock=Path('stocktake.html').read_text();stockadm=Path('admin-stocktake.html').read_text()
+          checks={
+            'employee identity by durable employee key':"const hasRememberedEmployeeSession = () => getRememberedEmployeeIdentity().valid;" in idx and 'return {valid:Boolean(name)' in idx,
+            'employee always defaults employee':"const __employeeMode = hasRememberedEmployeeSession() || __entryParams.get('employee') === '1';" in idx,
+            'no chooser bypass for remembered employee':"__entryParams.get('chooser') !== '1'" not in idx,
+            'compact customer switch':"./customer.html?employeeView=1" in idx and '>عملاء</span>' in idx,
+            'nonblocking message': 'EmployeeAdminNotification' in idx and 'EmployeeAdminMessageScreen' not in idx and 'employeeAdminMessage && <EmployeeAdminNotification' in idx,
+            'message autoclose': 'setTimeout(() => onClose?.(), 10000)' in idx,
+            'customer early employee redirect':"employeeName && params.get('employeeView')!=='1'" in cust,
+            'customer remembered employee': 'const remembered=Boolean(name);' in cust,
+            'manual employee customer view':'EMPLOYEE_CUSTOMER_VIEW' in cust and "get('employeeView')==='1'" in cust,
+            'employee customer no name prompt':'!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
+            'employee customer identity':"EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
+            'service worker v37':'customer-sw.js?v=37.0' in cust and 'batco-customer-v37-0' in sw,
+            'service worker excludes other documents':'if (isDocument && !isCustomerDocument) return;' in sw,
+            'orders preserved':'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
+            'guest tracking preserved':'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust,
+            'employee auth preserved':'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx,
+            'stocktake preserved':'stocktake_audit' in stock and 'صنف موجود في فرق أخرى' in stockadm,
+            'admin monitoring preserved':'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
+          }
+          failures += [k for k,v in checks.items() if not v]
+          if failures: print('\n'.join(failures)); sys.exit(1)
+          print('V37_STATIC_OK scripts=',count,'checks=',len(checks))
+          PY
+      - name: Browser runtime verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          cat > /tmp/v37-runtime.mjs <<'JS'
+          import { chromium } from 'playwright';
+          import fs from 'fs';
+          const base='http://127.0.0.1:4173';
+          const employee={inventory_user_name_v2:'اختبار تقني',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
+          const legacy={inventory_user_name_v2:'اختبار قديم'};
+          const admin={inventory_user_name_v2:'مهند',inventory_admin_token_v2:'1jh297-spgf2z'};
+          const scenarios=[
+            ['public','/index.html',{}],['employee','/index.html',employee],['legacy','/index.html',legacy],['employee-explicit','/index.html?employee=1',employee],
+            ['customer-public','/customer.html',{}],['customer-employee-direct','/customer.html',employee],['customer-legacy-direct','/customer.html',legacy],['customer-employee-manual','/customer.html?employeeView=1',employee],
+            ['admin','/admin-dashboard.html',admin],['stocktake','/stocktake.html',employee],['stocktake-admin','/admin-stocktake.html',admin],['security','/security-center.html',admin]
+          ];
+          const covered=new Set(scenarios.map(x=>x[1].split('?')[0].slice(1)));
+          for(const f of fs.readdirSync('.').filter(x=>x.endsWith('.html'))) if(!covered.has(f)) scenarios.push([`html:${f}`,`/${f}`,{}]);
+          const browser=await chromium.launch({headless:true});let failed=false;
+          for(const [name,path,store] of scenarios){
+            const ctx=await browser.newContext();await ctx.addInitScript(store=>{localStorage.clear();sessionStorage.clear();for(const[k,v]of Object.entries(store))localStorage.setItem(k,v)},store);
+            const page=await ctx.newPage();const errs=[];page.on('pageerror',e=>errs.push(String(e?.stack||e)));
+            try{
+              const resp=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});await page.waitForTimeout(5000);const text=(await page.locator('body').innerText().catch(()=>''));const final=page.url();
+              console.log('RUNTIME',name,resp?.status(),final,text.replace(/\s+/g,' ').length);
+              if(!resp||resp.status()>=400||errs.length||text.trim().length<8){failed=true;console.error(name,'base runtime failure',errs.join(' | '))}
+              if(name==='public'&&!text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('public chooser missing')}
+              if((name==='employee'||name==='legacy'||name==='employee-explicit')&&text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error(name,'employee chooser incorrectly visible')}
+              if((name==='customer-employee-direct'||name==='customer-legacy-direct')&&!final.includes('/index.html?employee=1')){failed=true;console.error(name,'customer direct route failed')}
+              if(name==='customer-employee-manual'){
+                if(!final.includes('/customer.html?employeeView=1')){failed=true;console.error('manual customer view redirected')}
+                if(text.includes('اسمك الكريم')){failed=true;console.error('employee name prompt visible')}
+                if(!text.includes('اختبار تقني')){failed=true;console.error('employee identity absent in customer view')}
+                if(!text.includes('الموظفين')){failed=true;console.error('return-to-employee control absent')}
+              }
+            }catch(e){failed=true;console.error('NAV',name,e?.stack||e)}
+            await ctx.close();
+          }
+          await browser.close();if(failed)process.exit(1);
+          JS
+          node /tmp/v37-runtime.mjs
+      - name: Commit verified V37 and clean temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'V37 ROUTING + NOTIFICATION AUDIT\nresult=PASS\nemployee_default_route=success\nlegacy_employee_route=success\nmanual_customer_switch=success\ncustomer_direct_guard=success\nnotification_nonblocking=success\nfull_syntax=success\nbrowser_runtime=success\n' > .github/quality-reports/v37-routing-notification-audit.txt
+          rm -f .github/workflows/v37-routing-notification.yml
+          git config user.name 'BATCO Quality Gate'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Fix employee default routing and nonblocking notifications V37'
+          git push origin main
