@@ -1,0 +1,13 @@
+V37 EMPLOYEE ROUTING + NOTIFICATION REVIEW
+implemented_by=direct_git_tree_commit
+employee_default_portal=employee
+remembered_employee_signal=inventory_user_name_v2
+manual_customer_switch=employeeView=1
+employee_customer_name_prompt=suppressed
+employee_customer_telemetry=isolated
+management_message=nonblocking_top_notification
+auto_dismiss_seconds=10
+customer_service_worker_scope=customer_document_only
+legacy_customer_sw_cache=rotated_to_v37
+preserved_core_source=yes
+backup_branch=backup-before-routing-notifications-v37

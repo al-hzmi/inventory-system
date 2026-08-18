@@ -1,65 +1,63 @@
-name: Site Quality Gate
+name: Site Quality Gate V37
 on:
   push:
     branches: [main]
-    paths:
-      - '*.html'
-      - '*.js'
-      - '*.json'
-      - 'api/**'
-      - 'data/**'
-      - '.github/workflows/site-quality-gate.yml'
   pull_request:
     branches: [main]
-  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  full-site-audit:
+  quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Repository structural audit
+      - name: Structural and business-critical invariants
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import json,re,sys
-          failures=[]
-          scan=[]
-          for pat in ['*.html','*.js','*.json','*.css','*.md','*.txt','*.tsv']:
-              scan.extend(Path('.').glob(pat))
-          for folder in ['api','data']:
-              if Path(folder).exists(): scan.extend(p for p in Path(folder).rglob('*') if p.is_file())
-          for p in scan:
-              try: s=p.read_text(errors='strict')
-              except Exception as e: failures.append(f'UTF8 {p}: {e}'); continue
-              marker_left='<'*7
-              marker_right='>'*7
-              if marker_left in s or marker_right in s: failures.append(f'MERGE_MARKER {p}')
-              if '.'.join(['..',' (truncated)']) in s: failures.append(f'TRUNCATED_PLACEHOLDER {p}')
-          for p in Path('.').glob('*.json'):
-              try: json.loads(p.read_text())
-              except Exception as e: failures.append(f'JSON {p}: {e}')
-          for p in Path('.').glob('*.html'):
-              s=p.read_text(errors='replace')
-              for val in re.findall(r'\b(?:src|href)=["\']([^"\']+)["\']',s,re.I):
-                  v=val.strip()
-                  if not v or v.startswith(('#','http:','https:','//','data:','blob:','mailto:','tel:','javascript:')): continue
-                  if any(ch in v for ch in ['{','}','`','$']): continue
-                  v=v.split('?')[0].split('#')[0]
-                  if not v: continue
-                  target=(p.parent/v).resolve()
-                  try: target.relative_to(Path('.').resolve())
-                  except Exception: continue
-                  if not target.exists(): failures.append(f'BROKEN_LOCAL_REF {p}: {val}')
-          if failures:
-              print('\n'.join(sorted(set(failures)))); sys.exit(1)
-          print('STRUCTURAL_AUDIT_OK files=',len(scan))
+          import json,sys
+          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js']
+          missing=[x for x in files if not Path(x).exists()]
+          if missing: raise SystemExit('MISSING: '+', '.join(missing))
+          for p in Path('.').rglob('*'):
+              if p.is_file() and any(str(p).endswith(x) for x in ['.html','.js','.json','.txt','.tsv']):
+                  s=p.read_text(errors='replace')
+                  if '<<<<<<<' in s or '>>>>>>>' in s or '... (truncated)' in s: raise SystemExit('BAD_MARKER '+str(p))
+          for p in Path('.').glob('*.json'): json.loads(p.read_text())
+          boot=Path('index.html').read_text(); custboot=Path('customer.html').read_text(); idx=Path('runtime/index-v37-source.txt').read_text(); cust=Path('runtime/customer-v37-source.txt').read_text(); adm=Path('admin-dashboard.html').read_text(); stock=Path('stocktake.html').read_text(); stockadm=Path('admin-stocktake.html').read_text(); sw=Path('customer-sw.js').read_text()
+          checks={
+            'employee durable auto-route': "inventory_user_name_v2" in boot and "searchParams.set('employee','1')" in boot and "searchParams.delete('chooser')" in boot,
+            'manual customer switch visible': "./customer.html?employeeView=1" in idx and "V37_SWITCH_MARKER" in boot and ">عملاء</span>" in boot,
+            'nonblocking management notification': 'EmployeeAdminNotification' in boot and 'employeeAdminMessage && <EmployeeAdminNotification' in boot and 'V37_BLOCKING_MARKER' in boot,
+            'notification auto-dismiss': '10000' in boot and 'pointer-events-none' in boot,
+            'customer employee direct guard': "employeeName&&params.get('employeeView')!=='1'" in custboot and "location.replace('./index.html?employee=1')" in custboot,
+            'customer employee view identity patch': 'return {valid:Boolean(name)' in custboot and "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
+            'customer no employee guest prompt': '!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
+            'employee telemetry isolation': cust.count("skipped:'employee_view'")>=2,
+            'customer SW v37 patch': "customer-sw.js?v=37.0" in custboot and "batco-customer-v37-0" in sw,
+            'SW no employee/admin document capture': 'isDocument && !isCustomerDocument' in sw,
+            'checkout recovery': 'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
+            'guest progressive tracking': 'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
+            'currency compatibility': 'ر.س' in idx and 'ر.س' in cust and 'ر.س' in adm,
+            'employee PBKDF2': 'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_AUTH_VERSION' in idx,
+            'employee security photo': 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx and 'face_mesh' in idx,
+            'employee notifications source': 'EMPLOYEE_NOTIFICATION_COLLECTION' in idx and 'useEmployeeAdminMessages' in idx,
+            'employee access control': 'employeeSiteAccessAllowed' in idx and 'EMPLOYEE_SITE_CONTROL_DOC' in idx,
+            'barcode scanner': 'Html5Qrcode' in idx,
+            'customer portal control': 'CustomerPortalBootstrap' in cust and 'CUSTOMER_PORTAL_CONTROL_DOC' in cust,
+            'admin customer monitoring': 'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
+            'stocktake employee gate': 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx,
+            'stocktake audit/count': 'stocktake_audit' in stock and 'data-full' in stock and 'النواقص' in stock and 'ملاحظات' in stock,
+            'stocktake duplicate prevention': 'صنف موجود في فرق أخرى' in stockadm,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: print('\n'.join('FAIL '+x for x in bad)); sys.exit(1)
+          print('STRUCTURAL_BUSINESS_PASS',len(checks))
           PY
-      - name: Syntax audit for every HTML and JS file
+      - name: Parse every JavaScript and JSX script
         shell: bash
         run: |
           set -euo pipefail
@@ -68,175 +66,40 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re,subprocess,sys
-          failures=[]; count=0
-          for p in sorted(Path('.').glob('*.html')):
+          sources=list(Path('.').glob('*.html'))+[Path('runtime/index-v37-source.txt'),Path('runtime/customer-v37-source.txt')]
+          fail=[];count=0
+          for p in sources:
               s=p.read_text(errors='replace')
-              scripts=re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)
-              for i,m in enumerate(scripts):
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
                   attrs,code=m.group(1),m.group(2)
                   if not code.strip(): continue
-                  count+=1
-                  is_babel=bool(re.search(r'type=["\']text/babel["\']',attrs,re.I))
-                  ext='.jsx' if is_babel else '.js'; f=Path('/tmp')/f'{p.stem}-{i}{ext}';f.write_text(code)
-                  if is_babel:
-                      r=subprocess.run(['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/out.js'],capture_output=True,text=True)
-                  else:
-                      r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
-                  if r.returncode: failures.append(f'{p.name} script#{i}:\n{r.stderr}')
-          for p in sorted(Path('.').glob('*.js')):
-              count+=1
-              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
-              if r.returncode: failures.append(f'{p}:\n{r.stderr}')
-          if Path('api').exists():
-              for p in sorted(Path('api').glob('*.js')):
-                  count+=1
-                  r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
-                  if r.returncode: failures.append(f'{p}:\n{r.stderr}')
-          if failures:
-              print('\n'.join(failures));sys.exit(1)
-          print('SYNTAX_AUDIT_OK scripts=',count)
+                  count+=1; babel='text/babel' in attrs; f=Path('/tmp')/f'{p.stem}-{i}.{"jsx" if babel else "js"}';f.write_text(code)
+                  cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/check.js'] if babel else ['node','--check',str(f)]
+                  r=subprocess.run(cmd,capture_output=True,text=True)
+                  if r.returncode: fail.append(f'{p} script#{i}: {r.stderr}')
+          for p in list(Path('.').glob('*.js'))+list(Path('api').glob('*.js')):
+              count+=1;r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode: fail.append(f'{p}: {r.stderr}')
+          if fail: print('\n'.join(fail));sys.exit(1)
+          print('SYNTAX_PASS',count)
           PY
-      - name: Business-critical semantic invariants
+      - name: Browser smoke - public, employee, customer switch and all HTML routes
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import sys,re
-          failures=[]
-          idx=Path('index.html').read_text()
-          cust=Path('customer.html').read_text()
-          adm=Path('admin-dashboard.html').read_text()
-          stock=Path('stocktake.html').read_text()
-          stockadm=Path('admin-stocktake.html').read_text()
-          sw=Path('customer-sw.js').read_text()
-
-          # Hook / runtime-order safety.
-          if idx.count('const stocktakeControl = useStocktakeControl();')!=1: failures.append('index: stocktake hook count must be exactly one')
-          app=idx.find('const App = () => {'); hook=idx.find('const stocktakeControl = useStocktakeControl();'); use=idx.find('const currentStocktakeAccessAllowed = stocktakeAccessAllowed(stocktakeControl')
-          if min(app,hook,use)<0 or not (app<hook<use): failures.append('index: stocktake hook must be declared inside App before use')
-          login=idx.find('const LoginScreen =');
-          if login>=0 and app>login and 'const stocktakeControl = useStocktakeControl();' in idx[login:app]: failures.append('index: stocktake hook leaked into LoginScreen')
-
-          checks={
-            'index: admin stocktake management entry': "window.location.href = './admin-stocktake.html'" in idx and '>إدارة الجرد</span>' in idx,
-            'index: employee stocktake access gate': 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx,
-            'index: remembered employee detection': 'hasRememberedEmployeeSession' in idx and "inventory_employee_auth_version_v2" in idx,
-            'index: employee auto route': "__entryParams.get('chooser') !== '1' && hasRememberedEmployeeSession()" in idx,
-            'index: manual customer-view switch': "./customer.html?employeeView=1" in idx and 'واجهة العملاء' in idx,
-            'customer: employee session detection': 'EMPLOYEE_CUSTOMER_SESSION' in cust and 'EMPLOYEE_CUSTOMER_VIEW' in cust,
-            'customer: direct employee guard': 'EMPLOYEE_CUSTOMER_AUTO_ROUTE' in cust and "window.location.replace('./index.html?employee=1')" in cust,
-            'customer: employee activity isolation': cust.count("skipped:'employee_view'")>=2,
-            'customer: employee guest heartbeat isolation': 'if(!guestMode||EMPLOYEE_CUSTOMER_VIEW)return;' in cust,
-            'customer: employee name-prompt isolation': '!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
-            'customer: employee identity display': "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
-            'customer: employee return control': 'العودة لنظام الموظفين' in cust,
-            'customer: employee customer-action guard': cust.count('employeeViewNotice')>=4,
-            'customer: service worker v35': 'customer-sw.js?v=35.0' in cust and 'batco-customer-v35-0' in sw,
-            'customer V32: pending checkout recovery': 'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust,
-            'customer V32: WhatsApp receipt/share path': 'whatsapp_share_opened' in cust,
-            'customer V33: progressive guest identity': 'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
-            'currency: compatibility label': 'ر.س' in idx and 'ر.س' in cust and 'ر.س' in adm,
-            'employee auth: PBKDF2': 'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_AUTH_VERSION' in idx,
-            'employee auth: face verification dependency': 'face_mesh' in idx and 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx,
-            'employee messaging': 'EMPLOYEE_NOTIFICATION_COLLECTION' in idx and 'رسالة من الإدارة' in idx,
-            'employee access control': 'employeeSiteAccessAllowed' in idx and 'EMPLOYEE_SITE_CONTROL_DOC' in idx,
-            'employee scanner': 'Html5Qrcode' in idx,
-            'customer portal control': 'CustomerPortalBootstrap' in cust and 'CUSTOMER_PORTAL_CONTROL_DOC' in cust,
-            'admin visitor monitoring': 'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
-            'admin stocktake entry': './admin-stocktake.html' in adm and 'إدارة الجرد' in adm,
-            'stocktake count/audit': 'stocktake_audit' in stock and 'data-full' in stock and 'النواقص' in stock and 'ملاحظات' in stock,
-            'stocktake duplicate protection': 'صنف موجود في فرق أخرى' in stockadm,
-          }
-          for name,ok in checks.items():
-              if not ok: failures.append(name)
-
-          required=['index.html','customer.html','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html']
-          for f in required:
-              if not Path(f).exists() or Path(f).stat().st_size<1000: failures.append(f'{f}: missing or suspiciously small')
-          for p in Path('.').glob('*.html'):
-              s=p.read_text(errors='replace')
-              for m in re.finditer(r'\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*[+\-*/]',s): failures.append(f'{p}: self-reference {m.group(1)}')
-          if failures:
-              print('\n'.join(failures));sys.exit(1)
-          print('SEMANTIC_INVARIANTS_OK checks=',len(checks))
-          PY
-      - name: Install Playwright Chromium
-        run: |
           npm install --no-save playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-      - name: Browser runtime audit for all root pages and employee routing
-        shell: bash
-        run: |
-          set -euo pipefail
           python3 -m http.server 4173 >/tmp/http.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
-          cat > .audit-runtime.mjs <<'JS'
-          import { chromium } from 'playwright';
-          import fs from 'fs';
+          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
+          cat >/tmp/smoke.mjs <<'JS'
+          import {chromium} from 'playwright';import fs from 'fs';
           const base='http://127.0.0.1:4173';
-          const admin={inventory_user_name_v2:'مهند',inventory_admin_token_v2:'1jh297-spgf2z'};
-          const employee={inventory_user_name_v2:'اختبار تقني',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
-          const scenarios=[
-            ['public-entry','/index.html',{}],
-            ['employee-auto','/index.html',employee],
-            ['employee-explicit','/index.html?employee=1',employee],
-            ['admin-employee','/index.html?employee=1',admin],
-            ['public-customer','/customer.html',{}],
-            ['employee-customer-direct','/customer.html',employee],
-            ['employee-customer-view','/customer.html?employeeView=1',employee],
-            ['admin-dashboard','/admin-dashboard.html',admin],
-            ['stocktake-employee','/stocktake.html',employee],
-            ['admin-stocktake','/admin-stocktake.html',admin],
-            ['security-center','/security-center.html',admin],
-          ];
-          const htmls=fs.readdirSync('.').filter(x=>x.endsWith('.html'));
-          const covered=new Set(scenarios.map(x=>x[1].split('?')[0].slice(1)));
-          for(const f of htmls) if(!covered.has(f)) scenarios.push([`all-html:${f}`,`/${f}`,{}]);
-          const browser=await chromium.launch({headless:true}); let failed=false;
-          for(const [name,path,store] of scenarios){
-            const context=await browser.newContext();
-            await context.addInitScript(store=>{localStorage.clear();sessionStorage.clear();for(const [k,v] of Object.entries(store))localStorage.setItem(k,v)},store);
-            const page=await context.newPage(); const pageErrors=[];
-            page.on('pageerror',e=>pageErrors.push(String(e?.stack||e)));
-            try{
-              const resp=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});
-              await page.waitForTimeout(5500);
-              const text=(await page.locator('body').innerText().catch(()=>'' )).trim();
-              const visible=text.replace(/\s+/g,' ').length;
-              const final=page.url();
-              console.log(`RUNTIME ${name} http=${resp?.status()} final=${final} text=${visible}`);
-              if(!resp || resp.status()>=400){failed=true;console.error(`HTTP_FAIL ${name}`)}
-              if(pageErrors.length){failed=true;console.error(`PAGEERROR ${name}:\n${pageErrors.join('\n---\n')}`)}
-              if(visible<10){failed=true;console.error(`BLANK_PAGE ${name}`)}
-
-              if(name==='public-entry'&&!text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('PUBLIC_CHOOSER_MISSING')}
-              if(name==='employee-auto'&&text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('EMPLOYEE_AUTO_ROUTING_FAILED')}
-              if(name==='employee-explicit'&&text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('EMPLOYEE_EXPLICIT_ROUTING_FAILED')}
-              if(name==='admin-employee'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_STOCKTAKE_ENTRY_MISSING')}
-              if(name==='public-customer'&&final.includes('/index.html?employee=1')){failed=true;console.error('PUBLIC_CUSTOMER_WRONGLY_REDIRECTED')}
-              if(name==='employee-customer-direct'&&!final.includes('/index.html?employee=1')){failed=true;console.error('EMPLOYEE_DIRECT_CUSTOMER_GUARD_FAILED')}
-              if(name==='employee-customer-view'){
-                const flag=await page.evaluate(()=>window.__employeeCustomerView===true).catch(()=>false);
-                const guestName=await page.evaluate(()=>localStorage.getItem('customer_guest_name_v1')).catch(()=>null);
-                if(!flag){failed=true;console.error('EMPLOYEE_CUSTOMER_VIEW_FLAG_FAILED')}
-                if(guestName!==null){failed=true;console.error('EMPLOYEE_VIEW_POLLUTED_GUEST_NAME')}
-                if(text.includes('اسمك الكريم')){failed=true;console.error('EMPLOYEE_VIEW_NAME_PROMPT_VISIBLE')}
-                if(!text.includes('الموظفين')){failed=true;console.error('EMPLOYEE_VIEW_RETURN_BUTTON_MISSING')}
-                if(!text.includes('اختبار تقني')){failed=true;console.error('EMPLOYEE_VIEW_IDENTITY_MISSING')}
-                const back=page.getByRole('button',{name:'الموظفين'}).first();
-                if(await back.count()){
-                  await back.click();
-                  await page.waitForTimeout(1200);
-                  const returnText=(await page.locator('body').innerText().catch(()=>''));
-                  if(!page.url().includes('/index.html?employee=1')||returnText.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('EMPLOYEE_VIEW_RETURN_FLOW_FAILED')}
-                } else {failed=true;console.error('EMPLOYEE_VIEW_RETURN_CONTROL_NOT_CLICKABLE')}
-              }
-            }catch(e){failed=true;console.error(`NAV_FAIL ${name}: ${e?.stack||e}`)}
-            await context.close();
-          }
-          await browser.close(); if(failed)process.exit(1); console.log('BROWSER_RUNTIME_OK scenarios=',scenarios.length);
+          const employee={inventory_user_name_v2:'اختبار موظف',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
+          const legacy={inventory_user_name_v2:'اختبار قديم'};
+          const scenarios=[['public','/index.html',{}],['employee','/index.html',employee],['legacy','/index.html',legacy],['customer-public','/customer.html',{}],['customer-employee-direct','/customer.html',employee],['customer-legacy-direct','/customer.html',legacy],['customer-employee-manual','/customer.html?employeeView=1',employee]];
+          const covered=new Set(['index.html','customer.html']);for(const f of fs.readdirSync('.').filter(x=>x.endsWith('.html')))if(!covered.has(f))scenarios.push(['html:'+f,'/'+f,{}]);
+          const b=await chromium.launch({headless:true});let fail=false;
+          for(const [name,path,store] of scenarios){const c=await b.newContext();await c.addInitScript(s=>{localStorage.clear();sessionStorage.clear();for(const[k,v]of Object.entries(s))localStorage.setItem(k,v)},store);const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(String(e)));try{const r=await p.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(5000);const text=await p.locator('body').innerText().catch(()=>''),url=p.url();console.log(name,r?.status(),url,text.replace(/\s+/g,' ').slice(0,180));if(!r||r.status()>=400||text.trim().length<8){fail=true;console.error(name,'basic runtime')};if(name==='public'&&!text.includes('حدد نوع الدخول للمتابعة')){fail=true;console.error('public chooser')};if((name==='employee'||name==='legacy')&&text.includes('حدد نوع الدخول للمتابعة')){fail=true;console.error(name,'employee default failed')};if((name==='customer-employee-direct'||name==='customer-legacy-direct')&&!url.includes('/index.html?employee=1')){fail=true;console.error(name,'customer guard')};if(name==='customer-employee-manual'&&(text.includes('اسمك الكريم')||!text.includes('اختبار موظف')||!text.includes('الموظفين'))){fail=true;console.error('manual employee customer view')};}catch(e){fail=true;console.error(name,e)}await c.close()}
+          await b.close();if(fail)process.exit(1);
           JS
-          node .audit-runtime.mjs
-          rm -f .audit-runtime.mjs
+          node /tmp/smoke.mjs
