@@ -1,0 +1,203 @@
+name: Employee Routing V35
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/employee-routing-v35.yml'
+permissions:
+  contents: write
+jobs:
+  apply-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Apply employee-first routing and customer employee-view isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def once(s, old, new, label):
+              c=s.count(old)
+              if c!=1:
+                  raise SystemExit(f'{label}: expected 1 marker, found {c}')
+              return s.replace(old,new,1)
+
+          # ---------- index.html ----------
+          p=Path('index.html'); s=p.read_text()
+          if 'const EMPLOYEE_DIRECT_SESSION' not in s:
+              marker='const EntryChooser = () => {'
+              helper="""const EMPLOYEE_DIRECT_SESSION = {\n    nameKey: 'inventory_user_name_v2',\n    employeeIdKey: 'inventory_employee_id_v2',\n    authVersionKey: 'inventory_employee_auth_version_v2',\n    authVersion: '2'\n};\nconst hasRememberedEmployeeSession = () => {\n    try {\n        const name = String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.nameKey) || '').trim();\n        const employeeId = String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.employeeIdKey) || '').trim();\n        const authVersion = String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.authVersionKey) || '');\n        return Boolean(name && employeeId && authVersion === EMPLOYEE_DIRECT_SESSION.authVersion);\n    } catch { return false; }\n};\n\n"""
+              s=once(s,marker,helper+marker,'index direct-session helper')
+
+          old="const __employeeMode = __entryParams.get('employee') === '1';"
+          new="const __employeeMode = __entryParams.get('employee') === '1' || (__entryParams.get('chooser') !== '1' && hasRememberedEmployeeSession());"
+          if old in s:
+              s=once(s,old,new,'index employee-first mode')
+          elif new not in s:
+              raise SystemExit('index employee mode marker missing')
+
+          if "./customer.html?employeeView=1" not in s:
+              marker="                            {currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && ("
+              switch="""                            {!isAdmin && currentEmployeeId && (\n                                <button onClick={() => { window.location.href = './customer.html?employeeView=1'; }} title=\"عرض بوابة العملاء\"\n                                        className=\"flex items-center justify-center gap-6 h-48 px-10 rounded-12 bg-bg border border-border text-secondary hover:border-accent/30 hover:text-accent transition-colors animate-flip\">\n                                    <Icon.Eye className=\"w-18 h-18\" />\n                                    <span className=\"hidden sm:inline text-[11px] font-bold whitespace-nowrap\">واجهة العملاء</span>\n                                </button>\n                            )}\n                            """
+              s=once(s,marker,switch+marker,'index customer-view switch')
+          p.write_text(s)
+
+          # ---------- customer.html ----------
+          p=Path('customer.html'); s=p.read_text()
+          s=s.replace("customer-sw.js?v=33.0","customer-sw.js?v=35.0")
+          if 'const EMPLOYEE_CUSTOMER_VIEW' not in s:
+              marker="const CUSTOMER_VISITOR_KEY = 'batco_customer_visitor_id_v1';"
+              helper="""const EMPLOYEE_CUSTOMER_ROUTE = new URLSearchParams(window.location.search);\nconst EMPLOYEE_CUSTOMER_SESSION = (() => {\n  try {\n    const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim();\n    const employeeId=String(localStorage.getItem('inventory_employee_id_v2')||'').trim();\n    const authVersion=String(localStorage.getItem('inventory_employee_auth_version_v2')||'');\n    return {valid:Boolean(name&&employeeId&&authVersion==='2'),name,employeeId};\n  } catch { return {valid:false,name:'',employeeId:''}; }\n})();\nconst EMPLOYEE_CUSTOMER_VIEW = EMPLOYEE_CUSTOMER_SESSION.valid && EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1';\nconst EMPLOYEE_CUSTOMER_AUTO_ROUTE = EMPLOYEE_CUSTOMER_SESSION.valid && !EMPLOYEE_CUSTOMER_VIEW;\nwindow.__employeeCustomerView = EMPLOYEE_CUSTOMER_VIEW;\nif(EMPLOYEE_CUSTOMER_AUTO_ROUTE) window.location.replace('./index.html?employee=1');\n"""
+              s=once(s,marker,marker+'\n'+helper,'customer employee-route helper')
+
+          marker="async function logCustomerEvent(user,type,label='',data={}){\n  const identity=customerIdentity(user),device=customerDeviceInfo(),guestName=currentGuestName();"
+          repl="async function logCustomerEvent(user,type,label='',data={}){\n  if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};\n  const identity=customerIdentity(user),device=customerDeviceInfo(),guestName=currentGuestName();"
+          if marker in s: s=once(s,marker,repl,'customer telemetry isolation')
+          elif "skipped:'employee_view'" not in s: raise SystemExit('customer telemetry marker missing')
+
+          marker="async function touchCustomerSession(user,profile,event='active'){\n  const identity=customerIdentity(user),device=customerDeviceInfo();"
+          repl="async function touchCustomerSession(user,profile,event='active'){\n  if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};\n  const identity=customerIdentity(user),device=customerDeviceInfo();"
+          if marker in s: s=once(s,marker,repl,'customer session isolation')
+          elif s.count("skipped:'employee_view'")<2: raise SystemExit('customer session marker missing')
+
+          old="function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth}){\n  const safeProfile=profile||{name:'',company:'',phone:'',branches:[]};"
+          new="function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth,employeeView=false,employeeName=''}){\n  const safeProfile=profile||{name:'',company:'',phone:'',branches:[]};\n  const employeeViewNotice='أنت تستعرض بوابة العملاء بحساب موظف. إنشاء الطلبات وحفظها يتم من نظام الموظفين.';"
+          if old in s: s=once(s,old,new,'CustomerApp employee props')
+          elif 'employeeViewNotice=' not in s: raise SystemExit('CustomerApp signature marker missing')
+
+          old="[guestBranches,setGuestBranches]=useState(()=>{try{return JSON.parse(localStorage.getItem('customer_guest_branches_v1')||'[]')}catch{return[]}})"
+          new="[guestBranches,setGuestBranches]=useState(()=>{if(employeeView)return[];try{return JSON.parse(localStorage.getItem('customer_guest_branches_v1')||'[]')}catch{return[]}})"
+          if old in s: s=once(s,old,new,'employee guest branches isolation')
+
+          old="const [guestName,setGuestName]=useState(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}}),[showGuestNamePrompt,setShowGuestNamePrompt]=useState(false);\n  useEffect(()=>{if(!guestMode||guestName)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),900);return()=>clearTimeout(t)},[guestMode,guestName]);"
+          new="const [guestName,setGuestName]=useState(()=>{if(employeeView)return String(employeeName||'').trim();try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}}),[showGuestNamePrompt,setShowGuestNamePrompt]=useState(false);\n  useEffect(()=>{if(employeeView||!guestMode||guestName)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),900);return()=>clearTimeout(t)},[employeeView,guestMode,guestName]);"
+          if old in s: s=once(s,old,new,'employee name prompt suppression')
+          elif 'if(employeeView||!guestMode||guestName)return' not in s: raise SystemExit('guest name prompt marker missing')
+
+          old="const pendingResumeRef=useRef(false);\n  useEffect(()=>{\n    if(!guestMode)return;"
+          new="const pendingResumeRef=useRef(false);\n  useEffect(()=>{\n    if(!guestMode||employeeView)return;"
+          if old in s: s=once(s,old,new,'employee presence suppression')
+
+          old="if(guestMode){\n      const next=[branch];setGuestBranches(next);try{localStorage.setItem('customer_guest_branches_v1',JSON.stringify(next))}catch{}"
+          new="if(guestMode){\n      const next=[branch];setGuestBranches(next);if(!employeeView){try{localStorage.setItem('customer_guest_branches_v1',JSON.stringify(next))}catch{}}"
+          if old in s: s=once(s,old,new,'employee branch storage isolation')
+
+          old="async function saveDraft(notes=''){\n    if(!cartItems.length)return;\n    if(guestMode){\n      try{"
+          new="async function saveDraft(notes=''){\n    if(!cartItems.length)return;\n    if(guestMode){\n      if(employeeView){setToast({type:'info',message:employeeViewNotice});return;}\n      try{"
+          if old in s: s=once(s,old,new,'employee draft protection')
+
+          old="if(!cartItems.length){setToast({type:'error',message:'السلة فارغة. لم يتم إنشاء أي طلب.'});return}\n    if(guestMode){\n      try{"
+          new="if(!cartItems.length){setToast({type:'error',message:'السلة فارغة. لم يتم إنشاء أي طلب.'});return}\n    if(guestMode){\n      if(employeeView){setToast({type:'info',message:employeeViewNotice});return;}\n      try{"
+          if old in s: s=once(s,old,new,'employee submit protection')
+
+          old="onCheckout={()=>setCheckout(true)} onSaveDraft={()=>saveDraft('')}"
+          new="onCheckout={()=>employeeView?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)} onSaveDraft={()=>saveDraft('')}"
+          if old in s: s=once(s,old,new,'employee checkout protection')
+
+          old="<div className=\"flex items-center gap-2\"><div className=\"hidden sm:block text-left\"><div className=\"text-[10px] text-muted\">مرحبًا</div><div className=\"text-xs font-bold\">{guestMode?'تصفح مباشر':(safeProfile.name||'عميل')}</div></div><button onClick={()=>setPage('cart')}"
+          new="<div className=\"flex items-center gap-2\">{employeeView&&<button onClick={()=>{window.location.href='./index.html?employee=1'}} title=\"العودة لنظام الموظفين\" className=\"h-9 px-3 rounded-10 border border-border bg-surface text-[10px] font-bold text-secondary hover:text-accent\">الموظفين</button>}<div className=\"hidden sm:block text-left\"><div className=\"text-[10px] text-muted\">مرحبًا</div><div className=\"text-xs font-bold\">{employeeView?(employeeName||'موظف'):(guestMode?'تصفح مباشر':(safeProfile.name||'عميل'))}</div></div><button onClick={()=>setPage('cart')}"
+          if old in s: s=once(s,old,new,'employee customer header switch-back')
+
+          old="onClick={()=>{if(guestMode&&(id==='orders'||id==='account')){onRequireAuth?.(id);return;}setCheckout(false);setPage(id);"
+          new="onClick={()=>{if(employeeView&&(id==='orders'||id==='account')){setToast({type:'info',message:employeeViewNotice});return;}if(guestMode&&(id==='orders'||id==='account')){onRequireAuth?.(id);return;}setCheckout(false);setPage(id);"
+          if old in s: s=once(s,old,new,'employee protected nav')
+
+          old="{guestMode&&showGuestNamePrompt&&!guestName&&<GuestNamePromptModal onSave={saveGuestName}/>}"
+          new="{!employeeView&&guestMode&&showGuestNamePrompt&&!guestName&&<GuestNamePromptModal onSave={saveGuestName}/>}"
+          if old in s: s=once(s,old,new,'employee prompt render guard')
+
+          old="<InstallNudge/>{allocItem&&<BranchAllocationModal"
+          new="{!employeeView&&<InstallNudge/>}{allocItem&&<BranchAllocationModal"
+          if old in s: s=once(s,old,new,'employee install nudge guard')
+
+          old="if(control.__loading){"
+          new="if(control.__loading&&!EMPLOYEE_CUSTOMER_VIEW){"
+          if old in s: s=once(s,old,new,'employee fast customer bootstrap')
+
+          old="if(!control.enabled&&!previewAllowed){"
+          new="if(!control.enabled&&!previewAllowed&&!EMPLOYEE_CUSTOMER_VIEW){"
+          if old in s: s=once(s,old,new,'employee customer access when portal stopped')
+
+          old="<Root registrationEnabled={effectiveRegistration} loginEnabled={effectiveLogin}/>"
+          new="{EMPLOYEE_CUSTOMER_VIEW?<CustomerApp user={null} profile={{name:EMPLOYEE_CUSTOMER_SESSION.name,company:'',phone:'',branches:[]}} guestMode={true} employeeView={true} employeeName={EMPLOYEE_CUSTOMER_SESSION.name} onProfileUpdate={()=>{}} onRequireAuth={()=>{}}/>:<Root registrationEnabled={effectiveRegistration} loginEnabled={effectiveLogin}/>}"
+          if old in s: s=once(s,old,new,'employee customer bootstrap route')
+          p.write_text(s)
+
+          # ---------- customer service worker ----------
+          p=Path('customer-sw.js'); s=p.read_text().replace("batco-customer-v33-0","batco-customer-v35-0"); p.write_text(s)
+
+          # ---------- permanent full-site quality gate additions ----------
+          p=Path('.github/workflows/site-quality-gate.yml'); s=p.read_text()
+          old="""            ['entry','/index.html',{}],\n            ['employee','/index.html?employee=1',employee],"""
+          new="""            ['entry','/index.html',{}],\n            ['employee-auto','/index.html',employee],\n            ['employee','/index.html?employee=1',employee],\n            ['employee-customer-direct','/customer.html',employee],\n            ['employee-customer-view','/customer.html?employeeView=1',employee],"""
+          if old in s: s=once(s,old,new,'quality gate employee scenarios')
+          elif "['employee-customer-view'" not in s: raise SystemExit('quality gate scenario marker missing')
+
+          old="""              if(name==='admin-employee'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_STOCKTAKE_ENTRY_MISSING')}"""
+          new="""              if(name==='admin-employee'&&!text.includes('إدارة الجرد')){failed=true;console.error('ADMIN_STOCKTAKE_ENTRY_MISSING')}\n              if(name==='employee-auto'&&text.includes('حدد نوع الدخول للمتابعة')){failed=true;console.error('EMPLOYEE_AUTO_ROUTING_FAILED')}\n              if(name==='employee-customer-direct'&&!page.url().includes('/index.html?employee=1')){failed=true;console.error('EMPLOYEE_CUSTOMER_DIRECT_GUARD_FAILED')}\n              if(name==='employee-customer-view'){\n                const employeeView=await page.evaluate(()=>window.__employeeCustomerView===true).catch(()=>false);\n                const guestName=await page.evaluate(()=>localStorage.getItem('customer_guest_name_v1')).catch(()=>null);\n                if(!employeeView){failed=true;console.error('EMPLOYEE_CUSTOMER_VIEW_FLAG_FAILED')}\n                if(guestName){failed=true;console.error('EMPLOYEE_CUSTOMER_VIEW_POLLUTED_GUEST_NAME')}\n                if(text.includes('اسمك الكريم')){failed=true;console.error('EMPLOYEE_CUSTOMER_VIEW_NAME_PROMPT_VISIBLE')}\n              }"""
+          if old in s: s=once(s,old,new,'quality gate routing assertions')
+          elif 'EMPLOYEE_CUSTOMER_VIEW_FLAG_FAILED' not in s: raise SystemExit('quality gate assertion marker missing')
+
+          old="""          if 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' not in idx: failures.append('index: employee stocktake entry must remain campaign/access gated')"""
+          new="""          if 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' not in idx: failures.append('index: employee stocktake entry must remain campaign/access gated')\n          if 'hasRememberedEmployeeSession' not in idx or './customer.html?employeeView=1' not in idx: failures.append('index: employee-first routing/switch missing')\n          customer=Path('customer.html').read_text()\n          if 'EMPLOYEE_CUSTOMER_VIEW' not in customer or 'EMPLOYEE_CUSTOMER_AUTO_ROUTE' not in customer: failures.append('customer: employee route guard missing')\n          if customer.count(\"skipped:'employee_view'\")<2: failures.append('customer: employee telemetry isolation missing')\n          if '!employeeView&&guestMode&&showGuestNamePrompt' not in customer: failures.append('customer: employee name-prompt suppression missing')\n          if 'employeeViewNotice' not in customer: failures.append('customer: employee protected-action guard missing')"""
+          if old in s: s=once(s,old,new,'quality gate semantic employee invariants')
+          elif 'employee telemetry isolation missing' not in s: raise SystemExit('quality gate semantic marker missing')
+          p.write_text(s)
+          PY
+      - name: Targeted syntax and routing invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          failures=[]
+          for fn in ['index.html','customer.html','admin-dashboard.html']:
+              s=Path(fn).read_text()
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+                  attrs,code=m.group(1),m.group(2)
+                  if not code.strip(): continue
+                  ext='.jsx' if re.search(r'type=["\']text/babel["\']',attrs,re.I) else '.js'
+                  f=Path('/tmp')/f'{Path(fn).stem}-{i}{ext}'; f.write_text(code)
+                  cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/out.js'] if ext=='.jsx' else ['node','--check',str(f)]
+                  r=subprocess.run(cmd,capture_output=True,text=True)
+                  if r.returncode: failures.append(f'{fn} script {i}: {r.stderr}')
+          r=subprocess.run(['node','--check','customer-sw.js'],capture_output=True,text=True)
+          if r.returncode: failures.append('customer-sw.js: '+r.stderr)
+          idx=Path('index.html').read_text(); cust=Path('customer.html').read_text(); gate=Path('.github/workflows/site-quality-gate.yml').read_text()
+          checks=[
+            ('employee auto',"__entryParams.get('employee') === '1' || (__entryParams.get('chooser') !== '1' && hasRememberedEmployeeSession())" in idx),
+            ('switch customer',"./customer.html?employeeView=1" in idx),
+            ('direct customer guard',"EMPLOYEE_CUSTOMER_AUTO_ROUTE" in cust and "window.location.replace('./index.html?employee=1')" in cust),
+            ('telemetry isolation',cust.count("skipped:'employee_view'")>=2),
+            ('name prompt suppressed',"!employeeView&&guestMode&&showGuestNamePrompt" in cust),
+            ('employee actions protected',cust.count('employeeViewNotice')>=4),
+            ('customer SW v35',"customer-sw.js?v=35.0" in cust and "batco-customer-v35-0" in Path('customer-sw.js').read_text()),
+            ('permanent routing browser tests','EMPLOYEE_CUSTOMER_VIEW_FLAG_FAILED' in gate),
+            ('checkout V32 preserved','PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust),
+            ('guest tracking V33 preserved','guest_name_captured' in cust and 'CUSTOMER_VISITOR_KEY' in cust),
+            ('stocktake preserved',Path('stocktake.html').exists() and Path('admin-stocktake.html').exists() and 'currentStocktakeAccessAllowed' in idx),
+          ]
+          for name,ok in checks:
+              if not ok: failures.append('INVARIANT '+name)
+          if failures:
+              print('\n'.join(failures));sys.exit(1)
+          print('TARGETED_ROUTING_CHECKS_OK',len(checks))
+          PY
+      - name: Commit verified changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "BATCO Automation"
+          git config user.email "actions@users.noreply.github.com"
+          rm -f .github/placeholder.tmp .github/workflows/employee-routing-v35.yml
+          git add index.html customer.html customer-sw.js .github/workflows/site-quality-gate.yml .github/placeholder.tmp .github/workflows/employee-routing-v35.yml || true
+          git commit -m "Add employee-first routing and isolated customer view V35"
+          git push origin main
