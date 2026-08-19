@@ -1,0 +1,82 @@
+name: V38 Employee Customer Cart Transfer Gate
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  transfer-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bootstrap JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          for name in ['index.html','customer.html']:
+              text=Path(name).read_text()
+              scripts=re.findall(r'<script[^>]*>(.*?)</script>',text,re.S|re.I)
+              if not scripts: raise SystemExit('NO_SCRIPT '+name)
+              for i,code in enumerate(scripts):
+                  if not code.strip(): continue
+                  p=Path('/tmp')/f'{name}-{i}.js';p.write_text(code)
+                  r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+                  if r.returncode:
+                      print(r.stderr);raise SystemExit('SYNTAX_FAIL '+name)
+          print('BOOTSTRAP_SYNTAX_PASS')
+          PY
+      - name: Validate runtime patch anchors and transfer invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          idxboot=Path('index.html').read_text()
+          custboot=Path('customer.html').read_text()
+          idx=Path('runtime/index-v37-source.txt').read_text()
+          cust=Path('runtime/customer-v37-source.txt').read_text()
+
+          customer_anchors={
+            'employee session source': "const EMPLOYEE_CUSTOMER_SESSION = (() => { try { const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim();" in cust,
+            'employee view marker': 'window.__employeeCustomerView = EMPLOYEE_CUSTOMER_VIEW;' in cust,
+            'old employee checkout interception': "onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)}" in cust,
+            'guest cart source': "customer_guest_cart_v1" in cust,
+          }
+          index_anchors={
+            'notification source': 'const EmployeeAdminMessageScreen =' in idx and 'const useEmployeeAdminMessages =' in idx,
+            'app source': 'const App = () => {' in idx,
+            'notes state': 'const [notes, setNotes] = useState("");' in idx,
+            'submit marker': 'if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");' in idx,
+            'order item persistence': 'items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),' in idx,
+            'transfer effect anchor': 'const [lastUpdate,    setLastUpdate]    = useState("جاري التحقق...");' in idx,
+            'customer switch source': '>واجهة العملاء</span>' in idx,
+          }
+          wrapper_checks={
+            'shared transfer key customer': "batco_employee_customer_cart_transfer_v1" in custboot,
+            'shared transfer key employee': "batco_employee_customer_cart_transfer_v1" in idxboot,
+            'customer handoff function': 'handoffEmployeeCustomerCart(cartItems,branches)' in custboot,
+            'customer transfer contains branches': 'branchQuantities' in custboot and 'branches:safeBranches' in custboot,
+            'customer does not clear source cart before redirect': "localStorage.removeItem('customer_guest_cart_v1')" not in custboot,
+            'employee idempotency marker': 'EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX' in idxboot and 'transferIds' in idxboot,
+            'employee durable cart write': "localStorage.setItem(cartKey,JSON.stringify(merged))" in idxboot,
+            'employee source cart clear after import': "localStorage.removeItem('customer_guest_cart_v1')" in idxboot,
+            'warehouse selection': 'chooseEmployeeCustomerTransferWarehouse' in idxboot and 'existingWarehouse||choice.key' in idxboot,
+            'overstock hard block': 'stockConflicts' in idxboot and 'لا يمكن اعتماد الطلب قبل مراجعة الكميات' in idxboot,
+            'branch distribution notes': 'buildEmployeeTransferNotes' in idxboot and 'توزيع الطلب المنقول من واجهة العملاء' in idxboot,
+            'firestore transfer metadata': 'customerTransfer: i.customerTransferMeta || null' in idxboot,
+            'auto open employee cart': 'setShowCart(true)' in idxboot,
+            'employee identity guard': 'sameId' in idxboot and 'sameName' in idxboot,
+          }
+          bad=[k for k,v in {**customer_anchors,**index_anchors,**wrapper_checks}.items() if not v]
+          if bad:
+              raise SystemExit('\n'.join('FAIL '+x for x in bad))
+          if idxboot.index("localStorage.setItem(cartKey,JSON.stringify(merged))") > idxboot.index("localStorage.removeItem('customer_guest_cart_v1')"):
+              raise SystemExit('FAIL source cart cleared before durable employee write')
+          print('V38_TRANSFER_INVARIANTS_PASS',len(customer_anchors)+len(index_anchors)+len(wrapper_checks))
+          PY
