@@ -40,7 +40,7 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
-      const fresh = await fetch(new Request(req, { cache: 'no-store' }));
+      const fresh = await fetch(req);
       if (fresh && fresh.ok) await cache.put(req, fresh.clone());
       return fresh;
     } catch (error) {
