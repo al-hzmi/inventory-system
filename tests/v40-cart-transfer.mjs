@@ -14,11 +14,13 @@ async function seedContext(browser, values = {}) {
   const context = await browser.newContext();
   await context.addInitScript(({ values }) => {
     try {
+      if (sessionStorage.getItem('__v40_seeded') === '1') return;
       localStorage.clear();
       sessionStorage.clear();
       for (const [key, value] of Object.entries(values)) {
         localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
       }
+      sessionStorage.setItem('__v40_seeded', '1');
     } catch {}
   }, { values });
   return context;
