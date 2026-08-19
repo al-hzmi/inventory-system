@@ -1,0 +1,36 @@
+name: V39 Repair Kickoff
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: write
+  actions: write
+  issues: write
+jobs:
+  kickoff:
+    if: github.event.issue.title == 'TRIGGER V39 PRODUCTION REPAIR'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable and dispatch V39 repair
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/v39-materialize-static-repair.yml')
+          s=p.read_text()
+          if 'workflow_dispatch:' not in s:
+              s=s.replace('on:\n  push:\n','on:\n  workflow_dispatch:\n  push:\n',1)
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/v39-issue-kickoff.yml
+          git config user.name 'BATCO V39 Kickoff'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Enable V39 production repair dispatch'
+          git push origin main
+          sleep 3
+          gh workflow run v39-materialize-static-repair.yml --ref main
+          gh issue close "${{ github.event.issue.number }}" --reason completed --comment "V39 production repair dispatched."
