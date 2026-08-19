@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Static V40 invariants
         shell: bash
@@ -30,27 +30,27 @@ jobs:
           idx=Path('index.html').read_text()
           cust=Path('customer.html').read_text()
           required_idx=[
-            "batco_employee_customer_cart_transfer_v1",
-            "batco_employee_customer_cart_transfer_backup_v1",
-            "batco_employee_customer_cart_transfer_applied_v1_",
-            "prepareTransfer40",
-            "V40_STOCK_GUARD_MARKER",
-            "batco_employee_transfer_open_cart_v1",
-            "batco_employee_transfer_warehouse_v1",
-            "batco_employee_transfer_notes_v1",
+            'batco_employee_customer_cart_transfer_v1',
+            'batco_employee_customer_cart_transfer_backup_v1',
+            'batco_employee_customer_cart_transfer_applied_v1_',
+            'prepareTransfer40',
+            'V40_STOCK_GUARD_MARKER',
+            'batco_employee_transfer_open_cart_v1',
+            'batco_employee_transfer_warehouse_v1',
+            'batco_employee_transfer_notes_v1',
           ]
           required_cust=[
-            "handoffEmployeeCustomerCart",
-            "batco_employee_customer_cart_transfer_v1",
-            "batco_employee_customer_cart_transfer_backup_v1",
-            "نقل ومتابعة الاعتماد",
-            "customerCartTransfer",
+            'handoffEmployeeCustomerCart',
+            'batco_employee_customer_cart_transfer_v1',
+            'batco_employee_customer_cart_transfer_backup_v1',
+            'نقل ومتابعة الاعتماد',
+            'customerCartTransfer',
           ]
           missing=[x for x in required_idx if x not in idx]+[x for x in required_cust if x not in cust]
           if missing: raise SystemExit('V40_MISSING: '+', '.join(missing))
           if "localStorage.removeItem('customer_guest_cart_v1')" not in idx: raise SystemExit('V40_NO_SAFE_SOURCE_CLEANUP')
           if "window.confirm('لديك أصناف محفوظة" not in idx: raise SystemExit('V40_NO_MERGE_CONFIRMATION')
-          if "stockConflicts" not in idx: raise SystemExit('V40_NO_STOCK_GUARD')
+          if 'stockConflicts' not in idx: raise SystemExit('V40_NO_STOCK_GUARD')
           print('V40_STATIC_PASS')
           PY
 
@@ -69,146 +69,4 @@ jobs:
           python3 -m http.server 4173 >/tmp/v40-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
-          cat >/tmp/v40-e2e.mjs <<'JS'
-          import { chromium } from 'playwright';
-          import { transformSync } from 'esbuild';
-
-          const base='http://127.0.0.1:4173';
-          const EMP={inventory_user_name_v2:'اختبار موظف',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
-          const TK='batco_employee_customer_cart_transfer_v1';
-          const TB='batco_employee_customer_cart_transfer_backup_v1';
-          const CART='b2b_cart_اختبار موظف';
-          const SKU='120005';
-          const fail=(m)=>{throw new Error(m)};
-          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-
-          async function seedContext(browser, values={}){
-            const c=await browser.newContext();
-            await c.addInitScript(({values})=>{
-              try{
-                localStorage.clear();sessionStorage.clear();
-                for(const [k,v] of Object.entries(values)) localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));
-              }catch{}
-            },{values});
-            return c;
-          }
-
-          function compileInlineScripts(html,label){
-            const re=/<script([^>]*)>([\s\S]*?)<\/script>/gi; let m,count=0;
-            while((m=re.exec(html))){
-              const attrs=m[1]||'',code=m[2]||'';
-              if(!code.trim())continue;
-              const loader=/text\/babel/i.test(attrs)?'jsx':'js';
-              try{transformSync(code,{loader,target:'es2020'});count++;}
-              catch(e){fail(label+' generated script compile failed: '+e.message)}
-            }
-            if(count<2)fail(label+' generated runtime missing scripts');
-            return count;
-          }
-
-          async function generatedRuntime(browser,path,store,label,needle){
-            const c=await seedContext(browser,store);const p=await c.newPage();
-            const errors=[];p.on('pageerror',e=>errors.push(String(e)));
-            await p.goto(base+path,{waitUntil:'domcontentloaded',timeout:45000});
-            await sleep(3500);
-            const html=await p.content();
-            if(!html.includes(needle))fail(label+' transformed marker missing');
-            const count=compileInlineScripts(html,label);
-            console.log(label,'generated scripts compiled',count,'pageerrors',errors.slice(0,3));
-            await c.close();
-          }
-
-          const browser=await chromium.launch({headless:true});
-          try{
-            await generatedRuntime(browser,'/index.html?employee=1',EMP,'employee','const stockConflicts = items.filter');
-            await generatedRuntime(browser,'/customer.html?employeeView=1',EMP,'customer','function handoffEmployeeCustomerCart');
-
-            // Full customer-view -> employee-cart handoff.
-            {
-              const seed={...EMP,
-                customer_guest_branches_v1:[{id:'b1',name:'الفرع الرئيسي'}],
-                customer_guest_cart_v1:{[SKU]:{cleanId:SKU,id:SKU,name:'حصالات كبير L',imageFile:'',cartonPrice:0,pack:'36',branchQuantities:{b1:1}}}
-              };
-              const c=await seedContext(browser,seed);const p=await c.newPage();
-              p.on('dialog',d=>d.accept());
-              await p.goto(base+'/customer.html?employeeView=1',{waitUntil:'domcontentloaded',timeout:45000});
-              await p.getByRole('button',{name:'السلة'}).last().click({timeout:20000});
-              const transferButton=p.getByRole('button',{name:'نقل ومتابعة الاعتماد'});
-              await transferButton.waitFor({state:'visible',timeout:15000});
-              await transferButton.click();
-              await p.waitForURL(/index\.html\?employee=1/,{timeout:30000});
-              await p.waitForFunction((key,sku)=>{try{const x=JSON.parse(localStorage.getItem(key)||'{}');return Number(x?.[sku]?.cartQty)===1}catch{return false}},CART,SKU,{timeout:20000});
-              const state=await p.evaluate(({cartKey,sku,TK,TB})=>{
-                const cart=JSON.parse(localStorage.getItem(cartKey)||'{}');
-                return {item:cart[sku]||null,transfer:localStorage.getItem(TK),backup:localStorage.getItem(TB),guest:localStorage.getItem('customer_guest_cart_v1'),url:location.href,notes:[...document.querySelectorAll('textarea')].map(x=>x.value).join('\n')};
-              },{cartKey:CART,sku:SKU,TK,TB});
-              if(!state.item||Number(state.item.cartQty)!==1)fail('handoff quantity mismatch');
-              if(!['jeddah','riyadh'].includes(state.item.warehouseKey))fail('handoff warehouse missing');
-              if(state.transfer||state.backup||state.guest)fail('successful handoff did not clean source payload');
-              if(/customerCartTransfer|appv=40/.test(state.url))fail('transfer query parameters not cleared');
-              await p.reload({waitUntil:'domcontentloaded',timeout:45000});await sleep(1800);
-              const qty=await p.evaluate(({cartKey,sku})=>Number((JSON.parse(localStorage.getItem(cartKey)||'{}')[sku]||{}).cartQty||0),{cartKey:CART,sku:SKU});
-              if(qty!==1)fail('idempotency failed: reload duplicated quantity');
-              console.log('E2E_HANDOFF_PASS',state.item.warehouseKey);
-              await c.close();
-            }
-
-            // Existing employee cart must merge only after confirmation and never overwrite.
-            {
-              const payload={version:3,transferId:'merge_case',employeeName:'اختبار موظف',employeeId:'audit_employee',items:[{cleanId:SKU,id:SKU,name:'حصالات كبير L',totalQty:.5,branchQuantities:{b1:.5}}],branches:[{id:'b1',name:'الرئيسي'}]};
-              const existing={[SKU]:{cleanId:SKU,id:SKU,name:'حصالات كبير L',warehouseKey:'jeddah',qty:7.5,cartQty:1}};
-              const c=await seedContext(browser,{...EMP,[TK]:payload,[TB]:payload,[CART]:existing});const p=await c.newPage();
-              let dialogs=0;p.on('dialog',async d=>{dialogs++;await d.accept()});
-              await p.goto(base+'/index.html?employee=1&customerCartTransfer=1&appv=40',{waitUntil:'domcontentloaded',timeout:45000});
-              await p.waitForFunction((key,sku)=>{const x=JSON.parse(localStorage.getItem(key)||'{}');return Number(x?.[sku]?.cartQty)===1.5},CART,SKU,{timeout:15000});
-              if(dialogs<1)fail('existing-cart merge confirmation did not appear');
-              console.log('MERGE_CONFIRM_PASS');await c.close();
-            }
-
-            // Cancelled merge preserves both existing employee cart and transfer payload.
-            {
-              const payload={version:3,transferId:'cancel_case',employeeName:'اختبار موظف',employeeId:'audit_employee',items:[{cleanId:SKU,id:SKU,totalQty:2,branchQuantities:{b1:2}}],branches:[{id:'b1',name:'الرئيسي'}]};
-              const existing={[SKU]:{cleanId:SKU,id:SKU,warehouseKey:'jeddah',qty:7.5,cartQty:1}};
-              const c=await seedContext(browser,{...EMP,[TK]:payload,[TB]:payload,[CART]:existing});const p=await c.newPage();p.on('dialog',d=>d.dismiss());
-              await p.goto(base+'/index.html?employee=1&customerCartTransfer=1',{waitUntil:'domcontentloaded',timeout:45000});await sleep(1800);
-              const state=await p.evaluate(({cartKey,sku,TK})=>({qty:Number((JSON.parse(localStorage.getItem(cartKey)||'{}')[sku]||{}).cartQty||0),transfer:!!localStorage.getItem(TK)}),{cartKey:CART,sku:SKU,TK});
-              if(state.qty!==1||!state.transfer)fail('cancelled merge changed data or deleted pending transfer');
-              console.log('MERGE_CANCEL_SAFE_PASS');await c.close();
-            }
-
-            // Transfer for another employee must never import into current account.
-            {
-              const payload={version:3,transferId:'wrong_employee',employeeName:'موظف آخر',employeeId:'other_id',items:[{cleanId:SKU,id:SKU,totalQty:1,branchQuantities:{b1:1}}],branches:[]};
-              const c=await seedContext(browser,{...EMP,[TK]:payload,[TB]:payload});const p=await c.newPage();
-              await p.goto(base+'/index.html?employee=1&customerCartTransfer=1',{waitUntil:'domcontentloaded',timeout:45000});await sleep(1200);
-              const state=await p.evaluate(({cartKey,TK})=>({cart:localStorage.getItem(cartKey),transfer:localStorage.getItem(TK)}),{cartKey:CART,TK});
-              if(state.cart)fail('wrong employee transfer leaked into current cart');
-              if(!state.transfer)fail('wrong employee transfer was destroyed');
-              console.log('EMPLOYEE_ISOLATION_PASS');await c.close();
-            }
-
-            // Malformed payload cannot take the whole application down.
-            {
-              const c=await seedContext(browser,{...EMP,[TK]:'{broken-json'});const p=await c.newPage();
-              await p.goto(base+'/index.html?employee=1&customerCartTransfer=1',{waitUntil:'domcontentloaded',timeout:45000});await sleep(2500);
-              const text=await p.locator('body').innerText();
-              if(!text.trim()||text.includes('V40_'))fail('malformed payload broke bootstrap');
-              console.log('MALFORMED_PAYLOAD_SAFE_PASS');await c.close();
-            }
-
-            // Overstock is preserved for employee review, while generated runtime has a hard submit guard.
-            {
-              const payload={version:3,transferId:'overstock_case',employeeName:'اختبار موظف',employeeId:'audit_employee',items:[{cleanId:SKU,id:SKU,totalQty:999999,branchQuantities:{b1:999999}}],branches:[{id:'b1',name:'الرئيسي'}]};
-              const c=await seedContext(browser,{...EMP,[TK]:payload,[TB]:payload});const p=await c.newPage();p.on('dialog',d=>d.accept());
-              await p.goto(base+'/index.html?employee=1&customerCartTransfer=1',{waitUntil:'domcontentloaded',timeout:45000});
-              await p.waitForFunction((key,sku)=>{const x=JSON.parse(localStorage.getItem(key)||'{}');return Number(x?.[sku]?.cartQty)===999999},CART,SKU,{timeout:15000});
-              const item=await p.evaluate(({cartKey,sku})=>(JSON.parse(localStorage.getItem(cartKey)||'{}')[sku]||null),{cartKey:CART,sku:SKU});
-              if(!item||!(Number(item.cartQty)>Number(item.qty)))fail('overstock test did not create a guarded conflict');
-              const html=await p.content();if(!html.includes('لا يمكن اعتماد الطلب قبل مراجعة الكميات'))fail('stock submit guard missing from generated employee runtime');
-              console.log('OVERSTOCK_GUARD_PASS');await c.close();
-            }
-
-            console.log('V40_ALL_TRANSFER_TESTS_PASS');
-          } finally { await browser.close(); }
-          JS
-          node /tmp/v40-e2e.mjs
+          node tests/v40-cart-transfer.mjs
