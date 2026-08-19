@@ -16,5 +16,11 @@
   "bugs": {
     "url": "https://github.com/al-hzmi/inventory-system/issues"
   },
-  "homepage": "https://github.com/al-hzmi/inventory-system#readme"
+  "homepage": "https://github.com/al-hzmi/inventory-system#readme",
+  "dependencies": {
+    "esbuild": "^0.25.9",
+    "playwright": "^1.55.0",
+    "playwright-core": "^1.55.0"
+  },
+  "devDependencies": {}
 }

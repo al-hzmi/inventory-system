@@ -1,0 +1,107 @@
+V39.4 DETAILED DIAGNOSTIC
+--- SOURCE ---
+PASS runtime recovery
+PASS customer handoff source anchor
+PASS transfer backup
+PASS payload branches
+PASS identity binding
+PASS idempotency
+PASS warehouse resolution
+PASS branch retention
+PASS stock guard
+PASS auto open
+PASS durable cart
+PASS source cart safe
+FAIL notifications
+PASS employee telemetry isolation
+PASS customer recovery
+PASS guest tracking
+PASS employee auth
+PASS scanner
+PASS admin customers
+PASS stocktake
+PASS currency
+PASS worker isolation
+PASS fresh deploy
+PASS durable-before-clear-order 15682 15898 15972 16053
+source_exit=1
+--- NPM ---
+npm_exit=0
+
+changed 2 packages, and audited 5 packages in 2s
+
+1 high severity vulnerability
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+--- PARSE ---
+PASS admin-stocktake.html script#3
+PASS security-center.html script#6
+PASS security-center.html script#7
+PASS index.html script#0
+PASS admin-dashboard.html script#7
+PASS admin-dashboard.html script#8
+PASS customer.html script#0
+PASS stocktake.html script#3
+PASS runtime/index-v37-source.txt script#6
+PASS runtime/index-v37-source.txt script#10
+PASS runtime/index-v37-source.txt script#11
+PASS runtime/index-v37-source.txt script#12
+PASS runtime/customer-v37-source.txt script#8
+PASS runtime/customer-v37-source.txt script#9
+PASS runtime/customer-v37-source.txt script#10
+PASS sw.js
+PASS OneSignalSDKWorker.js
+PASS customer-sw.js
+PASS OneSignalSDKUpdaterWorker.js
+PASS api/image-admin.js
+PARSE_TOTAL 20
+parse_exit=0
+--- GENERATED ---
+PASS indexApp
+PASS customerApp
+PASS handoff
+PASS oldInfoRemoved
+PASS button
+PASS autoOpen
+PASS stockGuard
+generated_exit=0
+--- PLAYWRIGHT INSTALL ---
+pw_install_exit=0
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.3 MiB
+FFMPEG playwright build v1011 downloaded to /home/runner/.cache/ms-playwright/ffmpeg-1011
+Downloading Chromium Headless Shell 140.0.7339.16 (playwright build v1187) from https://cdn.playwright.dev/dbazure/download/playwright/builds/chromium/1187/chromium-headless-shell-linux.zip
+|                                                                                |   0% of 104.3 MiB
+|■■■■■■■■                                                                        |  10% of 104.3 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 104.3 MiB
+Chromium Headless Shell 140.0.7339.16 (playwright build v1187) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1187
+--- BROWSER ---
+node:internal/modules/package_json_reader:314
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'playwright' imported from /tmp/routes.mjs
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)
+    at packageResolve (node:internal/modules/esm/resolve:768:81)
+    at moduleResolve (node:internal/modules/esm/resolve:855:18)
+    at defaultResolve (node:internal/modules/esm/resolve:985:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v22.23.2
+browser_exit=1
+result=FAIL
