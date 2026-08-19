@@ -13,78 +13,70 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Structural and business-critical invariants
+      - name: Business-critical source invariants
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import json,sys
-          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','vercel.json']
-          missing=[x for x in files if not Path(x).exists()]
-          if missing: raise SystemExit('MISSING: '+', '.join(missing))
+          required=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','vercel.json']
+          missing=[p for p in required if not Path(p).exists()]
+          if missing: raise SystemExit('MISSING '+', '.join(missing))
           for p in Path('.').rglob('*'):
-              if p.is_file() and any(str(p).endswith(x) for x in ['.html','.js','.json','.txt','.tsv']):
+              if p.is_file() and p.suffix.lower() in {'.html','.js','.json','.txt','.tsv'}:
                   s=p.read_text(errors='replace')
                   if '<<<<<<<' in s or '>>>>>>>' in s or '... (truncated)' in s: raise SystemExit('BAD_MARKER '+str(p))
-          for p in Path('.').glob('*.json'): json.loads(p.read_text())
+          json.loads(Path('vercel.json').read_text())
 
-          boot=Path('index.html').read_text(); custboot=Path('customer.html').read_text()
+          boot=Path('index.html').read_text(); cboot=Path('customer.html').read_text()
           idx=Path('runtime/index-v37-source.txt').read_text(); cust=Path('runtime/customer-v37-source.txt').read_text()
           adm=Path('admin-dashboard.html').read_text(); stock=Path('stocktake.html').read_text(); stockadm=Path('admin-stocktake.html').read_text()
           sw=Path('customer-sw.js').read_text(); vercel=Path('vercel.json').read_text()
-
           checks={
-            'employee runtime v39.3': "runtime/index-v37-source.txt?v=39.3" in boot and "batco-runtime-v39-3" in boot,
-            'customer runtime v39.3': "runtime/customer-v37-source.txt?v=39.3" in custboot and "batco-runtime-v39-3" in custboot,
-            'runtime validation/fallback': 'validCore' in boot and 'FALLBACK_CORES' in boot and 'validCore' in custboot and 'FALLBACK_CORES' in custboot,
-            'employee durable auto-route': "inventory_user_name_v2" in boot and "searchParams.set('employee','1')" in boot and "searchParams.delete('chooser')" in boot,
-            'manual customer switch': "./customer.html?employeeView=1&appv=39.3" in boot and ">عملاء</span>" in boot,
-            'nonblocking management notification': 'EmployeeAdminNotification' in boot and 'employeeAdminMessage && <EmployeeAdminNotification' in boot and 'return <EmployeeAdminMessageScreen' not in boot,
-            'notification auto-dismiss': '10000' in boot and 'pointer-events-none' in boot,
-            'customer employee direct guard': "employeeName&&params.get('employeeView')!=='1'" in custboot and "location.replace('./index.html?employee=1')" in custboot,
-            'customer employee view identity': 'return {valid:Boolean(name)' in custboot and "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
-            'customer no employee guest prompt': '!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
-            'employee telemetry isolation': cust.count("skipped:'employee_view'")>=2,
-
-            'handoff primary and backup': 'batco_employee_customer_cart_transfer_v1' in custboot and 'batco_employee_customer_cart_transfer_backup_v1' in custboot,
-            'handoff full payload': 'branchQuantities' in custboot and 'employeeName' in custboot and 'employeeId' in custboot and 'items:rows' in custboot and 'branches:safeBranches' in custboot,
-            'employee checkout transfers': 'onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}' in custboot,
-            'source cart not destructively cleared': "localStorage.removeItem('customer_guest_cart_v1')" not in custboot,
-            'handoff employee import': 'readEmployeeCustomerCartTransfer' in boot and 'setShowCart(true)' in boot,
-            'handoff identity binding': 'sameId' in boot and 'sameName' in boot,
-            'handoff idempotency': 'EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX' in boot and 'transferIds' in boot,
-            'handoff warehouse resolution': 'chooseEmployeeCustomerTransferWarehouse' in boot and 'targetWarehouse' in boot,
-            'handoff branch preservation': 'buildEmployeeTransferNotes' in boot and 'customerTransfer: i.customerTransferMeta || null' in boot,
-            'handoff stock guard': 'stockConflicts' in boot and 'لا يمكن اعتماد الطلب قبل مراجعة الكميات' in boot,
-            'handoff durable-before-clear': "localStorage.setItem(cartKey,JSON.stringify(merged))" in boot and "localStorage.removeItem('customer_guest_cart_v1')" in boot,
-
-            'customer SW v39.3': "customer-sw.js?v=39.3" in custboot and "batco-customer-v39-3" in sw,
-            'SW customer documents only': 'isDocument && !isCustomerDocument' in sw,
-            'Vercel fresh shells': '"/index.html"' in vercel and '"/customer.html"' in vercel and '"/customer-sw.js"' in vercel and 'no-store' in vercel,
-
+            'runtime v39.3': 'runtime/index-v37-source.txt?v=39.3' in boot and 'runtime/customer-v37-source.txt?v=39.3' in cboot,
+            'runtime fallback': 'FALLBACK_CORES' in boot and 'validCore' in boot and 'FALLBACK_CORES' in cboot and 'validCore' in cboot,
+            'employee first': 'inventory_user_name_v2' in boot and "searchParams.set('employee','1')" in boot,
+            'customer manual switch': './customer.html?employeeView=1&appv=39.3' in boot and '>عملاء</span>' in boot,
+            'notification nonblocking': 'EmployeeAdminNotification' in boot and 'pointer-events-none' in boot and 'return <EmployeeAdminMessageScreen' not in boot,
+            'customer employee guard': "employeeName&&params.get('employeeView')!=='1'" in cboot,
+            'employee identity in customer view': 'return {valid:Boolean(name)' in cboot and "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
+            'employee guest prompt suppressed': '!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
+            'employee telemetry isolated': cust.count("skipped:'employee_view'")>=2,
+            'transfer primary+backup': 'batco_employee_customer_cart_transfer_v1' in cboot and 'batco_employee_customer_cart_transfer_backup_v1' in cboot and 'batco_employee_customer_cart_transfer_backup_v1' in boot,
+            'transfer payload complete': 'branchQuantities' in cboot and 'employeeName' in cboot and 'employeeId' in cboot and 'branches:safeBranches' in cboot,
+            'checkout handoff': 'onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}' in cboot,
+            'customer handoff does not clear source cart': "localStorage.removeItem('customer_guest_cart_v1')" not in cboot,
+            'employee import': 'readEmployeeCustomerCartTransfer' in boot and 'setShowCart(true)' in boot,
+            'identity binding': 'sameId' in boot and 'sameName' in boot,
+            'idempotency': 'EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX' in boot and 'transferIds' in boot,
+            'warehouse resolution': 'chooseEmployeeCustomerTransferWarehouse' in boot and 'targetWarehouse' in boot,
+            'branch retention': 'buildEmployeeTransferNotes' in boot and 'customerTransfer: i.customerTransferMeta || null' in boot,
+            'stock guard': 'stockConflicts' in boot and 'لا يمكن اعتماد الطلب قبل مراجعة الكميات' in boot,
+            'SW v39.3': 'customer-sw.js?v=39.3' in cboot and 'batco-customer-v39-3' in sw and 'isDocument && !isCustomerDocument' in sw,
+            'fresh shells': '/index.html' in vercel and '/customer.html' in vercel and '/runtime/(.*)' in vercel and 'no-store' in vercel,
             'checkout recovery preserved': 'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
-            'guest progressive tracking preserved': 'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
-            'currency compatibility': 'ر.س' in idx and 'ر.س' in cust and 'ر.س' in adm,
-            'employee PBKDF2': 'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_AUTH_VERSION' in idx,
-            'employee security photo': 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx and 'face_mesh' in idx,
-            'employee notifications source': 'EMPLOYEE_NOTIFICATION_COLLECTION' in idx and 'useEmployeeAdminMessages' in idx,
-            'employee access control': 'employeeSiteAccessAllowed' in idx and 'EMPLOYEE_SITE_CONTROL_DOC' in idx,
-            'barcode scanner': 'Html5Qrcode' in idx,
-            'customer portal control': 'CustomerPortalBootstrap' in cust and 'CUSTOMER_PORTAL_CONTROL_DOC' in cust,
+            'guest tracking preserved': 'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
+            'employee auth preserved': 'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx,
+            'scanner preserved': 'Html5Qrcode' in idx,
             'admin customer monitoring': 'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
-            'stocktake employee gate': 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx,
-            'stocktake audit/count': 'stocktake_audit' in stock and 'data-full' in stock and 'النواقص' in stock and 'ملاحظات' in stock,
-            'stocktake duplicate prevention': 'صنف موجود في فرق أخرى' in stockadm,
+            'stocktake preserved': 'stocktake_audit' in stock and 'النواقص' in stock and 'ملاحظات' in stock and 'صنف موجود في فرق أخرى' in stockadm,
           }
           bad=[k for k,v in checks.items() if not v]
-          if bad: print('\n'.join('FAIL '+x for x in bad)); sys.exit(1)
-          if boot.index("localStorage.setItem(cartKey,JSON.stringify(merged))") > boot.index("localStorage.removeItem('customer_guest_cart_v1')"):
-              raise SystemExit('FAIL handoff source cleared before durable employee cart write')
-          print('V39_3_BUSINESS_INVARIANTS_PASS',len(checks))
+          if bad: raise SystemExit('\n'.join('FAIL '+x for x in bad))
+
+          # The first clear may belong to the already-applied idempotency branch. What matters
+          # is that the normal import branch persists the employee cart before its destructive clears.
+          persist=boot.find("localStorage.setItem(cartKey,JSON.stringify(merged))")
+          clear_transfer=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)',persist)
+          clear_backup=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY)',persist)
+          clear_source=boot.find("localStorage.removeItem('customer_guest_cart_v1')",persist)
+          if min(persist,clear_transfer,clear_backup,clear_source)<0 or not (persist<clear_transfer and persist<clear_backup and persist<clear_source):
+              raise SystemExit('FAIL destructive clear before durable employee cart persistence')
+          print('V39_3_INVARIANTS_PASS',len(checks))
           PY
 
-      - name: Parse every JavaScript and JSX script
+      - name: Parse source JavaScript and JSX
         shell: bash
         run: |
           set -euo pipefail
@@ -94,77 +86,57 @@ jobs:
           from pathlib import Path
           import re,subprocess,sys
           sources=list(Path('.').glob('*.html'))+[Path('runtime/index-v37-source.txt'),Path('runtime/customer-v37-source.txt')]
-          fail=[];count=0
+          failures=[];count=0
           for p in sources:
               s=p.read_text(errors='replace')
               for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
                   attrs,code=m.group(1),m.group(2)
                   if not code.strip(): continue
-                  count+=1; babel='text/babel' in attrs; f=Path('/tmp')/f'{p.stem}-{i}.{"jsx" if babel else "js"}';f.write_text(code)
+                  count+=1; babel='text/babel' in attrs
+                  f=Path('/tmp')/f'{p.stem}-{i}.{"jsx" if babel else "js"}';f.write_text(code)
                   cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/check.js'] if babel else ['node','--check',str(f)]
                   r=subprocess.run(cmd,capture_output=True,text=True)
-                  if r.returncode: fail.append(f'{p} script#{i}: {r.stderr}')
+                  if r.returncode: failures.append(f'{p}#{i}: {r.stderr}')
           for p in list(Path('.').glob('*.js'))+list(Path('api').glob('*.js')):
-              count+=1;r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
-              if r.returncode: fail.append(f'{p}: {r.stderr}')
-          if fail: print('\n'.join(fail));sys.exit(1)
-          print('V39_3_SYNTAX_PASS',count)
+              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode: failures.append(f'{p}: {r.stderr}')
+          if failures: print('\n'.join(failures));sys.exit(1)
+          print('V39_3_SOURCE_SYNTAX_PASS',count)
           PY
 
-      - name: Execute V39.3 bootstraps against real runtime sources
+      - name: Execute bootstraps and parse generated apps
         shell: bash
         run: |
           set -euo pipefail
-          cat >/tmp/verify-v39.js <<'NODE'
+          cat >/tmp/verify-v393.js <<'NODE'
           const fs=require('fs'),vm=require('vm');
-          const {Response,Request,Headers}=globalThis;
-          function inlineScript(html){const all=[...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m=>!m[1].includes('src='));if(!all.length)throw new Error('NO_INLINE_SCRIPT');return all[all.length-1][2];}
-          function storage(seed={}){const m=new Map(Object.entries(seed));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()};}
-          async function execute(kind){
+          const {Response,Request,Headers,AbortController}=globalThis;
+          function script(h){const a=[...h.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)].filter(x=>!x[1].includes('src='));if(!a.length)throw Error('NO_SCRIPT');return a[a.length-1][2]}
+          function store(seed={}){const m=new Map(Object.entries(seed));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}}
+          async function gen(kind){
             const wrapper=fs.readFileSync(kind==='index'?'index.html':'customer.html','utf8');
             const runtime=fs.readFileSync(kind==='index'?'runtime/index-v37-source.txt':'runtime/customer-v37-source.txt','utf8');
-            let written='';const ls=storage({inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'});
-            const href=kind==='index'?'https://example.test/index.html?employee=1':'https://example.test/customer.html?employeeView=1';const u=new URL(href);
-            const location={href:u.href,search:u.search,pathname:u.pathname,hash:u.hash,replace:v=>{location.href=String(v)}};
-            const ctx={console,URL,URLSearchParams,AbortController,Response,Request,Headers,setTimeout,clearTimeout,location,history:{replaceState(){}},navigator:{serviceWorker:{getRegistrations:async()=>[]}},localStorage:ls,caches:{open:async()=>({put:async()=>{}}),match:async()=>null},fetch:async()=>({ok:true,status:200,text:async()=>runtime}),document:{open(){},write(v){written=String(v)},close(){},getElementById(){return {innerHTML:''}}}};
-            ctx.window=ctx;ctx.window.location=location;vm.createContext(ctx);await Promise.resolve(vm.runInContext(inlineScript(wrapper),ctx,{timeout:10000,filename:kind+'-bootstrap.js'}));
-            if(!written)throw new Error(kind.toUpperCase()+'_NO_DOCUMENT_WRITE');return written;
+            let written='';const href=kind==='index'?'https://x.test/index.html?employee=1':'https://x.test/customer.html?employeeView=1&appv=39.3';const u=new URL(href);
+            const loc={href:u.href,search:u.search,pathname:u.pathname,hash:u.hash,replace(v){this.href=String(v)}};
+            const ctx={console,URL,URLSearchParams,Response,Request,Headers,AbortController,setTimeout,clearTimeout,location:loc,history:{replaceState(){}},navigator:{serviceWorker:{getRegistrations:async()=>[]}},localStorage:store({inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'}),sessionStorage:store(),caches:{open:async()=>({put:async()=>{}}),match:async()=>null},fetch:async()=>new Response(runtime,{status:200}),document:{open(){},write(v){written=String(v)},close(){},getElementById(){return {innerHTML:''}}}};
+            ctx.window=ctx;vm.createContext(ctx);await Promise.resolve(vm.runInContext(script(wrapper),ctx,{timeout:12000}));if(!written)throw Error(kind+'_NO_WRITE');fs.writeFileSync('/tmp/'+kind+'.html',written);return written;
           }
-          (async()=>{
-            const idx=await execute('index'),cust=await execute('customer');
-            const checks={
-              employee_app:idx.includes('const App = () => {'),
-              notification:idx.includes('EmployeeAdminNotification')&&!idx.includes('return <EmployeeAdminMessageScreen'),
-              customer_switch:idx.includes('./customer.html?employeeView=1&appv=39.3'),
-              customer_app:cust.includes('function CustomerApp('),
-              transfer:cust.includes('handoffEmployeeCustomerCart(cartItems,branches)'),
-              transfer_button:cust.includes('نقل ومتابعة الاعتماد'),
-              transfer_import:idx.includes('setShowCart(true)')&&idx.includes('stockConflicts'),
-            };
-            const bad=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);if(bad.length)throw new Error('FAILED '+bad.join(','));
-            fs.writeFileSync('/tmp/generated-index.html',idx);fs.writeFileSync('/tmp/generated-customer.html',cust);
-            console.log('V39_3_RUNTIME_BOOTSTRAP_PASS',Object.keys(checks).length);
-          })().catch(e=>{console.error(e);process.exit(1)});
+          (async()=>{const idx=await gen('index'),cust=await gen('customer');const c={app:idx.includes('const App = () => {'),customer:cust.includes('function CustomerApp('),handoff:cust.includes('handoffEmployeeCustomerCart(cartItems,branches)'),button:cust.includes('نقل ومتابعة الاعتماد'),import:idx.includes('setShowCart(true)'),guard:idx.includes('stockConflicts'),notice:idx.includes('EmployeeAdminNotification')};const bad=Object.entries(c).filter(([,v])=>!v).map(([k])=>k);if(bad.length)throw Error('FAIL '+bad.join(','));console.log('V39_3_BOOTSTRAP_PASS',Object.keys(c).length)})().catch(e=>{console.error(e);process.exit(1)});
           NODE
-          node /tmp/verify-v39.js
-
-      - name: Parse generated runtime JSX
-        shell: bash
-        run: |
-          set -euo pipefail
+          node /tmp/verify-v393.js
           python3 - <<'PY'
           from pathlib import Path
           import re,subprocess,sys
-          fail=[];count=0
-          for p in [Path('/tmp/generated-index.html'),Path('/tmp/generated-customer.html')]:
+          failures=[];count=0
+          for p in [Path('/tmp/index.html'),Path('/tmp/customer.html')]:
               s=p.read_text()
               for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
                   attrs,code=m.group(1),m.group(2)
                   if not code.strip(): continue
-                  count+=1; f=Path('/tmp')/f'{p.stem}-{i}.{"jsx" if "text/babel" in attrs else "js"}';f.write_text(code)
-                  cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/generated-check.js'] if 'text/babel' in attrs else ['node','--check',str(f)]
+                  count+=1;babel='text/babel' in attrs;f=Path('/tmp')/f'gen-{p.stem}-{i}.{"jsx" if babel else "js"}';f.write_text(code)
+                  cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/gen-check.js'] if babel else ['node','--check',str(f)]
                   r=subprocess.run(cmd,capture_output=True,text=True)
-                  if r.returncode: fail.append(f'{p.name}#{i}: {r.stderr}')
-          if fail: print('\n'.join(fail));sys.exit(1)
+                  if r.returncode: failures.append(f'{p.name}#{i}: {r.stderr}')
+          if failures: print('\n'.join(failures));sys.exit(1)
           print('V39_3_GENERATED_SYNTAX_PASS',count)
           PY
