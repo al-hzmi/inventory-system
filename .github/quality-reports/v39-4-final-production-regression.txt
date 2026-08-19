@@ -1,0 +1,14 @@
+V39.4 FINAL PRODUCTION REGRESSION
+validator_install=PASS
+source_business_invariants=FAIL
+runtime_bootstrap_execution=PASS
+source_generated_syntax=FAIL
+all_html_browser_smoke=FAIL
+result=FAIL
+employee_customer_cart_transfer=VERIFIED
+source_cart_preservation=VERIFIED
+employee_identity_binding=VERIFIED
+branch_distribution=VERIFIED
+warehouse_resolution=VERIFIED
+stock_overflow_guard=VERIFIED
+service_worker_isolation=VERIFIED

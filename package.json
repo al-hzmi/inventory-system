@@ -1,0 +1,20 @@
+{
+  "name": "inventory-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "OneSignalSDKUpdaterWorker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/al-hzmi/inventory-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/al-hzmi/inventory-system/issues"
+  },
+  "homepage": "https://github.com/al-hzmi/inventory-system#readme"
+}
