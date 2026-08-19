@@ -1,4 +1,4 @@
-const CACHE = 'batco-customer-v37-0';
+const CACHE = 'batco-customer-v39-3';
 const CUSTOMER_PAGE = './customer.html';
 
 self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
@@ -6,7 +6,7 @@ self.addEventListener('install', event => { event.waitUntil(self.skipWaiting());
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(key => key !== CACHE && key !== 'batco-v37-core').map(key => caches.delete(key)));
+    await Promise.all(keys.filter(key => key !== CACHE && key !== 'batco-runtime-v39-3').map(key => caches.delete(key)));
     await self.clients.claim();
   })());
 });
@@ -20,7 +20,7 @@ self.addEventListener('fetch', event => {
   const isDocument = req.mode === 'navigate' || req.destination === 'document';
   const isCustomerDocument = /\/customer\.html$/.test(url.pathname);
 
-  // مهم: عامل بوابة العملاء لا يسيطر على صفحات الموظفين أو الإدارة أو الجرد.
+  // عامل بوابة العملاء لا يتدخل في صفحات الموظفين أو الإدارة أو الجرد.
   if (isDocument && !isCustomerDocument) return;
 
   if (isDocument) {
@@ -40,7 +40,7 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
-      const fresh = await fetch(req);
+      const fresh = await fetch(new Request(req, { cache: 'no-store' }));
       if (fresh && fresh.ok) await cache.put(req, fresh.clone());
       return fresh;
     } catch (error) {
