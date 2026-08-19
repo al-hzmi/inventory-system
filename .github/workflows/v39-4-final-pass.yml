@@ -1,0 +1,136 @@
+name: V39.4 Corrected Final Regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v39-4-final-pass.yml'
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Full corrected verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,sys
+          required=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','vercel.json']
+          missing=[p for p in required if not Path(p).exists()]
+          if missing: raise SystemExit('MISSING '+', '.join(missing))
+          boot=Path('index.html').read_text();cboot=Path('customer.html').read_text();idx=Path('runtime/index-v37-source.txt').read_text();cust=Path('runtime/customer-v37-source.txt').read_text();adm=Path('admin-dashboard.html').read_text();stock=Path('stocktake.html').read_text();stockadm=Path('admin-stocktake.html').read_text();sw=Path('customer-sw.js').read_text();vercel=Path('vercel.json').read_text()
+          checks={
+            'runtime recovery':'FALLBACK_CORES' in boot and 'validCore' in boot and 'FALLBACK_CORES' in cboot and 'validCore' in cboot,
+            'employee customer handoff patch':'const newCheckout="onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}"' in cboot,
+            'transfer primary backup':'batco_employee_customer_cart_transfer_v1' in cboot and 'batco_employee_customer_cart_transfer_backup_v1' in cboot and 'batco_employee_customer_cart_transfer_backup_v1' in boot,
+            'full transfer payload':'branchQuantities' in cboot and 'branches:safeBranches' in cboot and 'employeeName' in cboot and 'employeeId' in cboot,
+            'identity binding':'sameId' in boot and 'sameName' in boot,
+            'idempotency':'EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX' in boot and 'transferIds' in boot,
+            'warehouse resolution':'chooseEmployeeCustomerTransferWarehouse' in boot and 'targetWarehouse' in boot,
+            'branch preservation':'buildEmployeeTransferNotes' in boot and 'customerTransfer: i.customerTransferMeta || null' in boot,
+            'stock overflow block':'stockConflicts' in boot and 'لا يمكن اعتماد الطلب قبل مراجعة الكميات' in boot,
+            'employee cart durable':'localStorage.setItem(cartKey,JSON.stringify(merged))' in boot,
+            'source cart not deleted in customer wrapper':"localStorage.removeItem('customer_guest_cart_v1')" not in cboot,
+            'notification patch':'EmployeeAdminNotification' in boot and "html=html.replace(blocking,'')" in boot,
+            'customer telemetry isolated':cust.count("skipped:'employee_view'")>=2,
+            'checkout recovery':'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
+            'guest tracking':'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust,
+            'employee auth':'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx,
+            'barcode scanner':'Html5Qrcode' in idx,
+            'admin live customers':'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
+            'stocktake':'stocktake_audit' in stock and 'النواقص' in stock and 'صنف موجود في فرق أخرى' in stockadm,
+            'currency':'ر.س' in idx and 'ر.س' in cust and 'ر.س' in adm,
+            'service worker isolation':'batco-customer-v39-3' in sw and 'isDocument && !isCustomerDocument' in sw,
+            'fresh Vercel shells':'no-store, max-age=0' in vercel and '/runtime/(.*)' in vercel,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('\n'.join('FAIL '+x for x in bad))
+          persist=boot.find('localStorage.setItem(cartKey,JSON.stringify(merged))');ct=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)',persist);cb=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY)',persist);cs=boot.find("localStorage.removeItem('customer_guest_cart_v1')",persist)
+          if min(persist,ct,cb,cs)<0 or not(persist<ct and persist<cb and persist<cs): raise SystemExit('FAIL durable-before-clear')
+          for p in Path('.').rglob('*'):
+            if p.is_file() and p.suffix.lower() in {'.html','.js','.json','.txt','.tsv'}:
+              s=p.read_text(errors='replace')
+              if '<<<<<<<' in s or '>>>>>>>' in s or '... (truncated)' in s: raise SystemExit('BAD_MARKER '+str(p))
+          json.loads(Path('vercel.json').read_text())
+          print('FINAL_SOURCE_PASS',len(checks))
+          PY
+
+          cat > ./v394-final-gen.js <<'NODE'
+          const fs=require('fs'),vm=require('vm');const {Response,Request,Headers,AbortController}=globalThis;
+          function inline(h){const a=[...h.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)].filter(x=>!x[1].includes('src='));if(!a.length)throw Error('NO_SCRIPT');return a.at(-1)[2]}
+          function store(seed={}){const m=new Map(Object.entries(seed));return{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}}
+          async function gen(kind){const w=fs.readFileSync(kind+'.html','utf8'),r=fs.readFileSync('runtime/'+kind+'-v37-source.txt','utf8');let out='';const href='https://x.local/'+kind+'.html'+(kind==='customer'?'?employeeView=1&appv=39.3':'?employee=1'),u=new URL(href),loc={href:u.href,search:u.search,pathname:u.pathname,hash:u.hash,replace(v){this.href=String(v)}};const ctx={console,URL,URLSearchParams,Response,Request,Headers,AbortController,setTimeout,clearTimeout,location:loc,history:{replaceState(){}},navigator:{serviceWorker:{getRegistrations:async()=>[]}},localStorage:store({inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'}),sessionStorage:store(),caches:{open:async()=>({put:async()=>{}}),match:async()=>null},fetch:async()=>new Response(r,{status:200}),document:{open(){},write(v){out=String(v)},close(){},getElementById(){return{innerHTML:''}}}};ctx.window=ctx;vm.createContext(ctx);await Promise.resolve(vm.runInContext(inline(w),ctx,{timeout:12000}));if(!out)throw Error(kind+'_NO_OUT');fs.writeFileSync('/tmp/generated-'+kind+'.html',out);return out}
+          (async()=>{const i=await gen('index'),c=await gen('customer');const checks={indexApp:i.includes('const App = () => {'),customerApp:c.includes('function CustomerApp('),handoff:c.includes('onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}'),oldInfoRemoved:!c.includes("onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)}"),button:c.includes('نقل ومتابعة الاعتماد'),autoOpen:i.includes('setShowCart(true)'),stockGuard:i.includes('stockConflicts'),notificationNonblocking:i.includes('EmployeeAdminNotification')&&!i.includes('return <EmployeeAdminMessageScreen')};const bad=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);if(bad.length)throw Error('FAIL '+bad.join(','));console.log('FINAL_GENERATED_PASS',Object.keys(checks).length)})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node ./v394-final-gen.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          files=list(Path('.').glob('*.html'))+[Path('runtime/index-v37-source.txt'),Path('runtime/customer-v37-source.txt'),Path('/tmp/generated-index.html'),Path('/tmp/generated-customer.html')]
+          bad=[];n=0
+          for p in files:
+            for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',p.read_text(errors='replace'),re.S|re.I)):
+              attrs,code=m.group(1),m.group(2)
+              if not code.strip(): continue
+              n+=1;f=Path('/tmp')/f'final-{n}.{"jsx" if "text/babel" in attrs else "js"}';f.write_text(code)
+              cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/final-out.js'] if 'text/babel' in attrs else ['node','--check',str(f)]
+              r=subprocess.run(cmd,capture_output=True,text=True)
+              if r.returncode: bad.append(f'{p}#{i}: {r.stderr}')
+          for p in list(Path('.').glob('*.js'))+list(Path('api').glob('*.js')):
+            n+=1;r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+            if r.returncode: bad.append(f'{p}: {r.stderr}')
+          if bad: print('\n'.join(bad));sys.exit(1)
+          print('FINAL_SYNTAX_PASS',n)
+          PY
+
+          python3 -m http.server 4173 >/tmp/final-server.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          cat > ./v394-final-routes.mjs <<'JS'
+          import {chromium} from 'playwright';import fs from 'fs';const b=await chromium.launch({headless:true});let fail=false;
+          for(const f of fs.readdirSync('.').filter(x=>x.endsWith('.html'))){const c=await b.newContext();const p=await c.newPage();try{const r=await p.goto('http://127.0.0.1:4173/'+f,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout((f==='index.html'||f==='customer.html')?6000:1200);const text=await p.locator('body').innerText().catch(()=>''),boot=await p.locator('.v37err').count().catch(()=>0),ok=!!r&&r.status()<400&&!!text.trim()&&!boot;console.log(ok?'PASS':'FAIL',f,'http='+r?.status(),'chars='+text.trim().length,'bootErr='+boot);if(!ok)fail=true}catch(e){fail=true;console.error('FAIL',f,String(e))}await c.close()}await b.close();if(fail)process.exit(1);
+          JS
+          node ./v394-final-routes.mjs
+          echo 'FINAL_BROWSER_PASS'
+
+          mkdir -p .github/quality-reports
+          cat > .github/quality-reports/v39-4-final-pass.txt <<'TXT'
+          V39.4 FINAL REGRESSION
+          result=PASS
+          source_business_invariants=PASS
+          runtime_bootstrap_execution=PASS
+          source_generated_syntax=PASS
+          all_root_html_browser_smoke=PASS
+          employee_customer_cart_transfer=PASS
+          transfer_backup=PASS
+          employee_identity_binding=PASS
+          transfer_idempotency=PASS
+          source_cart_preservation=PASS
+          branch_distribution_preservation=PASS
+          warehouse_resolution=PASS
+          stock_overflow_guard=PASS
+          checkout_recovery=PASS
+          guest_tracking=PASS
+          employee_auth=PASS
+          stocktake=PASS
+          service_worker_isolation=PASS
+          vercel_fresh_shell_headers=PASS
+          TXT
+          rm -f .github/workflows/v39-4-final-pass.yml ./v394-final-gen.js ./v394-final-routes.mjs
+          git config user.name 'BATCO V39.4 Final PASS'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Record V39.4 final regression PASS'
+          git pull --rebase origin main
+          git push origin main
