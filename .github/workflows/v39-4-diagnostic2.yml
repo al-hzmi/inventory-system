@@ -1,0 +1,134 @@
+name: V39.4 Detailed Diagnostic
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v39-4-diagnostic2.yml'
+permissions:
+  contents: write
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detailed diagnostic and report
+        shell: bash
+        run: |
+          set +e
+          REPORT=.github/quality-reports/v39-4-diagnostic2.txt
+          mkdir -p .github/quality-reports
+          : > "$REPORT"
+          echo 'V39.4 DETAILED DIAGNOSTIC' >> "$REPORT"
+
+          python3 - <<'PY' >/tmp/source.log 2>&1
+          from pathlib import Path
+          import json,sys
+          boot=Path('index.html').read_text();cboot=Path('customer.html').read_text();idx=Path('runtime/index-v37-source.txt').read_text();cust=Path('runtime/customer-v37-source.txt').read_text();adm=Path('admin-dashboard.html').read_text();stock=Path('stocktake.html').read_text();stockadm=Path('admin-stocktake.html').read_text();sw=Path('customer-sw.js').read_text();vercel=Path('vercel.json').read_text()
+          checks={
+            'runtime recovery':'FALLBACK_CORES' in boot and 'validCore' in boot and 'FALLBACK_CORES' in cboot and 'validCore' in cboot,
+            'customer handoff source anchor':'const oldCheckout=' in cboot and 'const newCheckout="onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}"' in cboot,
+            'transfer backup':'batco_employee_customer_cart_transfer_backup_v1' in cboot and 'batco_employee_customer_cart_transfer_backup_v1' in boot,
+            'payload branches':'branchQuantities' in cboot and 'branches:safeBranches' in cboot,
+            'identity binding':'sameId' in boot and 'sameName' in boot,
+            'idempotency':'EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX' in boot and 'transferIds' in boot,
+            'warehouse resolution':'chooseEmployeeCustomerTransferWarehouse' in boot,
+            'branch retention':'buildEmployeeTransferNotes' in boot and 'customerTransfer: i.customerTransferMeta || null' in boot,
+            'stock guard':'stockConflicts' in boot and 'لا يمكن اعتماد الطلب قبل مراجعة الكميات' in boot,
+            'auto open':'setShowCart(true)' in boot,
+            'durable cart':"localStorage.setItem(cartKey,JSON.stringify(merged))" in boot,
+            'source cart safe':"localStorage.removeItem('customer_guest_cart_v1')" not in cboot,
+            'notifications':'EmployeeAdminNotification' in boot and 'return <EmployeeAdminMessageScreen' not in boot,
+            'employee telemetry isolation':cust.count("skipped:'employee_view'")>=2,
+            'customer recovery':'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
+            'guest tracking':'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust,
+            'employee auth':'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx,
+            'scanner':'Html5Qrcode' in idx,
+            'admin customers':'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
+            'stocktake':'stocktake_audit' in stock and 'النواقص' in stock and 'صنف موجود في فرق أخرى' in stockadm,
+            'currency':'ر.س' in idx and 'ر.س' in cust and 'ر.س' in adm,
+            'worker isolation':'batco-customer-v39-3' in sw and 'isDocument && !isCustomerDocument' in sw,
+            'fresh deploy':'no-store, max-age=0' in vercel and '/runtime/(.*)' in vercel,
+          }
+          for k,v in checks.items(): print(('PASS ' if v else 'FAIL ')+k)
+          bad=[k for k,v in checks.items() if not v]
+          persist=boot.find("localStorage.setItem(cartKey,JSON.stringify(merged))");ct=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)',persist);cb=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY)',persist);cs=boot.find("localStorage.removeItem('customer_guest_cart_v1')",persist)
+          order=min(persist,ct,cb,cs)>=0 and persist<ct and persist<cb and persist<cs
+          print(('PASS ' if order else 'FAIL ')+'durable-before-clear-order',persist,ct,cb,cs)
+          if bad or not order: sys.exit(1)
+          PY
+          SRC=$?
+          echo '--- SOURCE ---' >> "$REPORT"; cat /tmp/source.log >> "$REPORT"; echo "source_exit=$SRC" >> "$REPORT"
+
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 playwright@1.55.0 >/tmp/npm.log 2>&1
+          NPM=$?
+          echo '--- NPM ---' >> "$REPORT"; echo "npm_exit=$NPM" >> "$REPORT"; tail -n 20 /tmp/npm.log >> "$REPORT"
+
+          if [ $NPM -eq 0 ]; then
+            python3 - <<'PY' >/tmp/parse.log 2>&1
+          from pathlib import Path
+          import re,subprocess,sys
+          files=list(Path('.').glob('*.html'))+[Path('runtime/index-v37-source.txt'),Path('runtime/customer-v37-source.txt')]
+          bad=[];n=0
+          for p in files:
+            s=p.read_text(errors='replace')
+            for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+              attrs,code=m.group(1),m.group(2)
+              if not code.strip(): continue
+              n+=1;babel='text/babel' in attrs;f=Path('/tmp')/f'diag-{n}.{"jsx" if babel else "js"}';f.write_text(code)
+              cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/diag-out.js'] if babel else ['node','--check',str(f)]
+              r=subprocess.run(cmd,capture_output=True,text=True)
+              if r.returncode:
+                bad.append(f'FAIL {p} script#{i}\n{r.stderr[-1800:]}')
+              else: print('PASS',p,'script#'+str(i))
+          for p in list(Path('.').glob('*.js'))+list(Path('api').glob('*.js')):
+            n+=1;r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+            if r.returncode: bad.append(f'FAIL {p}\n{r.stderr[-1800:]}')
+            else: print('PASS',p)
+          if bad: print('\n'.join(bad));sys.exit(1)
+          print('PARSE_TOTAL',n)
+          PY
+            PARSE=$?
+          else PARSE=1; echo 'npm install failed' >/tmp/parse.log; fi
+          echo '--- PARSE ---' >> "$REPORT"; cat /tmp/parse.log >> "$REPORT"; echo "parse_exit=$PARSE" >> "$REPORT"
+
+          cat >/tmp/gen.js <<'NODE'
+          const fs=require('fs'),vm=require('vm');const {Response,Request,Headers,AbortController}=globalThis;
+          function inline(h){const a=[...h.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)].filter(x=>!x[1].includes('src='));if(!a.length)throw Error('NO_SCRIPT');return a.at(-1)[2]}
+          function store(seed={}){const m=new Map(Object.entries(seed));return{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}}
+          async function gen(kind){const w=fs.readFileSync(kind+'.html','utf8'),r=fs.readFileSync('runtime/'+kind+'-v37-source.txt','utf8');let out='';const href='https://x.local/'+kind+'.html'+(kind==='customer'?'?employeeView=1&appv=39.3':'?employee=1'),u=new URL(href),loc={href:u.href,search:u.search,pathname:u.pathname,hash:u.hash,replace(v){this.href=String(v)}};const ctx={console,URL,URLSearchParams,Response,Request,Headers,AbortController,setTimeout,clearTimeout,location:loc,history:{replaceState(){}},navigator:{serviceWorker:{getRegistrations:async()=>[]}},localStorage:store({inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'}),sessionStorage:store(),caches:{open:async()=>({put:async()=>{}}),match:async()=>null},fetch:async()=>new Response(r,{status:200}),document:{open(){},write(v){out=String(v)},close(){},getElementById(){return{innerHTML:''}}}};ctx.window=ctx;vm.createContext(ctx);await Promise.resolve(vm.runInContext(inline(w),ctx,{timeout:12000}));if(!out)throw Error(kind+'_NO_OUT');fs.writeFileSync('/tmp/generated-'+kind+'.html',out);return out}
+          (async()=>{const i=await gen('index'),c=await gen('customer');const checks={indexApp:i.includes('const App = () => {'),customerApp:c.includes('function CustomerApp('),handoff:c.includes('onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}'),oldInfoRemoved:!c.includes("onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)}"),button:c.includes('نقل ومتابعة الاعتماد'),autoOpen:i.includes('setShowCart(true)'),stockGuard:i.includes('stockConflicts')};for(const[k,v]of Object.entries(checks))console.log(v?'PASS':'FAIL',k);if(Object.values(checks).some(v=>!v))process.exit(1)})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node /tmp/gen.js >/tmp/gen.log 2>&1
+          GEN=$?
+          echo '--- GENERATED ---' >> "$REPORT"; cat /tmp/gen.log >> "$REPORT"; echo "generated_exit=$GEN" >> "$REPORT"
+
+          if [ $NPM -eq 0 ]; then
+            npx playwright install --with-deps chromium >/tmp/pwinstall.log 2>&1
+            PWI=$?
+          else PWI=1; fi
+          echo '--- PLAYWRIGHT INSTALL ---' >> "$REPORT"; echo "pw_install_exit=$PWI" >> "$REPORT"; tail -n 15 /tmp/pwinstall.log 2>/dev/null >> "$REPORT"
+
+          if [ $PWI -eq 0 ]; then
+            python3 -m http.server 4173 >/tmp/server.log 2>&1 & SERVER=$!; sleep 1
+            cat >/tmp/routes.mjs <<'JS'
+          import {chromium} from 'playwright';import fs from 'fs';const b=await chromium.launch({headless:true});let fail=false;
+          for(const f of fs.readdirSync('.').filter(x=>x.endsWith('.html'))){const c=await b.newContext();const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(String(e)));try{const r=await p.goto('http://127.0.0.1:4173/'+f,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout((f==='index.html'||f==='customer.html')?6000:1200);const text=await p.locator('body').innerText().catch(()=>''),boot=await p.locator('.v37err').count().catch(()=>0);const ok=!!r&&r.status()<400&&!!text.trim()&&!boot;console.log(ok?'PASS':'FAIL',f,'http='+r?.status(),'chars='+text.trim().length,'bootErr='+boot,'pageErrors='+errors.length,errors.slice(0,2).join(' | '));if(!ok)fail=true}catch(e){fail=true;console.log('FAIL',f,String(e))}await c.close()}await b.close();if(fail)process.exit(1);
+          JS
+            node /tmp/routes.mjs >/tmp/browser.log 2>&1
+            BROWSER=$?; kill $SERVER 2>/dev/null
+          else BROWSER=1; echo 'playwright unavailable' >/tmp/browser.log; fi
+          echo '--- BROWSER ---' >> "$REPORT"; cat /tmp/browser.log >> "$REPORT"; echo "browser_exit=$BROWSER" >> "$REPORT"
+
+          if [ $SRC -eq 0 ] && [ $PARSE -eq 0 ] && [ $GEN -eq 0 ] && [ $BROWSER -eq 0 ]; then echo 'result=PASS' >> "$REPORT"; else echo 'result=FAIL' >> "$REPORT"; fi
+          rm -f .github/workflows/v39-4-diagnostic2.yml
+          git config user.name 'BATCO V39.4 Diagnostic'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Record V39.4 detailed diagnostic'
+          git pull --rebase origin main
+          git push origin main
+          exit 0
