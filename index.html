@@ -11,7 +11,9 @@
 <div id="v37boot"><div class="v37box"><img src="./icons/icon-192.png" alt="بيت الأواني الطيبة"><p>جاري فتح النظام...</p></div></div>
 <script>
 (async function(){
-  const CORE='./runtime/index-v37-source.txt?v=38.0';
+  const CORE='./runtime/index-v37-source.txt?v=39.3';
+  const FALLBACK_CORES=['./runtime/index-v37-source.txt?v=38.0','./runtime/index-v37-source.txt'];
+  const RUNTIME_CACHE='batco-runtime-v39-3';
   const employeeName=(()=>{try{return String(localStorage.getItem('inventory_user_name_v2')||'').trim()}catch{return''}})();
   if(employeeName){
     const u=new URL(location.href);
@@ -20,12 +22,30 @@
     }
   }
   if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.update().catch(()=>{}))).catch(()=>{});
-  const loadCore=async()=>{try{const r=await fetch(CORE,{cache:'no-store'});if(!r.ok)throw new Error('CORE_HTTP_'+r.status);const text=await r.text();try{const c=await caches.open('batco-v37-core');await c.put(CORE,new Response(text,{headers:{'Content-Type':'text/plain;charset=utf-8'}}))}catch{}return text}catch(e){try{const hit=await caches.match(CORE);if(hit)return await hit.text()}catch{}throw e}};
+  const validCore=text=>typeof text==='string'&&text.includes('const App = () => {')&&text.includes('const useEmployeeAdminMessages =');
+  const loadCore=async()=>{
+    let lastError=null;
+    for(const url of [CORE,...FALLBACK_CORES]){
+      try{
+        const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),9000);
+        const r=await fetch(url,{cache:'no-store',signal:controller.signal});clearTimeout(timer);
+        if(!r.ok)throw new Error('CORE_HTTP_'+r.status);
+        const text=await r.text();if(!validCore(text))throw new Error('CORE_INVALID');
+        try{const c=await caches.open(RUNTIME_CACHE);await c.put(CORE,new Response(text,{headers:{'Content-Type':'text/plain;charset=utf-8'}}))}catch{}
+        return text;
+      }catch(e){lastError=e;}
+    }
+    try{
+      const direct=await caches.match(CORE);if(direct){const text=await direct.text();if(validCore(text))return text;}
+      for(const url of FALLBACK_CORES){const hit=await caches.match(url);if(hit){const text=await hit.text();if(validCore(text))return text;}}
+    }catch{}
+    throw lastError||new Error('CORE_UNAVAILABLE');
+  };
   try{
     let html=await loadCore();
     const msgStart=html.indexOf('const EmployeeAdminMessageScreen =');
     const hookStart=html.indexOf('const useEmployeeAdminMessages =',msgStart);
-    if(msgStart<0||hookStart<0)throw new Error('V37_MESSAGE_MARKER');
+    if(msgStart<0||hookStart<0)throw new Error('V39_MESSAGE_MARKER');
     const notification=`const EmployeeAdminNotification = ({notification,onClose}) => {
     const closeRef = useRef(onClose);
     useEffect(() => { closeRef.current = onClose; }, [onClose]);
@@ -44,14 +64,15 @@
 `;
     html=html.slice(0,msgStart)+notification+html.slice(hookStart);
     const blocking=`    if (employeeAdminMessage) {\n        return <EmployeeAdminMessageScreen notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />;\n    }\n\n`;
-    if(!html.includes(blocking))throw new Error('V37_BLOCKING_MARKER');
+    if(!html.includes(blocking))throw new Error('V39_BLOCKING_MARKER');
     html=html.replace(blocking,'');
 
     const transferHelpers=`
 const EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';
+const EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';
 const EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX='batco_employee_customer_cart_transfer_applied_v1_';
-const readEmployeeCustomerCartTransfer=()=>{try{return JSON.parse(localStorage.getItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)||'null')}catch{return null}};
-const clearEmployeeCustomerCartTransferParam=()=>{try{const u=new URL(window.location.href);if(u.searchParams.has('customerCartTransfer')){u.searchParams.delete('customerCartTransfer');history.replaceState(null,'',u.pathname+u.search+u.hash)}}catch{}};
+const readEmployeeCustomerCartTransfer=()=>{try{return JSON.parse(localStorage.getItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)||localStorage.getItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY)||'null')}catch{return null}};
+const clearEmployeeCustomerCartTransferParam=()=>{try{const u=new URL(window.location.href);if(u.searchParams.has('customerCartTransfer')||u.searchParams.has('appv')){u.searchParams.delete('customerCartTransfer');u.searchParams.delete('appv');history.replaceState(null,'',u.pathname+u.search+u.hash)}}catch{}};
 const chooseEmployeeCustomerTransferWarehouse=(payload,databases,preferred='')=>{
     const items=Array.isArray(payload?.items)?payload.items:[];
     const stats=Object.keys(WAREHOUSES).map(key=>{
@@ -87,23 +108,23 @@ const buildEmployeeTransferNotes=(items=[])=>{
 
 `;
     const appDecl='const App = () => {';
-    if(!html.includes(appDecl))throw new Error('V38_APP_DECL_MARKER');
+    if(!html.includes(appDecl))throw new Error('V39_APP_DECL_MARKER');
     html=html.replace(appDecl,transferHelpers+appDecl);
 
     const notesMarker='const [notes, setNotes] = useState("");';
-    if(!html.includes(notesMarker))throw new Error('V38_NOTES_MARKER');
+    if(!html.includes(notesMarker))throw new Error('V39_NOTES_MARKER');
     html=html.replace(notesMarker,'const [notes, setNotes] = useState(() => buildEmployeeTransferNotes(Object.values(cart || {})));');
 
     const submitMarker='const handleSubmit = () => {\n        if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");';
-    if(!html.includes(submitMarker))throw new Error('V38_SUBMIT_MARKER');
+    if(!html.includes(submitMarker))throw new Error('V39_SUBMIT_MARKER');
     html=html.replace(submitMarker,submitMarker+'\n        const stockConflicts = items.filter(item => (Number(item.cartQty)||0) > (Number(item.qty)||0) + 1e-9);\n        if (stockConflicts.length) {\n            const sample = stockConflicts.slice(0,4).map(item => item.id || item.cleanId).join("، ");\n            return alert(`لا يمكن اعتماد الطلب قبل مراجعة الكميات في المستودع المحدد. الكمية المطلوبة تتجاوز المخزون في: ${sample}${stockConflicts.length>4?" …":""}`);\n        }');
 
     const orderItemsMarker='items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),';
-    if(!html.includes(orderItemsMarker))throw new Error('V38_ORDER_ITEMS_MARKER');
+    if(!html.includes(orderItemsMarker))throw new Error('V39_ORDER_ITEMS_MARKER');
     html=html.replace(orderItemsMarker,'items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty, customerTransfer: i.customerTransferMeta || null })),' );
 
     const lastUpdateMarker='    const [lastUpdate,    setLastUpdate]    = useState("جاري التحقق...");';
-    if(!html.includes(lastUpdateMarker))throw new Error('V38_TRANSFER_EFFECT_MARKER');
+    if(!html.includes(lastUpdateMarker))throw new Error('V39_TRANSFER_EFFECT_MARKER');
     const transferEffect=`
     const employeeCustomerTransferRef = useRef(false);
     const [employeeCustomerTransferNotice,setEmployeeCustomerTransferNotice] = useState('');
@@ -134,7 +155,7 @@ const buildEmployeeTransferNotes=(items=[])=>{
 
         const items=(Array.isArray(payload.items)?payload.items:[]).filter(row=>normalizeCleanId(row?.cleanId||row?.id||'')&&(Number(row?.totalQty)||0)>0);
         if (!items.length) {
-            try{localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)}catch{}
+            try{localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY);localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY)}catch{}
             clearEmployeeCustomerCartTransferParam();
             employeeCustomerTransferRef.current=true;
             return;
@@ -145,6 +166,7 @@ const buildEmployeeTransferNotes=(items=[])=>{
         try {
             if (localStorage.getItem(appliedKey)) {
                 localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY);
+                localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY);
                 localStorage.removeItem('customer_guest_cart_v1');
                 clearEmployeeCustomerCartTransferParam();
                 employeeCustomerTransferRef.current=true;
@@ -201,6 +223,7 @@ const buildEmployeeTransferNotes=(items=[])=>{
             localStorage.setItem(appliedKey,String(Date.now()));
             localStorage.setItem('b2b_last_warehouse_'+sessionName,targetWarehouse);
             localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY);
+            localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY);
             localStorage.removeItem('customer_guest_cart_v1');
         } catch (error) {
             console.error('[Employee cart transfer persist]',error);
@@ -226,16 +249,17 @@ const buildEmployeeTransferNotes=(items=[])=>{
     html=html.replace(lastUpdateMarker,lastUpdateMarker+'\n'+transferEffect);
 
     const appAt=html.indexOf('const App = () => {'),rootMarker='<div className="min-h-screen font-sans">',rootAt=html.indexOf(rootMarker,appAt);
-    if(appAt<0||rootAt<0)throw new Error('V37_APP_ROOT_MARKER');
+    if(appAt<0||rootAt<0)throw new Error('V39_APP_ROOT_MARKER');
     const overlays=rootMarker+'\n            {employeeAdminMessage && <EmployeeAdminNotification notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />}\n            {employeeCustomerTransferNotice && <div className="fixed inset-x-0 top-[74px] z-[270] pointer-events-none px-12 font-sans"><div role="status" className="pointer-events-auto mx-auto max-w-[440px] rounded-14 border border-border bg-white/95 backdrop-blur shadow-lift px-12 py-10 text-[11px] font-bold text-primary leading-5 animate-card">{employeeCustomerTransferNotice}</div></div>}';
     html=html.slice(0,rootAt)+html.slice(rootAt).replace(rootMarker,overlays,1);
 
     const oldSwitch='<span className="hidden sm:inline text-[11px] font-bold whitespace-nowrap">واجهة العملاء</span>',newSwitch='<span className="text-[10px] font-bold whitespace-nowrap">عملاء</span>';
-    if(!html.includes(oldSwitch))throw new Error('V37_SWITCH_MARKER');
+    if(!html.includes(oldSwitch))throw new Error('V39_SWITCH_MARKER');
     html=html.replace(oldSwitch,newSwitch);
-    if(!html.includes('EmployeeAdminNotification')||html.includes('return <EmployeeAdminMessageScreen')||!html.includes('./customer.html?employeeView=1')||!html.includes('>عملاء</span>')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY')||!html.includes('employeeCustomerTransferNotice')||!html.includes('stockConflicts'))throw new Error('V38_OUTPUT_CHECK');
+    html=html.replace("./customer.html?employeeView=1","./customer.html?employeeView=1&appv=39.3");
+    if(!html.includes('EmployeeAdminNotification')||html.includes('return <EmployeeAdminMessageScreen')||!html.includes('./customer.html?employeeView=1&appv=39.3')||!html.includes('>عملاء</span>')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('employeeCustomerTransferNotice')||!html.includes('stockConflicts'))throw new Error('V39_OUTPUT_CHECK');
     document.open();document.write(html);document.close();
-  }catch(e){console.error('[V38 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
+  }catch(e){console.error('[V39 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>جرّب تحديث الصفحة مرة واحدة. البيانات المحلية والسلة لن تُحذف بسبب هذا الخطأ.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
 </script>
 </body>
