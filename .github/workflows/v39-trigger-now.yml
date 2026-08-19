@@ -1,0 +1,38 @@
+name: V39 Trigger Now
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v39-trigger-now.yml'
+permissions:
+  contents: write
+  actions: write
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable and dispatch repair
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/v39-materialize-static-repair.yml')
+          s=p.read_text()
+          if 'workflow_dispatch:' not in s:
+              s=s.replace('on:\n  push:\n','on:\n  workflow_dispatch:\n  push:\n',1)
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/v39-trigger-now.yml .github/workflows/v39-issue-kickoff.yml
+          git config user.name 'BATCO V39 Trigger'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'Enable V39 repair dispatch'
+            git push origin main
+          fi
+          sleep 5
+          gh workflow run v39-materialize-static-repair.yml --ref main
