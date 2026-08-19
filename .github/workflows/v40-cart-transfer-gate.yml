@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
           npm init -y >/dev/null 2>&1
           npm install --no-save esbuild@0.25.9 playwright@1.55.0 >/dev/null 2>&1
-          npx playwright install --with-deps chromium >/dev/null
+          npx playwright install chromium >/dev/null
 
       - name: Generated runtime compile and end-to-end transfer tests
         shell: bash
