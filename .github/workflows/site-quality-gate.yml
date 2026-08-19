@@ -38,7 +38,7 @@ jobs:
             'runtime fallback': 'FALLBACK_CORES' in boot and 'validCore' in boot and 'FALLBACK_CORES' in cboot and 'validCore' in cboot,
             'employee first': 'inventory_user_name_v2' in boot and "searchParams.set('employee','1')" in boot,
             'customer manual switch': './customer.html?employeeView=1&appv=39.3' in boot and '>عملاء</span>' in boot,
-            'notification nonblocking': 'EmployeeAdminNotification' in boot and 'pointer-events-none' in boot and 'return <EmployeeAdminMessageScreen' not in boot,
+            'notification nonblocking patch': 'EmployeeAdminNotification' in boot and 'pointer-events-none' in boot and "html=html.replace(blocking,'')" in boot,
             'customer employee guard': "employeeName&&params.get('employeeView')!=='1'" in cboot,
             'employee identity in customer view': 'return {valid:Boolean(name)' in cboot and "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
             'employee guest prompt suppressed': '!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
@@ -121,7 +121,7 @@ jobs:
             const ctx={console,URL,URLSearchParams,Response,Request,Headers,AbortController,setTimeout,clearTimeout,location:loc,history:{replaceState(){}},navigator:{serviceWorker:{getRegistrations:async()=>[]}},localStorage:store({inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'}),sessionStorage:store(),caches:{open:async()=>({put:async()=>{}}),match:async()=>null},fetch:async()=>new Response(runtime,{status:200}),document:{open(){},write(v){written=String(v)},close(){},getElementById(){return {innerHTML:''}}}};
             ctx.window=ctx;vm.createContext(ctx);await Promise.resolve(vm.runInContext(script(wrapper),ctx,{timeout:12000}));if(!written)throw Error(kind+'_NO_WRITE');fs.writeFileSync('/tmp/'+kind+'.html',written);return written;
           }
-          (async()=>{const idx=await gen('index'),cust=await gen('customer');const c={app:idx.includes('const App = () => {'),customer:cust.includes('function CustomerApp('),handoff:cust.includes('handoffEmployeeCustomerCart(cartItems,branches)'),button:cust.includes('نقل ومتابعة الاعتماد'),import:idx.includes('setShowCart(true)'),guard:idx.includes('stockConflicts'),notice:idx.includes('EmployeeAdminNotification')};const bad=Object.entries(c).filter(([,v])=>!v).map(([k])=>k);if(bad.length)throw Error('FAIL '+bad.join(','));console.log('V39_3_BOOTSTRAP_PASS',Object.keys(c).length)})().catch(e=>{console.error(e);process.exit(1)});
+          (async()=>{const idx=await gen('index'),cust=await gen('customer');const c={app:idx.includes('const App = () => {'),customer:cust.includes('function CustomerApp('),handoff:cust.includes('handoffEmployeeCustomerCart(cartItems,branches)'),button:cust.includes('نقل ومتابعة الاعتماد'),import:idx.includes('setShowCart(true)'),guard:idx.includes('stockConflicts'),notice:idx.includes('EmployeeAdminNotification')&&!idx.includes('return <EmployeeAdminMessageScreen')};const bad=Object.entries(c).filter(([,v])=>!v).map(([k])=>k);if(bad.length)throw Error('FAIL '+bad.join(','));console.log('V39_3_BOOTSTRAP_PASS',Object.keys(c).length)})().catch(e=>{console.error(e);process.exit(1)});
           NODE
           node /tmp/verify-v393.js
           python3 - <<'PY'
