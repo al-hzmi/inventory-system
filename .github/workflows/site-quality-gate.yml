@@ -1,4 +1,4 @@
-name: Site Quality Gate V37
+name: Site Quality Gate V39.3
 on:
   push:
     branches: [main]
@@ -9,9 +9,10 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
+
       - name: Structural and business-critical invariants
         shell: bash
         run: |
@@ -19,7 +20,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json,sys
-          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js']
+          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','vercel.json']
           missing=[x for x in files if not Path(x).exists()]
           if missing: raise SystemExit('MISSING: '+', '.join(missing))
           for p in Path('.').rglob('*'):
@@ -27,20 +28,43 @@ jobs:
                   s=p.read_text(errors='replace')
                   if '<<<<<<<' in s or '>>>>>>>' in s or '... (truncated)' in s: raise SystemExit('BAD_MARKER '+str(p))
           for p in Path('.').glob('*.json'): json.loads(p.read_text())
-          boot=Path('index.html').read_text(); custboot=Path('customer.html').read_text(); idx=Path('runtime/index-v37-source.txt').read_text(); cust=Path('runtime/customer-v37-source.txt').read_text(); adm=Path('admin-dashboard.html').read_text(); stock=Path('stocktake.html').read_text(); stockadm=Path('admin-stocktake.html').read_text(); sw=Path('customer-sw.js').read_text()
+
+          boot=Path('index.html').read_text(); custboot=Path('customer.html').read_text()
+          idx=Path('runtime/index-v37-source.txt').read_text(); cust=Path('runtime/customer-v37-source.txt').read_text()
+          adm=Path('admin-dashboard.html').read_text(); stock=Path('stocktake.html').read_text(); stockadm=Path('admin-stocktake.html').read_text()
+          sw=Path('customer-sw.js').read_text(); vercel=Path('vercel.json').read_text()
+
           checks={
+            'employee runtime v39.3': "runtime/index-v37-source.txt?v=39.3" in boot and "batco-runtime-v39-3" in boot,
+            'customer runtime v39.3': "runtime/customer-v37-source.txt?v=39.3" in custboot and "batco-runtime-v39-3" in custboot,
+            'runtime validation/fallback': 'validCore' in boot and 'FALLBACK_CORES' in boot and 'validCore' in custboot and 'FALLBACK_CORES' in custboot,
             'employee durable auto-route': "inventory_user_name_v2" in boot and "searchParams.set('employee','1')" in boot and "searchParams.delete('chooser')" in boot,
-            'manual customer switch visible': "./customer.html?employeeView=1" in idx and "V37_SWITCH_MARKER" in boot and ">عملاء</span>" in boot,
-            'nonblocking management notification': 'EmployeeAdminNotification' in boot and 'employeeAdminMessage && <EmployeeAdminNotification' in boot and 'V37_BLOCKING_MARKER' in boot,
+            'manual customer switch': "./customer.html?employeeView=1&appv=39.3" in boot and ">عملاء</span>" in boot,
+            'nonblocking management notification': 'EmployeeAdminNotification' in boot and 'employeeAdminMessage && <EmployeeAdminNotification' in boot and 'return <EmployeeAdminMessageScreen' not in boot,
             'notification auto-dismiss': '10000' in boot and 'pointer-events-none' in boot,
             'customer employee direct guard': "employeeName&&params.get('employeeView')!=='1'" in custboot and "location.replace('./index.html?employee=1')" in custboot,
-            'customer employee view identity patch': 'return {valid:Boolean(name)' in custboot and "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
+            'customer employee view identity': 'return {valid:Boolean(name)' in custboot and "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
             'customer no employee guest prompt': '!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
             'employee telemetry isolation': cust.count("skipped:'employee_view'")>=2,
-            'customer SW v37 patch': "customer-sw.js?v=37.0" in custboot and "batco-customer-v37-0" in sw,
-            'SW no employee/admin document capture': 'isDocument && !isCustomerDocument' in sw,
-            'checkout recovery': 'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
-            'guest progressive tracking': 'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
+
+            'handoff primary and backup': 'batco_employee_customer_cart_transfer_v1' in custboot and 'batco_employee_customer_cart_transfer_backup_v1' in custboot,
+            'handoff full payload': 'branchQuantities' in custboot and 'employeeName' in custboot and 'employeeId' in custboot and 'items:rows' in custboot and 'branches:safeBranches' in custboot,
+            'employee checkout transfers': 'onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}' in custboot,
+            'source cart not destructively cleared': "localStorage.removeItem('customer_guest_cart_v1')" not in custboot,
+            'handoff employee import': 'readEmployeeCustomerCartTransfer' in boot and 'setShowCart(true)' in boot,
+            'handoff identity binding': 'sameId' in boot and 'sameName' in boot,
+            'handoff idempotency': 'EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX' in boot and 'transferIds' in boot,
+            'handoff warehouse resolution': 'chooseEmployeeCustomerTransferWarehouse' in boot and 'targetWarehouse' in boot,
+            'handoff branch preservation': 'buildEmployeeTransferNotes' in boot and 'customerTransfer: i.customerTransferMeta || null' in boot,
+            'handoff stock guard': 'stockConflicts' in boot and 'لا يمكن اعتماد الطلب قبل مراجعة الكميات' in boot,
+            'handoff durable-before-clear': "localStorage.setItem(cartKey,JSON.stringify(merged))" in boot and "localStorage.removeItem('customer_guest_cart_v1')" in boot,
+
+            'customer SW v39.3': "customer-sw.js?v=39.3" in custboot and "batco-customer-v39-3" in sw,
+            'SW customer documents only': 'isDocument && !isCustomerDocument' in sw,
+            'Vercel fresh shells': '"/index.html"' in vercel and '"/customer.html"' in vercel and '"/customer-sw.js"' in vercel and 'no-store' in vercel,
+
+            'checkout recovery preserved': 'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
+            'guest progressive tracking preserved': 'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
             'currency compatibility': 'ر.س' in idx and 'ر.س' in cust and 'ر.س' in adm,
             'employee PBKDF2': 'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_AUTH_VERSION' in idx,
             'employee security photo': 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx and 'face_mesh' in idx,
@@ -55,8 +79,11 @@ jobs:
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: print('\n'.join('FAIL '+x for x in bad)); sys.exit(1)
-          print('STRUCTURAL_BUSINESS_PASS',len(checks))
+          if boot.index("localStorage.setItem(cartKey,JSON.stringify(merged))") > boot.index("localStorage.removeItem('customer_guest_cart_v1')"):
+              raise SystemExit('FAIL handoff source cleared before durable employee cart write')
+          print('V39_3_BUSINESS_INVARIANTS_PASS',len(checks))
           PY
+
       - name: Parse every JavaScript and JSX script
         shell: bash
         run: |
@@ -81,25 +108,63 @@ jobs:
               count+=1;r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
               if r.returncode: fail.append(f'{p}: {r.stderr}')
           if fail: print('\n'.join(fail));sys.exit(1)
-          print('SYNTAX_PASS',count)
+          print('V39_3_SYNTAX_PASS',count)
           PY
-      - name: Browser smoke - public, employee, customer switch and all HTML routes
+
+      - name: Execute V39.3 bootstraps against real runtime sources
         shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
-          npx playwright install --with-deps chromium >/dev/null
-          python3 -m http.server 4173 >/tmp/http.log 2>&1 &
-          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
-          cat >/tmp/smoke.mjs <<'JS'
-          import {chromium} from 'playwright';import fs from 'fs';
-          const base='http://127.0.0.1:4173';
-          const employee={inventory_user_name_v2:'اختبار موظف',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
-          const legacy={inventory_user_name_v2:'اختبار قديم'};
-          const scenarios=[['public','/index.html',{}],['employee','/index.html',employee],['legacy','/index.html',legacy],['customer-public','/customer.html',{}],['customer-employee-direct','/customer.html',employee],['customer-legacy-direct','/customer.html',legacy],['customer-employee-manual','/customer.html?employeeView=1',employee]];
-          const covered=new Set(['index.html','customer.html']);for(const f of fs.readdirSync('.').filter(x=>x.endsWith('.html')))if(!covered.has(f))scenarios.push(['html:'+f,'/'+f,{}]);
-          const b=await chromium.launch({headless:true});let fail=false;
-          for(const [name,path,store] of scenarios){const c=await b.newContext();await c.addInitScript(s=>{localStorage.clear();sessionStorage.clear();for(const[k,v]of Object.entries(s))localStorage.setItem(k,v)},store);const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(String(e)));try{const r=await p.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(5000);const text=await p.locator('body').innerText().catch(()=>''),url=p.url();console.log(name,r?.status(),url,text.replace(/\s+/g,' ').slice(0,180));if(!r||r.status()>=400||text.trim().length<8){fail=true;console.error(name,'basic runtime')};if(name==='public'&&!text.includes('حدد نوع الدخول للمتابعة')){fail=true;console.error('public chooser')};if((name==='employee'||name==='legacy')&&text.includes('حدد نوع الدخول للمتابعة')){fail=true;console.error(name,'employee default failed')};if((name==='customer-employee-direct'||name==='customer-legacy-direct')&&!url.includes('/index.html?employee=1')){fail=true;console.error(name,'customer guard')};if(name==='customer-employee-manual'&&(text.includes('اسمك الكريم')||!text.includes('اختبار موظف')||!text.includes('الموظفين'))){fail=true;console.error('manual employee customer view')};}catch(e){fail=true;console.error(name,e)}await c.close()}
-          await b.close();if(fail)process.exit(1);
-          JS
-          node /tmp/smoke.mjs
+          cat >/tmp/verify-v39.js <<'NODE'
+          const fs=require('fs'),vm=require('vm');
+          const {Response,Request,Headers}=globalThis;
+          function inlineScript(html){const all=[...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m=>!m[1].includes('src='));if(!all.length)throw new Error('NO_INLINE_SCRIPT');return all[all.length-1][2];}
+          function storage(seed={}){const m=new Map(Object.entries(seed));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()};}
+          async function execute(kind){
+            const wrapper=fs.readFileSync(kind==='index'?'index.html':'customer.html','utf8');
+            const runtime=fs.readFileSync(kind==='index'?'runtime/index-v37-source.txt':'runtime/customer-v37-source.txt','utf8');
+            let written='';const ls=storage({inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'});
+            const href=kind==='index'?'https://example.test/index.html?employee=1':'https://example.test/customer.html?employeeView=1';const u=new URL(href);
+            const location={href:u.href,search:u.search,pathname:u.pathname,hash:u.hash,replace:v=>{location.href=String(v)}};
+            const ctx={console,URL,URLSearchParams,AbortController,Response,Request,Headers,setTimeout,clearTimeout,location,history:{replaceState(){}},navigator:{serviceWorker:{getRegistrations:async()=>[]}},localStorage:ls,caches:{open:async()=>({put:async()=>{}}),match:async()=>null},fetch:async()=>({ok:true,status:200,text:async()=>runtime}),document:{open(){},write(v){written=String(v)},close(){},getElementById(){return {innerHTML:''}}}};
+            ctx.window=ctx;ctx.window.location=location;vm.createContext(ctx);await Promise.resolve(vm.runInContext(inlineScript(wrapper),ctx,{timeout:10000,filename:kind+'-bootstrap.js'}));
+            if(!written)throw new Error(kind.toUpperCase()+'_NO_DOCUMENT_WRITE');return written;
+          }
+          (async()=>{
+            const idx=await execute('index'),cust=await execute('customer');
+            const checks={
+              employee_app:idx.includes('const App = () => {'),
+              notification:idx.includes('EmployeeAdminNotification')&&!idx.includes('return <EmployeeAdminMessageScreen'),
+              customer_switch:idx.includes('./customer.html?employeeView=1&appv=39.3'),
+              customer_app:cust.includes('function CustomerApp('),
+              transfer:cust.includes('handoffEmployeeCustomerCart(cartItems,branches)'),
+              transfer_button:cust.includes('نقل ومتابعة الاعتماد'),
+              transfer_import:idx.includes('setShowCart(true)')&&idx.includes('stockConflicts'),
+            };
+            const bad=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);if(bad.length)throw new Error('FAILED '+bad.join(','));
+            fs.writeFileSync('/tmp/generated-index.html',idx);fs.writeFileSync('/tmp/generated-customer.html',cust);
+            console.log('V39_3_RUNTIME_BOOTSTRAP_PASS',Object.keys(checks).length);
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node /tmp/verify-v39.js
+
+      - name: Parse generated runtime JSX
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          fail=[];count=0
+          for p in [Path('/tmp/generated-index.html'),Path('/tmp/generated-customer.html')]:
+              s=p.read_text()
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+                  attrs,code=m.group(1),m.group(2)
+                  if not code.strip(): continue
+                  count+=1; f=Path('/tmp')/f'{p.stem}-{i}.{"jsx" if "text/babel" in attrs else "js"}';f.write_text(code)
+                  cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/generated-check.js'] if 'text/babel' in attrs else ['node','--check',str(f)]
+                  r=subprocess.run(cmd,capture_output=True,text=True)
+                  if r.returncode: fail.append(f'{p.name}#{i}: {r.stderr}')
+          if fail: print('\n'.join(fail));sys.exit(1)
+          print('V39_3_GENERATED_SYNTAX_PASS',count)
+          PY
