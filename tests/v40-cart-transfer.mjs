@@ -110,10 +110,10 @@ try {
     await context.close();
   }
 
-  // Existing employee cart must merge only after confirmation and never overwrite.
+  // Existing employee cart must merge only after confirmation and refresh stock metadata from the current warehouse file.
   {
     const payload = { version:3, transferId:'merge_case', employeeName:'اختبار موظف', employeeId:'audit_employee', items:[{ cleanId:SKU, id:SKU, name:'حصالات كبير L', totalQty:.5, branchQuantities:{ b1:.5 } }], branches:[{ id:'b1', name:'الرئيسي' }] };
-    const existing = { [SKU]:{ cleanId:SKU, id:SKU, name:'حصالات كبير L', warehouseKey:'jeddah', qty:7.5, cartQty:1 } };
+    const existing = { [SKU]:{ cleanId:SKU, id:SKU, name:'حصالات كبير L', warehouseKey:'jeddah', qty:0, cartQty:1 } };
     const context = await seedContext(browser, { ...EMP, [TK]:payload, [TB]:payload, [CART]:existing });
     const page = await context.newPage();
     let dialogs = 0;
@@ -121,7 +121,9 @@ try {
     await page.goto(base + '/index.html?employee=1&customerCartTransfer=1&appv=40', { waitUntil:'domcontentloaded', timeout:45000 });
     await page.waitForFunction(({ key, sku }) => Number((JSON.parse(localStorage.getItem(key) || '{}')?.[sku] || {}).cartQty) === 1.5, { key:CART, sku:SKU }, { timeout:15000 });
     if (dialogs < 1) fail('existing-cart merge confirmation did not appear');
-    console.log('MERGE_CONFIRM_PASS');
+    const merged = await page.evaluate(({ cartKey, sku }) => JSON.parse(localStorage.getItem(cartKey) || '{}')[sku] || null, { cartKey:CART, sku:SKU });
+    if (!merged || Number(merged.qty) <= 0) fail('merged cart retained stale stock metadata instead of current warehouse data');
+    console.log('MERGE_CONFIRM_AND_REFRESH_PASS', merged.qty);
     await context.close();
   }
 
