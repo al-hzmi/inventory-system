@@ -1,0 +1,65 @@
+V39.4 FINAL REGRESSION
+validator_install=PASS
+source_business_invariants=FAIL
+PASS runtime recovery
+PASS employee customer handoff patch
+PASS transfer primary backup
+PASS full transfer payload
+PASS identity binding
+PASS idempotency
+PASS warehouse resolution
+PASS branch preservation
+PASS stock overflow block
+PASS employee cart durable
+PASS source cart safe
+PASS notification patch
+PASS customer telemetry isolated
+PASS checkout recovery
+PASS guest tracking
+PASS employee auth
+PASS barcode scanner
+PASS admin live customers
+PASS stocktake
+PASS currency
+PASS service worker isolation
+PASS fresh Vercel shells
+PASS durable-before-clear
+BAD_MARKER node_modules/playwright/lib/runner/rebase.js
+runtime_bootstrap_execution=PASS
+source_generated_syntax=FAIL
+/tmp/generated-index.html#12: ✘ [ERROR] Unterminated string literal
+
+    ../../../../../tmp/final-19.jsx:3174:38:
+      3174 │     return lines.length>1?lines.join('
+           ╵                                       ^
+
+1 error
+
+all_root_html_browser_smoke=FAIL
+PASS admin-dashboard.html http=200 chars=130 bootErr=0
+FAIL admin-stocktake.html http=200 chars=0 bootErr=0
+PASS customer.html http=200 chars=4219 bootErr=0
+FAIL index.html http=200 chars=0 bootErr=0
+PASS security-center.html http=200 chars=149 bootErr=0
+FAIL stocktake.html http=200 chars=0 bootErr=0
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 2.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.3 MiB
+FFMPEG playwright build v1011 downloaded to /home/runner/.cache/ms-playwright/ffmpeg-1011
+Downloading Chromium Headless Shell 140.0.7339.16 (playwright build v1187) from https://cdn.playwright.dev/dbazure/download/playwright/builds/chromium/1187/chromium-headless-shell-linux.zip
+|                                                                                |   0% of 104.3 MiB
+|■■■■■■■■                                                                        |  10% of 104.3 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 104.3 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 104.3 MiB
+Chromium Headless Shell 140.0.7339.16 (playwright build v1187) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1187
+result=FAIL
