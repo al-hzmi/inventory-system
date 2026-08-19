@@ -12,10 +12,62 @@
     let html=await loadCore();
     const oldSession="const EMPLOYEE_CUSTOMER_SESSION = (() => { try { const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(); const employeeId=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(); const authVersion=String(localStorage.getItem('inventory_employee_auth_version_v2')||''); return {valid:Boolean(name&&employeeId&&authVersion==='2'),name,employeeId}; } catch { return {valid:false,name:'',employeeId:''}; } })();";
     const newSession="const EMPLOYEE_CUSTOMER_SESSION = (() => { try { const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(); const employeeId=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(); const authVersion=String(localStorage.getItem('inventory_employee_auth_version_v2')||''); const modern=Boolean(name&&employeeId&&authVersion==='2'); return {valid:Boolean(name),name,employeeId,authVersion,modern}; } catch { return {valid:false,name:'',employeeId:'',authVersion:'',modern:false}; } })();";
-    if(!html.includes(oldSession))throw new Error('V37_CUSTOMER_SESSION_MARKER');html=html.replace(oldSession,newSession);
-    if(!html.includes("customer-sw.js?v=35.0"))throw new Error('V37_SW_MARKER');html=html.replace("customer-sw.js?v=35.0","customer-sw.js?v=37.0");
-    if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt'))throw new Error('V37_CUSTOMER_OUTPUT_CHECK');
+    if(!html.includes(oldSession))throw new Error('V40_CUSTOMER_SESSION_MARKER');
+    html=html.replace(oldSession,newSession);
+    if(!html.includes("customer-sw.js?v=35.0"))throw new Error('V40_SW_MARKER');
+    html=html.replace("customer-sw.js?v=35.0","customer-sw.js?v=37.0");
+
+    const employeeViewMarker='window.__employeeCustomerView = EMPLOYEE_CUSTOMER_VIEW;';
+    if(!html.includes(employeeViewMarker))throw new Error('V40_TRANSFER_HELPER_MARKER');
+    const transferHelper=[
+      "const EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';",
+      "const EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';",
+      "function handoffEmployeeCustomerCart(cartItems,branches){",
+      "  if(!EMPLOYEE_CUSTOMER_VIEW)return false;",
+      "  const rows=(Array.isArray(cartItems)?cartItems:[]).map(item=>({",
+      "    cleanId:normalizeCleanId(item&&((item.cleanId||item.id)||'')),",
+      "    id:String((item&&(item.id||item.cleanId))||''),",
+      "    name:String((item&&item.name)||''),",
+      "    totalQty:Number(item&&item.totalQty)||0,",
+      "    cartonPrice:Number(item&&item.cartonPrice)||0,",
+      "    pack:String((item&&item.pack)||''),",
+      "    imageFile:String((item&&item.imageFile)||''),",
+      "    branchQuantities:Object.assign({},(item&&item.branchQuantities)||{})",
+      "  })).filter(item=>item.cleanId&&item.totalQty>0);",
+      "  if(!rows.length){window.alert('السلة فارغة. أضف أصنافًا أولاً ثم تابع الاعتماد.');return false;}",
+      "  const safeBranches=(Array.isArray(branches)?branches:[]).map(branch=>({id:String((branch&&branch.id)||''),name:String((branch&&branch.name)||'')})).filter(branch=>branch.id||branch.name);",
+      "  const payload={version:3,transferId:'ect_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8),createdAt:Date.now(),employeeName:String(EMPLOYEE_CUSTOMER_SESSION.name||''),employeeId:String(EMPLOYEE_CUSTOMER_SESSION.employeeId||''),source:'customer_portal_employee_view',items:rows,branches:safeBranches};",
+      "  try{",
+      "    const serialized=JSON.stringify(payload);",
+      "    localStorage.setItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY,serialized);",
+      "    localStorage.setItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY,serialized);",
+      "    const target=new URL('./index.html',window.location.href);",
+      "    target.searchParams.set('employee','1');",
+      "    target.searchParams.set('customerCartTransfer','1');",
+      "    target.searchParams.set('appv','40');",
+      "    window.location.href=target.href;",
+      "    return true;",
+      "  }catch(error){",
+      "    console.error('[Employee customer cart handoff]',error);",
+      "    window.alert('تعذر نقل السلة إلى نظام الموظفين. السلة ما زالت محفوظة هنا ولم يتم حذفها.');",
+      "    return false;",
+      "  }",
+      "}"
+    ].join('\n');
+    html=html.replace(employeeViewMarker,employeeViewMarker+'\n'+transferHelper);
+
+    const oldCheckout="onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)}";
+    const newCheckout="onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}";
+    if(!html.includes(oldCheckout))throw new Error('V40_EMPLOYEE_CHECKOUT_MARKER');
+    html=html.replace(oldCheckout,newCheckout);
+
+    const oldButton='<button onClick={onCheckout} className="h-12 rounded-12 bg-primary text-white font-bold text-sm">متابعة الاعتماد</button>';
+    const newButton='<button onClick={onCheckout} className="h-12 rounded-12 bg-primary text-white font-bold text-sm">{EMPLOYEE_CUSTOMER_VIEW?\'نقل ومتابعة الاعتماد\':\'متابعة الاعتماد\'}</button>';
+    if(!html.includes(oldButton))throw new Error('V40_TRANSFER_BUTTON_MARKER');
+    html=html.replace(oldButton,newButton);
+
+    if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt')||!html.includes('handoffEmployeeCustomerCart(cartItems,branches)')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('نقل ومتابعة الاعتماد'))throw new Error('V40_CUSTOMER_OUTPUT_CHECK');
     document.open();document.write(html);document.close();
-  }catch(e){console.error('[V37 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
+  }catch(e){console.error('[V40 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
 </script></body></html>

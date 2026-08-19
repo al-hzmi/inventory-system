@@ -1,0 +1,72 @@
+name: V40 Cart Transfer Quality Gate
+
+on:
+  push:
+    branches: [feature/cart-transfer-v40]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  v40-transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Static V40 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          idx=Path('index.html').read_text()
+          cust=Path('customer.html').read_text()
+          required_idx=[
+            'batco_employee_customer_cart_transfer_v1',
+            'batco_employee_customer_cart_transfer_backup_v1',
+            'batco_employee_customer_cart_transfer_applied_v1_',
+            'prepareTransfer40',
+            'V40_STOCK_GUARD_MARKER',
+            'batco_employee_transfer_open_cart_v1',
+            'batco_employee_transfer_warehouse_v1',
+            'batco_employee_transfer_notes_v1',
+          ]
+          required_cust=[
+            'handoffEmployeeCustomerCart',
+            'batco_employee_customer_cart_transfer_v1',
+            'batco_employee_customer_cart_transfer_backup_v1',
+            'نقل ومتابعة الاعتماد',
+            'customerCartTransfer',
+          ]
+          missing=[x for x in required_idx if x not in idx]+[x for x in required_cust if x not in cust]
+          if missing: raise SystemExit('V40_MISSING: '+', '.join(missing))
+          if "localStorage.removeItem('customer_guest_cart_v1')" not in idx: raise SystemExit('V40_NO_SAFE_SOURCE_CLEANUP')
+          if "window.confirm('لديك أصناف محفوظة" not in idx: raise SystemExit('V40_NO_MERGE_CONFIRMATION')
+          if 'stockConflicts' not in idx: raise SystemExit('V40_NO_STOCK_GUARD')
+          print('V40_STATIC_PASS')
+          PY
+
+      - name: Install browser test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+
+      - name: Generated runtime compile and end-to-end transfer tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 >/tmp/v40-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          node tests/v40-cart-transfer.mjs
