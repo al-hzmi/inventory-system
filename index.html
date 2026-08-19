@@ -103,7 +103,7 @@ const buildEmployeeTransferNotes=(items=[])=>{
     }));
     const lines=['توزيع الطلب المنقول من واجهة العملاء:'];
     Object.entries(grouped).forEach(([branchId,entries])=>lines.push((branchNames.get(String(branchId))||'الفرع')+': '+entries.join('، ')));
-    return lines.length>1?lines.join('\n'):'';
+    return lines.length>1?lines.join('\\n'):'';
 };
 
 `;
