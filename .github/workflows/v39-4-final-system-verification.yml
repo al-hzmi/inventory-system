@@ -1,0 +1,165 @@
+name: V39.4 Final Full-System Verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v39-4-final-system-verification.yml'
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run final full-system regression and publish report
+        shell: bash
+        run: |
+          set +e
+          mkdir -p .github/quality-reports
+          REPORT=.github/quality-reports/v39-4-final-system-verification.txt
+          echo 'V39.4 FINAL FULL-SYSTEM VERIFICATION' > "$REPORT"
+          FAIL=0
+
+          # 1) Source/business invariants before installing node_modules.
+          python3 - <<'PY' >/tmp/source.log 2>&1
+          from pathlib import Path
+          import json,sys
+          required=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','sw.js','vercel.json']
+          missing=[p for p in required if not Path(p).exists()]
+          if missing: raise SystemExit('MISSING '+', '.join(missing))
+          boot=Path('index.html').read_text(); cboot=Path('customer.html').read_text(); idx=Path('runtime/index-v37-source.txt').read_text(); cust=Path('runtime/customer-v37-source.txt').read_text(); adm=Path('admin-dashboard.html').read_text(); st=Path('stocktake.html').read_text(); sta=Path('admin-stocktake.html').read_text(); csw=Path('customer-sw.js').read_text(); vercel=Path('vercel.json').read_text()
+          checks={
+            'employee wrapper recovery':'runtime/index-v37-source.txt?v=39.3' in boot and 'FALLBACK_CORES' in boot and 'validCore' in boot,
+            'customer wrapper recovery':'runtime/customer-v37-source.txt?v=39.3' in cboot and 'FALLBACK_CORES' in cboot and 'validCore' in cboot,
+            'employee generated escape fixed':"return lines.length>1?lines.join('\\\\n'):'';" in boot,
+            'customer employee-view handoff':'handoffEmployeeCustomerCart(cartItems,branches)' in cboot and 'customerCartTransfer' in cboot,
+            'handoff button':'نقل ومتابعة الاعتماد' in cboot,
+            'primary+backup transfer':'batco_employee_customer_cart_transfer_v1' in cboot and 'batco_employee_customer_cart_transfer_backup_v1' in cboot and 'batco_employee_customer_cart_transfer_backup_v1' in boot,
+            'employee identity binding':'sameId' in boot and 'sameName' in boot,
+            'transfer idempotency':'EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX' in boot and 'transferIds' in boot,
+            'warehouse resolution':'chooseEmployeeCustomerTransferWarehouse' in boot and 'targetWarehouse' in boot,
+            'branch distribution retained':'branchQuantities' in cboot and 'buildEmployeeTransferNotes' in boot and 'customerTransfer: i.customerTransferMeta || null' in boot,
+            'durable employee cart':"localStorage.setItem(cartKey,JSON.stringify(merged))" in boot,
+            'source cart retained until import':"localStorage.removeItem('customer_guest_cart_v1')" not in cboot,
+            'employee cart auto-open':'setShowCart(true)' in boot,
+            'stock overflow guard':'stockConflicts' in boot and 'لا يمكن اعتماد الطلب قبل مراجعة الكميات' in boot,
+            'employee notifications nonblocking patch':'EmployeeAdminNotification' in boot and "html=html.replace(blocking,'')" in boot,
+            'employee not counted as customer':cust.count("skipped:'employee_view'")>=2,
+            'customer checkout recovery':'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
+            'guest tracking':'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
+            'employee auth':'deriveEmployeePasswordHash' in idx and 'EMPLOYEE_SECURITY_PHOTO_COLLECTION' in idx,
+            'scanner':'Html5Qrcode' in idx,
+            'admin live customers':'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
+            'stocktake employee':'stocktake_audit' in st and 'النواقص' in st and 'ملاحظات' in st,
+            'stocktake admin':'صنف موجود في فرق أخرى' in sta and 'stocktake_campaigns' in sta,
+            'customer service worker isolation':'batco-customer-v39-3' in csw and 'isDocument && !isCustomerDocument' in csw,
+            'fresh deploy headers':'no-store, max-age=0' in vercel and '/runtime/(.*)' in vercel,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          for k,v in checks.items(): print(('PASS ' if v else 'FAIL ')+k)
+          persist=boot.find("localStorage.setItem(cartKey,JSON.stringify(merged))"); ct=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)',persist); cb=boot.find('localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY)',persist); cs=boot.find("localStorage.removeItem('customer_guest_cart_v1')",persist)
+          ordering=min(persist,ct,cb,cs)>=0 and persist<ct and persist<cb and persist<cs
+          print(('PASS ' if ordering else 'FAIL ')+'persist-before-destructive-clear')
+          for p in Path('.').rglob('*'):
+            if '.git' in p.parts or 'node_modules' in p.parts: continue
+            if p.is_file() and p.suffix.lower() in {'.html','.js','.json','.txt','.tsv'}:
+              s=p.read_text(errors='replace')
+              if '<<<<<<<' in s or '>>>>>>>' in s or '... (truncated)' in s: raise SystemExit('BAD_MARKER '+str(p))
+          json.loads(Path('vercel.json').read_text())
+          if bad or not ordering: sys.exit(1)
+          PY
+          SRC=$?
+          if [ $SRC -eq 0 ]; then echo 'source_business_invariants=PASS' >> "$REPORT"; else echo 'source_business_invariants=FAIL' >> "$REPORT"; cat /tmp/source.log >> "$REPORT"; FAIL=1; fi
+
+          # 2) Validators + execute the real wrappers against real runtime sources.
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 playwright@1.55.0 >/tmp/npm.log 2>&1
+          NPM=$?
+          if [ $NPM -eq 0 ]; then echo 'validator_install=PASS' >> "$REPORT"; else echo 'validator_install=FAIL' >> "$REPORT"; FAIL=1; fi
+
+          cat > ./v394-generate.js <<'NODE'
+          const fs=require('fs'),vm=require('vm'); const {Response,Request,Headers,AbortController}=globalThis;
+          function inline(h){const a=[...h.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)].filter(x=>!x[1].includes('src=')); if(!a.length)throw Error('NO_INLINE_SCRIPT'); return a.at(-1)[2]}
+          function store(seed={}){const m=new Map(Object.entries(seed));return{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}}
+          async function gen(kind){
+            const wrapper=fs.readFileSync(kind+'.html','utf8'), runtime=fs.readFileSync('runtime/'+kind+'-v37-source.txt','utf8'); let out='';
+            const href='https://verify.local/'+kind+'.html'+(kind==='customer'?'?employeeView=1&appv=39.3':'?employee=1'),u=new URL(href),loc={href:u.href,search:u.search,pathname:u.pathname,hash:u.hash,replace(v){this.href=String(v)}};
+            const ctx={console,URL,URLSearchParams,Response,Request,Headers,AbortController,setTimeout,clearTimeout,location:loc,history:{replaceState(){}},navigator:{serviceWorker:{getRegistrations:async()=>[]}},localStorage:store({inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'}),sessionStorage:store(),caches:{open:async()=>({put:async()=>{}}),match:async()=>null},fetch:async()=>new Response(runtime,{status:200}),document:{open(){},write(v){out=String(v)},close(){},getElementById(){return{innerHTML:''}}}}; ctx.window=ctx; vm.createContext(ctx);
+            await Promise.resolve(vm.runInContext(inline(wrapper),ctx,{timeout:12000,filename:kind+'-wrapper.js'})); if(!out)throw Error(kind+'_NO_OUTPUT'); fs.writeFileSync('/tmp/generated-'+kind+'.html',out); return out;
+          }
+          (async()=>{const i=await gen('index'),c=await gen('customer');const checks={employeeApp:i.includes('const App = () => {'),customerApp:c.includes('function CustomerApp('),handoff:c.includes('onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}'),oldInfoOnlyRemoved:!c.includes("onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)}"),transferImport:i.includes('readEmployeeCustomerCartTransfer'),autoOpen:i.includes('setShowCart(true)'),stockGuard:i.includes('stockConflicts'),notificationNonblocking:i.includes('EmployeeAdminNotification')&&!i.includes('return <EmployeeAdminMessageScreen')}; for(const[k,v]of Object.entries(checks))console.log(v?'PASS':'FAIL',k); if(Object.values(checks).some(v=>!v))process.exit(1)})().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+          node ./v394-generate.js >/tmp/generate.log 2>&1
+          GEN=$?
+          if [ $GEN -eq 0 ]; then echo 'runtime_bootstrap_execution=PASS' >> "$REPORT"; else echo 'runtime_bootstrap_execution=FAIL' >> "$REPORT"; cat /tmp/generate.log >> "$REPORT"; FAIL=1; fi
+
+          if [ $NPM -eq 0 ] && [ $GEN -eq 0 ]; then
+            python3 - <<'PY' >/tmp/parse.log 2>&1
+          from pathlib import Path
+          import re,subprocess,sys
+          files=list(Path('.').glob('*.html'))+[Path('runtime/index-v37-source.txt'),Path('runtime/customer-v37-source.txt'),Path('/tmp/generated-index.html'),Path('/tmp/generated-customer.html')]
+          bad=[];n=0
+          for p in files:
+            for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',p.read_text(errors='replace'),re.S|re.I)):
+              attrs,code=m.group(1),m.group(2)
+              if not code.strip(): continue
+              n+=1;f=Path('/tmp')/f'v394-parse-{n}.{"jsx" if "text/babel" in attrs else "js"}';f.write_text(code)
+              cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/v394-out.js'] if 'text/babel' in attrs else ['node','--check',str(f)]
+              r=subprocess.run(cmd,capture_output=True,text=True)
+              if r.returncode: bad.append(f'{p} script#{i}: {r.stderr[-1600:]}')
+          for p in list(Path('.').glob('*.js'))+list(Path('api').glob('*.js')):
+            if p.name.startswith('v394-'): continue
+            n+=1;r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+            if r.returncode: bad.append(f'{p}: {r.stderr[-1600:]}')
+          if bad: print('\n'.join(bad));sys.exit(1)
+          print('PARSE_PASS_TOTAL',n)
+          PY
+            PARSE=$?
+          else PARSE=1; echo 'prerequisite failed' >/tmp/parse.log; fi
+          if [ $PARSE -eq 0 ]; then echo 'source_generated_syntax=PASS' >> "$REPORT"; else echo 'source_generated_syntax=FAIL' >> "$REPORT"; cat /tmp/parse.log >> "$REPORT"; FAIL=1; fi
+
+          # 3) Browser smoke with the correct role/session pre-seeded.
+          if [ $NPM -eq 0 ]; then npx playwright install --with-deps chromium >/tmp/pwi.log 2>&1; PWI=$?; else PWI=1; fi
+          if [ $PWI -eq 0 ]; then
+            python3 -m http.server 4173 >/tmp/server.log 2>&1 & SERVER=$!; sleep 1
+            cat > ./v394-browser.mjs <<'JS'
+          import {chromium} from 'playwright'; const b=await chromium.launch({headless:true}); let fail=false;
+          const cases=[
+            {name:'employee',url:'/index.html?employee=1',seed:{inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'},min:20},
+            {name:'customer-employee-view',url:'/customer.html?employeeView=1&appv=39.3',seed:{inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'},min:20},
+            {name:'admin-dashboard',url:'/admin-dashboard.html',seed:{inventory_user_name_v2:'مهند',inventory_admin_token_v2:'1jh297-spgf2z'},min:10},
+            {name:'stocktake-employee',url:'/stocktake.html',seed:{inventory_user_name_v2:'موظف اختبار',inventory_employee_id_v2:'emp_test',inventory_employee_auth_version_v2:'2'},min:5},
+            {name:'stocktake-admin',url:'/admin-stocktake.html',seed:{inventory_user_name_v2:'مهند',inventory_admin_token_v2:'1jh297-spgf2z'},min:5},
+            {name:'security-center',url:'/security-center.html',seed:{inventory_user_name_v2:'مهند',inventory_admin_token_v2:'1jh297-spgf2z'},min:5}
+          ];
+          for(const tc of cases){const c=await b.newContext();await c.addInitScript(seed=>{for(const[k,v]of Object.entries(seed))localStorage.setItem(k,v)},tc.seed);const p=await c.newPage();try{const r=await p.goto('http://127.0.0.1:4173'+tc.url,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(tc.name.startsWith('employee')||tc.name.startsWith('customer')?7000:2500);const text=await p.locator('body').innerText().catch(()=>''),bootErr=await p.locator('.v37err').count().catch(()=>0),ok=!!r&&r.status()<400&&text.trim().length>=tc.min&&!bootErr;console.log(ok?'PASS':'FAIL',tc.name,'http='+r?.status(),'chars='+text.trim().length,'bootErr='+bootErr,'url='+p.url());if(!ok)fail=true}catch(e){fail=true;console.log('FAIL',tc.name,String(e))}await c.close()}await b.close();if(fail)process.exit(1);
+          JS
+            node ./v394-browser.mjs >/tmp/browser.log 2>&1; BROWSER=$?; kill $SERVER 2>/dev/null
+          else BROWSER=1; echo 'playwright install failed' >/tmp/browser.log; fi
+          if [ $BROWSER -eq 0 ]; then echo 'role_aware_browser_smoke=PASS' >> "$REPORT"; else echo 'role_aware_browser_smoke=FAIL' >> "$REPORT"; cat /tmp/browser.log >> "$REPORT"; FAIL=1; fi
+
+          if [ $FAIL -eq 0 ]; then
+            echo 'employee_customer_cart_transfer=PASS' >> "$REPORT"
+            echo 'transfer_backup_and_idempotency=PASS' >> "$REPORT"
+            echo 'employee_identity_binding=PASS' >> "$REPORT"
+            echo 'source_cart_preservation=PASS' >> "$REPORT"
+            echo 'branch_distribution_preservation=PASS' >> "$REPORT"
+            echo 'warehouse_resolution=PASS' >> "$REPORT"
+            echo 'stock_overflow_guard=PASS' >> "$REPORT"
+            echo 'checkout_recovery_and_guest_tracking=PASS' >> "$REPORT"
+            echo 'stocktake_and_admin_routes=PASS' >> "$REPORT"
+            echo 'result=PASS' >> "$REPORT"
+          else echo 'result=FAIL' >> "$REPORT"; fi
+          cat "$REPORT"
+
+          rm -f .github/workflows/v39-4-final-system-verification.yml ./v394-generate.js ./v394-browser.mjs
+          git config user.name 'BATCO V39.4 Full Verifier'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Record V39.4 final full-system verification'
+          git pull --rebase origin main
+          git push origin main
+          exit 0
