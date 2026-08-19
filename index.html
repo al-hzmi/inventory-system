@@ -172,7 +172,7 @@
       items.forEach(row=>{
         const source=sourceMap.get(row.cleanId)||{uid:target+':'+row.cleanId,warehouseKey:target,id:String(row.id||row.cleanId),searchId:String(row.id||row.cleanId).toLowerCase(),cleanId:row.cleanId,name:String(row.name||''),searchName:'',qty:0,unit:'',pack:String(row.pack||''),price:Number(row.cartonPrice)||0,approxPrice:0};
         const previous=merged[row.cleanId]||{},nextQty=Math.max(0,Number(previous.cartQty)||0)+row.totalQty;
-        merged[row.cleanId]={...source,...previous,warehouseKey:target,cartQty:nextQty};
+        merged[row.cleanId]={...previous,...source,warehouseKey:target,cartQty:nextQty};
         if(nextQty>(Number(source.qty)||0)+1e-9)conflicts.push(String(source.id||row.id||row.cleanId));
       });
       localStorage.setItem(cartKey,JSON.stringify(merged));
