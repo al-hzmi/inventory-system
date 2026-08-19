@@ -81,12 +81,12 @@ try {
     await transferButton.waitFor({ state:'visible', timeout:15000 });
     await transferButton.click();
     await page.waitForURL(/index\.html\?employee=1/, { timeout:30000 });
-    await page.waitForFunction((key, sku) => {
+    await page.waitForFunction(({ key, sku }) => {
       try {
         const cart = JSON.parse(localStorage.getItem(key) || '{}');
         return Number(cart?.[sku]?.cartQty) === 1;
       } catch { return false; }
-    }, CART, SKU, { timeout:20000 });
+    }, { key:CART, sku:SKU }, { timeout:20000 });
     const state = await page.evaluate(({ cartKey, sku, TK, TB }) => {
       const cart = JSON.parse(localStorage.getItem(cartKey) || '{}');
       return {
@@ -119,7 +119,7 @@ try {
     let dialogs = 0;
     page.on('dialog', async dialog => { dialogs += 1; await dialog.accept(); });
     await page.goto(base + '/index.html?employee=1&customerCartTransfer=1&appv=40', { waitUntil:'domcontentloaded', timeout:45000 });
-    await page.waitForFunction((key, sku) => Number((JSON.parse(localStorage.getItem(key) || '{}')?.[sku] || {}).cartQty) === 1.5, CART, SKU, { timeout:15000 });
+    await page.waitForFunction(({ key, sku }) => Number((JSON.parse(localStorage.getItem(key) || '{}')?.[sku] || {}).cartQty) === 1.5, { key:CART, sku:SKU }, { timeout:15000 });
     if (dialogs < 1) fail('existing-cart merge confirmation did not appear');
     console.log('MERGE_CONFIRM_PASS');
     await context.close();
@@ -173,7 +173,7 @@ try {
     const page = await context.newPage();
     page.on('dialog', dialog => dialog.accept());
     await page.goto(base + '/index.html?employee=1&customerCartTransfer=1', { waitUntil:'domcontentloaded', timeout:45000 });
-    await page.waitForFunction((key, sku) => Number((JSON.parse(localStorage.getItem(key) || '{}')?.[sku] || {}).cartQty) === 999999, CART, SKU, { timeout:15000 });
+    await page.waitForFunction(({ key, sku }) => Number((JSON.parse(localStorage.getItem(key) || '{}')?.[sku] || {}).cartQty) === 999999, { key:CART, sku:SKU }, { timeout:15000 });
     const item = await page.evaluate(({ cartKey, sku }) => JSON.parse(localStorage.getItem(cartKey) || '{}')[sku] || null, { cartKey:CART, sku:SKU });
     if (!item || !(Number(item.cartQty) > Number(item.qty))) fail('overstock test did not create a guarded conflict');
     const html = await page.content();
