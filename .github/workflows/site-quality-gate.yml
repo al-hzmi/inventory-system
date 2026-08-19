@@ -91,7 +91,7 @@ jobs:
           npx playwright install --with-deps chromium >/dev/null
           python3 -m http.server 4173 >/tmp/http.log 2>&1 &
           PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
-          cat >/tmp/smoke.mjs <<'JS'
+          cat >.site-smoke.mjs <<'JS'
           import {chromium} from 'playwright';import fs from 'fs';
           const base='http://127.0.0.1:4173';
           const employee={inventory_user_name_v2:'اختبار موظف',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'};
@@ -102,4 +102,4 @@ jobs:
           for(const [name,path,store] of scenarios){const c=await b.newContext();await c.addInitScript(s=>{localStorage.clear();sessionStorage.clear();for(const[k,v]of Object.entries(s))localStorage.setItem(k,v)},store);const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(String(e)));try{const r=await p.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(5000);const text=await p.locator('body').innerText().catch(()=>''),url=p.url();console.log(name,r?.status(),url,text.replace(/\s+/g,' ').slice(0,180));if(!r||r.status()>=400||text.trim().length<8){fail=true;console.error(name,'basic runtime')};if(name==='public'&&!text.includes('حدد نوع الدخول للمتابعة')){fail=true;console.error('public chooser')};if((name==='employee'||name==='legacy')&&text.includes('حدد نوع الدخول للمتابعة')){fail=true;console.error(name,'employee default failed')};if((name==='customer-employee-direct'||name==='customer-legacy-direct')&&!url.includes('/index.html?employee=1')){fail=true;console.error(name,'customer guard')};if(name==='customer-employee-manual'&&(text.includes('اسمك الكريم')||!text.includes('اختبار موظف')||!text.includes('الموظفين'))){fail=true;console.error('manual employee customer view')};}catch(e){fail=true;console.error(name,e)}await c.close()}
           await b.close();if(fail)process.exit(1);
           JS
-          node /tmp/smoke.mjs
+          node ./.site-smoke.mjs
