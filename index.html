@@ -11,7 +11,7 @@
 <div id="v37boot"><div class="v37box"><img src="./icons/icon-192.png" alt="بيت الأواني الطيبة"><p>جاري فتح النظام...</p></div></div>
 <script>
 (async function(){
-  const CORE='./runtime/index-v37-source.txt?v=37.1';
+  const CORE='./runtime/index-v37-source.txt?v=38.0';
   const employeeName=(()=>{try{return String(localStorage.getItem('inventory_user_name_v2')||'').trim()}catch{return''}})();
   if(employeeName){
     const u=new URL(location.href);
@@ -46,15 +46,196 @@
     const blocking=`    if (employeeAdminMessage) {\n        return <EmployeeAdminMessageScreen notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />;\n    }\n\n`;
     if(!html.includes(blocking))throw new Error('V37_BLOCKING_MARKER');
     html=html.replace(blocking,'');
+
+    const transferHelpers=`
+const EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';
+const EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX='batco_employee_customer_cart_transfer_applied_v1_';
+const readEmployeeCustomerCartTransfer=()=>{try{return JSON.parse(localStorage.getItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)||'null')}catch{return null}};
+const clearEmployeeCustomerCartTransferParam=()=>{try{const u=new URL(window.location.href);if(u.searchParams.has('customerCartTransfer')){u.searchParams.delete('customerCartTransfer');history.replaceState(null,'',u.pathname+u.search+u.hash)}}catch{}};
+const chooseEmployeeCustomerTransferWarehouse=(payload,databases,preferred='')=>{
+    const items=Array.isArray(payload?.items)?payload.items:[];
+    const stats=Object.keys(WAREHOUSES).map(key=>{
+        const rows=databases?.[key]||[];
+        const byId=new Map(rows.map(row=>[normalizeCleanId(row.cleanId||row.id||''),row]));
+        let requested=0,covered=0,missing=0;
+        items.forEach(row=>{
+            const cleanId=normalizeCleanId(row?.cleanId||row?.id||''),req=Math.max(0,Number(row?.totalQty)||0),stock=Math.max(0,Number(byId.get(cleanId)?.qty)||0);
+            requested+=req;covered+=Math.min(req,stock);if(stock+1e-9<req)missing+=1;
+        });
+        return {key,requested,covered,missing,complete:items.length>0&&missing===0,ratio:requested>0?covered/requested:0};
+    });
+    const complete=stats.filter(x=>x.complete);
+    if(complete.length){const remembered=complete.find(x=>x.key===preferred);return {...(remembered||complete[0]),stats};}
+    const ranked=[...stats].sort((a,b)=>(b.ratio-a.ratio)||(b.covered-a.covered)||((a.key===preferred?-1:0)-(b.key===preferred?-1:0)));
+    return {...(ranked[0]||{key:'',complete:false,ratio:0,missing:items.length}),stats};
+};
+const buildEmployeeTransferNotes=(items=[])=>{
+    const rows=(Array.isArray(items)?items:[]).filter(item=>item?.customerTransferMeta?.branchQuantities&&Object.keys(item.customerTransferMeta.branchQuantities).length);
+    if(!rows.length)return '';
+    const branchNames=new Map();
+    rows.forEach(item=>(item.customerTransferMeta?.branches||[]).forEach(branch=>branchNames.set(String(branch?.id||''),String(branch?.name||'الفرع'))));
+    const grouped={};
+    rows.forEach(item=>Object.entries(item.customerTransferMeta.branchQuantities||{}).forEach(([branchId,qty])=>{
+        const n=Number(qty)||0;if(n<=0)return;
+        if(!grouped[branchId])grouped[branchId]=[];
+        grouped[branchId].push(String(item.id||item.cleanId||'الصنف')+' × '+n);
+    }));
+    const lines=['توزيع الطلب المنقول من واجهة العملاء:'];
+    Object.entries(grouped).forEach(([branchId,entries])=>lines.push((branchNames.get(String(branchId))||'الفرع')+': '+entries.join('، ')));
+    return lines.length>1?lines.join('\n'):'';
+};
+
+`;
+    const appDecl='const App = () => {';
+    if(!html.includes(appDecl))throw new Error('V38_APP_DECL_MARKER');
+    html=html.replace(appDecl,transferHelpers+appDecl);
+
+    const notesMarker='const [notes, setNotes] = useState("");';
+    if(!html.includes(notesMarker))throw new Error('V38_NOTES_MARKER');
+    html=html.replace(notesMarker,'const [notes, setNotes] = useState(() => buildEmployeeTransferNotes(Object.values(cart || {})));');
+
+    const submitMarker='const handleSubmit = () => {\n        if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");';
+    if(!html.includes(submitMarker))throw new Error('V38_SUBMIT_MARKER');
+    html=html.replace(submitMarker,submitMarker+'\n        const stockConflicts = items.filter(item => (Number(item.cartQty)||0) > (Number(item.qty)||0) + 1e-9);\n        if (stockConflicts.length) {\n            const sample = stockConflicts.slice(0,4).map(item => item.id || item.cleanId).join("، ");\n            return alert(`لا يمكن اعتماد الطلب قبل مراجعة الكميات في المستودع المحدد. الكمية المطلوبة تتجاوز المخزون في: ${sample}${stockConflicts.length>4?" …":""}`);\n        }');
+
+    const orderItemsMarker='items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),';
+    if(!html.includes(orderItemsMarker))throw new Error('V38_ORDER_ITEMS_MARKER');
+    html=html.replace(orderItemsMarker,'items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty, customerTransfer: i.customerTransferMeta || null })),' );
+
+    const lastUpdateMarker='    const [lastUpdate,    setLastUpdate]    = useState("جاري التحقق...");';
+    if(!html.includes(lastUpdateMarker))throw new Error('V38_TRANSFER_EFFECT_MARKER');
+    const transferEffect=`
+    const employeeCustomerTransferRef = useRef(false);
+    const [employeeCustomerTransferNotice,setEmployeeCustomerTransferNotice] = useState('');
+
+    useEffect(() => {
+        if (!employeeCustomerTransferNotice) return;
+        const timer=setTimeout(()=>setEmployeeCustomerTransferNotice(''),6000);
+        return ()=>clearTimeout(timer);
+    }, [employeeCustomerTransferNotice]);
+
+    useEffect(() => {
+        if (employeeCustomerTransferRef.current || !sessionName) return;
+        const params=new URLSearchParams(window.location.search);
+        const payload=readEmployeeCustomerCartTransfer();
+        if (!payload) {
+            if (params.get('customerCartTransfer')==='1') clearEmployeeCustomerCartTransferParam();
+            return;
+        }
+        if (!(databases.jeddah?.length || databases.riyadh?.length)) return;
+
+        const currentEmployeeId=String(localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)||'');
+        const sameId=!payload.employeeId || !currentEmployeeId || String(payload.employeeId)===currentEmployeeId;
+        const sameName=!payload.employeeName || normalizeText(payload.employeeName)===normalizeText(sessionName);
+        if (!sameId || !sameName) {
+            setEmployeeCustomerTransferNotice('توجد سلة منقولة مرتبطة بحساب موظف آخر. لم يتم دمجها مع هذا الحساب.');
+            return;
+        }
+
+        const items=(Array.isArray(payload.items)?payload.items:[]).filter(row=>normalizeCleanId(row?.cleanId||row?.id||'')&&(Number(row?.totalQty)||0)>0);
+        if (!items.length) {
+            try{localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY)}catch{}
+            clearEmployeeCustomerCartTransferParam();
+            employeeCustomerTransferRef.current=true;
+            return;
+        }
+
+        const transferId=String(payload.transferId||('legacy_'+String(payload.createdAt||Date.now())));
+        const appliedKey=EMPLOYEE_CUSTOMER_CART_TRANSFER_APPLIED_PREFIX+transferId;
+        try {
+            if (localStorage.getItem(appliedKey)) {
+                localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY);
+                localStorage.removeItem('customer_guest_cart_v1');
+                clearEmployeeCustomerCartTransferParam();
+                employeeCustomerTransferRef.current=true;
+                return;
+            }
+        } catch {}
+
+        const cartKey='b2b_cart_'+sessionName;
+        let persisted={};
+        try{persisted=JSON.parse(localStorage.getItem(cartKey)||'{}')||{}}catch{persisted={}}
+        const existingWarehouse=Object.values(persisted).map(row=>String(row?.warehouseKey||'')).find(key=>WAREHOUSES[key])||'';
+        const rememberedWarehouse=String(localStorage.getItem('b2b_last_warehouse_'+sessionName)||'');
+        const choice=chooseEmployeeCustomerTransferWarehouse(payload,databases,existingWarehouse||rememberedWarehouse);
+        const targetWarehouse=existingWarehouse||choice.key;
+        if (!targetWarehouse || !WAREHOUSES[targetWarehouse]) {
+            setEmployeeCustomerTransferNotice('تعذر تحديد المستودع للسلة المنقولة. السلة ما زالت محفوظة ولم يتم حذفها.');
+            return;
+        }
+        const targetStat=(choice.stats||[]).find(x=>x.key===targetWarehouse)||choice;
+        const warehouseRows=new Map((databases[targetWarehouse]||[]).map(row=>[normalizeCleanId(row.cleanId||row.id||''),row]));
+        const merged={...persisted};
+        let imported=0;
+        items.forEach(row=>{
+            const cleanId=normalizeCleanId(row.cleanId||row.id||''),transferQty=Math.max(0,Number(row.totalQty)||0);
+            if(!cleanId||transferQty<=0)return;
+            const source=warehouseRows.get(cleanId)||{
+                uid:targetWarehouse+':'+cleanId,warehouseKey:targetWarehouse,id:String(row.id||cleanId),searchId:String(row.id||cleanId).toLowerCase(),cleanId,
+                name:String(row.name||''),searchName:normalizeText(row.name||''),qty:0,unit:'',pack:String(row.pack||''),price:Number(row.cartonPrice)||0,approxPrice:0
+            };
+            const prior=merged[cleanId]||null;
+            const priorIds=Array.isArray(prior?.customerTransferMeta?.transferIds)?prior.customerTransferMeta.transferIds:[];
+            const alreadyApplied=priorIds.includes(transferId);
+            const previousQty=Math.max(0,Number(prior?.cartQty)||0);
+            merged[cleanId]={
+                ...(prior||{}),...source,
+                warehouseKey:targetWarehouse,
+                qty:Math.max(0,Number(source.qty)||0),
+                price:Number(source.price)||Number(row.cartonPrice)||0,
+                cartQty:previousQty+(alreadyApplied?0:transferQty),
+                customerTransferMeta:{
+                    source:'customer_portal_employee_view',transferId,transferIds:[...new Set([...priorIds,transferId])],transferredQty:transferQty,
+                    branchQuantities:{...(row.branchQuantities||{})},branches:Array.isArray(payload.branches)?payload.branches:[],transferredAt:Number(payload.createdAt)||Date.now()
+                }
+            };
+            imported+=1;
+        });
+        if (!imported) {
+            setEmployeeCustomerTransferNotice('لم يتم العثور على أصناف صالحة للنقل. السلة الأصلية ما زالت محفوظة.');
+            return;
+        }
+
+        try {
+            localStorage.setItem(cartKey,JSON.stringify(merged));
+            localStorage.setItem(appliedKey,String(Date.now()));
+            localStorage.setItem('b2b_last_warehouse_'+sessionName,targetWarehouse);
+            localStorage.removeItem(EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY);
+            localStorage.removeItem('customer_guest_cart_v1');
+        } catch (error) {
+            console.error('[Employee cart transfer persist]',error);
+            setEmployeeCustomerTransferNotice('تعذر حفظ السلة المنقولة على هذا الجهاز. لم يتم حذف السلة الأصلية.');
+            return;
+        }
+
+        employeeCustomerTransferRef.current=true;
+        setCart(merged);
+        setWarehouse(targetWarehouse);
+        setShowCart(true);
+        setEmployeeCustomerTransferNotice(targetStat?.complete
+            ? 'تم نقل السلة كاملة إلى حساب الموظف وفتحها مباشرة. توزيع الفروع محفوظ في الملاحظات.'
+            : 'تم نقل السلة كاملة إلى حساب الموظف. بعض الكميات تحتاج مراجعة للمستودع قبل الاعتماد، ولن يسمح النظام باعتماد كمية أعلى من المخزون.');
+        clearEmployeeCustomerCartTransferParam();
+    }, [databases, sessionName]);
+
+    useEffect(() => {
+        if (!sessionName || !warehouse) return;
+        try{localStorage.setItem('b2b_last_warehouse_'+sessionName,warehouse)}catch{}
+    }, [warehouse, sessionName]);
+`;
+    html=html.replace(lastUpdateMarker,lastUpdateMarker+'\n'+transferEffect);
+
     const appAt=html.indexOf('const App = () => {'),rootMarker='<div className="min-h-screen font-sans">',rootAt=html.indexOf(rootMarker,appAt);
     if(appAt<0||rootAt<0)throw new Error('V37_APP_ROOT_MARKER');
-    html=html.slice(0,rootAt)+html.slice(rootAt).replace(rootMarker,rootMarker+'\n            {employeeAdminMessage && <EmployeeAdminNotification notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />}');
+    const overlays=rootMarker+'\n            {employeeAdminMessage && <EmployeeAdminNotification notification={employeeAdminMessage} onClose={dismissEmployeeAdminMessage} />}\n            {employeeCustomerTransferNotice && <div className="fixed inset-x-0 top-[74px] z-[270] pointer-events-none px-12 font-sans"><div role="status" className="pointer-events-auto mx-auto max-w-[440px] rounded-14 border border-border bg-white/95 backdrop-blur shadow-lift px-12 py-10 text-[11px] font-bold text-primary leading-5 animate-card">{employeeCustomerTransferNotice}</div></div>}';
+    html=html.slice(0,rootAt)+html.slice(rootAt).replace(rootMarker,overlays,1);
+
     const oldSwitch='<span className="hidden sm:inline text-[11px] font-bold whitespace-nowrap">واجهة العملاء</span>',newSwitch='<span className="text-[10px] font-bold whitespace-nowrap">عملاء</span>';
     if(!html.includes(oldSwitch))throw new Error('V37_SWITCH_MARKER');
     html=html.replace(oldSwitch,newSwitch);
-    if(!html.includes('EmployeeAdminNotification')||html.includes('return <EmployeeAdminMessageScreen')||!html.includes('./customer.html?employeeView=1')||!html.includes('>عملاء</span>'))throw new Error('V37_OUTPUT_CHECK');
+    if(!html.includes('EmployeeAdminNotification')||html.includes('return <EmployeeAdminMessageScreen')||!html.includes('./customer.html?employeeView=1')||!html.includes('>عملاء</span>')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY')||!html.includes('employeeCustomerTransferNotice')||!html.includes('stockConflicts'))throw new Error('V38_OUTPUT_CHECK');
     document.open();document.write(html);document.close();
-  }catch(e){console.error('[V37 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
+  }catch(e){console.error('[V38 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
 </script>
 </body>
