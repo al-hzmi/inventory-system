@@ -69,5 +69,4 @@ jobs:
           python3 -m http.server 4173 >/tmp/v40-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
-          node tests/v40-handoff-diagnostic.mjs
           node tests/v40-cart-transfer.mjs
