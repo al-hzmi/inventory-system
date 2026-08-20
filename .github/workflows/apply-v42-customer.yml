@@ -1,0 +1,44 @@
+name: Apply V42 Customer Runtime
+on:
+  push:
+    branches: [feature/customer-passwordless-v42]
+    paths:
+      - tools/patch_customer_v42.py
+      - tools/patch_customer_v42_finish.py
+      - .github/workflows/apply-v42-customer.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/customer-passwordless-v42
+          fetch-depth: 0
+      - name: Apply V42 patch safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/patch_customer_v42.py tools/patch_customer_v42_finish.py
+          python3 tools/patch_customer_v42.py
+          python3 tools/patch_customer_v42_finish.py
+          grep -q "V42: no customer password" customer.html
+          grep -q "QUICK_CUSTOMER_PROFILE_KEY" customer.html
+          grep -q "V42_FINISH: post-checkout consistency" customer.html
+      - name: Commit generated customer wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- customer.html; then
+            echo "customer.html already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer.html
+          git commit -m "V42: generate passwordless customer checkout wrapper"
+          git push origin HEAD:feature/customer-passwordless-v42
