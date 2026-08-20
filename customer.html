@@ -12,13 +12,13 @@
     let html=await loadCore();
     const oldSession="const EMPLOYEE_CUSTOMER_SESSION = (() => { try { const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(); const employeeId=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(); const authVersion=String(localStorage.getItem('inventory_employee_auth_version_v2')||''); return {valid:Boolean(name&&employeeId&&authVersion==='2'),name,employeeId}; } catch { return {valid:false,name:'',employeeId:''}; } })();";
     const newSession="const EMPLOYEE_CUSTOMER_SESSION = (() => { try { const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(); const employeeId=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(); const authVersion=String(localStorage.getItem('inventory_employee_auth_version_v2')||''); const modern=Boolean(name&&employeeId&&authVersion==='2'); return {valid:Boolean(name),name,employeeId,authVersion,modern}; } catch { return {valid:false,name:'',employeeId:'',authVersion:'',modern:false}; } })();";
-    if(!html.includes(oldSession))throw new Error('V40_CUSTOMER_SESSION_MARKER');
+    if(!html.includes(oldSession))throw new Error('V41_CUSTOMER_SESSION_MARKER');
     html=html.replace(oldSession,newSession);
-    if(!html.includes("customer-sw.js?v=35.0"))throw new Error('V40_SW_MARKER');
+    if(!html.includes("customer-sw.js?v=35.0"))throw new Error('V41_SW_MARKER');
     html=html.replace("customer-sw.js?v=35.0","customer-sw.js?v=37.0");
 
     const employeeViewMarker='window.__employeeCustomerView = EMPLOYEE_CUSTOMER_VIEW;';
-    if(!html.includes(employeeViewMarker))throw new Error('V40_TRANSFER_HELPER_MARKER');
+    if(!html.includes(employeeViewMarker))throw new Error('V41_TRANSFER_HELPER_MARKER');
     const transferHelper=[
       "const EMPLOYEE_CUSTOMER_CART_TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';",
       "const EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';",
@@ -58,16 +58,36 @@
 
     const oldCheckout="onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?setToast({type:'info',message:employeeViewNotice}):setCheckout(true)}";
     const newCheckout="onCheckout={()=>EMPLOYEE_CUSTOMER_VIEW?handoffEmployeeCustomerCart(cartItems,branches):setCheckout(true)}";
-    if(!html.includes(oldCheckout))throw new Error('V40_EMPLOYEE_CHECKOUT_MARKER');
+    if(!html.includes(oldCheckout))throw new Error('V41_EMPLOYEE_CHECKOUT_MARKER');
     html=html.replace(oldCheckout,newCheckout);
 
     const oldButton='<button onClick={onCheckout} className="h-12 rounded-12 bg-primary text-white font-bold text-sm">متابعة الاعتماد</button>';
     const newButton='<button onClick={onCheckout} className="h-12 rounded-12 bg-primary text-white font-bold text-sm">{EMPLOYEE_CUSTOMER_VIEW?\'نقل ومتابعة الاعتماد\':\'متابعة الاعتماد\'}</button>';
-    if(!html.includes(oldButton))throw new Error('V40_TRANSFER_BUTTON_MARKER');
+    if(!html.includes(oldButton))throw new Error('V41_TRANSFER_BUTTON_MARKER');
     html=html.replace(oldButton,newButton);
 
-    if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt')||!html.includes('handoffEmployeeCustomerCart(cartItems,branches)')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('نقل ومتابعة الاعتماد'))throw new Error('V40_CUSTOMER_OUTPUT_CHECK');
+    const oldGuestTimer="useEffect(()=>{if(!guestMode||guestName)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),900);return()=>clearTimeout(t)},[guestMode,guestName]);";
+    const newGuestTimer="useEffect(()=>{if(!guestMode||guestName||EMPLOYEE_CUSTOMER_VIEW)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),5000);return()=>clearTimeout(t)},[guestMode,guestName]);";
+    if(!html.includes(oldGuestTimer))throw new Error('V41_GUEST_TIMER_MARKER');
+    html=html.replace(oldGuestTimer,newGuestTimer);
+
+    const eventMarker="async function logCustomerEvent(user,type,label='',data={}){\n  if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};";
+    const eventPatch="async function logCustomerEvent(user,type,label='',data={}){\n  if(['127.0.0.1','localhost'].includes(location.hostname)) return {activity:false,profile:false,skipped:'local_qa'};\n  if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};\n  if(!user?.uid && !currentGuestName()) return {activity:false,profile:false,skipped:'guest_name_pending'};";
+    if(!html.includes(eventMarker))throw new Error('V41_EVENT_GUARD_MARKER');
+    html=html.replace(eventMarker,eventPatch);
+
+    const sessionMarker="async function touchCustomerSession(user,profile,event='active'){\n  if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};";
+    const sessionPatch="async function touchCustomerSession(user,profile,event='active'){\n  if(['127.0.0.1','localhost'].includes(location.hostname)) return {skipped:'local_qa'};\n  if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};\n  if(!user?.uid && !currentGuestName()) return {skipped:'guest_name_pending'};";
+    if(!html.includes(sessionMarker))throw new Error('V41_SESSION_GUARD_MARKER');
+    html=html.replace(sessionMarker,sessionPatch);
+
+    const guestPromptCopy='<div className="ui-eyebrow">خطوة سريعة</div><h2 className="ui-title text-[20px]">اسمك الكريم</h2><p className="ui-subtitle">نحفظ الاسم على هذا الجهاز لتسهيل إعداد الطلب لاحقًا.</p>';
+    const guestPromptCopyNew='<div className="ui-eyebrow">بعد 5 ثوانٍ من التصفح</div><h2 className="ui-title text-[20px]">سجل اسمك للمتابعة</h2><p className="ui-subtitle">اكتب اسمك مرة واحدة فقط، وسيُحفظ على هذا الجهاز لتسهيل التصفح والطلبات لاحقًا.</p>';
+    if(!html.includes(guestPromptCopy))throw new Error('V41_GUEST_PROMPT_COPY_MARKER');
+    html=html.replace(guestPromptCopy,guestPromptCopyNew);
+
+    if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt')||!html.includes('handoffEmployeeCustomerCart(cartItems,branches)')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('نقل ومتابعة الاعتماد')||!html.includes('setShowGuestNamePrompt(true),5000')||!html.includes("skipped:'guest_name_pending'")||!html.includes('سجل اسمك للمتابعة'))throw new Error('V41_CUSTOMER_OUTPUT_CHECK');
     document.open();document.write(html);document.close();
-  }catch(e){console.error('[V40 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
+  }catch(e){console.error('[V41 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
 </script></body></html>
