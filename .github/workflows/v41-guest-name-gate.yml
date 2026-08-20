@@ -1,0 +1,59 @@
+name: V41 Guest Name Quality Gate
+
+on:
+  push:
+    branches: [feature/guest-name-v41]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guest-name:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Static V41 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('customer.html').read_text()
+          checks={
+            'five-second prompt':'setShowGuestNamePrompt(true),5000' in s,
+            'anonymous telemetry suppression':"skipped:'guest_name_pending'" in s,
+            'local QA telemetry suppression':"skipped:'local_qa'" in s,
+            'employee exclusion':'guestName||EMPLOYEE_CUSTOMER_VIEW' in s,
+            'prompt copy':'سجل اسمك للمتابعة' in s,
+            'transfer preserved':'handoffEmployeeCustomerCart(cartItems,branches)' in s,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V41_STATIC_FAIL: '+', '.join(bad))
+          print('V41_STATIC_PASS',len(checks))
+          PY
+
+      - name: Install browser test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+
+      - name: Guest-name E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 >/tmp/v41-http.log 2>&1 &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          node tests/v41-guest-name.mjs
