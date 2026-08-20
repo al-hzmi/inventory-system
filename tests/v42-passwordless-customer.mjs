@@ -11,24 +11,29 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function seed(browser){
   const context=await browser.newContext();
   await context.addInitScript(({NAME,VISITOR,SKU})=>{
-    localStorage.clear();sessionStorage.clear();
-    localStorage.setItem('customer_guest_name_v1',NAME);
-    localStorage.setItem('batco_customer_visitor_id_v1',VISITOR);
-    localStorage.setItem('customer_guest_branches_v1',JSON.stringify([{id:'b1',name:'الفرع الرئيسي'}]));
-    localStorage.setItem('customer_guest_cart_v1',JSON.stringify({[SKU]:{cleanId:SKU,id:SKU,name:'منتج اختبار',imageFile:'',cartonPrice:0,pack:'',branchQuantities:{b1:.5}}}));
+    try{
+      if(sessionStorage.getItem('__v42_seeded')==='1')return;
+      localStorage.clear();sessionStorage.clear();
+      localStorage.setItem('customer_guest_name_v1',NAME);
+      localStorage.setItem('batco_customer_visitor_id_v1',VISITOR);
+      localStorage.setItem('customer_guest_branches_v1',JSON.stringify([{id:'b1',name:'الفرع الرئيسي'}]));
+      localStorage.setItem('customer_guest_cart_v1',JSON.stringify({[SKU]:{cleanId:SKU,id:SKU,name:'منتج اختبار',imageFile:'',cartonPrice:0,pack:'',branchQuantities:{b1:.5}}}));
+      sessionStorage.setItem('__v42_seeded','1');
+    }catch{}
   },{NAME,VISITOR,SKU});
   return context;
 }
 
 async function cleanup(page){
   return await page.evaluate(async()=>{
+    const withTimeout=(promise,ms=8000)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('TIMEOUT')),ms))]);
     const u=firebase.auth().currentUser;if(!u)return {ok:true,none:true};
     const uid=u.uid,errors=[];
     for(const col of ['customer_orders','customer_drafts','customer_sessions','customer_activity_logs','customer_login_logs','customer_devices','customer_security_photos']){
-      try{const q=await firebase.firestore().collection(col).where('customerUid','==',uid).get();for(const d of q.docs)await d.ref.delete()}catch(e){errors.push(col+':'+(e?.code||e?.message||e))}
+      try{const q=await withTimeout(firebase.firestore().collection(col).where('customerUid','==',uid).get());for(const d of q.docs)await withTimeout(d.ref.delete())}catch(e){errors.push(col+':'+(e?.code||e?.message||e))}
     }
-    try{await firebase.firestore().collection('customers').doc(uid).delete()}catch(e){errors.push('customers:'+(e?.code||e?.message||e))}
-    try{await u.delete()}catch(e){errors.push('auth:'+(e?.code||e?.message||e))}
+    try{await withTimeout(firebase.firestore().collection('customers').doc(uid).delete())}catch(e){errors.push('customers:'+(e?.code||e?.message||e))}
+    try{await withTimeout(u.delete())}catch(e){errors.push('auth:'+(e?.code||e?.message||e))}
     try{localStorage.removeItem('batco_quick_customer_profile_v1')}catch{}
     return {ok:errors.length===0,uid,errors};
   });
@@ -53,7 +58,7 @@ try{
   body=await page.locator('body').innerText();
   if(!body.includes('هذه المعلومة الوحيدة المطلوبة'))fail('company-only checkout explanation missing');
   if(!body.includes('ملاحظة')||!body.includes('اختياري'))fail('notes are not optional');
-  for(const forbidden of ['كلمة المرور','رمز دخول','رقم الجوال','الكاميرا','الوجه ظاهر'])if(body.includes(forbidden)&&forbidden!=='كلمة المرور')fail('legacy authentication requirement visible: '+forbidden);
+  for(const forbidden of ['رمز دخول','رقم الجوال','الكاميرا','الوجه ظاهر','إنشاء حساب جديد','لدي حساب'])if(body.includes(forbidden))fail('legacy authentication requirement visible: '+forbidden);
   const submit=page.getByRole('button',{name:'اعتماد وإرسال الطلب'});
   if(await submit.isEnabled())fail('submit enabled before company name');
   await company.fill(COMPANY);
@@ -79,10 +84,10 @@ try{
   if(pageErrors.length)fail('runtime page errors: '+pageErrors.join(' | '));
   console.log('V42_FIRST_CHECKOUT_PASS',state.uid);
 
-  await page.reload({waitUntil:'domcontentloaded',timeout:45000});await sleep(3500);
+  await page.reload({waitUntil:'domcontentloaded',timeout:45000});
+  await page.getByText('طلباتي',{exact:true}).waitFor({state:'visible',timeout:30000});
   body=await page.locator('body').innerText();
-  if(body.includes('أنشئ رمز دخول')||body.includes('تأكيد الحضور')||body.includes('رقم الجوال'))fail('legacy auth returned after passwordless account reload');
-  if(!body.includes('طلباتي'))fail('passwordless returning customer did not retain seamless account history');
+  if(body.includes('أنشئ رمز دخول')||body.includes('تأكيد الحضور')||body.includes('رقم الجوال')||body.includes('إنشاء حساب جديد')||body.includes('لدي حساب'))fail('legacy auth returned after passwordless account reload');
   if(body.includes('حسابي'))fail('passwordless customer should not see password/account-settings tab');
   const authUid=await page.evaluate(()=>firebase.auth().currentUser?.uid||'');
   if(authUid!==state.uid)fail('Firebase persisted session was not restored');
