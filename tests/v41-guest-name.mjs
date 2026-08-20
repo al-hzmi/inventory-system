@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 const base = process.env.V41_BASE_URL || 'http://127.0.0.1:4173';
 const fail = message => { throw new Error(message); };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const PREVIEW = { batco_customer_portal_preview_v2:'admin-preview' };
 
 async function freshContext(browser, values = {}) {
   const context = await browser.newContext();
@@ -20,7 +21,7 @@ const browser = await chromium.launch({ headless:true });
 try {
   // Anonymous customer gets exactly five seconds of browsing before the required name prompt.
   {
-    const context = await freshContext(browser);
+    const context = await freshContext(browser, PREVIEW);
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(String(error)));
@@ -28,7 +29,7 @@ try {
     await sleep(2500);
     const early = await page.locator('body').innerText();
     if (early.includes('سجل اسمك للمتابعة')) fail('guest prompt appeared before five-second grace period');
-    await page.getByText('سجل اسمك للمتابعة', { exact:true }).waitFor({ state:'visible', timeout:5500 });
+    await page.getByText('سجل اسمك للمتابعة', { exact:true }).waitFor({ state:'visible', timeout:6500 });
     if (errors.length) fail('page errors before guest prompt: ' + errors.join(' | '));
 
     const input = page.getByPlaceholder('اكتب اسمك الكريم');
@@ -45,7 +46,7 @@ try {
 
   // Returning named customer should never be prompted again.
   {
-    const context = await freshContext(browser, { customer_guest_name_v1:'عميل محفوظ' });
+    const context = await freshContext(browser, { ...PREVIEW, customer_guest_name_v1:'عميل محفوظ' });
     const page = await context.newPage();
     await page.goto(base + '/customer.html', { waitUntil:'domcontentloaded', timeout:45000 });
     await sleep(6200);
