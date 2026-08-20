@@ -5,6 +5,7 @@ on:
     paths:
       - tools/patch_customer_v42.py
       - tools/patch_customer_v42_finish.py
+      - tools/patch_customer_v42_secure.py
       - .github/workflows/apply-v42-customer.yml
   workflow_dispatch:
 permissions:
@@ -23,11 +24,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile tools/patch_customer_v42.py tools/patch_customer_v42_finish.py
+          python3 -m py_compile tools/patch_customer_v42.py tools/patch_customer_v42_finish.py tools/patch_customer_v42_secure.py
           python3 tools/patch_customer_v42.py
           python3 tools/patch_customer_v42_finish.py
+          python3 tools/patch_customer_v42_secure.py
           grep -q "V42: no customer password" customer.html
           grep -q "QUICK_CUSTOMER_PROFILE_KEY" customer.html
+          grep -q "V42_SECURE: invisible Firebase session" customer.html
           grep -q "V42_FINISH: post-checkout consistency" customer.html
       - name: Commit generated customer wrapper
         shell: bash
@@ -40,5 +43,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add customer.html
-          git commit -m "V42: generate passwordless customer checkout wrapper"
+          git commit -m "V42: generate secure passwordless customer checkout wrapper"
           git push origin HEAD:feature/customer-passwordless-v42
