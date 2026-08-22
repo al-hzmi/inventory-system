@@ -1,0 +1,45 @@
+name: Apply V43 Customer UX
+on:
+  push:
+    branches: [feature/customer-ux-v43-real]
+    paths:
+      - tools/patch_customer_v43.py
+      - .github/workflows/apply-v43-customer.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/customer-ux-v43-real
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V43 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/patch_customer_v43.py
+          python tools/patch_customer_v43.py
+          grep -q "V43_CUSTOMER_UX" customer.html
+          grep -q "cart-image-gallery" customer.html
+          grep -q "CUSTOMER_DEVICE_ACCOUNT_LINK_KEY" customer.html
+      - name: Commit generated customer wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- customer.html; then
+            echo "customer.html already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer.html
+          git commit -m "V43: generate customer UX enhancements"
+          git push origin HEAD:feature/customer-ux-v43-real
