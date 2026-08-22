@@ -32,7 +32,7 @@ jobs:
             'v42 simplified checkout':'هذه المعلومة الوحيدة المطلوبة' in s and "accountType:'passwordless_device'" in s,
             'v41 guest name delay':'setShowGuestNamePrompt(true),5000' in s,
             'v40 employee cart transfer':'handoffEmployeeCustomerCart(cartItems,branches)' in s,
-            'fresh customer cache':"batco-customer-v43-0" in sw,
+            'customer service worker isolation':"batco-customer-v37-0" in sw and 'isDocument && !isCustomerDocument' in sw,
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V43_STATIC_FAIL: '+', '.join(bad))
