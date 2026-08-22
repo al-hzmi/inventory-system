@@ -1,0 +1,72 @@
+name: V43 Customer UX Quality Gate
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/customer-ux-v43-real]
+permissions:
+  contents: read
+jobs:
+  customer-ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: V43 static invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('customer.html').read_text()
+          sw=Path('customer-sw.js').read_text()
+          checks={
+            'balanced guest nav':"nav.length===3?'grid-cols-3'" in s and "nav.length===4?'grid-cols-4'" in s,
+            'cart image gallery':'cart-image-gallery' in s and 'عرض صور الأصناف' in s and 'إخفاء صور الأصناف' in s,
+            'device account link':'CUSTOMER_DEVICE_ACCOUNT_LINK_KEY' in s and 'persistCustomerDeviceAccountLink(next)' in s,
+            'order device association':'deviceAccount:' in s,
+            'install after name':"String(guestName||safeProfile.name||'').trim()&&!showGuestNamePrompt&&<InstallNudge/>" in s,
+            'v42 simplified checkout':'هذه المعلومة الوحيدة المطلوبة' in s and "accountType:'passwordless_device'" in s,
+            'v41 guest name delay':'setShowGuestNamePrompt(true),5000' in s,
+            'v40 employee cart transfer':'handoffEmployeeCustomerCart(cartItems,branches)' in s,
+            'fresh customer cache':"batco-customer-v43-0" in sw,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V43_STATIC_FAIL: '+', '.join(bad))
+          print('V43_STATIC_PASS',len(checks))
+          PY
+      - name: Parse JavaScript and JSX
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          s=Path('customer.html').read_text()
+          fail=[]
+          for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+              attrs,code=m.group(1),m.group(2)
+              if not code.strip(): continue
+              f=Path('/tmp')/f'v43-{i}.{"jsx" if "text/babel" in attrs else "js"}'
+              f.write_text(code)
+              cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/v43-check.js'] if 'text/babel' in attrs else ['node','--check',str(f)]
+              r=subprocess.run(cmd,capture_output=True,text=True)
+              if r.returncode: fail.append(r.stderr)
+          if fail:
+              print('\n'.join(fail));sys.exit(1)
+          print('V43_SYNTAX_PASS')
+          PY
+      - name: Browser UX regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v43-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
+          node tests/v43-customer-ux.mjs
