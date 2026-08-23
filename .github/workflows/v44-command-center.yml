@@ -1,0 +1,78 @@
+name: V44 Command Center Quality Gate
+on:
+  push:
+    branches: [feature/command-center-v44]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  v44:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Static V44 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          required=['command-center.html','v44-observability.js','v44-admin-bridge.js','index.html','customer.html','admin-dashboard.html','security-center.html']
+          miss=[x for x in required if not Path(x).exists()]
+          if miss: raise SystemExit('missing '+','.join(miss))
+          idx=Path('index.html').read_text();cust=Path('customer.html').read_text();adm=Path('admin-dashboard.html').read_text();obs=Path('v44-observability.js').read_text();cmd=Path('command-center.html').read_text()
+          checks={
+            'employee qa bootstrap':'V44_QA_BOOTSTRAP' in idx and 'navigator.webdriver===true' in idx,
+            'customer qa bootstrap':'V44_QA_BOOTSTRAP' in cust and 'navigator.webdriver===true' in cust,
+            'employee observability':'v44-observability.js?v=44.0' in idx,
+            'customer observability':'v44-observability.js?v=44.0' in cust,
+            'admin command bridge':'v44-admin-bridge.js?v=44.0' in adm,
+            'qa identity skip':'isQaIdentity(me.name)' in obs and "db.collection('v44_presence')" in obs,
+            'live cart snapshot':"db.collection('v44_live_carts')" in obs and 'lastNonEmptyItems' in obs,
+            'detailed activity':"db.collection('v44_activity_logs')" in obs and 'category_select' in obs and 'button_click' in obs,
+            'permissions runtime':"doc('permissions_v44')" in obs and 'employeeOverrides' in cmd and 'customerOverrides' in cmd,
+            'command center modules':all(x in cmd for x in ['الموظفون','العملاء','النشاط','البحث','السلال','الصلاحيات']),
+            'test filter':'اختبار تقني' in Path('v44-admin-bridge.js').read_text(),
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V44_STATIC_FAIL '+', '.join(bad))
+          print('V44_STATIC_PASS',len(checks))
+          PY
+      - name: Parse scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v44-observability.js
+          node --check v44-admin-bridge.js
+          node --check tests/v44-command-center.mjs
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          fails=[]
+          for file in ['command-center.html','index.html','customer.html','admin-dashboard.html','security-center.html']:
+              s=Path(file).read_text(errors='replace')
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+                  attrs,code=m.group(1),m.group(2)
+                  if not code.strip() or ' src=' in attrs: continue
+                  ext='jsx' if 'text/babel' in attrs else 'js';p=Path('/tmp')/f'v44-{Path(file).stem}-{i}.{ext}';p.write_text(code)
+                  cmd=['npx','esbuild',str(p),'--loader:.jsx=jsx','--outfile=/tmp/v44-check.js'] if ext=='jsx' else ['node','--check',str(p)]
+                  r=subprocess.run(cmd,capture_output=True,text=True)
+                  if r.returncode:fails.append(file+'#'+str(i)+' '+r.stderr)
+          if fails: print('\n'.join(fails));sys.exit(1)
+          print('V44_PARSE_PASS')
+          PY
+      - name: Browser mobile and QA regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v44-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
+          node tests/v44-command-center.mjs

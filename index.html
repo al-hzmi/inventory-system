@@ -11,6 +11,8 @@
 <div id="v37boot"><div class="v37box"><img src="./icons/icon-192.png" alt="بيت الأواني الطيبة"><p>جاري فتح النظام...</p></div></div>
 <script>
 (async function(){
+  // V44_QA_BOOTSTRAP: automated browsers must never pollute production presence or logs.
+  window.__V44_QA=Boolean(['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
   const CORE='./runtime/index-v37-source.txt?v=37.1';
   const TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';
   const TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';
@@ -193,6 +195,9 @@
   try{
     await prepareTransfer40();
     let html=await loadCore();
+    // V44_EMPLOYEE_CORE_PATCH: keep QA out of legacy Firestore logs while preserving real production telemetry.
+    html=html.replace("if (!warehouse || !search || search.total === 0) return;","if (window.__V44_QA || !warehouse || !search) return;");
+    html=html.replace("let isTracking = true;","let isTracking = !window.__V44_QA; if (window.__V44_QA) return;");
     const msgStart=html.indexOf('const EmployeeAdminMessageScreen =');
     const hookStart=html.indexOf('const useEmployeeAdminMessages =',msgStart);
     if(msgStart<0||hookStart<0)throw new Error('V37_MESSAGE_MARKER');
@@ -250,6 +255,7 @@
     html=html.replace(submitMarker,submitMarker+'\n        '+stockGuard);
 
     if(!html.includes('EmployeeAdminNotification')||html.includes('return <EmployeeAdminMessageScreen')||!html.includes('./customer.html?employeeView=1')||!html.includes('>عملاء</span>')||!html.includes('batco_employee_transfer_open_cart_v1')||!html.includes('batco_employee_transfer_warehouse_v1')||!html.includes('batco_employee_transfer_notes_v1')||!html.includes('const stockConflicts = items.filter'))throw new Error('V40_OUTPUT_CHECK');
+    html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V40 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();

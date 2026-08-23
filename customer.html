@@ -4,6 +4,8 @@
 <body><div id="v37boot"><div class="v37box"><img src="./icons/icon-192.png" alt="بيت الأواني الطيبة"><p>جاري فتح بوابة العملاء...</p></div></div>
 <script>
 (async function(){
+  // V44_QA_BOOTSTRAP
+  window.__V44_QA=Boolean((['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||window.__V44_QA===true)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
   const params=new URLSearchParams(location.search),employeeName=(()=>{try{return String(localStorage.getItem('inventory_user_name_v2')||'').trim()}catch{return''}})();
   if(employeeName&&params.get('employeeView')!=='1'){location.replace('./index.html?employee=1');return}
   const CORE='./runtime/customer-v37-source.txt?v=37.1';
@@ -73,12 +75,12 @@
     html=html.replace(oldGuestTimer,newGuestTimer);
 
     const eventMarker="async function logCustomerEvent(user,type,label='',data={}){\n  if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};";
-    const eventPatch="async function logCustomerEvent(user,type,label='',data={}){\n  if(['127.0.0.1','localhost'].includes(location.hostname)) return {activity:false,profile:false,skipped:'local_qa'};\n  if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};\n  if(!user?.uid && !currentGuestName()) return {activity:false,profile:false,skipped:'guest_name_pending'};";
+    const eventPatch="async function logCustomerEvent(user,type,label='',data={}){\n  if((['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||window.__V44_QA===true)) return {activity:false,profile:false,skipped:'local_qa'};\n  if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};\n  if(!user?.uid && !currentGuestName()) return {activity:false,profile:false,skipped:'guest_name_pending'};";
     if(!html.includes(eventMarker))throw new Error('V41_EVENT_GUARD_MARKER');
     html=html.replace(eventMarker,eventPatch);
 
     const sessionMarker="async function touchCustomerSession(user,profile,event='active'){\n  if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};";
-    const sessionPatch="async function touchCustomerSession(user,profile,event='active'){\n  if(['127.0.0.1','localhost'].includes(location.hostname)) return {skipped:'local_qa'};\n  if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};\n  if(!user?.uid && !currentGuestName()) return {skipped:'guest_name_pending'};";
+    const sessionPatch="async function touchCustomerSession(user,profile,event='active'){\n  if((['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||window.__V44_QA===true)) return {skipped:'local_qa'};\n  if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};\n  if(!user?.uid && !currentGuestName()) return {skipped:'guest_name_pending'};";
     if(!html.includes(sessionMarker))throw new Error('V41_SESSION_GUARD_MARKER');
     html=html.replace(sessionMarker,sessionPatch);
 
@@ -100,12 +102,12 @@
 
     const telemetry42=[
       "async function logCustomerEvent(user,type,label='',data={}){",
-      "  if(['127.0.0.1','localhost'].includes(location.hostname))return {activity:false,profile:false,skipped:'local_qa'};if(!user?.uid&&window.__employeeCustomerView)return {activity:false,profile:false,skipped:'employee_view'};if(!user?.uid&&!currentGuestName())return {activity:false,profile:false,skipped:'guest_name_pending'};",
+      "  if((['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||window.__V44_QA===true))return {activity:false,profile:false,skipped:'local_qa'};if(!user?.uid&&window.__employeeCustomerView)return {activity:false,profile:false,skipped:'employee_view'};if(!user?.uid&&!currentGuestName())return {activity:false,profile:false,skipped:'guest_name_pending'};",
       "  const identity=customerIdentity(user),device=customerDeviceInfo(),guestName=currentGuestName(),writes=[db.collection(CUSTOMER_ACTIVITY_COLLECTION).add({customerUid:identity.customerUid,visitorId:identity.visitorId,identityType:identity.identityType,name:user?.uid?'':guestName,sessionId:customerSessionId,type,label:String(label||''),data:data||{},device,createdAt:firebase.firestore.FieldValue.serverTimestamp()})];",
       "  if(identity.customerUid)writes.push(db.collection(CUSTOMER_COLLECTION).doc(identity.customerUid).set({visitorId:identity.visitorId,lastActivityAt:firebase.firestore.FieldValue.serverTimestamp(),lastActivityType:String(type||'activity'),lastActivityLabel:String(label||''),lastSessionId:customerSessionId,lastSeenAt:firebase.firestore.FieldValue.serverTimestamp(),telemetryVersion:6},{merge:true}));const results=await Promise.allSettled(writes);return {activity:results[0]?.status==='fulfilled',profile:identity.customerUid?(results[1]?.status==='fulfilled'):false};",
       "}",
       "async function touchCustomerSession(user,profile,event='active'){",
-      "  if(['127.0.0.1','localhost'].includes(location.hostname))return {skipped:'local_qa'};if(!user?.uid&&window.__employeeCustomerView)return {skipped:'employee_view'};if(!user?.uid&&!currentGuestName())return {skipped:'guest_name_pending'};const identity=customerIdentity(user),device=customerDeviceInfo(),resolved=profile||currentQuickCustomerProfile()||{};",
+      "  if((['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||window.__V44_QA===true))return {skipped:'local_qa'};if(!user?.uid&&window.__employeeCustomerView)return {skipped:'employee_view'};if(!user?.uid&&!currentGuestName())return {skipped:'guest_name_pending'};const identity=customerIdentity(user),device=customerDeviceInfo(),resolved=profile||currentQuickCustomerProfile()||{};",
       "  try{const key='batco_customer_session_started_'+identity.key+'_'+customerSessionId,first=!sessionStorage.getItem(key),payload={customerUid:identity.customerUid,visitorId:identity.visitorId,identityType:identity.identityType,sessionId:customerSessionId,name:String(resolved.name||currentGuestName()).trim(),company:resolved.company||'',phone:'',event,lastActive:firebase.firestore.FieldValue.serverTimestamp(),device,userAgent:device.userAgent||'',platform:device.platform||''};if(first){payload.startedAt=firebase.firestore.FieldValue.serverTimestamp();sessionStorage.setItem(key,'1')}await db.collection(CUSTOMER_SESSION_COLLECTION).doc(`${identity.key}_${customerSessionId}`).set(payload,{merge:true});return {session:true}}catch(e){console.warn('[Customer session]',e?.message||e);return {session:false}}",
       "}",""
     ].join('\n');
@@ -227,6 +229,7 @@
 
     if(!html.includes('cart-image-gallery')||!html.includes('عرض صور الأصناف')||!html.includes("nav.length===3?'grid-cols-3'")||!html.includes('CUSTOMER_DEVICE_ACCOUNT_LINK_KEY')||!html.includes('persistCustomerDeviceAccountLink(next)')||!html.includes('deviceAccount:')||!html.includes("String(guestName||safeProfile.name||'').trim()&&!showGuestNamePrompt&&<InstallNudge/>"))throw new Error('V43_OUTPUT_CHECK');
     if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt')||!html.includes('handoffEmployeeCustomerCart(cartItems,branches)')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('نقل ومتابعة الاعتماد')||!html.includes('setShowGuestNamePrompt(true),5000')||!html.includes("skipped:'guest_name_pending'")||!html.includes('سجل اسمك للمتابعة'))throw new Error('V41_CUSTOMER_OUTPUT_CHECK');
+    html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V41 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
