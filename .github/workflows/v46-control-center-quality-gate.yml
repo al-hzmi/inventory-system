@@ -1,0 +1,107 @@
+name: V46 Control Center Quality Gate
+on:
+  push:
+    branches: [feature/v46-control-center]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  v46:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Static V46 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          required=['control-center.html','v46-admin-nav.js','admin-dashboard.html','command-center.html','v44-observability.js']
+          miss=[x for x in required if not Path(x).exists()]
+          if miss: raise SystemExit('MISSING '+','.join(miss))
+          cc=Path('control-center.html').read_text()
+          nav=Path('v46-admin-nav.js').read_text()
+          obs=Path('v44-observability.js').read_text()
+          checks={
+            'admin guard': "location.replace('./index.html?employee=1')" in cc,
+            'permission source': "doc('permissions_v44')" in cc and "doc('permissions_v44')" in obs,
+            'employee defaults': 'employeeDefaults' in cc and 'employeeOverrides' in cc,
+            'customer defaults': 'customerDefaults' in cc and 'customerOverrides' in cc,
+            'inherit allow deny': all(x in cc for x in ['وراثة','سماح','منع']),
+            'templates': all(x in cc for x in ['مبيعات','مستودع','استعراض فقط','تصفح فقط']),
+            '360 profiles': 'ملفات 360°' in cc and 'v44_live_carts' in cc and 'v44_activity_logs' in cc,
+            'sessions devices': 'site_sessions' in cc and 'customer_sessions' in cc and 'customer_devices' in cc,
+            'messages': 'employee_notifications' in cc,
+            'feature controls': all(x in cc for x in ['employee_site_access','customer_portal','stocktake_feature']),
+            'danger confirmation': "confirm('هذا الإجراء سيوقف الميزة" in cc,
+            'audit': 'security_admin_logs' in cc and 'control_center_v46' in cc,
+            'qa isolation': 'QA_RE' in cc,
+            'runtime enforcement retained': 'applyPermissionDom' in obs and 'effective[permission]===false' in obs,
+            'nav link': 'v46-control-tab' in nav and 'control-center.html' in nav,
+            'admin injected': 'v46-admin-nav.js?v=46.0' in Path('admin-dashboard.html').read_text(),
+            'command injected': 'v46-admin-nav.js?v=46.0' in Path('command-center.html').read_text(),
+            'employee wrapper untouched': 'v46-admin-nav.js?v=46.0' not in Path('index.html').read_text(),
+            'customer wrapper untouched': 'v46-admin-nav.js?v=46.0' not in Path('customer.html').read_text(),
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V46_STATIC_FAIL '+', '.join(bad))
+          print('V46_STATIC_PASS',len(checks))
+          PY
+      - name: Parse V46 scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v46-admin-nav.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('control-center.html').read_text()
+          blocks=list(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I))
+          code='\n'.join(m.group(2) for m in blocks if m.group(2).strip() and 'src=' not in m.group(1))
+          Path('v46-inline-check.js').write_text(code)
+          PY
+          node --check v46-inline-check.js
+          rm -f v46-inline-check.js
+      - name: Browser desktop and mobile regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v46-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f v46-test.mjs' EXIT
+          cat > v46-test.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const b=await chromium.launch({headless:true});let fail=false;
+          async function pageAt(width,height,path){
+            const c=await b.newContext({viewport:{width,height}});
+            await c.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
+            const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(String(e)));
+            await p.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(4500);
+            return {c,p,errors};
+          }
+          try{
+            let {c,p,errors}=await pageAt(1440,900,'control-center.html?qa=1');
+            const tabs=await p.locator('[data-tab]').count();
+            const title=await p.locator('text=مركز التحكم').count();
+            const width=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+            console.log('control desktop',tabs,title,width,errors.slice(0,3));
+            if(tabs<5||!title||width.sw>width.cw+3||errors.length)fail=true;
+            for(const tab of ['permissions','profiles','features','audit']){await p.locator(`[data-tab="${tab}"]`).click();await p.waitForTimeout(120);}
+            await c.close();
+            ({c,p,errors}=await pageAt(390,844,'control-center.html?qa=1'));
+            const mobile=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+            console.log('control mobile',mobile,errors.slice(0,3));if(mobile.sw>mobile.cw+3||errors.length)fail=true;await c.close();
+            ({c,p,errors}=await pageAt(1440,900,'admin-dashboard.html?qa=1'));
+            const adminLink=await p.locator('#v46-control-tab').count();console.log('admin link',adminLink,errors.slice(0,3));if(!adminLink)fail=true;await c.close();
+            ({c,p,errors}=await pageAt(1440,900,'command-center.html?qa=1'));
+            const commandLink=await p.locator('#v46-control-tab').count();const w2=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));console.log('command link',commandLink,w2,errors.slice(0,3));if(!commandLink||w2.sw>w2.cw+3)fail=true;await c.close();
+          }catch(e){console.error(e);fail=true}
+          await b.close();if(fail)process.exit(1);
+          JS
+          node v46-test.mjs
