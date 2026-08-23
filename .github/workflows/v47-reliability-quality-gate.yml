@@ -1,0 +1,82 @@
+name: V47 Reliability Intelligence Quality Gate
+on:
+  push:
+    branches: [feature/v47-reliability-intelligence]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  v47:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Static V47 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          required=['health-center.html','v47-admin-nav.js','admin-dashboard.html','command-center.html','control-center.html']
+          miss=[x for x in required if not Path(x).exists()]
+          if miss: raise SystemExit('MISSING '+','.join(miss))
+          h=Path('health-center.html').read_text(); nav=Path('v47-admin-nav.js').read_text()
+          checks={
+            'admin guard': "location.replace('./index.html?employee=1')" in h,
+            'critical route checks': all(x in h for x in ['index.html','customer.html','admin-dashboard.html','control-center.html','stocktake.html']),
+            'firebase health': "doc('customer_portal').get()" in h,
+            'inventory data': all(x in h for x in ['data/jeddah.tsv','data/riyadh.tsv','data/pricing.tsv','data/images_list.txt','data/categories.tsv','data/version.json']),
+            'data validation': all(x in h for x in ['missingPrice','missingImage','missingPack','badQty','duplicates']),
+            'zero-result intelligence': 'resultsCount' in h and 'بحث بدون نتائج' in h,
+            'abandoned carts': 'v44_live_carts' in h and 'سلال غير مكتملة' in h,
+            'stocktake exceptions': 'stocktake_items' in h and 'فروقات الجرد' in h,
+            'exception management': 'يحتاج انتباهك' in h and 'buildAlerts' in h,
+            'qa isolation': 'QA_RE' in h,
+            'admin nav': 'v47-health-tab' in nav and 'health-center.html' in nav,
+          }
+          for f in ['admin-dashboard.html','command-center.html','control-center.html']:
+            checks['injected '+f]='v47-admin-nav.js?v=47.0' in Path(f).read_text()
+          checks['employee wrapper untouched']='v47-admin-nav.js?v=47.0' not in Path('index.html').read_text()
+          checks['customer wrapper untouched']='v47-admin-nav.js?v=47.0' not in Path('customer.html').read_text()
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V47_STATIC_FAIL '+', '.join(bad))
+          print('V47_STATIC_PASS',len(checks))
+          PY
+      - name: Parse V47 scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v47-admin-nav.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('health-center.html').read_text();blocks=list(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I))
+          code='\n'.join(m.group(2) for m in blocks if m.group(2).strip() and 'src=' not in m.group(1));Path('v47-inline-check.js').write_text(code)
+          PY
+          node --check v47-inline-check.js
+          rm -f v47-inline-check.js
+      - name: Browser health and navigation regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v47-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f v47-test.mjs' EXIT
+          cat > v47-test.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const b=await chromium.launch({headless:true});let fail=false;
+          async function pageAt(width,height,path){const c=await b.newContext({viewport:{width,height}});await c.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(String(e)));await p.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(6000);return {c,p,errors}}
+          try{
+            let {c,p,errors}=await pageAt(1440,900,'health-center.html?qa=1');
+            const tabs=await p.locator('[data-tab]').count(), title=await p.locator('text=صحة النظام').count();const width=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));const body=await p.locator('body').innerText();console.log('health desktop',tabs,title,width,errors.slice(0,3));if(tabs<4||!title||width.sw>width.cw+3||errors.length||!body.includes('المسارات الأساسية'))fail=true;
+            for(const tab of ['data','alerts','search']){await p.locator(`[data-tab="${tab}"]`).click();await p.waitForTimeout(120)}await c.close();
+            ({c,p,errors}=await pageAt(390,844,'health-center.html?qa=1'));const mobile=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));console.log('health mobile',mobile,errors.slice(0,3));if(mobile.sw>mobile.cw+3||errors.length)fail=true;await c.close();
+            for(const path of ['admin-dashboard.html?qa=1','command-center.html?qa=1','control-center.html?qa=1']){({c,p,errors}=await pageAt(1440,900,path));const link=await p.locator('#v47-health-tab').count();console.log(path,link,errors.slice(0,2));if(!link)fail=true;await c.close()}
+          }catch(e){console.error(e);fail=true}await b.close();if(fail)process.exit(1);
+          JS
+          node v47-test.mjs
