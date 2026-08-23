@@ -229,7 +229,8 @@
 
     if(!html.includes('cart-image-gallery')||!html.includes('عرض صور الأصناف')||!html.includes("nav.length===3?'grid-cols-3'")||!html.includes('CUSTOMER_DEVICE_ACCOUNT_LINK_KEY')||!html.includes('persistCustomerDeviceAccountLink(next)')||!html.includes('deviceAccount:')||!html.includes("String(guestName||safeProfile.name||'').trim()&&!showGuestNamePrompt&&<InstallNudge/>"))throw new Error('V43_OUTPUT_CHECK');
     if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt')||!html.includes('handoffEmployeeCustomerCart(cartItems,branches)')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('نقل ومتابعة الاعتماد')||!html.includes('setShowGuestNamePrompt(true),5000')||!html.includes("skipped:'guest_name_pending'")||!html.includes('سجل اسمك للمتابعة'))throw new Error('V41_CUSTOMER_OUTPUT_CHECK');
-    html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt></body>');
+    html=html.replace('<script src="./v45-admin-ux.js?v=45.0"></script>
+</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V41 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
