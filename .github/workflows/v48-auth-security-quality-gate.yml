@@ -24,6 +24,7 @@ jobs:
           set -euo pipefail
           node --check v48-auth-security.js
           node --check v48-admin-security.js
+          node --check v46-admin-nav.js
           python -m py_compile tools/patch_v48_auth_security.py
           python3 - <<'PY'
           from pathlib import Path
@@ -34,7 +35,7 @@ jobs:
           checks={
             'employee runtime injected': all('v48-auth-security.js?v=48.0' in files[p] for p in ['index.html','customer.html']),
             'admin runtime injected': all('v48-admin-security.js?v=48.0' in files[p] for p in ['admin-dashboard.html','control-center.html','command-center.html']),
-            'trusted device recovery': all(x in auth for x in ['trustedRecoveryDevices','deviceSecret(false)','DEVICE_NOT_TRUSTED','same device' if False else 'الاستعادة متاحة فقط من نفس الجهاز']),
+            'trusted device recovery': all(x in auth for x in ['trustedRecoveryDevices','deviceSecret(false)','DEVICE_NOT_TRUSTED','الاستعادة متاحة فقط من نفس الجهاز']),
             'no weak fingerprint recovery': 'trustedRecord(account,hash)' in auth and "deviceHash(false)" in auth,
             'forced reauth': all(x in auth for x in ['forceReauthEpoch','inventory_v48_pending_reauth_','softLogout','reauthDecision']),
             'soft logout preserves local data': 'localStorage.clear' not in auth and "b2b_cart_" not in auth,
@@ -44,6 +45,7 @@ jobs:
             'multi employee selection': all(x in adm for x in ['selected=new Set()','تحديد الظاهر','forceSelected','تم تحديد']),
             'admin audit': 'force_employee_reauth_v48' in adm and 'security_admin_logs' in adm,
             'admin self protected': "norm(x.canonicalName||x.name||'')!=='مهند'" in adm,
+            'late admin session resilient': "if(!isAdmin()){if(existing)existing.remove();return}" in adm and 'refresh:securityButton' in adm,
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V48_STATIC_FAIL '+', '.join(bad))
@@ -70,28 +72,35 @@ jobs:
           try{
             const c=await b.newContext({viewport:{width:390,height:844}});
             const p=await c.newPage();
+            const employeeErrors=[];p.on('pageerror',e=>employeeErrors.push(String(e)));
             await p.route('**/index.html?qa=1',r=>r.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="ar" dir="rtl"><head></head><body><form><h2>موظف تجريبي</h2><p>دخلت باسم: موظف تجريبي</p><input type="password" autocomplete="current-password"><button type="submit">دخول</button><button type="button">استخدام اسم آخر</button></form></body></html>'}));
             await p.goto('http://127.0.0.1:4173/index.html?qa=1');
             await p.addScriptTag({url:'http://127.0.0.1:4173/v48-auth-security.js'});
-            await p.waitForTimeout(350);
+            await p.waitForTimeout(500);
             const forgot=await p.locator('#v48-forgot-button').count();
-            const decisions=await p.evaluate(()=>[window.__V48_AUTH_SECURITY.reauthDecision(100,0,0),window.__V48_AUTH_SECURITY.reauthDecision(100,0,100),window.__V48_AUTH_SECURITY.reauthDecision(100,100,0)]);
+            const state=await p.evaluate(()=>({
+              decisions:[window.__V48_AUTH_SECURITY.reauthDecision(100,0,0),window.__V48_AUTH_SECURITY.reauthDecision(100,0,100),window.__V48_AUTH_SECURITY.reauthDecision(100,100,0)],
+              trusted:Boolean(window.__V48_AUTH_SECURITY.trustedRecord({trustedRecoveryDevices:{abc:{enabled:true}}},'abc')),
+              blocked:window.__V48_AUTH_SECURITY.trustedRecord({trustedRecoveryDevices:{abc:{enabled:false}}},'abc')===null
+            }));
             const w=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
-            console.log('employee security',forgot,decisions,w);
-            if(forgot!==1||decisions.join(',')!=='force,complete,none'||w.sw>w.cw+3)failed=true;
+            console.log('employee security',forgot,state,w,employeeErrors);
+            if(forgot!==1||state.decisions.join(',')!=='force,complete,none'||!state.trusted||!state.blocked||w.sw>w.cw+3||employeeErrors.length)failed=true;
             await c.close();
 
             const a=await b.newContext({viewport:{width:1440,height:900}});
-            await a.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
-            const ap=await a.newPage();
+            const ap=await a.newPage();const adminErrors=[];ap.on('pageerror',e=>adminErrors.push(String(e)));
             await ap.route('**/control-center.html?qa=1',r=>r.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="ar" dir="rtl"><head></head><body><div class="topin"><b>مركز التحكم</b></div></body></html>'}));
             await ap.goto('http://127.0.0.1:4173/control-center.html?qa=1');
+            await ap.evaluate(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
             await ap.addScriptTag({url:'http://127.0.0.1:4173/v48-admin-security.js'});
-            await ap.waitForTimeout(350);
+            await ap.waitForFunction(()=>Boolean(window.__V48_ADMIN_SECURITY),null,{timeout:5000});
+            await ap.evaluate(()=>window.__V48_ADMIN_SECURITY.refresh());
+            await ap.waitForTimeout(250);
             const btn=await ap.locator('#v48-security-btn').count();
             const aw=await ap.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
-            console.log('admin security',btn,aw);
-            if(btn!==1||aw.sw>aw.cw+3)failed=true;
+            console.log('admin security',btn,aw,adminErrors);
+            if(btn!==1||aw.sw>aw.cw+3||adminErrors.length)failed=true;
             await a.close();
           }catch(e){console.error(e);failed=true}
           await b.close();if(failed)process.exit(1);
