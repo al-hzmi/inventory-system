@@ -1,0 +1,45 @@
+name: Apply V47 Reliability Navigation
+on:
+  push:
+    branches: [feature/v47-reliability-intelligence]
+    paths:
+      - tools/patch_v47_reliability.py
+      - v47-admin-nav.js
+      - .github/workflows/apply-v47-reliability.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/v47-reliability-intelligence
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V47 admin-only injection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/patch_v47_reliability.py
+          python tools/patch_v47_reliability.py
+          for f in admin-dashboard.html command-center.html control-center.html; do grep -q 'v47-admin-nav.js?v=47.0' "$f"; done
+          if grep -q 'v47-admin-nav.js?v=47.0' index.html customer.html; then
+            echo 'V47 must not touch employee/customer bootstrap wrappers'
+            exit 1
+          fi
+      - name: Commit generated admin files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- admin-dashboard.html command-center.html control-center.html; then echo 'already applied'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-dashboard.html command-center.html control-center.html
+          git commit -m 'V47: expose system health center in admin navigation'
+          git push origin HEAD:feature/v47-reliability-intelligence
