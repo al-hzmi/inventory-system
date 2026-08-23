@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# V44 detailed activity patch: keep category and button interactions visible in the command center.
 p=Path('v44-observability.js')
 s=p.read_text()
 start=s.index("document.addEventListener('click',e=>{")
