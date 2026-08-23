@@ -89,18 +89,15 @@ jobs:
             await c.close();
 
             const a=await b.newContext({viewport:{width:1440,height:900}});
+            await a.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
             const ap=await a.newPage();const adminErrors=[];ap.on('pageerror',e=>adminErrors.push(String(e)));
-            await ap.route('**/control-center.html?qa=1',r=>r.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="ar" dir="rtl"><head></head><body><div class="topin"><b>مركز التحكم</b></div></body></html>'}));
-            await ap.goto('http://127.0.0.1:4173/control-center.html?qa=1');
-            await ap.evaluate(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
-            await ap.addScriptTag({url:'http://127.0.0.1:4173/v48-admin-security.js'});
-            await ap.waitForFunction(()=>Boolean(window.__V48_ADMIN_SECURITY),null,{timeout:5000});
-            await ap.evaluate(()=>window.__V48_ADMIN_SECURITY.refresh());
-            await ap.waitForTimeout(250);
+            await ap.goto('http://127.0.0.1:4173/control-center.html?qa=1',{waitUntil:'domcontentloaded',timeout:30000});
+            await ap.waitForTimeout(4500);
             const btn=await ap.locator('#v48-security-btn').count();
-            const aw=await ap.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
-            console.log('admin security',btn,aw,adminErrors);
-            if(btn!==1||aw.sw>aw.cw+3||adminErrors.length)failed=true;
+            const title=await ap.locator('text=مركز التحكم').count();
+            const aw=await ap.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,hasApi:Boolean(window.__V48_ADMIN_SECURITY)}));
+            console.log('admin security real page',btn,title,aw,adminErrors.slice(0,3));
+            if(btn!==1||!title||!aw.hasApi||aw.sw>aw.cw+3||adminErrors.length)failed=true;
             await a.close();
           }catch(e){console.error(e);failed=true}
           await b.close();if(failed)process.exit(1);
