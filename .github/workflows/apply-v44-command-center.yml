@@ -2,10 +2,6 @@ name: Apply V44 Command Center
 on:
   push:
     branches: [feature/command-center-v44]
-    paths:
-      - tools/patch_v44_command_center.py
-      - tools/patch_v44_activity_detail.py
-      - .github/workflows/apply-v44-command-center.yml
   workflow_dispatch:
 permissions:
   contents: write
