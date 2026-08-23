@@ -1,0 +1,48 @@
+name: Apply V46 Control Center
+on:
+  push:
+    branches: [feature/v46-control-center]
+    paths:
+      - tools/patch_v46_control_center.py
+      - v46-admin-nav.js
+      - .github/workflows/apply-v46-control-center.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/v46-control-center
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V46 admin-only injection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/patch_v46_control_center.py
+          python tools/patch_v46_control_center.py
+          for f in admin-dashboard.html command-center.html; do grep -q 'v46-admin-nav.js?v=46.0' "$f"; done
+          if grep -q 'v46-admin-nav.js?v=46.0' index.html customer.html; then
+            echo 'V46 must not be injected into employee/customer bootstrap wrappers'
+            exit 1
+          fi
+      - name: Commit generated admin files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- admin-dashboard.html command-center.html; then
+            echo 'already applied'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-dashboard.html command-center.html
+          git commit -m 'V46: expose control center in admin navigation'
+          git push origin HEAD:feature/v46-control-center
