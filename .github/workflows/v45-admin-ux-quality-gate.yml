@@ -1,0 +1,74 @@
+name: V45 Admin UX Quality Gate
+on:
+  push:
+    branches: [feature/v45-admin-ux]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  v45:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Static V45 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          required=['v45-admin-ux.js','index.html','customer.html','admin-dashboard.html','command-center.html']
+          miss=[x for x in required if not Path(x).exists()]
+          if miss: raise SystemExit('MISSING '+','.join(miss))
+          js=Path('v45-admin-ux.js').read_text(); idx=Path('index.html').read_text(); cust=Path('customer.html').read_text(); adm=Path('admin-dashboard.html').read_text(); cmd=Path('command-center.html').read_text()
+          checks={
+            'command launcher': "id='v45-command-tab'" in js or "id=\"v45-command-tab\"" in js,
+            'sent message history': 'employee_notifications' in js and 'الرسائل المرسلة للموظفين' in js,
+            'message delivery state': 'shownCount' in js and 'maxShows' in js and 'scheduledAt' in js,
+            'desktop tab grid': 'v45-desktop-tabs' in js and 'v45-command-tabs' in js,
+            'desktop horizontal support': 'enableDesktopHorizontal' in js and "addEventListener('wheel'" in js,
+            'qa filter retained': 'QA_RE' in js,
+            'admin injection':'v45-admin-ux.js?v=45.0' in adm,
+            'command injection':'v45-admin-ux.js?v=45.0' in cmd,
+            'employee wrapper untouched':'v45-admin-ux.js?v=45.0' not in idx,
+            'customer wrapper untouched':'v45-admin-ux.js?v=45.0' not in cust,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V45_STATIC_FAIL '+', '.join(bad))
+          print('V45_STATIC_PASS',len(checks))
+          PY
+      - name: Parse V45 script
+        run: node --check v45-admin-ux.js
+      - name: Browser desktop and mobile regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v45-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
+          cat > .v45.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const b=await chromium.launch({headless:true});let fail=false;
+          async function pageAt(width,height,path){const c=await b.newContext({viewport:{width,height}});await c.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(String(e)));await p.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(5000);return {c,p,errors}}
+          try{
+            let {c,p,errors}=await pageAt(1440,900,'admin-dashboard.html?qa=1');
+            const command=await p.locator('#v45-command-tab').count(),messages=await p.locator('#v45-messages-tab').count();
+            const bodyWidth=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+            console.log('admin desktop',command,messages,bodyWidth,errors.slice(0,3));
+            if(!command||!messages||bodyWidth.sw>bodyWidth.cw+3)fail=true;
+            if(messages){await p.locator('#v45-messages-tab').click();await p.waitForTimeout(250);if(!(await p.locator('#v45-msg-bg.on').count()))fail=true;await p.locator('#v45-msg-close').click()}
+            await c.close();
+            ({c,p,errors}=await pageAt(1440,900,'command-center.html?qa=1'));
+            const cmdMessages=await p.locator('#v45-messages-tab').count();const tabsStyle=await p.locator('.tabs').evaluate(el=>({display:getComputedStyle(el).display,sw:el.scrollWidth,cw:el.clientWidth})).catch(()=>({}));const pageWidth=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+            console.log('command desktop',cmdMessages,tabsStyle,pageWidth,errors.slice(0,3));
+            if(!cmdMessages||tabsStyle.display!=='grid'||pageWidth.sw>pageWidth.cw+3)fail=true;await c.close();
+            ({c,p,errors}=await pageAt(390,844,'command-center.html?qa=1'));const mobileWidth=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));console.log('command mobile',mobileWidth,errors.slice(0,3));if(mobileWidth.sw>mobileWidth.cw+3)fail=true;await c.close();
+          }catch(e){console.error(e);fail=true}
+          await b.close();if(fail)process.exit(1);
+          JS
+          node ./.v45.mjs
