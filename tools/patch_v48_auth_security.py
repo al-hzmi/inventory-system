@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# V48 generated-file patcher. Kept idempotent so CI can verify it safely.
 EMPLOYEE_FILES = [Path('index.html'), Path('customer.html')]
 ADMIN_FILES = [Path('admin-dashboard.html'), Path('control-center.html'), Path('command-center.html')]
 
