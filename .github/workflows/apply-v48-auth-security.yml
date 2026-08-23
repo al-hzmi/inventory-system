@@ -1,0 +1,47 @@
+name: Apply V48 Auth Security
+on:
+  push:
+    branches: [feature/v48-auth-security]
+    paths:
+      - tools/patch_v48_auth_security.py
+      - v48-auth-security.js
+      - v48-admin-security.js
+      - .github/workflows/apply-v48-auth-security.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/v48-auth-security
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V48 security injection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/patch_v48_auth_security.py
+          python tools/patch_v48_auth_security.py
+          grep -q 'v48-auth-security.js?v=48.0' index.html
+          grep -q 'v48-auth-security.js?v=48.0' customer.html
+          for f in admin-dashboard.html control-center.html command-center.html; do grep -q 'v48-admin-security.js?v=48.0' "$f"; done
+      - name: Commit generated files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- index.html customer.html admin-dashboard.html control-center.html command-center.html; then
+            echo 'already applied'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html customer.html admin-dashboard.html control-center.html command-center.html
+          git commit -m 'V48: inject employee and admin auth security runtime'
+          git push origin HEAD:feature/v48-auth-security
