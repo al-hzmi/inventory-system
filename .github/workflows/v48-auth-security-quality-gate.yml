@@ -1,0 +1,99 @@
+name: V48 Auth Security Quality Gate
+on:
+  push:
+    branches: [feature/v48-auth-security]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  v48:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: V48 static security invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v48-auth-security.js
+          node --check v48-admin-security.js
+          python -m py_compile tools/patch_v48_auth_security.py
+          python3 - <<'PY'
+          from pathlib import Path
+          auth=Path('v48-auth-security.js').read_text()
+          adm=Path('v48-admin-security.js').read_text()
+          core=Path('runtime/index-v37-source.txt').read_text()
+          files={p:Path(p).read_text() for p in ['index.html','customer.html','admin-dashboard.html','control-center.html','command-center.html']}
+          checks={
+            'employee runtime injected': all('v48-auth-security.js?v=48.0' in files[p] for p in ['index.html','customer.html']),
+            'admin runtime injected': all('v48-admin-security.js?v=48.0' in files[p] for p in ['admin-dashboard.html','control-center.html','command-center.html']),
+            'trusted device recovery': all(x in auth for x in ['trustedRecoveryDevices','deviceSecret(false)','DEVICE_NOT_TRUSTED','same device' if False else 'الاستعادة متاحة فقط من نفس الجهاز']),
+            'no weak fingerprint recovery': 'trustedRecord(account,hash)' in auth and "deviceHash(false)" in auth,
+            'forced reauth': all(x in auth for x in ['forceReauthEpoch','inventory_v48_pending_reauth_','softLogout','reauthDecision']),
+            'soft logout preserves local data': 'localStorage.clear' not in auth and "b2b_cart_" not in auth,
+            'forgot password ui': 'هل نسيت رمز الدخول؟' in auth and 'تحديث الرمز' in auth,
+            'password reset requires photo': 'passwordResetRequiresPhoto:true' in auth and 'passwordResetPhotoCompletedAt' in auth,
+            'existing face login retained': "verificationType: 'login_face_presence'" in core and 'employee_security_photos' in core,
+            'multi employee selection': all(x in adm for x in ['selected=new Set()','تحديد الظاهر','forceSelected','تم تحديد']),
+            'admin audit': 'force_employee_reauth_v48' in adm and 'security_admin_logs' in adm,
+            'admin self protected': "norm(x.canonicalName||x.name||'')!=='مهند'" in adm,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V48_STATIC_FAIL '+', '.join(bad))
+          print('V48_STATIC_PASS',len(checks))
+          PY
+      - name: V48 patch idempotence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/patch_v48_auth_security.py
+          git diff --exit-code -- index.html customer.html admin-dashboard.html control-center.html command-center.html
+      - name: Browser security UI and state-machine checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v48-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f v48-test.mjs' EXIT
+          cat > v48-test.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const b=await chromium.launch({headless:true});
+          let failed=false;
+          try{
+            const c=await b.newContext({viewport:{width:390,height:844}});
+            const p=await c.newPage();
+            await p.route('**/index.html?qa=1',r=>r.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="ar" dir="rtl"><head></head><body><form><h2>موظف تجريبي</h2><p>دخلت باسم: موظف تجريبي</p><input type="password" autocomplete="current-password"><button type="submit">دخول</button><button type="button">استخدام اسم آخر</button></form></body></html>'}));
+            await p.goto('http://127.0.0.1:4173/index.html?qa=1');
+            await p.addScriptTag({url:'http://127.0.0.1:4173/v48-auth-security.js'});
+            await p.waitForTimeout(350);
+            const forgot=await p.locator('#v48-forgot-button').count();
+            const decisions=await p.evaluate(()=>[window.__V48_AUTH_SECURITY.reauthDecision(100,0,0),window.__V48_AUTH_SECURITY.reauthDecision(100,0,100),window.__V48_AUTH_SECURITY.reauthDecision(100,100,0)]);
+            const w=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+            console.log('employee security',forgot,decisions,w);
+            if(forgot!==1||decisions.join(',')!=='force,complete,none'||w.sw>w.cw+3)failed=true;
+            await c.close();
+
+            const a=await b.newContext({viewport:{width:1440,height:900}});
+            await a.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
+            const ap=await a.newPage();
+            await ap.route('**/control-center.html?qa=1',r=>r.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="ar" dir="rtl"><head></head><body><div class="topin"><b>مركز التحكم</b></div></body></html>'}));
+            await ap.goto('http://127.0.0.1:4173/control-center.html?qa=1');
+            await ap.addScriptTag({url:'http://127.0.0.1:4173/v48-admin-security.js'});
+            await ap.waitForTimeout(350);
+            const btn=await ap.locator('#v48-security-btn').count();
+            const aw=await ap.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+            console.log('admin security',btn,aw);
+            if(btn!==1||aw.sw>aw.cw+3)failed=true;
+            await a.close();
+          }catch(e){console.error(e);failed=true}
+          await b.close();if(failed)process.exit(1);
+          JS
+          node v48-test.mjs
