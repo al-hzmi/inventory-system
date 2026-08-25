@@ -21,7 +21,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          required=['v45-admin-ux.js','v46-admin-nav.js','index.html','customer.html','admin-dashboard.html','command-center.html']
+          required=['v45-admin-ux.js','v46-admin-nav.js','index.html','customer.html','admin-dashboard.html','command-center.html','admin-home.html']
           miss=[x for x in required if not Path(x).exists()]
           if miss: raise SystemExit('MISSING '+','.join(miss))
           js=Path('v45-admin-ux.js').read_text(); nav=Path('v46-admin-nav.js').read_text(); idx=Path('index.html').read_text(); cust=Path('customer.html').read_text(); adm=Path('admin-dashboard.html').read_text()
@@ -29,8 +29,8 @@ jobs:
             'legacy launchers retired': 'legacyLaunchers:false' in js and 'removeLegacyLaunchers' in js,
             'legacy messages listener retired': 'employee_notifications' not in js,
             'desktop horizontal support': 'enableDesktopHorizontal' in js and "addEventListener('wheel'" in js,
-            'unified shell': 'v51-admin-shell' in nav and "VERSION='51." in nav,
-            'legacy command redirect': "path==='command-center.html'" in nav and 'location.replace' in nav,
+            'unified shell': 'v51-admin-shell' in nav and 'v52-sidebar' in nav,
+            'legacy command redirect': "path==='command-center.html'" in nav and 'admin-home.html' in nav,
             'admin V45 injection retained':'v45-admin-ux.js?v=45.0' in adm,
             'employee wrapper untouched':'v45-admin-ux.js?v=45.0' not in idx,
             'customer wrapper untouched':'v45-admin-ux.js?v=45.0' not in cust,
@@ -68,7 +68,7 @@ jobs:
             }
             let {c,p,errors}=await pageAt(1440,900,'command-center.html?qa=1');await p.waitForTimeout(700);
             const url=p.url(),shell=await p.locator('#v51-admin-shell').count();console.log('legacy command redirect',url,shell,errors.slice(0,3));
-            if(!url.includes('admin-dashboard.html')||shell!==1||errors.length)fail=true;await c.close();
+            if(!url.includes('admin-home.html')||shell!==1||errors.length)fail=true;await c.close();
           }catch(e){console.error(e);fail=true}
           await b.close();if(fail)process.exit(1);
           JS

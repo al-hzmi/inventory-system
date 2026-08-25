@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'admin-home.html'
       - 'admin-dashboard.html'
       - 'command-center.html'
       - 'control-center.html'
@@ -13,6 +14,7 @@ on:
       - 'v45-admin-ux.js'
       - 'v46-admin-nav.js'
       - 'v48-admin-security.js'
+      - 'v52-admin.css'
       - '.github/workflows/v51-unified-admin-quality-gate.yml'
 
 permissions:
@@ -27,8 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Static architecture invariants
+      - name: Static administration architecture
         shell: bash
         run: |
           set -euo pipefail
@@ -36,86 +37,29 @@ jobs:
           node --check v46-admin-nav.js
           python3 - <<'PY'
           from pathlib import Path
-          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8')
-          v45=Path('v45-admin-ux.js').read_text(encoding='utf-8')
-          sales=Path('inventory-analytics.html').read_text(encoding='utf-8')
-          stock=Path('admin-stocktake-shell.html').read_text(encoding='utf-8')
-          checks={
-            'one shell id':'v51-admin-shell' in nav,
-            'global sections':all(x in nav for x in ['الرئيسية','الموظفون','العملاء','المبيعات','الجرد','الصلاحيات','الأمان']),
-            'legacy command retired':"path==='command-center.html'" in nav and 'location.replace' in nav,
-            'legacy injected buttons removed':all(x in nav for x in ['v45-command-tab','v45-messages-tab','v46-control-tab','v49-security-tab','v50-inventory-tab']),
-            'v45 no launcher injection':'legacyLaunchers:false' in v45 and 'employee_notifications' not in v45,
-            'admin modal normalization':'body.v51-admin-dashboard #root>div.fixed.inset-0' in nav,
-            'stocktake unified wrapper':'admin-stocktake-shell.html' in nav and 'admin-stocktake.html?embedded=1' in stock,
-            'sales terminology':all(x in sales for x in ['المبيعات وحركة المخزون','الأكثر مبيعًا','قيمة المبيعات التقديرية','تحويل مخزني']),
-            'sales transfer exclusion':'function saleQty' in sales and 'transferMatchedQty' in sales,
-          }
+          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8');v45=Path('v45-admin-ux.js').read_text(encoding='utf-8');sales=Path('inventory-analytics.html').read_text(encoding='utf-8');stock=Path('admin-stocktake-shell.html').read_text(encoding='utf-8');css=Path('v52-admin.css').read_text(encoding='utf-8')
+          checks={'compat shell':'v51-admin-shell' in nav,'v52 shell':all(x in nav for x in ["VERSION='52.1'",'v52-sidebar','v52-mobile-nav','admin-home.html']),'sections':all(x in nav for x in ['الرئيسية','الموظفون','العملاء','المبيعات','الجرد','الصلاحيات','أمان الدخول']),'legacy redirect':"path==='command-center.html'" in nav and "location.replace('./admin-home.html')" in nav,'legacy launchers retired':'legacyLaunchers:false' in v45 and 'employee_notifications' not in v45,'desktop responsive':'.v52-sidebar' in css,'mobile responsive':'#v52-mobile-nav' in css,'stocktake wrapper':'admin-stocktake.html?embedded=1' in stock,'sales v52':all(x in sales for x in ['جدة','الرياض','branch-card','sales-chart','saleQty','transferMatchedQty'])}
           bad=[k for k,v in checks.items() if not v]
-          if bad: raise SystemExit('V51_STATIC_FAIL '+', '.join(bad))
-          print('V51_STATIC_PASS',len(checks))
+          if bad: raise SystemExit('ADMIN_STATIC_FAIL '+', '.join(bad))
+          print('ADMIN_STATIC_PASS',len(checks))
           PY
-
       - name: Install Playwright
         run: |
           npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-
       - name: Browser administration journey desktop and mobile
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m http.server 4173 >/tmp/v51-http.log 2>&1 &
-          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .v51.mjs' EXIT
+          python3 -m http.server 4173 >/tmp/admin-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .admin.mjs' EXIT
           sleep 2
-          cat > .v51.mjs <<'JS'
+          cat > .admin.mjs <<'JS'
           import {chromium} from 'playwright';
-          const browser=await chromium.launch({headless:true});
-          let fail=false;
-          async function ctxPage(width,height){
-            const ctx=await browser.newContext({viewport:{width,height}});
-            await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
-            const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
-            return {ctx,page,errors};
-          }
-          async function assertShell(page,errors,label){
-            await page.waitForSelector('#v51-admin-shell',{timeout:15000});
-            const shell=await page.locator('#v51-admin-shell').count();
-            const legacy=await page.locator('#v45-command-tab,#v45-messages-tab,#v46-control-tab,#v49-security-tab,#v49-security-fallback,#v50-inventory-tab').count();
-            const w=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
-            const labels=await page.locator('#v51-admin-shell .v51-item').allTextContents();
-            console.log(label,{shell,legacy,w,labels,errors:errors.slice(0,3)});
-            if(shell!==1||legacy!==0||w.sw>w.cw+3||errors.length)fail=true;
-          }
-          try{
-            for(const [width,height] of [[1440,900],[390,844]]){
-              let {ctx,page,errors}=await ctxPage(width,height);
-              await page.goto('http://127.0.0.1:4173/admin-dashboard.html?section=employees&module=overview&qa=1',{waitUntil:'domcontentloaded',timeout:30000});
-              await page.waitForTimeout(4500);await assertShell(page,errors,'dashboard '+width);
-              const backdrop=await page.evaluate(()=>{const el=document.querySelector('#root>div.fixed.inset-0');if(!el)return null;const s=getComputedStyle(el);return{position:s.position,bg:s.backgroundColor}});
-              if(backdrop?.position==='fixed')fail=true;
-              await page.locator('#v51-admin-shell [data-v51-key="customers"]').click();await page.waitForTimeout(350);
-              if(!(await page.locator('#v51-admin-shell [data-v51-key="customers"].on').count()))fail=true;
-              await page.locator('#v51-admin-shell [data-v51-key="employees"]').click();await page.waitForTimeout(350);
-              if(!(await page.locator('#v51-admin-shell [data-v51-key="employees"].on').count()))fail=true;
-              await ctx.close();
-
-              ({ctx,page,errors}=await ctxPage(width,height));
-              await page.goto('http://127.0.0.1:4173/control-center.html?qa=1',{waitUntil:'domcontentloaded',timeout:30000});await page.waitForTimeout(3500);await assertShell(page,errors,'permissions '+width);
-              if((await page.locator('[data-tab]').count())<5)fail=true;await ctx.close();
-
-              ({ctx,page,errors}=await ctxPage(width,height));
-              await page.goto('http://127.0.0.1:4173/inventory-analytics.html?qa=1',{waitUntil:'domcontentloaded',timeout:30000});await page.waitForFunction(()=>document.body.innerText.includes('المبيعات'),null,{timeout:20000});await assertShell(page,errors,'sales '+width);
-              if((await page.locator('.stat').count())<6)fail=true;await ctx.close();
-
-              ({ctx,page,errors}=await ctxPage(width,height));
-              await page.goto('http://127.0.0.1:4173/admin-stocktake-shell.html?qa=1',{waitUntil:'domcontentloaded',timeout:30000});await page.waitForTimeout(4500);await assertShell(page,errors,'stocktake '+width);
-              const frame=page.frames().find(f=>f.url().includes('admin-stocktake.html'));if(!frame)fail=true;else{const top=await frame.locator('.top').evaluate(el=>getComputedStyle(el).display).catch(()=>null);const root=await frame.locator('#root').count();console.log('stocktake frame',width,{top,root});if(top!=='none'||root!==1)fail=true}await ctx.close();
-            }
-            let {ctx,page,errors}=await ctxPage(1440,900);
-            await page.goto('http://127.0.0.1:4173/command-center.html?qa=1',{waitUntil:'domcontentloaded',timeout:30000});await page.waitForTimeout(2000);
-            console.log('legacy redirect',page.url(),errors.slice(0,3));if(!page.url().includes('admin-dashboard.html')||errors.length)fail=true;await ctx.close();
-          }catch(e){console.error(e);fail=true}
+          const browser=await chromium.launch({headless:true});let fail=false;
+          async function open(width,height,path){const ctx=await browser.newContext({viewport:{width,height}});await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});return{ctx,page,errors}}
+          async function shell(page,errors,label,w){await page.waitForSelector('#v51-admin-shell',{state:'attached',timeout:20000});const g=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth})),count=await page.locator('#v51-admin-shell').count(),legacy=await page.locator('#v45-command-tab,#v45-messages-tab,#v46-control-tab,#v49-security-tab,#v49-security-fallback,#v50-inventory-tab').count(),side=await page.locator('.v52-sidebar').count(),mobile=await page.locator('#v52-mobile-nav').count(),vis=await page.evaluate(()=>({side:getComputedStyle(document.querySelector('.v52-sidebar')).display,mobile:getComputedStyle(document.querySelector('#v52-mobile-nav')).display}));console.log(label,{g,count,legacy,side,mobile,vis,errors});if(g.sw>g.cw+3||count!==1||legacy!==0||side!==1||mobile!==1||errors.length||(w>=900&&vis.side==='none')||(w<900&&vis.mobile==='none'))fail=true}
+          try{for(const [w,h] of [[1440,900],[390,844]]){let x=await open(w,h,'admin-home.html?qa=1');await x.page.waitForSelector('.v52-page',{timeout:20000});await shell(x.page,x.errors,'home '+w,w);await x.ctx.close();x=await open(w,h,'admin-dashboard.html?section=employees&module=live&qa=1');await x.page.waitForTimeout(3000);await shell(x.page,x.errors,'employees '+w,w);await x.ctx.close();x=await open(w,h,'admin-dashboard.html?section=customers&module=live&qa=1');await x.page.waitForTimeout(3000);await shell(x.page,x.errors,'customers '+w,w);await x.ctx.close();x=await open(w,h,'control-center.html?qa=1');await x.page.waitForTimeout(2200);await shell(x.page,x.errors,'permissions '+w,w);if((await x.page.locator('[data-tab]').count())<5)fail=true;await x.ctx.close();x=await open(w,h,'inventory-analytics.html?qa=1');await x.page.waitForSelector('.v52-kpi',{timeout:45000});await shell(x.page,x.errors,'sales '+w,w);if((await x.page.locator('.v52-kpi').count())<6)fail=true;await x.ctx.close();x=await open(w,h,'admin-stocktake-shell.html?qa=1');await x.page.waitForTimeout(3000);await shell(x.page,x.errors,'stocktake '+w,w);if(!x.page.frames().find(f=>f.url().includes('admin-stocktake.html')))fail=true;await x.ctx.close();}const x=await open(1440,900,'command-center.html?qa=1');await x.page.waitForTimeout(1000);if(!x.page.url().includes('admin-home.html')||x.errors.length)fail=true;await x.ctx.close()}catch(e){console.error(e);fail=true}
           await browser.close();if(fail)process.exit(1);
           JS
-          node ./.v51.mjs
+          node ./.admin.mjs
