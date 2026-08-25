@@ -36,6 +36,7 @@ jobs:
           assert isinstance(d['events'],list) and d['events']
           assert all('summary' in e and 'changes' in e for e in d['events'])
           assert all(c['delta']!=0 for e in d['events'] for c in e['changes'])
+          assert all(float(t.get('quantityRatio',1))>=0.70 for t in d.get('transferCandidates',[]))
           print('events',d['eventCount'],'transfers',len(d['transferCandidates']))
           PY
 
@@ -55,8 +56,10 @@ jobs:
           PY
           node --check /tmp/v50-dashboard.js
 
-      - name: Install Chromium
-        run: npx -y playwright@1.55.0 install --with-deps chromium
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
 
       - name: Browser regression desktop and mobile
         run: |
@@ -64,7 +67,7 @@ jobs:
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
           sleep 2
-          npx -y -p playwright@1.55.0 node - <<'NODE'
+          node - <<'NODE'
           const {chromium}=require('playwright');
           (async()=>{
             const browser=await chromium.launch({headless:true});
