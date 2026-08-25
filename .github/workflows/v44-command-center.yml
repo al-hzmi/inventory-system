@@ -15,28 +15,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Static V44 invariants
+      - name: Static V44 compatibility invariants
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          required=['command-center.html','v44-observability.js','v44-admin-bridge.js','index.html','customer.html','admin-dashboard.html','security-center.html']
+          required=['command-center.html','v44-observability.js','v44-admin-bridge.js','v46-admin-nav.js','index.html','customer.html','admin-dashboard.html','security-center.html']
           miss=[x for x in required if not Path(x).exists()]
           if miss: raise SystemExit('missing '+','.join(miss))
-          idx=Path('index.html').read_text();cust=Path('customer.html').read_text();adm=Path('admin-dashboard.html').read_text();obs=Path('v44-observability.js').read_text();cmd=Path('command-center.html').read_text()
+          idx=Path('index.html').read_text();cust=Path('customer.html').read_text();adm=Path('admin-dashboard.html').read_text();obs=Path('v44-observability.js').read_text();bridge=Path('v44-admin-bridge.js').read_text();nav=Path('v46-admin-nav.js').read_text()
           checks={
             'employee qa bootstrap':'V44_QA_BOOTSTRAP' in idx and 'navigator.webdriver===true' in idx,
             'customer qa bootstrap':'V44_QA_BOOTSTRAP' in cust and 'navigator.webdriver===true' in cust,
             'employee observability':'v44-observability.js?v=44.0' in idx,
             'customer observability':'v44-observability.js?v=44.0' in cust,
-            'admin command bridge':'v44-admin-bridge.js?v=44.0' in adm,
+            'admin bridge retained':'v44-admin-bridge.js?v=44.0' in adm,
             'qa identity skip':'isQaIdentity(me.name)' in obs and "db.collection('v44_presence')" in obs,
             'live cart snapshot':"db.collection('v44_live_carts')" in obs and 'lastNonEmptyItems' in obs,
             'detailed activity':"db.collection('v44_activity_logs')" in obs and 'category_select' in obs and 'button_click' in obs,
-            'permissions runtime':"doc('permissions_v44')" in obs and 'employeeOverrides' in cmd and 'customerOverrides' in cmd,
-            'command center modules':all(x in cmd for x in ['الموظفون','العملاء','النشاط','البحث','السلال','الصلاحيات']),
-            'test filter':'اختبار تقني' in Path('v44-admin-bridge.js').read_text(),
+            'permissions runtime':"doc('permissions_v44')" in obs,
+            'legacy launcher removed':'commandLauncher:false' in bridge and 'removeLegacy' in bridge,
+            'qa filter retained':'اختبار تقني' in bridge,
+            'command route retired':"path==='command-center.html'" in nav and 'location.replace' in nav,
+            'unified admin shell':'v51-admin-shell' in nav,
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V44_STATIC_FAIL '+', '.join(bad))
@@ -48,6 +50,7 @@ jobs:
           set -euo pipefail
           node --check v44-observability.js
           node --check v44-admin-bridge.js
+          node --check v46-admin-nav.js
           node --check tests/v44-command-center.mjs
           npm init -y >/dev/null 2>&1
           npm install --no-save esbuild@0.25.9 >/dev/null 2>&1

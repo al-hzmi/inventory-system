@@ -1,0 +1,110 @@
+name: V50 Inventory Analytics Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'inventory-analytics.html'
+      - 'tools/inventory_analytics.py'
+      - 'data/inventory-analytics.json'
+      - 'v46-admin-nav.js'
+      - '.github/workflows/update-version.yml'
+      - '.github/workflows/v50-inventory-analytics-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inventory-analytics-v50:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Python syntax and analytics rebuild
+        run: |
+          python -m py_compile tools/inventory_analytics.py
+          python tools/inventory_analytics.py --repo . --output data/inventory-analytics.json --limit 250
+          python - <<'PY'
+          import json,os
+          d=json.load(open('data/inventory-analytics.json',encoding='utf-8'))
+          assert d['schema']==1
+          assert d['eventCount']>=1, 'No inventory history detected'
+          assert d['current']['jeddah']['skuCount']>0
+          assert d['current']['riyadh']['skuCount']>0
+          assert isinstance(d['events'],list) and d['events']
+          assert all('summary' in e and 'changes' in e for e in d['events'])
+          assert all(c['delta']!=0 for e in d['events'] for c in e['changes'])
+          assert all(float(t.get('quantityRatio',1))>=0.70 for t in d.get('transferCandidates',[]))
+          count=sum(len(e['changes']) for e in d['events'])
+          size=os.path.getsize('data/inventory-analytics.json')
+          print('events',d['eventCount'],'changes',count,'transfers',len(d['transferCandidates']),'bytes',size)
+          assert size < 25_000_000, f'Analytics payload too large: {size}'
+          PY
+
+      - name: JavaScript syntax and static invariants
+        run: |
+          node --check v46-admin-nav.js
+          python - <<'PY'
+          import re
+          s=open('inventory-analytics.html',encoding='utf-8').read()
+          blocks=re.findall(r'<script>(.*?)</script>',s,re.S|re.I)
+          assert blocks, 'No inline dashboard script'
+          open('/tmp/v50-dashboard.js','w',encoding='utf-8').write('\n'.join(blocks))
+          for marker in ['المبيعات وحركة المخزون','المبيعات','تحويل مخزني','سجل التحديثات','كل الفروقات','inventory-analytics.json','v46-admin-nav.js?v=51.0']:
+              assert marker in s, marker
+          nav=open('v46-admin-nav.js',encoding='utf-8').read()
+          assert 'v51-admin-shell' in nav and './inventory-analytics.html' in nav
+          assert 'command-center.html' in nav and 'location.replace' in nav
+          PY
+          node --check /tmp/v50-dashboard.js
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Browser regression desktop and mobile
+        run: |
+          python -m http.server 4173 >/tmp/v50-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          node - <<'NODE'
+          const fs=require('fs');
+          const {chromium}=require('playwright');
+          const html=fs.readFileSync('inventory-analytics.html','utf8');
+          const match=html.match(/const ADMIN_HASH='([^']+)'/);
+          if(!match)throw new Error('Admin test token marker missing');
+          const adminToken=match[1];
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            let failed=false;
+            for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
+              const ctx=await browser.newContext({viewport});
+              await ctx.addInitScript(token=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2',token)},adminToken);
+              const page=await ctx.newPage(),errors=[],failedReq=[];
+              page.on('pageerror',e=>errors.push(String(e)));
+              page.on('requestfailed',r=>failedReq.push(r.url()+': '+(r.failure()?.errorText||'')));
+              const started=Date.now();
+              await page.goto('http://127.0.0.1:4173/inventory-analytics.html',{waitUntil:'domcontentloaded',timeout:30000});
+              try{await page.waitForFunction(()=>document.body.innerText.includes('المبيعات'),null,{timeout:45000})}catch(e){
+                console.log('LOAD_DIAG',viewport,'ms',Date.now()-started,'errors',errors.slice(0,5),'failedReq',failedReq.slice(0,5),'body',(await page.locator('body').innerText()).slice(0,1200));
+                throw e;
+              }
+              const loadMs=Date.now()-started;
+              const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+              const stats=await page.locator('.stat').count();
+              const shell=await page.locator('#v51-admin-shell').count();
+              await page.getByRole('button',{name:'كل الفروقات'}).click();
+              const table=await page.locator('.table').count();
+              await page.getByRole('button',{name:'التحويلات'}).click();
+              const transferText=await page.locator('body').innerText();
+              console.log(viewport,{loadMs,overflow,stats,table,shell,errors:errors.slice(0,3)});
+              if(loadMs>12000||overflow>3||stats<6||table!==1||shell!==1||errors.length||!transferText.includes('تحويلات')) failed=true;
+              await ctx.close();
+            }
+            await browser.close();if(failed)process.exit(1);
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
