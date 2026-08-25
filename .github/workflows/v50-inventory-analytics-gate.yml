@@ -23,7 +23,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Python syntax and analytics rebuild
         run: |
           python -m py_compile tools/inventory_analytics.py
@@ -39,30 +38,22 @@ jobs:
           assert os.path.getsize('data/inventory-analytics.json') < 25_000_000
           print('V50_DATA_PASS',d['eventCount'],sum(len(e['changes']) for e in d['events']))
           PY
-
       - name: JavaScript syntax and V52 invariants
         run: |
           node --check v46-admin-nav.js
           python - <<'PY'
           import re
-          s=open('inventory-analytics.html',encoding='utf-8').read()
-          blocks=re.findall(r'<script>(.*?)</script>',s,re.S|re.I)
-          assert blocks
-          open('/tmp/v50-dashboard.js','w',encoding='utf-8').write('\n'.join(blocks))
-          for marker in ['المبيعات','جدة','الرياض','inventory-analytics.json','branch-card','sales-chart','transferMatchedQty','saleQty']:
-              assert marker in s, marker
+          s=open('inventory-analytics.html',encoding='utf-8').read();blocks=re.findall(r'<script>(.*?)</script>',s,re.S|re.I);assert blocks;open('/tmp/v50-dashboard.js','w',encoding='utf-8').write('\n'.join(blocks))
+          for marker in ['المبيعات','جدة','الرياض','inventory-analytics.json','branch-card','sales-chart','transferMatchedQty','saleQty']: assert marker in s, marker
           nav=open('v46-admin-nav.js',encoding='utf-8').read()
-          for marker in ["VERSION='52.1'",'v52-sidebar','v52-mobile-nav','./inventory-analytics.html','command-center.html','location.replace']:
-              assert marker in nav, marker
+          for marker in ["VERSION='52.1'",'v52-sidebar','v52-mobile-nav','./inventory-analytics.html','command-center.html','location.replace']: assert marker in nav, marker
           print('V50_STATIC_PASS')
           PY
           node --check /tmp/v50-dashboard.js
-
       - name: Install Playwright and Chromium
         run: |
           npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-
       - name: Browser regression desktop and mobile
         run: |
           python -m http.server 4173 >/tmp/v50-http.log 2>&1 &
@@ -80,7 +71,7 @@ jobs:
               const loadMs=Date.now()-started,overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth),kpis=await page.locator('.v52-kpi').count(),charts=await page.locator('.sales-chart svg').count(),branches=await page.locator('.branch-card').count(),shell=await page.locator('#v51-admin-shell').count();
               const text=await page.locator('body').innerText();console.log(viewport,{loadMs,overflow,kpis,charts,branches,shell,errors});
               if(loadMs>20000||overflow>3||kpis<6||charts<2||branches<2||shell!==1||errors.length||!text.includes('جدة')||!text.includes('الرياض'))failed=true;
-              for(const label of ['الأصناف','التحويلات','التحديثات','كل التفاصيل']){await page.getByRole('button',{name:label,exact:true}).click();await page.waitForTimeout(100)}
+              for(const label of ['الأصناف','التحويلات','التحديثات','كل التفاصيل']){const b=page.getByRole('button',{name:label,exact:true});await b.evaluate(el=>el.click());await page.waitForTimeout(100)}
               await ctx.close();
             }
             await browser.close();if(failed)process.exit(1);
