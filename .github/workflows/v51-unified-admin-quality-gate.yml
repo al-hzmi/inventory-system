@@ -29,7 +29,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
       - name: Static administration architecture
         shell: bash
         run: |
@@ -38,32 +37,16 @@ jobs:
           node --check v46-admin-nav.js
           python3 - <<'PY'
           from pathlib import Path
-          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8')
-          v45=Path('v45-admin-ux.js').read_text(encoding='utf-8')
-          sales=Path('inventory-analytics.html').read_text(encoding='utf-8')
-          stock=Path('admin-stocktake-shell.html').read_text(encoding='utf-8')
-          css=Path('v52-admin.css').read_text(encoding='utf-8')
-          checks={
-            'compat shell':'v51-admin-shell' in nav,
-            'v52 shell':all(x in nav for x in ["VERSION='52.1'",'v52-sidebar','v52-mobile-nav','admin-home.html']),
-            'sections':all(x in nav for x in ['الرئيسية','الموظفون','العملاء','المبيعات','الجرد','الصلاحيات','أمان الدخول']),
-            'legacy redirect':"path==='command-center.html'" in nav and "location.replace('./admin-home.html')" in nav,
-            'legacy launchers retired':'legacyLaunchers:false' in v45 and 'employee_notifications' not in v45,
-            'desktop responsive':'.v52-sidebar' in css,
-            'mobile responsive':'#v52-mobile-nav' in css,
-            'stocktake wrapper':'admin-stocktake.html?embedded=1' in stock,
-            'sales v52':all(x in sales for x in ['جدة','الرياض','branch-card','sales-chart','saleQty','transferMatchedQty']),
-          }
+          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8');v45=Path('v45-admin-ux.js').read_text(encoding='utf-8');sales=Path('inventory-analytics.html').read_text(encoding='utf-8');stock=Path('admin-stocktake-shell.html').read_text(encoding='utf-8');css=Path('v52-admin.css').read_text(encoding='utf-8')
+          checks={'compat shell':'v51-admin-shell' in nav,'v52 shell':all(x in nav for x in ["VERSION='52.1'",'v52-sidebar','v52-mobile-nav','admin-home.html']),'sections':all(x in nav for x in ['الرئيسية','الموظفون','العملاء','المبيعات','الجرد','الصلاحيات','أمان الدخول']),'legacy redirect':"path==='command-center.html'" in nav and "location.replace('./admin-home.html')" in nav,'legacy launchers retired':'legacyLaunchers:false' in v45 and 'employee_notifications' not in v45,'desktop responsive':'.v52-sidebar' in css,'mobile responsive':'#v52-mobile-nav' in css,'stocktake wrapper':'admin-stocktake.html?embedded=1' in stock,'sales v52':all(x in sales for x in ['جدة','الرياض','branch-card','sales-chart','saleQty','transferMatchedQty'])}
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('ADMIN_STATIC_FAIL '+', '.join(bad))
           print('ADMIN_STATIC_PASS',len(checks))
           PY
-
       - name: Install Playwright
         run: |
           npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
-
       - name: Browser administration journey desktop and mobile
         shell: bash
         run: |
@@ -75,18 +58,8 @@ jobs:
           import {chromium} from 'playwright';
           const browser=await chromium.launch({headless:true});let fail=false;
           async function open(width,height,path){const ctx=await browser.newContext({viewport:{width,height}});await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});return{ctx,page,errors}}
-          async function shell(page,errors,label){await page.waitForSelector('#v51-admin-shell',{timeout:20000});const g=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth})),count=await page.locator('#v51-admin-shell').count(),legacy=await page.locator('#v45-command-tab,#v45-messages-tab,#v46-control-tab,#v49-security-tab,#v49-security-fallback,#v50-inventory-tab').count();console.log(label,{g,count,legacy,errors});if(g.sw>g.cw+3||count!==1||legacy!==0||errors.length)fail=true}
-          try{
-            for(const [w,h] of [[1440,900],[390,844]]){
-              let x=await open(w,h,'admin-home.html?qa=1');await x.page.waitForSelector('.v52-page',{timeout:20000});await shell(x.page,x.errors,'home '+w);await x.ctx.close();
-              x=await open(w,h,'admin-dashboard.html?section=employees&module=live&qa=1');await x.page.waitForTimeout(3500);await shell(x.page,x.errors,'employees '+w);await x.ctx.close();
-              x=await open(w,h,'admin-dashboard.html?section=customers&module=live&qa=1');await x.page.waitForTimeout(3500);await shell(x.page,x.errors,'customers '+w);await x.ctx.close();
-              x=await open(w,h,'control-center.html?qa=1');await x.page.waitForTimeout(2500);await shell(x.page,x.errors,'permissions '+w);if((await x.page.locator('[data-tab]').count())<5)fail=true;await x.ctx.close();
-              x=await open(w,h,'inventory-analytics.html?qa=1');await x.page.waitForSelector('.v52-kpi',{timeout:45000});await shell(x.page,x.errors,'sales '+w);if((await x.page.locator('.v52-kpi').count())<6)fail=true;await x.ctx.close();
-              x=await open(w,h,'admin-stocktake-shell.html?qa=1');await x.page.waitForTimeout(3500);await shell(x.page,x.errors,'stocktake '+w);const frame=x.page.frames().find(f=>f.url().includes('admin-stocktake.html'));if(!frame)fail=true;await x.ctx.close();
-            }
-            const x=await open(1440,900,'command-center.html?qa=1');await x.page.waitForTimeout(1200);if(!x.page.url().includes('admin-home.html')||x.errors.length)fail=true;await x.ctx.close();
-          }catch(e){console.error(e);fail=true}
+          async function shell(page,errors,label,w){await page.waitForSelector('#v51-admin-shell',{state:'attached',timeout:20000});const g=await page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth})),count=await page.locator('#v51-admin-shell').count(),legacy=await page.locator('#v45-command-tab,#v45-messages-tab,#v46-control-tab,#v49-security-tab,#v49-security-fallback,#v50-inventory-tab').count(),side=await page.locator('.v52-sidebar').count(),mobile=await page.locator('#v52-mobile-nav').count(),vis=await page.evaluate(()=>({side:getComputedStyle(document.querySelector('.v52-sidebar')).display,mobile:getComputedStyle(document.querySelector('#v52-mobile-nav')).display}));console.log(label,{g,count,legacy,side,mobile,vis,errors});if(g.sw>g.cw+3||count!==1||legacy!==0||side!==1||mobile!==1||errors.length||(w>=900&&vis.side==='none')||(w<900&&vis.mobile==='none'))fail=true}
+          try{for(const [w,h] of [[1440,900],[390,844]]){let x=await open(w,h,'admin-home.html?qa=1');await x.page.waitForSelector('.v52-page',{timeout:20000});await shell(x.page,x.errors,'home '+w,w);await x.ctx.close();x=await open(w,h,'admin-dashboard.html?section=employees&module=live&qa=1');await x.page.waitForTimeout(3000);await shell(x.page,x.errors,'employees '+w,w);await x.ctx.close();x=await open(w,h,'admin-dashboard.html?section=customers&module=live&qa=1');await x.page.waitForTimeout(3000);await shell(x.page,x.errors,'customers '+w,w);await x.ctx.close();x=await open(w,h,'control-center.html?qa=1');await x.page.waitForTimeout(2200);await shell(x.page,x.errors,'permissions '+w,w);if((await x.page.locator('[data-tab]').count())<5)fail=true;await x.ctx.close();x=await open(w,h,'inventory-analytics.html?qa=1');await x.page.waitForSelector('.v52-kpi',{timeout:45000});await shell(x.page,x.errors,'sales '+w,w);if((await x.page.locator('.v52-kpi').count())<6)fail=true;await x.ctx.close();x=await open(w,h,'admin-stocktake-shell.html?qa=1');await x.page.waitForTimeout(3000);await shell(x.page,x.errors,'stocktake '+w,w);if(!x.page.frames().find(f=>f.url().includes('admin-stocktake.html')))fail=true;await x.ctx.close();}const x=await open(1440,900,'command-center.html?qa=1');await x.page.waitForTimeout(1000);if(!x.page.url().includes('admin-home.html')||x.errors.length)fail=true;await x.ctx.close()}catch(e){console.error(e);fail=true}
           await browser.close();if(fail)process.exit(1);
           JS
           node ./.admin.mjs
