@@ -24,9 +24,7 @@ jobs:
           required=['control-center.html','v46-admin-nav.js','admin-dashboard.html','command-center.html','v44-observability.js']
           miss=[x for x in required if not Path(x).exists()]
           if miss: raise SystemExit('MISSING '+','.join(miss))
-          cc=Path('control-center.html').read_text()
-          nav=Path('v46-admin-nav.js').read_text()
-          obs=Path('v44-observability.js').read_text()
+          cc=Path('control-center.html').read_text(); nav=Path('v46-admin-nav.js').read_text(); obs=Path('v44-observability.js').read_text()
           checks={
             'admin guard': "location.replace('./index.html?employee=1')" in cc,
             'permission source': "doc('permissions_v44')" in cc and "doc('permissions_v44')" in obs,
@@ -42,11 +40,11 @@ jobs:
             'audit': 'security_admin_logs' in cc and 'control_center_v46' in cc,
             'qa isolation': 'QA_RE' in cc,
             'runtime enforcement retained': 'applyPermissionDom' in obs and 'effective[permission]===false' in obs,
-            'nav link': 'v46-control-tab' in nav and 'control-center.html' in nav,
-            'admin injected': 'v46-admin-nav.js?v=46.0' in Path('admin-dashboard.html').read_text(),
-            'command injected': 'v46-admin-nav.js?v=46.0' in Path('command-center.html').read_text(),
-            'employee wrapper untouched': 'v46-admin-nav.js?v=46.0' not in Path('index.html').read_text(),
-            'customer wrapper untouched': 'v46-admin-nav.js?v=46.0' not in Path('customer.html').read_text(),
+            'unified shell': 'v51-admin-shell' in nav and './control-center.html' in nav,
+            'legacy launchers hidden': all(x in nav for x in ['v45-command-tab','v45-messages-tab','v46-control-tab','v49-security-tab','v50-inventory-tab']),
+            'command center retired': "path==='command-center.html'" in nav and 'location.replace' in nav,
+            'employee wrapper untouched': 'v46-admin-nav.js' not in Path('index.html').read_text(),
+            'customer wrapper untouched': 'v46-admin-nav.js' not in Path('customer.html').read_text(),
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V46_STATIC_FAIL '+', '.join(bad))
@@ -86,21 +84,19 @@ jobs:
             return {c,p,errors};
           }
           try{
-            let {c,p,errors}=await pageAt(1440,900,'control-center.html?qa=1');
-            const tabs=await p.locator('[data-tab]').count();
-            const title=await p.locator('text=مركز التحكم').count();
-            const width=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
-            console.log('control desktop',tabs,title,width,errors.slice(0,3));
-            if(tabs<5||!title||width.sw>width.cw+3||errors.length)fail=true;
-            for(const tab of ['permissions','profiles','features','audit']){await p.locator(`[data-tab="${tab}"]`).click();await p.waitForTimeout(120);}
-            await c.close();
-            ({c,p,errors}=await pageAt(390,844,'control-center.html?qa=1'));
-            const mobile=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
-            console.log('control mobile',mobile,errors.slice(0,3));if(mobile.sw>mobile.cw+3||errors.length)fail=true;await c.close();
-            ({c,p,errors}=await pageAt(1440,900,'admin-dashboard.html?qa=1'));
-            const adminLink=await p.locator('#v46-control-tab').count();console.log('admin link',adminLink,errors.slice(0,3));if(!adminLink)fail=true;await c.close();
-            ({c,p,errors}=await pageAt(1440,900,'command-center.html?qa=1'));
-            const commandLink=await p.locator('#v46-control-tab').count();const w2=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));console.log('command link',commandLink,w2,errors.slice(0,3));if(!commandLink||w2.sw>w2.cw+3)fail=true;await c.close();
+            for(const vp of [[1440,900],[390,844]]){
+              let {c,p,errors}=await pageAt(vp[0],vp[1],'control-center.html?qa=1');
+              const tabs=await p.locator('[data-tab]').count(),shell=await p.locator('#v51-admin-shell').count();
+              const legacy=await p.locator('#v45-command-tab,#v45-messages-tab,#v46-control-tab,#v49-security-tab,#v50-inventory-tab').count();
+              const width=await p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+              console.log('control',vp,{tabs,shell,legacy,width,errors:errors.slice(0,3)});
+              if(tabs<5||shell!==1||legacy!==0||width.sw>width.cw+3||errors.length)fail=true;
+              for(const tab of ['permissions','profiles','features','audit']){await p.locator(`[data-tab="${tab}"]`).click();await p.waitForTimeout(100)}
+              await c.close();
+            }
+            let {c,p,errors}=await pageAt(1440,900,'admin-dashboard.html?section=customers&module=live&qa=1');
+            const shell=await p.locator('#v51-admin-shell').count();const customers=await p.locator('#v51-admin-shell [data-v51-key="customers"].on').count();
+            console.log('admin shell',shell,customers,errors.slice(0,3));if(shell!==1||customers!==1||errors.length)fail=true;await c.close();
           }catch(e){console.error(e);fail=true}
           await b.close();if(fail)process.exit(1);
           JS
