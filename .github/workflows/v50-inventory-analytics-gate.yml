@@ -52,10 +52,11 @@ jobs:
           blocks=re.findall(r'<script>(.*?)</script>',s,re.S|re.I)
           assert blocks, 'No inline dashboard script'
           open('/tmp/v50-dashboard.js','w',encoding='utf-8').write('\n'.join(blocks))
-          for marker in ['حركة المخزون','خروج غير مفسّر','التحويلات المحتملة','سجل التحديثات','كل الفروقات','inventory-analytics.json']:
+          for marker in ['المبيعات وحركة المخزون','المبيعات','تحويل مخزني','سجل التحديثات','كل الفروقات','inventory-analytics.json','v46-admin-nav.js?v=51.0']:
               assert marker in s, marker
           nav=open('v46-admin-nav.js',encoding='utf-8').read()
-          assert 'v50-inventory-tab' in nav and './inventory-analytics.html' in nav
+          assert 'v51-admin-shell' in nav and './inventory-analytics.html' in nav
+          assert 'command-center.html' in nav and 'location.replace' in nav
           PY
           node --check /tmp/v50-dashboard.js
 
@@ -88,19 +89,20 @@ jobs:
               page.on('requestfailed',r=>failedReq.push(r.url()+': '+(r.failure()?.errorText||'')));
               const started=Date.now();
               await page.goto('http://127.0.0.1:4173/inventory-analytics.html',{waitUntil:'domcontentloaded',timeout:30000});
-              try{await page.waitForFunction(()=>document.body.innerText.includes('خروج مخزون'),null,{timeout:45000})}catch(e){
+              try{await page.waitForFunction(()=>document.body.innerText.includes('المبيعات'),null,{timeout:45000})}catch(e){
                 console.log('LOAD_DIAG',viewport,'ms',Date.now()-started,'errors',errors.slice(0,5),'failedReq',failedReq.slice(0,5),'body',(await page.locator('body').innerText()).slice(0,1200));
                 throw e;
               }
               const loadMs=Date.now()-started;
               const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
               const stats=await page.locator('.stat').count();
+              const shell=await page.locator('#v51-admin-shell').count();
               await page.getByRole('button',{name:'كل الفروقات'}).click();
               const table=await page.locator('.table').count();
-              await page.getByRole('button',{name:'التحويلات المحتملة'}).click();
+              await page.getByRole('button',{name:'التحويلات'}).click();
               const transferText=await page.locator('body').innerText();
-              console.log(viewport,{loadMs,overflow,stats,table,errors:errors.slice(0,3)});
-              if(loadMs>12000||overflow>3||stats<6||table!==1||errors.length||!transferText.includes('تحويلات')) failed=true;
+              console.log(viewport,{loadMs,overflow,stats,table,shell,errors:errors.slice(0,3)});
+              if(loadMs>12000||overflow>3||stats<6||table!==1||shell!==1||errors.length||!transferText.includes('تحويلات')) failed=true;
               await ctx.close();
             }
             await browser.close();if(failed)process.exit(1);
