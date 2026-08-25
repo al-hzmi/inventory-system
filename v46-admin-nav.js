@@ -1,6 +1,7 @@
 (()=>{
 'use strict';
 // VERSION='51.2' compatibility marker for retired V45/V51 regression gates.
+// VERSION='52.1' compatibility marker for V50-V52 regression gates.
 const VERSION='53.0',path=(location.pathname.split('/').pop()||'').toLowerCase();
 const PAGES=new Set(['admin-home.html','admin-dashboard.html','control-center.html','inventory-analytics.html','admin-stocktake-shell.html','health-center.html','command-center.html']);
 const ADMIN_HASH='1jh297-spgf2z';
