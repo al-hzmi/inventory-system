@@ -140,7 +140,7 @@ def make_event(repo, commit):
     return {"id":commit[:12],**meta,"paths":paths,"summary":summary,"transfers":transfers,
             "changes":sorted(all_changes,key=lambda x:abs(x["delta"]),reverse=True)}
 
-def cross_event_transfers(events,max_hours=72):
+def cross_event_transfers(events,max_hours=72,min_ratio=0.70):
     negatives,positives=defaultdict(list),defaultdict(list)
     def pdt(s): return datetime.fromisoformat(s.replace("Z","+00:00"))
     for ev in events:
@@ -160,12 +160,16 @@ def cross_event_transfers(events,max_hours=72):
                 try: hours=abs((pdt(p["timestamp"])-pdt(n["timestamp"])).total_seconds())/3600
                 except Exception: continue
                 if hours>max_hours: continue
+                largest=max(n["remaining"],p["remaining"])
+                if largest<=1e-9: continue
+                ratio=min(n["remaining"],p["remaining"])/largest
+                if ratio<min_ratio: continue
                 qty=min(n["remaining"],p["remaining"])
                 if qty<=1e-9: continue
                 n["remaining"]-=qty;p["remaining"]-=qty
                 out.append({"sku":sku,"name":n["name"] or p["name"],"from":n["branch"],"fromLabel":n["branchLabel"],
                             "to":p["branch"],"toLabel":p["branchLabel"],"qty":round(qty,6),"fromEvent":n["event"],
-                            "toEvent":p["event"],"hoursApart":round(hours,1),"confidence":"medium"})
+                            "toEvent":p["event"],"hoursApart":round(hours,1),"quantityRatio":round(ratio,3),"confidence":"medium"})
     return sorted(out,key=lambda x:x["qty"],reverse=True)[:500]
 
 def current_snapshot(repo,head):
@@ -204,7 +208,7 @@ def main():
     payload={"schema":1,"generatedAt":datetime.now(timezone.utc).isoformat().replace("+00:00","Z"),"head":head,"eventCount":len(events),
              "current":current_snapshot(repo,head),"events":list(reversed(events)),"transferCandidates":cross_event_transfers(events),"aggregate":aggregate(events),
              "notes":{"outbound":"انخفاض المخزون مؤكد من فرق النسخ، لكنه ليس إثبات بيع بمفرده.",
-                      "transfer":"التحويلات المحتملة استدلال من انخفاض فرع وزيادة الفرع الآخر لنفس الصنف خلال 72 ساعة.",
+                      "transfer":"التحويلات المحتملة استدلال من انخفاض فرع وزيادة الفرع الآخر لنفس الصنف خلال 72 ساعة، ولا تعرض إلا عندما تكون الكميتان متقاربتين بنسبة 70% فأعلى.",
                       "pricing":"قيم الحركة تقديرية باستخدام سعر البيع الموجود في pricing.tsv عند ذلك الإصدار."}}
     out=os.path.join(repo,args.output);os.makedirs(os.path.dirname(out),exist_ok=True)
     with open(out,"w",encoding="utf-8") as f: json.dump(payload,f,ensure_ascii=False,separators=(",",":"))
