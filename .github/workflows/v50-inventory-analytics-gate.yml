@@ -1,0 +1,90 @@
+name: V50 Inventory Analytics Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'inventory-analytics.html'
+      - 'tools/inventory_analytics.py'
+      - 'data/inventory-analytics.json'
+      - 'v46-admin-nav.js'
+      - '.github/workflows/update-version.yml'
+      - '.github/workflows/v50-inventory-analytics-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inventory-analytics-v50:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Python syntax and analytics rebuild
+        run: |
+          python -m py_compile tools/inventory_analytics.py
+          python tools/inventory_analytics.py --repo . --output data/inventory-analytics.json --limit 250
+          python - <<'PY'
+          import json
+          d=json.load(open('data/inventory-analytics.json',encoding='utf-8'))
+          assert d['schema']==1
+          assert d['eventCount']>=1, 'No inventory history detected'
+          assert d['current']['jeddah']['skuCount']>0
+          assert d['current']['riyadh']['skuCount']>0
+          assert isinstance(d['events'],list) and d['events']
+          assert all('summary' in e and 'changes' in e for e in d['events'])
+          assert all(c['delta']!=0 for e in d['events'] for c in e['changes'])
+          print('events',d['eventCount'],'transfers',len(d['transferCandidates']))
+          PY
+
+      - name: JavaScript syntax and static invariants
+        run: |
+          node --check v46-admin-nav.js
+          python - <<'PY'
+          import re
+          s=open('inventory-analytics.html',encoding='utf-8').read()
+          blocks=re.findall(r'<script>(.*?)</script>',s,re.S|re.I)
+          assert blocks, 'No inline dashboard script'
+          open('/tmp/v50-dashboard.js','w',encoding='utf-8').write('\n'.join(blocks))
+          for marker in ['حركة المخزون','خروج غير مفسّر','التحويلات المحتملة','سجل التحديثات','كل الفروقات','inventory-analytics.json']:
+              assert marker in s, marker
+          nav=open('v46-admin-nav.js',encoding='utf-8').read()
+          assert 'v50-inventory-tab' in nav and './inventory-analytics.html' in nav
+          PY
+          node --check /tmp/v50-dashboard.js
+
+      - name: Install Chromium
+        run: npx -y playwright@1.55.0 install --with-deps chromium
+
+      - name: Browser regression desktop and mobile
+        run: |
+          python -m http.server 4173 >/tmp/v50-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          npx -y -p playwright@1.55.0 node - <<'NODE'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            let failed=false;
+            for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
+              const ctx=await browser.newContext({viewport});
+              await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
+              const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
+              await page.goto('http://127.0.0.1:4173/inventory-analytics.html',{waitUntil:'domcontentloaded',timeout:30000});
+              await page.waitForFunction(()=>document.body.innerText.includes('خروج مخزون'),null,{timeout:15000});
+              const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+              const stats=await page.locator('.stat').count();
+              await page.getByRole('button',{name:'كل الفروقات'}).click();
+              const table=await page.locator('.table').count();
+              await page.getByRole('button',{name:'التحويلات المحتملة'}).click();
+              const transferText=await page.locator('body').innerText();
+              console.log(viewport, {overflow,stats,table,errors:errors.slice(0,3)});
+              if(overflow>3||stats<6||table!==1||errors.length||!transferText.includes('تحويلات')) failed=true;
+              await ctx.close();
+            }
+            await browser.close();if(failed)process.exit(1);
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
