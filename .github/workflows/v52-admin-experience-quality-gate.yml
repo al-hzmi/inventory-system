@@ -11,6 +11,7 @@ on:
       - 'admin-stocktake-shell.html'
       - 'v46-admin-nav.js'
       - 'v52-admin.css'
+      - 'v53-admin-polish.css'
       - 'tools/inventory_analytics.py'
       - 'data/inventory-analytics.json'
       - '.github/workflows/v52-admin-experience-quality-gate.yml'
@@ -32,6 +33,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Static architecture and syntax
         shell: bash
         run: |
@@ -43,20 +45,42 @@ jobs:
           from pathlib import Path
           import re,json
           for p in ['admin-home.html','inventory-analytics.html']:
-              s=Path(p).read_text(encoding='utf-8');blocks=list(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I));code='\n'.join(m.group(2) for m in blocks if m.group(2).strip() and 'src=' not in m.group(1));Path('/tmp/'+p.replace('.html','.js')).write_text(code,encoding='utf-8')
-          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8');home=Path('admin-home.html').read_text(encoding='utf-8');sales=Path('inventory-analytics.html').read_text(encoding='utf-8');css=Path('v52-admin.css').read_text(encoding='utf-8')
-          checks={'v52 shell':all(x in nav for x in ["VERSION='52.1'",'v52-sidebar','v52-mobile-nav','admin-home.html']),'legacy redirect':"path==='command-center.html'" in nav and 'location.replace' in nav,'desktop sidebar':'.v52-sidebar' in css,'mobile bottom nav':'#v52-mobile-nav' in css,'executive home':all(x in home for x in ['لوحة الإدارة','اتجاه المبيعات','مقارنة الفرعين','الأصناف الأكثر مبيعًا','يحتاج انتباهك']),'sales branches':all(x in sales for x in ['جدة','الرياض','branchCard','branch-card']),'sales charts':all(x in sales for x in ['trendChart','movementChart','sales-chart']),'mobile sales cards':all(x in sales for x in ['mobile-changes','change-card']),'sales transfer exclusion':'transferMatchedQty' in sales and 'saleQty' in sales}
+              s=Path(p).read_text(encoding='utf-8')
+              blocks=list(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I))
+              code='\n'.join(m.group(2) for m in blocks if m.group(2).strip() and 'src=' not in m.group(1))
+              Path('/tmp/'+p.replace('.html','.js')).write_text(code,encoding='utf-8')
+          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8')
+          home=Path('admin-home.html').read_text(encoding='utf-8')
+          sales=Path('inventory-analytics.html').read_text(encoding='utf-8')
+          css=Path('v52-admin.css').read_text(encoding='utf-8')
+          polish=Path('v53-admin-polish.css').read_text(encoding='utf-8') if Path('v53-admin-polish.css').exists() else ''
+          checks={
+            'v52 compatibility': all(x in nav for x in ["VERSION='52.1'",'v52-sidebar','v52-mobile-nav','admin-home.html']),
+            'legacy redirect': "path==='command-center.html'" in nav and 'location.replace' in nav,
+            'desktop sidebar': '.v52-sidebar' in css,
+            'mobile bottom nav': '#v52-mobile-nav' in css,
+            'executive home': all(x in home for x in ['لوحة الإدارة','اتجاه المبيعات','مقارنة الفرعين','الأصناف الأكثر مبيعًا','يحتاج انتباهك']),
+            'sales branches': all(x in sales for x in ['جدة','الرياض','branchCard','branch-card']),
+            'sales charts': all(x in sales for x in ['trendChart','movementChart','sales-chart']),
+            'mobile sales cards': all(x in sales for x in ['mobile-changes','change-card']),
+            'sales transfer exclusion': 'transferMatchedQty' in sales and 'saleQty' in sales,
+            'v53 mobile chart': not polish or all(x in polish for x in ['.v52-chart svg','height:180px!important'])
+          }
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V52_STATIC_FAIL '+', '.join(bad))
-          d=json.load(open('data/inventory-analytics.json',encoding='utf-8'));assert d.get('eventCount',0)>0 and d['current']['jeddah']['skuCount']>0 and d['current']['riyadh']['skuCount']>0
+          d=json.load(open('data/inventory-analytics.json',encoding='utf-8'))
+          assert d.get('eventCount',0)>0
+          assert d['current']['jeddah']['skuCount']>0 and d['current']['riyadh']['skuCount']>0
           print('V52_STATIC_PASS',len(checks),'events',d['eventCount'])
           PY
           node --check /tmp/admin-home.js
           node --check /tmp/inventory-analytics.js
+
       - name: Install Playwright
         run: |
           npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
           npx playwright install --with-deps chromium >/dev/null
+
       - name: Browser executive UX desktop and mobile
         shell: bash
         run: |
@@ -66,10 +90,77 @@ jobs:
           sleep 2
           cat > .v52.mjs <<'JS'
           import {chromium} from 'playwright';
-          const browser=await chromium.launch({headless:true});let fail=false;
-          async function open(width,height,path){const ctx=await browser.newContext({viewport:{width,height}});await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});return{ctx,page,errors}}
+          const browser=await chromium.launch({headless:true});
+          const failures=[];
+          const fail=(label,data)=>{failures.push(label);console.error('FAIL',label,data||'')};
+          async function open(width,height,path){
+            const ctx=await browser.newContext({viewport:{width,height}});
+            await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
+            const page=await ctx.newPage(),errors=[];
+            page.on('pageerror',e=>errors.push(String(e)));
+            await page.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});
+            return{ctx,page,errors};
+          }
           const geo=page=>page.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
-          try{for(const [w,h] of [[1440,900],[390,844]]){let x=await open(w,h,'admin-home.html?qa=1');await x.page.waitForSelector('.v52-kpi',{timeout:45000});await x.page.waitForSelector('.v52-chart svg',{timeout:45000});let g=await geo(x.page),k=await x.page.locator('.v52-kpi').count(),c=await x.page.locator('.v52-chart svg').count(),side=await x.page.locator('.v52-sidebar').count(),mobile=await x.page.locator('#v52-mobile-nav').count();const vis=await x.page.evaluate(()=>({side:getComputedStyle(document.querySelector('.v52-sidebar')).display,mobile:getComputedStyle(document.querySelector('#v52-mobile-nav')).display}));console.log('home',w,{g,k,c,side,mobile,vis,errors:x.errors});if(g.sw>g.cw+3||k<4||c<1||side!==1||mobile!==1||x.errors.length||(w>=900&&vis.side==='none')||(w<900&&vis.mobile==='none'))fail=true;await x.ctx.close();x=await open(w,h,'inventory-analytics.html?qa=1');await x.page.waitForSelector('.v52-kpi',{timeout:45000});await x.page.waitForSelector('.branch-card',{timeout:45000});g=await geo(x.page);const sk=await x.page.locator('.v52-kpi').count(),svg=await x.page.locator('.sales-chart svg').count(),branches=await x.page.locator('.branch-card').count(),text=await x.page.locator('body').innerText();console.log('sales',w,{g,sk,svg,branches,errors:x.errors});if(g.sw>g.cw+3||sk<6||svg<2||branches<2||!text.includes('جدة')||!text.includes('الرياض')||x.errors.length)fail=true;for(const label of ['الأصناف','التحويلات','التحديثات','كل التفاصيل']){const b=x.page.getByRole('button',{name:label,exact:true});await b.evaluate(el=>el.click());await x.page.waitForTimeout(100)}if(w<900){const cards=await x.page.locator('.mobile-changes .change-card').count();if(cards<1)fail=true}await x.ctx.close();x=await open(w,h,'control-center.html?qa=1');await x.page.waitForSelector('#v51-admin-shell',{state:'attached',timeout:20000});g=await geo(x.page);if(g.sw>g.cw+3||x.errors.length)fail=true;await x.ctx.close();x=await open(w,h,'admin-dashboard.html?section=employees&module=live&qa=1');await x.page.waitForSelector('#v51-admin-shell',{state:'attached',timeout:20000});await x.page.waitForTimeout(2500);g=await geo(x.page);if(g.sw>g.cw+3||x.errors.length)fail=true;await x.ctx.close();}const x=await open(1440,900,'command-center.html?qa=1');await x.page.waitForTimeout(1000);if(!x.page.url().includes('admin-home.html')||x.errors.length)fail=true;await x.ctx.close()}catch(e){console.error(e);fail=true}
-          await browser.close();if(fail)process.exit(1);
+          try{
+            for(const [w,h] of [[1440,900],[390,844]]){
+              let x=await open(w,h,'admin-home.html?qa=1');
+              await x.page.waitForSelector('.v52-kpi',{timeout:45000});
+              await x.page.waitForSelector('.v52-chart svg',{state:'attached',timeout:45000});
+              await x.page.waitForTimeout(500);
+              let g=await geo(x.page);
+              const home=await x.page.evaluate(()=>{
+                const svg=document.querySelector('.v52-chart svg'),r=svg?.getBoundingClientRect();
+                const side=document.querySelector('.v52-sidebar'),mobile=document.querySelector('#v52-mobile-nav');
+                return {kpis:document.querySelectorAll('.v52-kpi').length,charts:document.querySelectorAll('.v52-chart svg').length,svgW:Math.round(r?.width||0),svgH:Math.round(r?.height||0),side:getComputedStyle(side).display,mobile:getComputedStyle(mobile).display};
+              });
+              console.log('HOME',w,{g,home,errors:x.errors});
+              if(g.sw>g.cw+3)fail(`home overflow ${w}`,g);
+              if(home.kpis<4||home.charts<1||home.svgW<10||home.svgH<10)fail(`home content ${w}`,home);
+              if(w>=900&&home.side==='none')fail(`desktop sidebar ${w}`,home);
+              if(w<900&&home.mobile==='none')fail(`mobile navigation ${w}`,home);
+              if(x.errors.length)fail(`home errors ${w}`,x.errors);
+              await x.ctx.close();
+
+              x=await open(w,h,'inventory-analytics.html?qa=1');
+              await x.page.waitForSelector('.v52-kpi',{timeout:45000});
+              await x.page.waitForSelector('.branch-card',{timeout:45000});
+              g=await geo(x.page);
+              const sales={kpis:await x.page.locator('.v52-kpi').count(),charts:await x.page.locator('.sales-chart svg').count(),branches:await x.page.locator('.branch-card').count(),text:await x.page.locator('body').innerText()};
+              console.log('SALES',w,{g,kpis:sales.kpis,charts:sales.charts,branches:sales.branches,errors:x.errors});
+              if(g.sw>g.cw+3)fail(`sales overflow ${w}`,g);
+              if(sales.kpis<6||sales.charts<2||sales.branches<2||!sales.text.includes('جدة')||!sales.text.includes('الرياض'))fail(`sales content ${w}`,sales);
+              if(x.errors.length)fail(`sales errors ${w}`,x.errors);
+              for(const label of ['الأصناف','التحويلات','التحديثات','كل التفاصيل']){
+                const b=x.page.getByRole('button',{name:label,exact:true});
+                await b.evaluate(el=>el.click());
+                await x.page.waitForTimeout(100);
+              }
+              if(w<900){
+                const cards=await x.page.locator('.mobile-changes .change-card').count();
+                console.log('MOBILE_DETAILS',cards);
+                if(cards<1)fail('mobile sales details',{cards});
+              }
+              await x.ctx.close();
+
+              for(const path of ['control-center.html?qa=1','admin-dashboard.html?section=employees&module=live&qa=1']){
+                x=await open(w,h,path);
+                await x.page.waitForSelector('#v51-admin-shell',{state:'attached',timeout:20000});
+                await x.page.waitForTimeout(2000);
+                g=await geo(x.page);
+                console.log('ADMIN_PAGE',w,path,{g,errors:x.errors});
+                if(g.sw>g.cw+3)fail(`${path} overflow ${w}`,g);
+                if(x.errors.length)fail(`${path} errors ${w}`,x.errors);
+                await x.ctx.close();
+              }
+            }
+            const x=await open(1440,900,'command-center.html?qa=1');
+            await x.page.waitForTimeout(1000);
+            if(!x.page.url().includes('admin-home.html')||x.errors.length)fail('legacy redirect',{url:x.page.url(),errors:x.errors});
+            await x.ctx.close();
+          }catch(e){fail('exception',String(e))}
+          await browser.close();
+          if(failures.length){console.error('V52_BROWSER_FAILURES',failures);process.exit(1)}
+          console.log('V52_BROWSER_PASS');
           JS
           node ./.v52.mjs
