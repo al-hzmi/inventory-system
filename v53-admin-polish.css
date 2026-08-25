@@ -60,6 +60,7 @@ body.v51-control-center main,body.v51-inventory-analytics main{max-width:1680px}
   .v52-card-head{padding:14px 14px 11px}.v52-card-head h2{font-size:14px}.v52-card-head p{font-size:9.5px}.v52-card-body{padding:14px}
   .v52-row-title{font-size:11px}.v52-row-sub{font-size:9px}.v52-row-value{font-size:11px}.v52-chip{font-size:8.5px}
   .v52-chart{min-height:190px}
+  .v52-chart svg{display:block!important;width:100%!important;height:180px!important;min-height:180px!important}
   .v52-tab{font-size:10px;height:36px}.v52-select,.v52-search{font-size:11px}
 }
 @media(max-width:520px){
