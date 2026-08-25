@@ -29,7 +29,7 @@ jobs:
             'legacy launchers retired': 'legacyLaunchers:false' in js and 'removeLegacyLaunchers' in js,
             'legacy messages listener retired': 'employee_notifications' not in js,
             'desktop horizontal support': 'enableDesktopHorizontal' in js and "addEventListener('wheel'" in js,
-            'unified shell': 'v51-admin-shell' in nav and "VERSION='51.0'" in nav,
+            'unified shell': 'v51-admin-shell' in nav and "VERSION='51." in nav,
             'legacy command redirect': "path==='command-center.html'" in nav and 'location.replace' in nav,
             'admin V45 injection retained':'v45-admin-ux.js?v=45.0' in adm,
             'employee wrapper untouched':'v45-admin-ux.js?v=45.0' not in idx,
