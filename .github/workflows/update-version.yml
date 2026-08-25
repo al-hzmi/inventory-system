@@ -1,34 +1,70 @@
-name: Update Version
+name: Update Version and Inventory Analytics
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'data/jeddah.tsv'
       - 'data/riyadh.tsv'
+      - 'tools/inventory_analytics.py'
+      - '.github/workflows/update-version.yml'
 
 permissions:
   contents: write
 
+concurrency:
+  group: inventory-analytics-main
+  cancel-in-progress: false
+
 jobs:
-  update-version:
+  update-version-and-analytics:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repository with inventory history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Update version.json
+      - name: Sync latest main before calculating
+        run: git pull --rebase origin main
+
+      - name: Detect whether inventory files changed in the triggering commit
+        id: inventory_change
+        shell: bash
+        run: |
+          BEFORE='${{ github.event.before }}'
+          SHA='${{ github.sha }}'
+          if [[ "$BEFORE" =~ ^0+$ ]]; then
+            BEFORE="${SHA}^"
+          fi
+          CHANGED=$(git diff --name-only "$BEFORE" "$SHA" 2>/dev/null || true)
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -Eq '^data/(jeddah|riyadh)\.tsv$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update version.json for real inventory updates only
+        if: steps.inventory_change.outputs.changed == 'true'
         run: |
           DATE=$(TZ=Asia/Riyadh date +"%Y-%m-%d %H:%M")
           echo "{\"lastUpdate\":\"$DATE\"}" > data/version.json
 
-      - name: Commit changes
+      - name: Rebuild inventory movement history and analytics
+        run: python tools/inventory_analytics.py --repo . --output data/inventory-analytics.json --limit 250
+
+      - name: Commit generated inventory metadata
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add data/version.json
-
-          git diff --cached --quiet || git commit -m "Auto update version.json"
-
-          git push
+          git add data/version.json data/inventory-analytics.json
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit"
+            exit 0
+          fi
+          git commit -m "Auto update inventory analytics"
+          git pull --rebase origin main
+          git push origin HEAD:main
