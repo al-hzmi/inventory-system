@@ -48,7 +48,7 @@ body.v51-control-center main,body.v51-inventory-analytics main{max-width:1680px}
 .v52-table th,.v52-table td{padding:11px 12px;font-size:10.5px}.v52-table th{font-size:9.5px;font-weight:700}
 .sales-tab{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif!important;font-weight:600!important}
 @media(min-width:1500px){.v52-page{padding-inline:36px}.v52-card-body{padding:20px 21px}.v52-card-head{padding:19px 21px 14px}}
-@media(max-width:1180px){.v52-page{padding:24px 21px 50px}.v52-page-title{font-size:28px}.v52-kpi{padding:16px}.v52-card-body{padding:16px 17px}.v52-card-head{padding:16px 17px 12px}}
+@media(max-width:1180px){.v52-split{grid-template-columns:1fr}.v52-page{padding:24px 21px 50px}.v52-page-title{font-size:28px}.v52-kpi{padding:16px}.v52-card-body{padding:16px 17px}.v52-card-head{padding:16px 17px 12px}}
 @media(max-width:900px){
   .v52-mobile-copy b{font-size:13px;font-weight:700}.v52-mobile-copy span{font-size:9px}
   .v52-mobile-nav-item{font-size:9px;font-weight:600}
