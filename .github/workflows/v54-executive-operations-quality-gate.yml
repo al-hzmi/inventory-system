@@ -1,0 +1,103 @@
+name: V54 Executive Operations Quality Gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'admin-home.html'
+      - 'operations-center.html'
+      - 'inventory-analytics.html'
+      - 'control-center.html'
+      - 'v44-observability.js'
+      - 'v46-admin-nav.js'
+      - 'v54-*.js'
+      - 'v54-admin.css'
+      - 'tools/inventory_analytics.py'
+      - 'tools/patch_v54_runtime.py'
+      - '.github/workflows/v54-executive-operations-quality-gate.yml'
+permissions:
+  contents: read
+jobs:
+  v54:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Static architecture, policy and analytics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/inventory_analytics.py tools/patch_v54_runtime.py
+          python tools/inventory_analytics.py --repo . --output data/inventory-analytics.json --limit 250
+          for f in v46-admin-nav.js v44-observability.js v54-policy-engine.js v54-control-extension.js v54-admin-home-extension.js v54-sales-extension.js v54-stock-data.js v54-stock-sync.js; do node --check "$f"; done
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8')
+          pol=Path('v54-policy-engine.js').read_text(encoding='utf-8')
+          ctl=Path('v54-control-extension.js').read_text(encoding='utf-8')
+          obs=Path('v44-observability.js').read_text(encoding='utf-8')
+          ops=Path('operations-center.html').read_text(encoding='utf-8')
+          home=Path('v54-admin-home-extension.js').read_text(encoding='utf-8')
+          sales=Path('v54-sales-extension.js').read_text(encoding='utf-8')
+          css=Path('v54-admin.css').read_text(encoding='utf-8')
+          deep=['prices','stockQuantity','branchStock','packInfo','cartAdd','cartEdit','cartRemove','draftCreate','draftDelete','orderCreate','orderHistory','orderCancel','stocktakeExpected','stocktakeEdit','stocktakeSubmit','whatsapp','export']
+          checks={
+            'executive name': 'الإدارة التنفيذية' in nav and 'operations-center.html' in nav,
+            'nav groups': all(x in nav for x in ['التحليل والتشغيل','إدارة الأعمال','الضبط والحوكمة']),
+            'mobile operations': "['home','sales','operations','employees']" in nav,
+            'deep permissions ui': all(x in ctl for x in deep),
+            'deep runtime enforcement': all(x in pol for x in deep),
+            'policy wired': 'v54-policy-engine.js?v=54.0' in obs,
+            'operations sources': all(x in ops for x in ['v44_presence','v44_live_carts','search_logs','v44_activity_logs','employee_notifications','site_sessions','customer_sessions','customer_devices']),
+            'operations tabs': all(x in ops for x in ["tab('live','الآن')","tab('carts','السلال')","tab('search','البحث')","tab('activity','النشاط')","tab('messages','الرسائل')","tab('sessions','الجلسات والأجهزة')"]),
+            'home intelligence': all(x in home for x in ['أداء الفروع','صحة المخزون','أكثر عمليات البحث','السلال النشطة','أحدث الطلبات']),
+            'sales intelligence': all(x in sales for x in ['أولوية إعادة التوريد','مخزون بدون حركة بيع','قيمة المخزون التقديرية','مخزون منخفض حاليًا']),
+            'responsive system': all(x in css for x in ['.v54-kpis','.v54-mobile-cards','@media(max-width:900px)']),
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V54_STATIC_FAIL '+', '.join(bad))
+          d=json.load(open('data/inventory-analytics.json',encoding='utf-8'))
+          for b in ['jeddah','riyadh']:
+            x=d['current'][b]
+            assert x['skuCount']>0 and 'items' in x and 'lowStockSkuCount' in x and 'inventoryValue' in x
+          print('V54_STATIC_PASS',len(checks),'events',d['eventCount'])
+          for p in ['operations-center.html']:
+            s=Path(p).read_text(encoding='utf-8');blocks=re.findall(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I);code='\n'.join(m.group(2) for m in blocks if m.group(2).strip() and 'src=' not in m.group(1));Path('/tmp/'+p+'.js').write_text(code,encoding='utf-8')
+          PY
+          node --check /tmp/operations-center.html.js
+      - name: Install browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Desktop and mobile administration journey
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 >/tmp/v54-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .v54.mjs' EXIT
+          sleep 2
+          cat > .v54.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const browser=await chromium.launch({headless:true});let fail=false;
+          async function open(w,h,path){const ctx=await browser.newContext({viewport:{width:w,height:h}});await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.goto('http://127.0.0.1:4173/'+path,{waitUntil:'domcontentloaded',timeout:30000});return{ctx,page,errors}}
+          const geo=p=>p.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
+          const clickTab=(p,k)=>p.locator(`[data-tab="${k}"]`).evaluate(el=>el.click());
+          try{for(const [w,h] of [[1440,900],[390,844]]){
+            let x=await open(w,h,'admin-home.html?qa=1');await x.page.waitForSelector('.v54-kpi',{timeout:45000});await x.page.waitForSelector('.v54-chart svg',{timeout:45000});let g=await geo(x.page),k=await x.page.locator('.v54-kpi').count(),branches=await x.page.locator('.v54-branch').count(),shell=await x.page.locator('#v51-admin-shell').count();const text=await x.page.locator('body').innerText();console.log('home',w,{g,k,branches,shell,errors:x.errors});if(g.sw>g.cw+3||k<8||branches<2||shell!==1||!text.includes('الإدارة التنفيذية')||!text.includes('صحة المخزون')||x.errors.length)fail=true;await x.ctx.close();
+            x=await open(w,h,'operations-center.html?qa=1');await x.page.waitForSelector('.v54-kpi',{timeout:45000});g=await geo(x.page);const tabs=await x.page.locator('[data-tab]').count(),ok=await x.page.locator('.v54-kpi').count();console.log('ops',w,{g,tabs,ok,errors:x.errors});if(g.sw>g.cw+3||tabs<6||ok<8||x.errors.length)fail=true;for(const t of ['carts','search','activity','messages','sessions','live']){await clickTab(x.page,t);await x.page.waitForTimeout(80)}await x.ctx.close();
+            x=await open(w,h,'inventory-analytics.html?qa=1');await x.page.waitForSelector('.v54-kpi',{timeout:45000});await x.page.waitForSelector('.branch-card',{timeout:45000});g=await geo(x.page);const sk=await x.page.locator('.v54-kpi').count(),charts=await x.page.locator('.sales-chart svg').count(),st=await x.page.locator('body').innerText();console.log('sales',w,{g,sk,charts,errors:x.errors});if(g.sw>g.cw+3||sk<8||charts<2||!st.includes('أولوية إعادة التوريد')||!st.includes('جدة')||!st.includes('الرياض')||x.errors.length)fail=true;for(const t of ['products','transfers','history','details','overview']){await clickTab(x.page,t);await x.page.waitForTimeout(80)}await x.ctx.close();
+            x=await open(w,h,'control-center.html?qa=1');await x.page.waitForSelector('#v51-admin-shell',{state:'attached',timeout:20000});await x.page.waitForTimeout(1800);await clickTab(x.page,'permissions');await x.page.waitForTimeout(300);g=await geo(x.page);const groups=await x.page.locator('.v54-perm-group').count(),perms=await x.page.locator('[data-default]').count();console.log('permissions',w,{g,groups,perms,errors:x.errors});if(g.sw>g.cw+3||groups<2||perms<20||x.errors.length)fail=true;await x.ctx.close();
+            x=await open(w,h,'admin-dashboard.html?section=employees&module=live&qa=1');await x.page.waitForSelector('#v51-admin-shell',{state:'attached',timeout:20000});await x.page.waitForTimeout(1800);g=await geo(x.page);if(g.sw>g.cw+3||x.errors.length)fail=true;await x.ctx.close();
+          }
+          const x=await open(1440,900,'command-center.html?qa=1');await x.page.waitForTimeout(900);if(!x.page.url().includes('admin-home.html')||x.errors.length)fail=true;await x.ctx.close()}catch(e){console.error(e);fail=true}
+          await browser.close();if(fail)process.exit(1);
+          JS
+          node ./.v54.mjs
