@@ -1,0 +1,88 @@
+name: V54.3 Mobile Employee Modal Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'v54-1-desktop-canvas-fix.css'
+      - 'admin-dashboard.html'
+      - '.github/workflows/v54-3-mobile-employee-modal-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-modal-scroll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Verify production modal contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'z-[140]' admin-dashboard.html >/dev/null
+          grep -F 'max-h-[72vh] overflow-y-auto' admin-dashboard.html >/dev/null
+          grep -F 'حفظ الحساب' admin-dashboard.html >/dev/null
+          grep -F 'overscroll-behavior-y:contain' v54-1-desktop-canvas-fix.css >/dev/null
+          grep -F 'z-index:100700' v54-1-desktop-canvas-fix.css >/dev/null
+          grep -F 'touch-action:pan-y' v54-1-desktop-canvas-fix.css >/dev/null
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Test scroll ownership on iPhone-sized viewports
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/modal-fixture.html <<'HTML'
+          <!doctype html><html dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="/v54-1-desktop-canvas-fix.css"><style>*{box-sizing:border-box}html,body{margin:0}#background{height:2200px;background:#eef1ef}#v52-mobile-header{position:fixed;top:0;left:0;right:0;height:58px;background:white}#v52-mobile-nav{position:fixed;bottom:0;left:0;right:0;height:72px;background:white}.panel{background:white}.head,.foot{padding:18px;border:1px solid #ddd}.form{padding:20px}.field{height:120px;margin-bottom:16px;border:1px solid #ddd;border-radius:16px}</style></head><body class="v52-admin-layout v51-admin-dashboard"><div id="v52-mobile-header">header</div><div id="v52-mobile-nav">nav</div><div id="root"><div id="background"></div><div id="overlay" class="fixed inset-0 z-[140] bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4"><div id="panel" class="panel w-full sm:max-w-2xl bg-white rounded-t-[1.8rem] sm:rounded-3xl overflow-hidden shadow-2xl"><div class="head">إعادة تعيين رمز الدخول</div><div id="scroll" class="form p-5 space-y-4 max-h-[72vh] overflow-y-auto"><div class="field">الاسم الأساسي</div><div class="field">الأسماء البديلة</div><div class="field">رمز دخول جديد</div><div class="field">حالة الحساب</div><div class="field">المستودع</div><div class="field">ملاحظات</div><div class="field">آخر حقل</div></div><div id="footer" class="foot px-5 py-4 bg-stone-50 border-t flex gap-3"><button>إلغاء</button><button>حفظ الحساب</button></div></div></div></div></body></html>
+          HTML
+          cp /tmp/modal-fixture.html ./__v54_3_modal_fixture.html
+          python3 -m http.server 4173 >/tmp/v54-3-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f __v54_3_modal_fixture.html .v54-3-test.mjs' EXIT
+          sleep 2
+          cat > .v54-3-test.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          let failed=false;
+          for (const [width,height] of [[390,844],[430,932]]) {
+            const ctx=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true});
+            const page=await ctx.newPage();
+            const errors=[]; page.on('pageerror',e=>errors.push(String(e)));
+            await page.goto('http://127.0.0.1:4173/__v54_3_modal_fixture.html',{waitUntil:'domcontentloaded'});
+            const state=await page.evaluate(()=>{
+              const overlay=document.querySelector('#overlay'),panel=document.querySelector('#panel'),scroll=document.querySelector('#scroll'),footer=document.querySelector('#footer');
+              const ob=overlay.getBoundingClientRect(),pb=panel.getBoundingClientRect(),fb=footer.getBoundingClientRect();
+              return {
+                bodyOverflow:getComputedStyle(document.body).overflow,
+                bodyOverscroll:getComputedStyle(document.body).overscrollBehavior,
+                overlayZ:getComputedStyle(overlay).zIndex,
+                overlayHeight:ob.height,panelHeight:pb.height,
+                scrollOverflow:getComputedStyle(scroll).overflowY,
+                scrollOverscroll:getComputedStyle(scroll).overscrollBehaviorY,
+                touchAction:getComputedStyle(scroll).touchAction,
+                scrollHeight:scroll.scrollHeight,clientHeight:scroll.clientHeight,
+                footerTop:fb.top,footerBottom:fb.bottom,
+                navVisibility:getComputedStyle(document.querySelector('#v52-mobile-nav')).visibility,
+                headerVisibility:getComputedStyle(document.querySelector('#v52-mobile-header')).visibility,
+                winY:window.scrollY
+              };
+            });
+            await page.evaluate(()=>{const s=document.querySelector('#scroll');s.scrollTop=500});
+            const after=await page.evaluate(()=>({inner:document.querySelector('#scroll').scrollTop,winY:window.scrollY}));
+            console.log(width,height,state,after,errors);
+            if(state.bodyOverflow!=='hidden'||state.overlayZ!=='100700'||state.panelHeight>height+1||state.scrollOverflow!=='auto'||state.scrollHeight<=state.clientHeight||state.footerBottom>height+1||state.footerTop<0||state.navVisibility!=='hidden'||state.headerVisibility!=='hidden'||after.inner<=0||after.winY!==state.winY||errors.length) failed=true;
+            await ctx.close();
+          }
+          await browser.close();
+          if(failed)process.exit(1);
+          JS
+          node ./.v54-3-test.mjs
