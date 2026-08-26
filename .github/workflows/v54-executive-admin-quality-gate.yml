@@ -1,0 +1,119 @@
+name: V54 Executive Administration Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'admin-home.html'
+      - 'inventory-analytics.html'
+      - 'control-center.html'
+      - 'admin-dashboard.html'
+      - 'v46-admin-nav.js'
+      - 'v44-observability.js'
+      - 'v54-admin-overhaul.css'
+      - 'v54-admin-enhancements.js'
+      - 'v54-sales-clarity.js'
+      - '.github/workflows/v54-executive-admin-quality-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  executive-admin-v54:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Static architecture and syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v46-admin-nav.js
+          node --check v44-observability.js
+          node --check v54-admin-enhancements.js
+          node --check v54-sales-clarity.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          need=['admin-home.html','inventory-analytics.html','control-center.html','v46-admin-nav.js','v44-observability.js','v54-admin-overhaul.css','v54-admin-enhancements.js','v54-sales-clarity.js']
+          missing=[p for p in need if not Path(p).exists()]
+          if missing: raise SystemExit('V54_MISSING '+','.join(missing))
+          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8')
+          css=Path('v54-admin-overhaul.css').read_text(encoding='utf-8')
+          obs=Path('v44-observability.js').read_text(encoding='utf-8')
+          perms=Path('v54-admin-enhancements.js').read_text(encoding='utf-8')
+          home=Path('admin-home.html').read_text(encoding='utf-8')
+          clarity=Path('v54-sales-clarity.js').read_text(encoding='utf-8')
+          checks={
+            'executive naming':'الإدارة التنفيذية' in nav and 'مركز القيادة' not in nav,
+            'rtl desktop offset':'padding-right:var(--admin-sidebar)' in css and 'padding-inline-end:var(--admin-sidebar)' not in css,
+            'desktop canvas':'.v52-page{width:100%' in css and 'max-width:none' in css,
+            'mobile reset':'padding-right:0!important' in css and '@media(max-width:900px)' in css,
+            'home analytics':all(x in home for x in ['مبيعات اليوم','مبيعات 7 أيام','مبيعات 30 يوم','متوسط البيع اليومي','أداء الفروع','نشاط النظام']),
+            'sales clarity':all(x in clarity for x in ['إجمالي النقص','تحويل مستبعد','مبيعات محتسبة','تغطية التسعير','توزيع المبيعات بين الفرعين']),
+            'employee permissions':all(x in perms for x in ['viewStockQty','viewPrices','viewImages','switchWarehouse','editCart','removeCartItems','submitOrder','viewOrderHistory','stocktakeNotes','stocktakeReview','stocktakeEdit','exportData']),
+            'customer permissions':all(x in perms for x in ['viewStockStatus','viewCartImages','branchDistribution','checkoutNotes','shareProduct','viewOrderDetails']),
+            'runtime permission keys':all(x in obs for x in ['viewStockQty:true','viewPrices:true','switchWarehouse:true','submitOrder:true','viewStockStatus:true','branchDistribution:true']),
+            'runtime enforcement':all(x in obs for x in ["return'submitOrder'","return'branchDistribution'","effective.viewPrices===false","effective.viewStockQty===false","effective.viewStockStatus===false"]),
+            'qa isolation':"const VERSION='44.0'" in obs and 'isQa()' in obs,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V54_STATIC_FAIL '+', '.join(bad))
+          for name in ['admin-home.html','inventory-analytics.html']:
+            s=Path(name).read_text(encoding='utf-8')
+            blocks=re.findall(r'<script>(.*?)</script>',s,re.S|re.I)
+            Path('/tmp/'+name+'.js').write_text('\n'.join(blocks),encoding='utf-8')
+          print('V54_STATIC_PASS',len(checks))
+          PY
+          node --check /tmp/admin-home.html.js
+          node --check /tmp/inventory-analytics.html.js
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Desktop and mobile responsive regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 >/tmp/v54-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .v54.mjs' EXIT
+          sleep 2
+          cat > .v54.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const browser=await chromium.launch({headless:true});let failed=false;
+          const analytics={schema:1,generatedAt:new Date().toISOString(),current:{jeddah:{label:'جدة',skuCount:2100,positiveSkuCount:1900,totalQty:120000},riyadh:{label:'الرياض',skuCount:2000,positiveSkuCount:1800,totalQty:90000}},transferCandidates:[],events:[{id:'e1',timestamp:new Date().toISOString(),message:'تحديث',summary:{inboundQty:35,outboundQty:95,sameEventTransferQty:10},transfers:[{sku:'1',name:'صنف 1',from:'jeddah',fromLabel:'جدة',to:'riyadh',toLabel:'الرياض',qty:10}],changes:[{branch:'jeddah',branchLabel:'جدة',sku:'1',name:'صنف أول',before:100,after:50,delta:-50,price:20,transferMatchedQty:10,zeroed:false},{branch:'riyadh',branchLabel:'الرياض',sku:'2',name:'صنف ثاني',before:70,after:35,delta:-35,price:15,transferMatchedQty:0,zeroed:false},{branch:'riyadh',branchLabel:'الرياض',sku:'3',name:'صنف ثالث',before:10,after:45,delta:35,price:12,transferMatchedQty:0,zeroed:false}]}]};
+          async function ctx(w,h){const c=await browser.newContext({viewport:{width:w,height:h}});await c.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});return c}
+          async function inspect(w,h){let c=await ctx(w,h),p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(String(e)));await p.route('**/data/inventory-analytics.json*',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(analytics)}));
+            await p.goto('http://127.0.0.1:4173/inventory-analytics.html',{waitUntil:'domcontentloaded',timeout:30000});await p.waitForFunction(()=>document.querySelector('.v52-sidebar')&&document.body.innerText.includes('المبيعات'),null,{timeout:15000});await p.waitForTimeout(600);
+            const geo=await p.evaluate(()=>{const side=document.querySelector('.v52-sidebar'),main=document.querySelector('#sales'),sn=getComputedStyle(side),mn=main.getBoundingClientRect(),sr=side.getBoundingClientRect();return {scroll:document.documentElement.scrollWidth-document.documentElement.clientWidth,sideDisplay:sn.display,sideLeft:sr.left,sideRight:sr.right,mainRight:mn.right,mainLeft:mn.left,viewport:innerWidth,mobileDisplay:getComputedStyle(document.querySelector('#v52-mobile-nav')).display,clarity:Boolean(document.querySelector('#v54-sales-clarity'))}});
+            const charts=await p.locator('svg[aria-label*="المبيعات"],.sales-chart svg,.v52-chart svg').count();console.log('sales',w,geo,'charts',charts,'errors',errors.slice(0,2));
+            if(geo.scroll>4||!geo.clarity||charts<2||errors.length)failed=true;
+            if(w>900){if(geo.sideDisplay==='none'||Math.abs(geo.sideRight-w)>3||geo.mainRight>geo.sideLeft+4)failed=true}else{if(geo.sideDisplay!=='none'||geo.mobileDisplay==='none')failed=true}
+            await c.close();
+          }
+          await inspect(1660,940);await inspect(1440,900);await inspect(390,844);
+          await browser.close();if(failed)process.exit(1);
+          JS
+          node ./.v54.mjs
+
+      - name: Advanced permission surface contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('v54-admin-enhancements.js').read_text(encoding='utf-8')
+          employee=['viewStockQty','viewPrices','viewImages','switchWarehouse','editCart','removeCartItems','submitOrder','viewOrderHistory','stocktakeNotes','stocktakeReview','stocktakeEdit','exportData']
+          customer=['viewPrices','viewStockStatus','viewCartImages','editCart','removeCartItems','branchDistribution','checkoutNotes','shareProduct','viewOrderDetails']
+          assert all(k in p for k in employee), 'employee permission missing'
+          assert all(k in p for k in customer), 'customer permission missing'
+          assert '20' in p or '8+Object.keys(employeeExtra).length' in p
+          assert '18' in p or '9+Object.keys(customerExtra).length' in p
+          print('V54_PERMISSION_CONTRACT_PASS',len(employee)+8,len(customer)+9)
+          PY
