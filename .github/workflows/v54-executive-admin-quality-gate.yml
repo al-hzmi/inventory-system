@@ -1,6 +1,8 @@
 name: V54 Executive Administration Quality Gate
 
 on:
+  push:
+    branches: ['feature/v54-admin-executive-overhaul']
   pull_request:
     branches: [main]
     paths:
