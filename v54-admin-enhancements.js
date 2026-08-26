@@ -16,6 +16,10 @@ function extendControlCenter(){
   Object.assign(PERMS.employee,employeeExtra);Object.assign(PERMS.customer,customerExtra);
   for(const k of Object.keys(employeeExtra))if(!(k in DEFAULTS.employee))DEFAULTS.employee[k]=true;
   for(const k of Object.keys(customerExtra))if(!(k in DEFAULTS.customer))DEFAULTS.customer[k]=true;
+  if(typeof S!=='undefined'&&S?.permissions){
+   S.permissions.employeeDefaults={...DEFAULTS.employee,...(S.permissions.employeeDefaults||{})};
+   S.permissions.customerDefaults={...DEFAULTS.customer,...(S.permissions.customerDefaults||{})};
+  }
   if(TEMPLATES.employee?.full)Object.assign(TEMPLATES.employee.full.v,DEFAULTS.employee);
   if(TEMPLATES.employee?.sales)Object.assign(TEMPLATES.employee.sales.v,{viewStockQty:true,viewPrices:true,viewImages:true,switchWarehouse:true,editCart:true,removeCartItems:true,submitOrder:true,viewOrderHistory:true,stocktakeNotes:false,stocktakeReview:false,stocktakeEdit:false,exportData:false});
   if(TEMPLATES.employee?.warehouse)Object.assign(TEMPLATES.employee.warehouse.v,{viewStockQty:true,viewPrices:false,viewImages:true,switchWarehouse:true,editCart:false,removeCartItems:false,submitOrder:false,viewOrderHistory:false,stocktakeNotes:true,stocktakeReview:true,stocktakeEdit:true,exportData:false});
