@@ -1,0 +1,68 @@
+name: V54 Admin Entry Self Patch
+
+on:
+  push:
+    branches: [feature/v54-admin-entry]
+    paths:
+      - '.github/workflows/v54-admin-entry-selfpatch.yml'
+      - 'runtime/index-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'command-center.html'
+      - 'admin-home.html'
+      - 'inventory-analytics.html'
+      - 'admin-stocktake-shell.html'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/v54-admin-entry
+      - name: Patch admin entry and cache versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          runtime=Path('runtime/index-v37-source.txt')
+          s=runtime.read_text(encoding='utf-8')
+          old="window.location.href = './admin-dashboard.html';"
+          new="window.location.href = './admin-home.html';"
+          if old in s:
+              s=s.replace(old,new,1)
+          elif new not in s:
+              raise SystemExit('V54_RUNTIME_ADMIN_ENTRY_MARKER_NOT_FOUND')
+          runtime.write_text(s,encoding='utf-8')
+
+          files=['admin-dashboard.html','command-center.html','admin-home.html','inventory-analytics.html','admin-stocktake-shell.html']
+          for name in files:
+              p=Path(name)
+              if not p.exists():
+                  continue
+              text=p.read_text(encoding='utf-8')
+              text2=re.sub(r'v46-admin-nav\.js\?v=[0-9.]+', 'v46-admin-nav.js?v=54.0', text)
+              if text2==text and 'v46-admin-nav.js?v=54.0' not in text:
+                  raise SystemExit(f'V54_NAV_MARKER_NOT_FOUND {name}')
+              p.write_text(text2,encoding='utf-8')
+
+          # Keep legacy command-center route explicitly retired.
+          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8')
+          assert "path==='command-center.html'" in nav and "location.replace('./admin-home.html')" in nav
+          assert 'مركز القيادة' in nav
+          print('V54_PATCH_READY')
+          PY
+          if git diff --quiet; then
+            echo 'V54_NO_CHANGES_NEEDED'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/index-v37-source.txt admin-dashboard.html command-center.html admin-home.html inventory-analytics.html admin-stocktake-shell.html
+          git commit -m 'V54: route admin entry to command center and bust admin shell cache'
+          git push origin HEAD:feature/v54-admin-entry
