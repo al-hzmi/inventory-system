@@ -1,0 +1,10 @@
+(()=>{
+'use strict';
+const VERSION='54.0';
+const clean=n=>{const x=Number(String(n??'').replace(/,/g,'').trim());return Number.isFinite(x)?x:0};
+function inv(text){const rows=String(text||'').replace(/\r/g,'').split('\n').filter(Boolean),out=[];for(let i=1;i<rows.length;i++){const c=rows[i].split('\t'),sku=String(c[0]||'').trim();if(!sku)continue;out.push({sku,name:String(c[1]||'').trim(),unit:String(c[2]||'').trim(),qty:clean(c[3]),pack:clean(c[4])})}return out}
+function prices(text){const out={jeddah:new Map(),riyadh:new Map()},rows=String(text||'').replace(/\r/g,'').split('\n');for(let i=2;i<rows.length;i++){const c=rows[i].split('\t'),j=String(c[0]||'').trim(),r=String(c[5]||'').trim();if(j)out.jeddah.set(j,clean(c[1]));if(r)out.riyadh.set(r,clean(c[6]))}return out}
+function summary(label,rows,pm){const items=rows.map(x=>{const price=pm.get(x.sku)||0,value=Math.max(0,x.qty)*price,limit=x.pack>0?x.pack:5;return{...x,price,value,low:x.qty>0&&x.qty<=limit}});return{label,skuCount:items.length,positiveSkuCount:items.filter(x=>x.qty>0).length,zeroSkuCount:items.filter(x=>x.qty===0).length,negativeSkuCount:items.filter(x=>x.qty<0).length,lowStockSkuCount:items.filter(x=>x.low).length,noPriceSkuCount:items.filter(x=>x.qty>0&&!x.price).length,totalQty:items.reduce((s,x)=>s+x.qty,0),inventoryValue:items.reduce((s,x)=>s+x.value,0),items}}
+async function load(){try{const stamp=Date.now(),rs=await Promise.all(['data/jeddah.tsv','data/riyadh.tsv','data/pricing.tsv'].map(p=>fetch('./'+p+'?v54='+stamp,{cache:'no-store'})));if(rs.some(r=>!r.ok))throw Error('STOCK_HTTP');const[j,r,p]=await Promise.all(rs.map(x=>x.text())),pm=prices(p);window.__V54_STOCK_DATA={version:VERSION,generatedAt:Date.now(),branches:{jeddah:summary('جدة',inv(j),pm.jeddah),riyadh:summary('الرياض',inv(r),pm.riyadh)}};window.dispatchEvent(new CustomEvent('v54-stock-data',{detail:window.__V54_STOCK_DATA}))}catch(e){window.__V54_STOCK_DATA={version:VERSION,error:String(e?.message||e),branches:null};window.dispatchEvent(new CustomEvent('v54-stock-data',{detail:window.__V54_STOCK_DATA}))}}
+load();
+})();
