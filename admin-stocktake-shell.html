@@ -15,5 +15,5 @@ const f=document.getElementById('stocktakeFrame');
 function normalizeFrame(){try{const d=f.contentDocument;if(!d)return;const top=d.querySelector('.top');if(top)top.style.display='none';const wrap=d.querySelector('.wrap');if(wrap){wrap.style.maxWidth='1460px';wrap.style.paddingTop='0'}d.documentElement.style.background='#fafaf9';d.body.style.background='#fafaf9'}catch(e){console.warn('[stocktake shell]',e)}}
 f.addEventListener('load',()=>{normalizeFrame();setTimeout(normalizeFrame,300);setTimeout(normalizeFrame,1200)});
 </script>
-<script src="./v46-admin-nav.js?v=51.1"></script>
+<script src="./v46-admin-nav.js?v=54.0"></script>
 </body></html>

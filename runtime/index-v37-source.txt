@@ -3714,7 +3714,7 @@ const App = () => {
                                 </button>
                             ))}
                             {isAdmin && (
-                                <button onClick={() => { window.location.href = './admin-dashboard.html'; }} title="لوحة التحكم الإدارية"
+                                <button onClick={() => { window.location.href = './admin-home.html'; }} title="لوحة التحكم الإدارية"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-primary border border-primary text-bg hover:opacity-90 transition-opacity animate-flip">
                                     <Icon.Dashboard className="w-20 h-20" />
                                     <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">لوحة التحكم</span>
