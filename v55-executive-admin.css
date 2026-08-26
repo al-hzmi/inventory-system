@@ -1,0 +1,31 @@
+/* V55 — Executive Administration desktop-first corrections */
+:root{--admin-sidebar:244px}
+.v52-brand-copy b::after{content:""}
+@media(min-width:1181px){
+ body.v52-admin-layout{padding-inline-end:var(--admin-sidebar)!important;overflow-x:hidden!important}
+ .v52-sidebar{width:var(--admin-sidebar);padding:22px 15px 16px}
+ .v52-page{width:100%;max-width:1720px;margin:0 auto;padding:30px clamp(24px,2.4vw,44px) 64px;overflow:visible}
+ .v52-page-head{align-items:center;margin-bottom:24px}
+ .v52-page-head>div:first-child{min-width:0}
+ .v52-page-title{font-size:30px}
+ .v52-page-sub{max-width:920px;font-size:11.5px}
+ .v52-kpis{grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+ .v52-kpi{padding:16px;min-height:128px}
+ .v52-kpi-value{font-size:26px}
+ .v52-split{grid-template-columns:minmax(0,1.55fr) minmax(330px,.55fr)}
+ .v52-half{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .sales-filter{display:grid!important;grid-template-columns:minmax(170px,220px) minmax(170px,220px) minmax(260px,1fr);width:100%}
+ .sales-filter input{min-width:0!important;width:100%}
+ .sales-tabs{overflow:visible!important;flex-wrap:wrap}
+ .sales-chart{min-width:0!important;width:100%!important;overflow:hidden!important}
+ .sales-chart svg{width:100%!important;max-width:100%!important;min-width:0!important}
+ .branch-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .branch-card{min-width:0}
+ .event-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .v52-card,.v52-card-body,.v52-grid>*{min-width:0}
+ .v52-table-wrap{max-width:100%;overflow:auto}
+}
+@media(min-width:1500px){.v52-kpis{grid-template-columns:repeat(6,minmax(150px,1fr))}.v52-page{padding-inline:42px}}
+@media(min-width:901px) and (max-width:1180px){.v52-page{max-width:100%;padding:24px 22px 52px}.v52-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.sales-filter{display:grid!important;grid-template-columns:1fr 1fr}.sales-filter input{grid-column:1/-1;min-width:0!important;width:100%}}
+@media(max-width:900px){.v52-page{width:100%;max-width:100%;overflow:hidden}.sales-chart,.sales-chart svg{max-width:100%!important}.v52-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.v52-kpis{grid-template-columns:1fr 1fr}.v52-kpi{padding:13px}.v52-kpi-value{font-size:21px}.branch-metrics{grid-template-columns:1fr 1fr!important}}
