@@ -13,4 +13,65 @@ jobs:
       github.event.check_run.app.slug == 'vercel' &&
       github.event.check_run.conclusion == 'success' &&
       github.event.check_run.pull_requests[0].head.ref == 'feature/v54-admin-executive-overhaul'
-    uses: ./.github/workflows/v54-vercel-external-gate.yml
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.check_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Static contract
+        run: |
+          set -euo pipefail
+          node --check v46-admin-nav.js
+          node --check v44-observability.js
+          node --check v54-admin-enhancements.js
+          node --check v54-sales-clarity.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          nav=Path('v46-admin-nav.js').read_text(encoding='utf-8');css=Path('v54-admin-overhaul.css').read_text(encoding='utf-8');obs=Path('v44-observability.js').read_text(encoding='utf-8');enh=Path('v54-admin-enhancements.js').read_text(encoding='utf-8');home=Path('admin-home.html').read_text(encoding='utf-8');clarity=Path('v54-sales-clarity.js').read_text(encoding='utf-8')
+          checks=[
+            ('name','الإدارة التنفيذية' in nav and 'مركز القيادة' not in nav),
+            ('rtl','padding-right:var(--admin-sidebar)' in css),
+            ('mobile','padding-right:0!important' in css),
+            ('home',all(x in home for x in ['مبيعات اليوم','مبيعات 7 أيام','مبيعات 30 يوم','أداء الفروع','يحتاج انتباهك'])),
+            ('clarity',all(x in clarity for x in ['إجمالي النقص','تحويل مستبعد','مبيعات محتسبة','تغطية التسعير'])),
+            ('employee',all(x in enh for x in ['viewStockQty','viewPrices','viewImages','switchWarehouse','editCart','removeCartItems','submitOrder','viewOrderHistory','stocktakeNotes','stocktakeReview','stocktakeEdit','exportData'])),
+            ('customer',all(x in enh for x in ['viewPrices','viewStockStatus','viewCartImages','editCart','removeCartItems','branchDistribution','checkoutNotes','shareProduct','viewOrderDetails'])),
+            ('runtime',all(x in obs for x in ["const VERSION='44.0'","return'submitOrder'","return'branchDistribution'","effective.viewPrices===false","effective.viewStockQty===false","effective.viewStockStatus===false"])),
+          ]
+          bad=[k for k,v in checks if not v]
+          if bad: raise SystemExit('V54_STATIC_FAIL '+','.join(bad))
+          for name in ['admin-home.html','inventory-analytics.html']:
+            s=Path(name).read_text(encoding='utf-8');Path('/tmp/'+name+'.js').write_text('\n'.join(re.findall(r'<script>(.*?)</script>',s,re.S|re.I)),encoding='utf-8')
+          print('V54_STATIC_PASS',len(checks))
+          PY
+          node --check /tmp/admin-home.html.js
+          node --check /tmp/inventory-analytics.html.js
+      - name: Install Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Browser regression
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 >/tmp/v54-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .v54.mjs' EXIT
+          sleep 2
+          cat > .v54.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const browser=await chromium.launch({headless:true});let failed=false;
+          const analytics={schema:1,generatedAt:new Date().toISOString(),current:{jeddah:{skuCount:2100,positiveSkuCount:1900,totalQty:120000},riyadh:{skuCount:2000,positiveSkuCount:1800,totalQty:90000}},transferCandidates:[],events:[{id:'e1',timestamp:new Date().toISOString(),message:'تحديث',summary:{inboundQty:35,outboundQty:95,sameEventTransferQty:10},transfers:[],changes:[{branch:'jeddah',branchLabel:'جدة',sku:'1',name:'صنف أول',before:100,after:50,delta:-50,price:20,transferMatchedQty:10,zeroed:false},{branch:'riyadh',branchLabel:'الرياض',sku:'2',name:'صنف ثاني',before:70,after:35,delta:-35,price:15,transferMatchedQty:0,zeroed:false},{branch:'riyadh',branchLabel:'الرياض',sku:'3',name:'صنف ثالث',before:10,after:45,delta:35,price:12,transferMatchedQty:0,zeroed:false}]}]};
+          async function adminCtx(w,h){const c=await browser.newContext({viewport:{width:w,height:h}});await c.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});return c}
+          for(const [w,h] of [[1660,940],[1440,900],[390,844]]){const c=await adminCtx(w,h),p=await c.newPage(),errs=[];p.on('pageerror',e=>errs.push(String(e)));await p.route('**/data/inventory-analytics.json*',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(analytics)}));await p.goto('http://127.0.0.1:4173/inventory-analytics.html',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.querySelector('.v52-sidebar')&&document.querySelector('#v54-sales-clarity'),null,{timeout:15000});await p.waitForTimeout(350);const g=await p.evaluate(()=>{const s=document.querySelector('.v52-sidebar'),m=document.querySelector('#sales'),sr=s.getBoundingClientRect(),mr=m.getBoundingClientRect();return{overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,side:getComputedStyle(s).display,sideLeft:sr.left,sideRight:sr.right,mainRight:mr.right,mobile:getComputedStyle(document.querySelector('#v52-mobile-nav')).display,label:document.body.innerText.includes('الإدارة التنفيذية'),clarity:document.body.innerText.includes('إجمالي النقص')&&document.body.innerText.includes('مبيعات محتسبة')}});const charts=await p.locator('.sales-chart svg,.v52-chart svg').count();console.log('V54_LAYOUT',w,g,'charts',charts,'errors',errs);if(g.overflow>4||!g.label||!g.clarity||charts<2||errs.length)failed=true;if(w>900){if(g.side==='none'||Math.abs(g.sideRight-w)>3||g.mainRight>g.sideLeft+4)failed=true}else if(g.side!=='none'||g.mobile==='none')failed=true;await c.close()}
+          const firebaseScript=perm=>`<script>const __p=${JSON.stringify(perm)};const __db={collection(n){return{doc(){return{set(){return Promise.resolve()},onSnapshot(cb){if(n==='system_controls')setTimeout(()=>cb({exists:true,data:()=>__p}),5);return()=>{}}}},add(){return Promise.resolve()}}}};function fs(){return __db}fs.FieldValue={serverTimestamp:()=>new Date()};window.firebase={apps:[{}],firestore:fs};</script>`;
+          {const c=await browser.newContext({viewport:{width:900,height:700}});await c.addInitScript(()=>{Object.defineProperty(navigator,'webdriver',{get:()=>false});localStorage.setItem('inventory_user_name_v2','أحمد');localStorage.setItem('inventory_employee_id_v2','emp1')});const p=await c.newPage();const html=`<body><button id="b" onclick="window.hit=(window.hit||0)+1">اعتماد وإرسال الطلب</button><span id="q">الكمية المتوفرة 15</span><span id="pr">السعر 100 ر.س</span>${firebaseScript({employeeDefaults:{submitOrder:false,viewStockQty:false,viewPrices:false}})}<script src="/v44-observability.js"></script></body>`;await p.route('http://batco.local:4173/index.html',r=>r.fulfill({status:200,contentType:'text/html',body:html}));await p.goto('http://batco.local:4173/index.html');await p.waitForTimeout(650);await p.locator('#b').click();const r=await p.evaluate(()=>({hit:window.hit||0,q:getComputedStyle(document.querySelector('#q')).visibility,pr:getComputedStyle(document.querySelector('#pr')).visibility,perm:window.__V44_OBSERVABILITY?.permissions?.().submitOrder}));console.log('EMP',r);if(r.hit||r.q!=='hidden'||r.pr!=='hidden'||r.perm!==false)failed=true;await c.close()}
+          {const c=await browser.newContext({viewport:{width:390,height:844}});await c.addInitScript(()=>{Object.defineProperty(navigator,'webdriver',{get:()=>false});localStorage.setItem('batco_customer_visitor_id_v1','v1');localStorage.setItem('customer_guest_name_v1','عميل')});const p=await c.newPage();const html=`<body><button id="b" onclick="window.hit=(window.hit||0)+1">تعديل التوزيع</button><span id="st">متوفر الآن</span><span id="pr">السعر 50 ر.س</span>${firebaseScript({customerDefaults:{branchDistribution:false,viewStockStatus:false,viewPrices:false}})}<script src="/v44-observability.js"></script></body>`;await p.route('http://batco.local:4173/customer.html',r=>r.fulfill({status:200,contentType:'text/html',body:html}));await p.goto('http://batco.local:4173/customer.html');await p.waitForTimeout(650);await p.locator('#b').click();const r=await p.evaluate(()=>({hit:window.hit||0,st:getComputedStyle(document.querySelector('#st')).visibility,pr:getComputedStyle(document.querySelector('#pr')).visibility,perm:window.__V44_OBSERVABILITY?.permissions?.().branchDistribution}));console.log('CUS',r);if(r.hit||r.st!=='hidden'||r.pr!=='hidden'||r.perm!==false)failed=true;await c.close()}
+          {const c=await browser.newContext(),p=await c.newPage();const h=`<body><div id="app"><main></main></div><script>const PERMS={employee:{search:1,scanner:1,catalog:1,cart:1,drafts:1,orders:1,customerView:1,stocktake:1},customer:{browse:1,search:1,categories:1,images:1,cart:1,checkout:1,orders:1,whatsapp:1,install:1}};const DEFAULTS={employee:{},customer:{}};const TEMPLATES={employee:{full:{v:{}},sales:{v:{}},warehouse:{v:{}},viewer:{v:{}}},customer:{full:{v:{}},browse:{v:{}},noCheckout:{v:{}}}};function render(){}</script><script src="/v54-admin-enhancements.js"></script></body>`;await p.route('http://127.0.0.1:4173/control-center.html',r=>r.fulfill({status:200,contentType:'text/html',body:h}));await p.goto('http://127.0.0.1:4173/control-center.html');await p.waitForTimeout(250);const r=await p.evaluate(()=>({e:Object.keys(PERMS.employee).length,c:Object.keys(PERMS.customer).length,s:Boolean(document.querySelector('#v54-permission-summary'))}));console.log('MATRIX',r);if(r.e!==20||r.c!==18||!r.s)failed=true;await c.close()}
+          await browser.close();if(failed)process.exit(1);
+          JS
+          node ./.v54.mjs
