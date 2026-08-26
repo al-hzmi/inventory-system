@@ -1,0 +1,52 @@
+name: Apply V54 Executive Runtime
+on:
+  push:
+    branches: [feature/v54-executive-operations]
+    paths:
+      - tools/patch_v54_runtime.py
+      - v54-policy-engine.js
+      - .github/workflows/apply-v54-runtime.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/v54-executive-operations
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply deterministic V54 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/patch_v54_runtime.py
+          python tools/patch_v54_runtime.py
+          python -m py_compile tools/inventory_analytics.py
+          node --check v44-observability.js
+          node --check v54-policy-engine.js
+          grep -q "v54-policy-engine.js?v=54.0" v44-observability.js
+          grep -q 'lowStockSkuCount' tools/inventory_analytics.py
+          grep -q 'inventoryValue' tools/inventory_analytics.py
+      - name: Commit patched runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- v44-observability.js tools/inventory_analytics.py; then
+            echo 'already applied'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v44-observability.js tools/inventory_analytics.py
+          git commit -m 'V54: wire granular policy engine and stock intelligence'
+          git push origin HEAD:feature/v54-executive-operations
