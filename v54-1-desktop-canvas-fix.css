@@ -1,0 +1,66 @@
+/* V54.1 — desktop canvas box-model correction */
+@media (min-width:901px){
+  html{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+  body.v52-admin-layout{
+    width:100vw!important;
+    max-width:100vw!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    margin:0!important;
+    padding-right:var(--admin-sidebar)!important;
+    padding-left:0!important;
+    overflow-x:hidden!important;
+  }
+  body.v52-admin-layout>.app,
+  body.v52-admin-layout>main,
+  body.v52-admin-layout>#home,
+  body.v52-admin-layout>#sales,
+  body.v52-admin-layout #root,
+  body.v52-admin-layout .v52-page,
+  body.v51-control-center .app,
+  body.v51-inventory-analytics .app{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .v52-page{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .v52-page-head,
+  .v52-grid,
+  .v52-kpis,
+  .v52-split,
+  .v52-half,
+  .v52-card,
+  .v52-card-head,
+  .v52-card-body,
+  .v54-quick,
+  .v54-metrics,
+  .v54-donut-wrap{
+    box-sizing:border-box!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+  .v52-page-head{flex-wrap:wrap!important}
+  .v52-page-head>div:first-child{min-width:280px!important}
+  .v52-head-actions{max-width:100%!important;min-width:0!important;flex-wrap:wrap!important}
+  .v52-head-actions>*{max-width:100%!important}
+  .v52-chart,.sales-chart{max-width:100%!important;min-width:0!important;overflow:hidden!important}
+  .v52-chart svg,.sales-chart svg{max-width:100%!important}
+}
+@media (min-width:901px) and (max-width:1450px){
+  .v52-page{padding-left:22px!important;padding-right:22px!important}
+  .v52-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media (min-width:901px) and (max-width:1180px){
+  .v52-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .v52-split,.v52-half{grid-template-columns:1fr!important}
+}
+@media (max-width:900px){
+  body.v52-admin-layout{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+  .v52-page{box-sizing:border-box!important;width:100%!important;max-width:100%!important}
+}

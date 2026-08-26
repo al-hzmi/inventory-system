@@ -1,0 +1,73 @@
+name: V54.1 Desktop Canvas Regression Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'v54-1-desktop-canvas-fix.css'
+      - 'v54-admin-enhancements.js'
+      - '.github/workflows/v54-1-desktop-canvas-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-canvas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Static contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v54-admin-enhancements.js
+          python3 - <<'PY'
+          from pathlib import Path
+          css=Path('v54-1-desktop-canvas-fix.css').read_text(encoding='utf-8')
+          js=Path('v54-admin-enhancements.js').read_text(encoding='utf-8')
+          checks={
+            'body border-box':'box-sizing:border-box!important' in css,
+            'viewport bound':'width:100vw!important' in css and 'max-width:100vw!important' in css,
+            'page border-box':'.v52-page' in css and 'max-width:100%!important' in css,
+            'desktop breakpoints':'max-width:1450px' in css and 'max-width:1180px' in css,
+            'mobile preserved':'@media (max-width:900px)' in css,
+            'loader wired':'v54-1-desktop-canvas-fix.css?v=54.1' in js,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V54_1_STATIC_FAIL '+', '.join(bad))
+          print('V54_1_STATIC_PASS',len(checks))
+          PY
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Desktop and mobile geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/v54-1-fixture.html <<'HTML'
+          <!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="http://127.0.0.1:4173/v52-admin.css"><link rel="stylesheet" href="http://127.0.0.1:4173/v54-admin-overhaul.css"><link rel="stylesheet" href="http://127.0.0.1:4173/v54-1-desktop-canvas-fix.css"></head><body class="v52-admin-layout"><aside class="v52-sidebar"><b>الإدارة التنفيذية</b></aside><main id="home" class="v52-page"><div class="v52-page-head"><div><h1 class="v52-page-title">نظرة تشغيلية شاملة</h1></div><div class="v52-head-actions"><button class="v52-btn">تحليل المبيعات</button><button class="v52-btn">صحة النظام</button><button class="v52-btn">الصلاحيات</button></div></div><div class="v52-grid v52-kpis">${'<div class="v52-kpi"><div class="v52-kpi-value">6,721</div></div>'.repeat(8)}</div><div class="v52-grid v52-split" style="margin-top:14px"><section class="v52-card"><div class="v52-card-body"><div class="v52-chart"><svg viewBox="0 0 900 260"><path d="M0 200 L450 50 L900 200" fill="none" stroke="black"/></svg></div></div></section><section class="v52-card"><div class="v52-card-body">حصة الفروع</div></section></div></main><nav id="v52-mobile-nav"></nav></body></html>
+          HTML
+          cp /tmp/v54-1-fixture.html ./v54-1-fixture.html
+          python3 -m http.server 4173 >/tmp/http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f v54-1-fixture.html .v54-1.mjs' EXIT
+          sleep 2
+          cat > .v54-1.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const browser=await chromium.launch({headless:true});let failed=false;
+          for(const [w,h] of [[1660,940],[1440,900],[1366,768],[1280,800],[1024,768],[390,844]]){
+            const c=await browser.newContext({viewport:{width:w,height:h}}),p=await c.newPage();
+            await p.goto('http://127.0.0.1:4173/v54-1-fixture.html',{waitUntil:'domcontentloaded'});await p.waitForTimeout(150);
+            const g=await p.evaluate(()=>{const side=document.querySelector('.v52-sidebar').getBoundingClientRect(),main=document.querySelector('#home').getBoundingClientRect(),body=document.body.getBoundingClientRect();return {scroll:document.documentElement.scrollWidth-document.documentElement.clientWidth,sideDisplay:getComputedStyle(document.querySelector('.v52-sidebar')).display,sideLeft:side.left,sideRight:side.right,mainLeft:main.left,mainRight:main.right,bodyLeft:body.left,bodyRight:body.right,viewport:innerWidth,mobile:getComputedStyle(document.querySelector('#v52-mobile-nav')).display}});
+            console.log(w,g);
+            if(g.scroll>2||g.mainLeft<-1||g.mainRight>w+1||g.bodyLeft<-1||g.bodyRight>w+1)failed=true;
+            if(w>900){if(g.sideDisplay==='none'||Math.abs(g.sideRight-w)>2||g.mainRight>g.sideLeft+2)failed=true}else{if(g.sideDisplay!=='none'||g.mobile==='none')failed=true}
+            await c.close();
+          }
+          await browser.close();if(failed)process.exit(1);
+          JS
+          node ./.v54-1.mjs
