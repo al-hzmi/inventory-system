@@ -69,8 +69,10 @@ jobs:
             x=d['current'][b]
             assert x['skuCount']>0 and 'items' in x and 'lowStockSkuCount' in x and 'inventoryValue' in x
           print('V54_STATIC_PASS',len(checks),'events',d['eventCount'])
-          for p in ['operations-center.html']:
-            s=Path(p).read_text(encoding='utf-8');blocks=re.findall(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I);code='\n'.join(m.group(2) for m in blocks if m.group(2).strip() and 'src=' not in m.group(1));Path('/tmp/'+p+'.js').write_text(code,encoding='utf-8')
+          s=Path('operations-center.html').read_text(encoding='utf-8')
+          blocks=re.findall(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)
+          code='\n'.join(body for attrs,body in blocks if body.strip() and 'src=' not in attrs)
+          Path('/tmp/operations-center.html.js').write_text(code,encoding='utf-8')
           PY
           node --check /tmp/operations-center.html.js
       - name: Install browser
