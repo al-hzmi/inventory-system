@@ -27,16 +27,19 @@ function extendControlCenter(){
   if(typeof render==='function')render();
  }catch(e){console.warn('[V54 permissions UI]',e)}
 }
+function permissionSummary(){if(path!=='control-center.html'||document.getElementById('v54-permission-summary'))return;const app=document.getElementById('app'),main=app?.querySelector('main')||app;if(!main)return;const row=document.createElement('div');row.id='v54-permission-summary';row.className='v54-metrics';row.style.margin='14px';row.innerHTML=`<div class="v54-metric"><small>صلاحيات الموظف</small><b>${8+Object.keys(employeeExtra).length}</b><span>بحث، مخزون، صور، فواتير، طلبات، جرد وتصدير</span></div><div class="v54-metric"><small>صلاحيات العميل</small><b>${9+Object.keys(customerExtra).length}</b><span>تصفح، أسعار، سلة، توزيع، اعتماد، مشاركة وطلبات</span></div><div class="v54-metric"><small>مستويات التحكم</small><b>3</b><span>افتراضي · استثناء فردي · قالب جاهز</span></div><div class="v54-metric"><small>الحفظ</small><b>مباشر</b><span>يتزامن مع محرك الصلاحيات في الواجهات الفعلية</span></div>`;main.insertBefore(row,main.firstChild)}
+function loadSalesClarity(){if(path!=='inventory-analytics.html'||document.getElementById('v54-sales-clarity-script'))return;const s=document.createElement('script');s.id='v54-sales-clarity-script';s.src='./v54-sales-clarity.js?v=54.0';s.async=true;document.head.appendChild(s)}
 function labels(){
  document.querySelectorAll('.v52-brand-copy b,.v52-mobile-copy b').forEach(x=>x.textContent='الإدارة التنفيذية');
  document.querySelectorAll('.v52-status-sub').forEach(x=>x.textContent='إدارة موحدة · صلاحيات ورقابة وتشغيل');
  if(path==='control-center.html'){
-   const brand=document.querySelector('.brand b');if(brand)brand.textContent='الصلاحيات المتقدمة';
-   const brandSub=document.querySelector('.brand span');if(brandSub)brandSub.textContent='تحكم تفصيلي بالموظفين والعملاء والميزات';
+  const brand=document.querySelector('.brand b');if(brand)brand.textContent='الصلاحيات المتقدمة';
+  const brandSub=document.querySelector('.brand span');if(brandSub)brandSub.textContent='تحكم تفصيلي بالموظفين والعملاء والميزات';
+  const tabs=[...document.querySelectorAll('.tab')];tabs.forEach(t=>{if(t.textContent.trim()==='الصلاحيات')t.textContent='الصلاحيات المتقدمة'});
  }
 }
-function run(){extendControlCenter();labels()}
+function run(){extendControlCenter();labels();permissionSummary();loadSalesClarity()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(run,0));else setTimeout(run,0);
-const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(labels,120)});mo.observe(document.documentElement,{childList:true,subtree:true});
+const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(()=>{labels();permissionSummary();loadSalesClarity()},120)});mo.observe(document.documentElement,{childList:true,subtree:true});
 window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};
 })();
