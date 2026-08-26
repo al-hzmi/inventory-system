@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='54.0',path=(location.pathname.split('/').pop()||'').toLowerCase();
+const VERSION='54.1',path=(location.pathname.split('/').pop()||'').toLowerCase();
 const employeeExtra={
  viewStockQty:'المخزون — رؤية الكمية الفعلية',viewPrices:'المخزون — رؤية الأسعار',viewImages:'المنتجات — رؤية الصور',switchWarehouse:'المخزون — التبديل بين المستودعات',
  editCart:'الفاتورة — تعديل الكميات',removeCartItems:'الفاتورة — حذف الأصناف',submitOrder:'الفاتورة — اعتماد وإرسال الطلب',viewOrderHistory:'الطلبات — رؤية السجل السابق',
@@ -9,6 +9,7 @@ const employeeExtra={
 const customerExtra={
  viewPrices:'المنتجات — رؤية الأسعار',viewStockStatus:'المنتجات — رؤية حالة التوفر',viewCartImages:'السلة — عرض صور الأصناف',editCart:'السلة — تعديل الكميات',removeCartItems:'السلة — حذف الأصناف',branchDistribution:'السلة — تعديل توزيع الفروع',checkoutNotes:'الطلب — إضافة ملاحظة',shareProduct:'المنتجات — المشاركة',viewOrderDetails:'الطلبات — رؤية تفاصيل الطلبات السابقة'
 };
+function loadCanvasFix(){if(document.getElementById('v54-1-desktop-canvas-fix'))return;const l=document.createElement('link');l.id='v54-1-desktop-canvas-fix';l.rel='stylesheet';l.href='./v54-1-desktop-canvas-fix.css?v=54.1';document.head.appendChild(l)}
 function extendControlCenter(){
  if(path!=='control-center.html')return;
  try{
@@ -42,8 +43,8 @@ function labels(){
   const tabs=[...document.querySelectorAll('.tab')];tabs.forEach(t=>{if(t.textContent.trim()==='الصلاحيات')t.textContent='الصلاحيات المتقدمة'});
  }
 }
-function run(){extendControlCenter();labels();permissionSummary();loadSalesClarity()}
+function run(){loadCanvasFix();extendControlCenter();labels();permissionSummary();loadSalesClarity()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(run,0));else setTimeout(run,0);
-const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(()=>{labels();permissionSummary();loadSalesClarity()},120)});mo.observe(document.documentElement,{childList:true,subtree:true});
+const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(()=>{loadCanvasFix();labels();permissionSummary();loadSalesClarity()},120)});mo.observe(document.documentElement,{childList:true,subtree:true});
 window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};
 })();
