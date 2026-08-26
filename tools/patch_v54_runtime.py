@@ -43,4 +43,12 @@ if new not in s:
     s=s.replace(old,new,1)
 s=s.replace('"outbound":"انخفاض المخزون مؤكد من فرق النسخ، لكنه ليس إثبات بيع بمفرده."','"outbound":"يُعامل انخفاض المخزون كمبيعات داخل لوحة الإدارة، مع استبعاد التحويل المطابق بين الفرعين."')
 p.write_text(s,encoding='utf-8')
+
+# Retire the obsolete duplicated command-center UI. Keep the route for old bookmarks,
+# but send it immediately to the single executive administration home.
+command=ROOT/'command-center.html'
+redirect='''<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>الإدارة التنفيذية | بيت الأواني الطيبة</title><meta http-equiv="refresh" content="0;url=./admin-home.html"></head><body><script>location.replace('./admin-home.html')</script><noscript><a href="./admin-home.html">فتح الإدارة التنفيذية</a></noscript></body></html>\n'''
+if command.read_text(encoding='utf-8') != redirect:
+    command.write_text(redirect,encoding='utf-8')
+
 print('V54_RUNTIME_PATCH_OK')
