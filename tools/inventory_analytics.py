@@ -174,10 +174,18 @@ def cross_event_transfers(events,max_hours=72,min_ratio=0.70):
 
 def current_snapshot(repo,head):
     result={}
+    prices=parse_prices(git_show(repo,head,"data/pricing.tsv"))
     for branch,path in BRANCH_FILES.items():
-        rows=parse_inventory(git_show(repo,head,path))
-        result[branch]={"label":BRANCH_LABELS[branch],"skuCount":len(rows),"positiveSkuCount":sum(1 for x in rows.values() if x["qty"]>0),
-                        "totalQty":round(sum(x["qty"] for x in rows.values()),6)}
+        rows=parse_inventory(git_show(repo,head,path));items=[]
+        for sku,row in rows.items():
+            price=prices.get(branch,{}).get(sku,0.0);qty=row["qty"];pack=row.get("pack",0) or 0;limit=pack if pack>0 else 5
+            items.append({"sku":sku,"name":row.get("name","") or sku,"unit":row.get("unit","") or "","qty":qty,"pack":pack,"price":price,
+                          "value":round(max(0,qty)*price,2) if price else 0.0,"low":qty>0 and qty<=limit})
+        result[branch]={"label":BRANCH_LABELS[branch],"skuCount":len(items),"positiveSkuCount":sum(1 for x in items if x["qty"]>0),
+                        "zeroSkuCount":sum(1 for x in items if x["qty"]==0),"negativeSkuCount":sum(1 for x in items if x["qty"]<0),
+                        "lowStockSkuCount":sum(1 for x in items if x["low"]),"noPriceSkuCount":sum(1 for x in items if x["qty"]>0 and not x["price"]),
+                        "totalQty":round(sum(x["qty"] for x in items),6),"inventoryValue":round(sum(x["value"] for x in items),2),
+                        "items":sorted(items,key=lambda x:(x["qty"],x["sku"]))}
     return result
 
 def aggregate(events):
@@ -207,7 +215,7 @@ def main():
         except Exception as e: print(f"WARN {c[:8]}: {e}")
     payload={"schema":1,"generatedAt":datetime.now(timezone.utc).isoformat().replace("+00:00","Z"),"head":head,"eventCount":len(events),
              "current":current_snapshot(repo,head),"events":list(reversed(events)),"transferCandidates":cross_event_transfers(events),"aggregate":aggregate(events),
-             "notes":{"outbound":"انخفاض المخزون مؤكد من فرق النسخ، لكنه ليس إثبات بيع بمفرده.",
+             "notes":{"outbound":"يُعامل انخفاض المخزون كمبيعات داخل لوحة الإدارة، مع استبعاد التحويل المطابق بين الفرعين.",
                       "transfer":"التحويلات المحتملة استدلال من انخفاض فرع وزيادة الفرع الآخر لنفس الصنف خلال 72 ساعة، ولا تعرض إلا عندما تكون الكميتان متقاربتين بنسبة 70% فأعلى.",
                       "pricing":"قيم الحركة تقديرية باستخدام سعر البيع الموجود في pricing.tsv عند ذلك الإصدار."}}
     out=os.path.join(repo,args.output);os.makedirs(os.path.dirname(out),exist_ok=True)
