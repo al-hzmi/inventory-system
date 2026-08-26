@@ -37,16 +37,17 @@ jobs:
           grep -q "v54-policy-engine.js?v=54.0" v44-observability.js
           grep -q 'lowStockSkuCount' tools/inventory_analytics.py
           grep -q 'inventoryValue' tools/inventory_analytics.py
+          grep -q "location.replace('./admin-home.html')" command-center.html
       - name: Commit patched runtime
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- v44-observability.js tools/inventory_analytics.py; then
+          if git diff --quiet -- v44-observability.js tools/inventory_analytics.py command-center.html; then
             echo 'already applied'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v44-observability.js tools/inventory_analytics.py
-          git commit -m 'V54: wire granular policy engine and stock intelligence'
+          git add v44-observability.js tools/inventory_analytics.py command-center.html
+          git commit -m 'V54: finalize executive runtime and retire legacy command center'
           git push origin HEAD:feature/v54-executive-operations
