@@ -1,0 +1,41 @@
+/* V54 — Executive administration layout, desktop correctness and mobile polish */
+:root{--admin-sidebar:248px;--v54-content-gap:30px;--v54-green:#0d654b;--v54-navy:#173026;--v54-surface:#f4f7f5;--v54-line:#e0e7e3}
+html,body{min-width:0!important;max-width:100%!important}
+body.v52-admin-layout{padding-right:var(--admin-sidebar)!important;padding-left:0!important;overflow-x:hidden!important;background:var(--admin-bg,#f5f7f6)!important}
+.v52-sidebar{right:0!important;left:auto!important;width:var(--admin-sidebar)!important;border-left:1px solid var(--v54-line)!important}
+.v52-brand-copy b{font-size:16px!important}.v52-brand-copy span{font-size:9.5px!important}
+body.v52-admin-layout>.app,body.v52-admin-layout main,body.v51-control-center .app,body.v51-inventory-analytics .app{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important}
+body.v51-control-center main,body.v51-inventory-analytics main{width:100%!important;max-width:none!important;margin:0!important}
+.v52-page{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:30px 34px 60px!important}
+.v52-page>*{min-width:0}.v52-grid,.v52-card,.v52-card-body,.v52-card-head,.v52-split,.v52-half,.v52-kpis{min-width:0!important}
+.v52-page-head{align-items:flex-start!important;margin-bottom:24px!important}.v52-page-title{font-size:31px!important}.v52-page-sub{max-width:820px!important;font-size:11.5px!important}
+.v52-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}.v52-kpi{min-height:132px!important;padding:17px!important}.v52-kpi-value{font-size:27px!important}.v52-kpi-sub{font-size:9px!important;line-height:1.65!important}
+.v52-split{grid-template-columns:minmax(0,1.55fr) minmax(330px,.7fr)!important;gap:14px!important}.v52-half{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+.v52-card{box-shadow:0 1px 2px rgba(18,36,28,.035),0 12px 32px rgba(18,36,28,.045)!important}.v52-card-head{padding:18px 20px 13px!important}.v52-card-body{padding:18px 20px!important}
+.v52-chart{min-height:250px!important;overflow:hidden!important}.v52-chart svg,.sales-chart svg{width:100%!important;height:250px!important;display:block!important}.sales-chart{width:100%!important;min-width:0!important;overflow:hidden!important}
+.sales-filter{width:100%!important}.sales-filter input{min-width:220px!important}.branch-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}.branch-card{min-width:0!important}.sales-bar-row{grid-template-columns:minmax(150px,1fr) minmax(180px,1.8fr) 82px!important}
+.v52-table-wrap,.desktop-changes{max-width:100%!important;overflow:auto!important}.v52-table,.table{width:100%!important}.v52-tabs,.sales-tabs{max-width:100%!important}
+/* Give the legacy dashboard a real desktop canvas instead of a phone-sized modal stretched under the sidebar. */
+body.v51-admin-dashboard #root{width:100%!important;min-width:0!important}
+body.v51-admin-dashboard #root>div.fixed.inset-0{width:100%!important;min-width:0!important;padding:0!important;overflow:visible!important}
+body.v51-admin-dashboard #root>div.fixed.inset-0>div:first-child{width:100%!important;max-width:none!important;min-width:0!important;min-height:100dvh!important;border-radius:0!important;margin:0!important;box-shadow:none!important}
+body.v51-admin-dashboard #root .overflow-x-auto{scrollbar-width:thin!important;scrollbar-color:#cbd5cf transparent!important}
+body.v51-admin-dashboard #root .overflow-x-auto::-webkit-scrollbar{height:8px!important}body.v51-admin-dashboard #root .overflow-x-auto::-webkit-scrollbar-thumb{background:#cbd5cf!important;border-radius:99px!important}
+/* Control center: use the entire available desktop width while preserving readable line length. */
+body.v51-control-center .app>main{padding:26px 30px 55px!important}.v51-control-center .panel{min-width:0!important}.v51-control-center .split{grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr)!important}.v51-control-center .stats{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+/* Executive extensions */
+.v54-section-title{display:flex;align-items:flex-end;gap:12px;margin:26px 0 12px}.v54-section-title>div{flex:1}.v54-section-title h2{margin:0;font-size:17px}.v54-section-title p{margin:4px 0 0;color:var(--admin-muted);font-size:9.5px;line-height:1.7}
+.v54-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.v54-metric{border:1px solid var(--admin-line);border-radius:14px;background:#fff;padding:13px;min-width:0}.v54-metric small{display:block;color:var(--admin-muted);font-size:8px}.v54-metric b{display:block;font-size:18px;margin-top:5px;direction:ltr;text-align:right}.v54-metric span{display:block;color:#8b958f;font-size:7.5px;margin-top:4px;line-height:1.6}
+.v54-health-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.v54-health{border:1px solid var(--admin-line);border-radius:12px;padding:10px;background:#fafcfb}.v54-health strong{font-size:10px}.v54-health p{font-size:8px;color:var(--admin-muted);margin:4px 0 0}.v54-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#18a36e;margin-left:6px;box-shadow:0 0 0 4px #e6f7ef}.v54-dot.warn{background:#c87922;box-shadow:0 0 0 4px #fff3df}
+.v54-donut-wrap{display:grid;grid-template-columns:180px 1fr;align-items:center;gap:18px}.v54-donut{width:160px;height:160px;border-radius:50%;display:grid;place-items:center;margin:auto;position:relative}.v54-donut:before{content:"";position:absolute;inset:23px;border-radius:50%;background:#fff}.v54-donut>div{position:relative;text-align:center}.v54-donut b{font-size:24px;display:block}.v54-donut span{font-size:8px;color:var(--admin-muted)}
+@media(min-width:1600px){.v52-page{padding-inline:42px!important}.v52-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}.v52-chart svg,.sales-chart svg{height:285px!important}.v52-chart{min-height:285px!important}}
+@media(min-width:901px) and (max-width:1250px){:root{--admin-sidebar:224px}.v52-page{padding:24px 22px 50px!important}.v52-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}.v52-split{grid-template-columns:1fr!important}.v51-control-center .stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}.v51-control-center .split{grid-template-columns:1fr!important}}
+@media(max-width:900px){
+ body.v52-admin-layout{padding-right:0!important;padding-left:0!important;padding-top:58px!important;padding-bottom:max(76px,calc(64px + env(safe-area-inset-bottom)))!important}
+ .v52-page{padding:15px 11px 30px!important}.v52-page-head{display:block!important;margin-bottom:15px!important}.v52-page-title{font-size:23px!important}.v52-page-sub{font-size:9.5px!important;max-width:38ch!important}.v52-head-actions{width:100%!important;margin-top:10px!important}.v52-head-actions>*{flex:1!important;min-width:0!important}
+ .v52-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.v52-kpi{min-height:112px!important;padding:12px!important}.v52-kpi-value{font-size:21px!important}.v52-kpi-label{font-size:8.5px!important}.v52-kpi-sub{font-size:7.5px!important}
+ .v52-split,.v52-half,.branch-cards{grid-template-columns:1fr!important}.v52-card-head{padding:13px 13px 10px!important}.v52-card-body{padding:13px!important}.v52-chart,.sales-chart{min-height:185px!important}.v52-chart svg,.sales-chart svg{height:185px!important}.sales-bar-row{grid-template-columns:minmax(0,1fr) 70px!important}.sales-bar-row .sales-bar{grid-column:1/-1!important}
+ body.v51-control-center .app>main{padding:12px 10px 28px!important}.v51-control-center .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}.v51-control-center .split{grid-template-columns:1fr!important}
+ .v54-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.v54-health-grid{grid-template-columns:1fr}.v54-donut-wrap{grid-template-columns:1fr}.v54-donut{width:142px;height:142px}.v54-donut:before{inset:20px}
+}
+@media(max-width:420px){.v52-kpi-value{font-size:19px!important}.v54-metrics{grid-template-columns:1fr 1fr}.v52-tab,.sales-tab{font-size:9px!important;padding-inline:10px!important}}
