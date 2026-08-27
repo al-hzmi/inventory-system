@@ -13,6 +13,7 @@ on:
       - 'v52-admin.css'
       - 'v53-admin-polish.css'
       - 'tools/inventory_analytics.py'
+      - 'tools/test_inventory_analytics.py'
       - 'data/inventory-analytics.json'
       - '.github/workflows/v52-admin-experience-quality-gate.yml'
 
@@ -38,7 +39,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile tools/inventory_analytics.py
+          python -m py_compile tools/inventory_analytics.py tools/test_inventory_analytics.py
+          python -m unittest tools/test_inventory_analytics.py
           python tools/inventory_analytics.py --repo . --output data/inventory-analytics.json --limit 250
           node --check v46-admin-nav.js
           python3 - <<'PY'
@@ -59,7 +61,7 @@ jobs:
             'legacy redirect': "path==='command-center.html'" in nav and 'location.replace' in nav,
             'desktop sidebar': '.v52-sidebar' in css,
             'mobile bottom nav': '#v52-mobile-nav' in css,
-            'executive home': all(x in home for x in ['لوحة الإدارة','اتجاه المبيعات','مقارنة الفرعين','الأصناف الأكثر مبيعًا','يحتاج انتباهك']),
+            'executive home': all(x in home for x in ['الإدارة التنفيذية','نظرة تشغيلية شاملة','اتجاه المبيعات','أداء الفروع','الأصناف الأكثر مبيعًا','يحتاج انتباهك']),
             'sales branches': all(x in sales for x in ['جدة','الرياض','branchCard','branch-card']),
             'sales charts': all(x in sales for x in ['trendChart','movementChart','sales-chart']),
             'mobile sales cards': all(x in sales for x in ['mobile-changes','change-card']),
@@ -69,9 +71,11 @@ jobs:
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V52_STATIC_FAIL '+', '.join(bad))
           d=json.load(open('data/inventory-analytics.json',encoding='utf-8'))
+          assert d.get('schema')==2
           assert d.get('eventCount',0)>0
+          assert d.get('rawEventCount')==d.get('eventCount',0)+d.get('excludedEventCount',0)
           assert d['current']['jeddah']['skuCount']>0 and d['current']['riyadh']['skuCount']>0
-          print('V52_STATIC_PASS',len(checks),'events',d['eventCount'])
+          print('V52_STATIC_PASS',len(checks),'trusted',d['eventCount'],'excluded',d.get('excludedEventCount',0))
           PY
           node --check /tmp/admin-home.js
           node --check /tmp/inventory-analytics.js

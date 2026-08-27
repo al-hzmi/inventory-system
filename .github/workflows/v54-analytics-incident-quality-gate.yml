@@ -1,0 +1,47 @@
+name: V54.4 Inventory Analytics Incident Guard
+
+on:
+  pull_request:
+    paths:
+      - 'tools/inventory_analytics.py'
+      - 'tools/test_inventory_analytics.py'
+      - '.github/workflows/update-version.yml'
+      - '.github/workflows/v54-analytics-incident-quality-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  analytics-incident-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compile analytics engine
+        run: python -m py_compile tools/inventory_analytics.py tools/test_inventory_analytics.py
+      - name: Run incident regression suite
+        run: python -m unittest tools/test_inventory_analytics.py
+      - name: Rebuild analytics from repository history
+        run: python tools/inventory_analytics.py --repo . --output /tmp/inventory-analytics.json --limit 250
+      - name: Assert confirmed incident is excluded from active analytics
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/inventory-analytics.json',encoding='utf-8'))
+          excluded={x.get('commit') for x in p.get('excludedEvents',[])}
+          required={
+            '0047432de994a04c3da176a1981996a01cc551b6',
+            '216f77727a9f8657521bd31e5606afad2b169d7a',
+            '114b085e0f7a4f5d25ffe8f1e694ebfa4ded0540',
+            'd1e021d5a0030375c1817c9ed06b4849797bf0ec',
+          }
+          missing=required-excluded
+          assert not missing, f'confirmed incident commits still active: {sorted(missing)}'
+          active={x.get('commit') for x in p.get('events',[])}
+          assert not (required & active), 'incident commits leaked into active analytics'
+          assert p.get('schema') == 2
+          assert p.get('excludedEventCount',0) >= 4
+          print('trusted=',p.get('eventCount'),'excluded=',p.get('excludedEventCount'),'raw=',p.get('rawEventCount'))
+          print('excluded_outbound=',p.get('quality',{}).get('excludedOutboundQty'))
+          PY
