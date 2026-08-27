@@ -1,4 +1,4 @@
-/* V54.1 — desktop canvas box-model correction + V54.3 mobile employee-modal scroll fix */
+/* V54.1 — desktop canvas box-model correction + V54.3 mobile employee-modal scroll fix + V54.4 mobile canvas containment */
 @media (min-width:901px){
   html{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
   body.v52-admin-layout{
@@ -61,7 +61,8 @@
   .v52-split,.v52-half{grid-template-columns:1fr!important}
 }
 @media (max-width:900px){
-  body.v52-admin-layout{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+  html{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+  body.v52-admin-layout{width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin:0!important;overflow-x:hidden!important}
   .v52-page{box-sizing:border-box!important;width:100%!important;max-width:100%!important}
 
   /* V54.3 — Employee account modal must own the gesture on iPhone.
