@@ -5,6 +5,7 @@ on:
     paths:
       - 'inventory-analytics.html'
       - 'tools/inventory_analytics.py'
+      - 'tools/test_inventory_analytics.py'
       - 'data/inventory-analytics.json'
       - 'v46-admin-nav.js'
       - 'v52-admin.css'
@@ -23,20 +24,36 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Python syntax and analytics rebuild
+      - name: Python syntax, incident tests and analytics rebuild
         run: |
-          python -m py_compile tools/inventory_analytics.py
+          python -m py_compile tools/inventory_analytics.py tools/test_inventory_analytics.py
+          python -m unittest tools/test_inventory_analytics.py
           python tools/inventory_analytics.py --repo . --output data/inventory-analytics.json --limit 250
           python - <<'PY'
           import json,os
           d=json.load(open('data/inventory-analytics.json',encoding='utf-8'))
-          assert d['schema']==1 and d['eventCount']>=1
+          assert d['schema']==2 and d['eventCount']>=1
+          assert d['rawEventCount']==d['eventCount']+d['excludedEventCount']
+          assert d['excludedEventCount']>=4
           assert d['current']['jeddah']['skuCount']>0 and d['current']['riyadh']['skuCount']>0
           assert all('summary' in e and 'changes' in e for e in d['events'])
           assert all(c['delta']!=0 for e in d['events'] for c in e['changes'])
           assert all(float(t.get('quantityRatio',1))>=0.70 for t in d.get('transferCandidates',[]))
+          excluded=d.get('excludedEvents',[])
+          assert all(e.get('analyticsExcluded') is True and e.get('exclusionType') and e.get('exclusionReason') for e in excluded)
+          required={
+            '0047432de994a04c3da176a1981996a01cc551b6',
+            '216f77727a9f8657521bd31e5606afad2b169d7a',
+            '114b085e0f7a4f5d25ffe8f1e694ebfa4ded0540',
+            'd1e021d5a0030375c1817c9ed06b4849797bf0ec',
+          }
+          active_commits={e.get('commit') for e in d['events']}
+          excluded_commits={e.get('commit') for e in excluded}
+          assert not (required & active_commits), 'confirmed correction incident leaked into active analytics'
+          assert required <= excluded_commits, 'confirmed correction incident missing from excluded audit history'
+          assert float(d.get('quality',{}).get('excludedOutboundQty') or 0)>9000
           assert os.path.getsize('data/inventory-analytics.json') < 25_000_000
-          print('V50_DATA_PASS',d['eventCount'],sum(len(e['changes']) for e in d['events']))
+          print('V50_DATA_PASS',d['eventCount'],d['excludedEventCount'],sum(len(e['changes']) for e in d['events']))
           PY
       - name: JavaScript syntax and V52 invariants
         run: |
