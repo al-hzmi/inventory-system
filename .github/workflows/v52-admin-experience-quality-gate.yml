@@ -61,7 +61,7 @@ jobs:
             'legacy redirect': "path==='command-center.html'" in nav and 'location.replace' in nav,
             'desktop sidebar': '.v52-sidebar' in css,
             'mobile bottom nav': '#v52-mobile-nav' in css,
-            'executive home': all(x in home for x in ['الإدارة التنفيذية','نظرة تشغيلية شاملة','اتجاه المبيعات','مقارنة الفرعين','الأصناف الأكثر مبيعًا','يحتاج انتباهك']),
+            'executive home': all(x in home for x in ['الإدارة التنفيذية','نظرة تشغيلية شاملة','اتجاه المبيعات','أداء الفروع','الأصناف الأكثر مبيعًا','يحتاج انتباهك']),
             'sales branches': all(x in sales for x in ['جدة','الرياض','branchCard','branch-card']),
             'sales charts': all(x in sales for x in ['trendChart','movementChart','sales-chart']),
             'mobile sales cards': all(x in sales for x in ['mobile-changes','change-card']),
