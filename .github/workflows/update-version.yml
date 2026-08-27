@@ -8,6 +8,7 @@ on:
       - 'data/jeddah.tsv'
       - 'data/riyadh.tsv'
       - 'tools/inventory_analytics.py'
+      - 'tools/test_inventory_analytics.py'
       - '.github/workflows/update-version.yml'
 
 permissions:
@@ -46,6 +47,9 @@ jobs:
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Test inventory analytics incident guard
+        run: python -m unittest tools/test_inventory_analytics.py
 
       - name: Update version.json for real inventory updates only
         if: steps.inventory_change.outputs.changed == 'true'
