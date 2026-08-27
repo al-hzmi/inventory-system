@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import inventory_analytics as ia
 
 
