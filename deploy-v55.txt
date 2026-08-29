@@ -1,0 +1,4 @@
+V55 production redeploy trigger
+Triggered after explicit user approval on 2026-08-30.
+Feature: جديدنا + mandatory login photo gate.
+Source merge commit: 61a80bbce7a61511f450fd0af93db1e31fccdfc0
