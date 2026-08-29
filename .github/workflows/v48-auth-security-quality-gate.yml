@@ -28,17 +28,18 @@ jobs:
           python -m py_compile tools/patch_v48_auth_security.py
           python3 - <<'PY'
           from pathlib import Path
+          import re
           auth=Path('v48-auth-security.js').read_text(); adm=Path('v48-admin-security.js').read_text(); nav=Path('v46-admin-nav.js').read_text(); core=Path('runtime/index-v37-source.txt').read_text()
           files={p:Path(p).read_text() for p in ['index.html','customer.html','admin-dashboard.html','control-center.html','command-center.html']}
           checks={
-            'employee runtime injected': all('v48-auth-security.js?v=48.0' in files[p] for p in ['index.html','customer.html']),
+            'employee runtime injected': all(re.search(r'v48-auth-security\.js\?v=\d+(?:\.\d+)*',files[p]) for p in ['index.html','customer.html']),
             'admin runtime injected': all('v48-admin-security.js?v=48.0' in files[p] for p in ['admin-dashboard.html','control-center.html','command-center.html']),
             'trusted device recovery': all(x in auth for x in ['trustedRecoveryDevices','deviceSecret(false)','DEVICE_NOT_TRUSTED','الاستعادة متاحة فقط من نفس الجهاز']),
             'no weak fingerprint recovery': 'trustedRecord(account,hash)' in auth and "deviceHash(false)" in auth,
             'forced reauth': all(x in auth for x in ['forceReauthEpoch','inventory_v48_pending_reauth_','softLogout','reauthDecision']),
             'soft logout preserves local data': 'localStorage.clear' not in auth and "b2b_cart_" not in auth,
             'forgot password ui': 'هل نسيت رمز الدخول؟' in auth and 'تحديث الرمز' in auth,
-            'password reset requires photo': 'passwordResetRequiresPhoto:true' in auth and 'passwordResetPhotoCompletedAt' in auth,
+            'password reset requires photo': all(x in auth+core for x in ['passwordResetRequiresPhoto:true','passwordResetPhotoCompletedAt','employee_login_attempts','inventory_login_photo_proof_v2']),
             'existing face login retained': "verificationType: 'login_face_presence'" in core and 'employee_security_photos' in core,
             'multi employee selection': all(x in adm for x in ['selected=new Set()','تحديد الظاهر','forceSelected','تم تحديد']),
             'admin audit': 'force_employee_reauth_v48' in adm and 'security_admin_logs' in adm,

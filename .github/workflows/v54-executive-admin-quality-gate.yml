@@ -51,7 +51,7 @@ jobs:
           home=Path('admin-home.html').read_text(encoding='utf-8')
           clarity=Path('v54-sales-clarity.js').read_text(encoding='utf-8')
           checks={
-            'executive naming':'الإدارة التنفيذية' in nav and 'مركز القيادة' not in nav,
+            'executive naming':'الإدارة التنفيذية' in nav and '<span>مركز القيادة</span>' not in nav,
             'rtl desktop offset':'padding-right:var(--admin-sidebar)' in css and 'padding-inline-end:var(--admin-sidebar)' not in css,
             'desktop canvas':'.v52-page{width:100%' in css and 'max-width:none' in css,
             'mobile reset':'padding-right:0!important' in css and '@media(max-width:900px)' in css,

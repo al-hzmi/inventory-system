@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 # V48 generated-file patcher. Kept idempotent so CI can verify it safely.
 EMPLOYEE_FILES = [Path('index.html'), Path('customer.html')]
@@ -7,11 +8,12 @@ ADMIN_FILES = [Path('admin-dashboard.html'), Path('control-center.html'), Path('
 OLD = "html=html.replace('</body>','<script src=\"./v44-observability.js?v=44.0\"></scr'+'ipt></body>');"
 NEW = "html=html.replace('</body>','<script src=\"./v44-observability.js?v=44.0\"></scr'+'ipt><script src=\"./v48-auth-security.js?v=48.0\"></scr'+'ipt></body>');"
 ADMIN_TAG = '<script src="./v48-admin-security.js?v=48.0"></script>'
+EMPLOYEE_RUNTIME = re.compile(r'v48-auth-security\.js\?v=\d+(?:\.\d+)*')
 
 
 def patch_employee(path: Path):
     text = path.read_text(encoding='utf-8')
-    if 'v48-auth-security.js?v=48.0' in text:
+    if EMPLOYEE_RUNTIME.search(text):
         return False
     if OLD not in text:
         raise SystemExit(f'V48 employee injection marker missing: {path}')
@@ -37,7 +39,7 @@ def main():
         if patch_admin(p): changed.append(str(p))
     for p in EMPLOYEE_FILES:
         t = p.read_text(encoding='utf-8')
-        if t.count('v48-auth-security.js?v=48.0') != 1:
+        if len(EMPLOYEE_RUNTIME.findall(t)) != 1:
             raise SystemExit(f'V48 employee injection duplicate/missing: {p}')
     for p in ADMIN_FILES:
         t = p.read_text(encoding='utf-8')

@@ -1,0 +1,43 @@
+name: V55 New Arrivals and Photo Gate
+
+on:
+  pull_request:
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'runtime/customer-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'v48-auth-security.js'
+      - 'tools/new_arrivals.py'
+      - 'tools/test_new_arrivals.py'
+      - 'data/new-arrivals.json'
+      - 'tests/v55-new-arrivals-photo-gate.mjs'
+      - '.github/workflows/v55-new-arrivals-photo-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify generated registry
+        run: |
+          python -m py_compile tools/new_arrivals.py tools/test_new_arrivals.py
+          python -m unittest tools/test_inventory_analytics.py tools/test_new_arrivals.py
+          python tools/new_arrivals.py --repo . --output /tmp/new-arrivals.json --window-days 30
+      - name: Compile JSX and install browser
+        run: |
+          npm install --no-save --no-package-lock esbuild@0.25.9 playwright@1.55.0 react@18.3.1 react-dom@18.3.1 @babel/standalone@7.27.6 firebase@10.8.0 tailwindcss@3.4.17 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null
+          npx tailwindcss -i tests/v55-tailwind-input.css -o /tmp/v55-tailwind.css --content './runtime/*.txt,./admin-dashboard.html' --minify >/dev/null
+          node --input-type=module <<'NODE'
+          import fs from 'fs';import {transformSync} from 'esbuild';
+          for(const file of ['runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html']){const text=fs.readFileSync(file,'utf8'),blocks=[...text.matchAll(/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]);if(!blocks.length)throw new Error(file);blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}))}
+          NODE
+      - name: Browser verification
+        run: |
+          python -m http.server 4173 --bind 127.0.0.1 >/tmp/v55-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          node tests/v55-new-arrivals-photo-gate.mjs

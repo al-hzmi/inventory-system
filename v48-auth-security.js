@@ -1,11 +1,11 @@
 (()=>{
 'use strict';
-const VERSION='48.0';
+const VERSION='55.0';
 const PATH=(location.pathname.split('/').pop()||'index.html').toLowerCase();
 const IS_EMPLOYEE_SURFACE=PATH==='index.html'||(PATH==='customer.html'&&new URLSearchParams(location.search).get('employeeView')==='1');
 if(!IS_EMPLOYEE_SURFACE)return;
 const QA=Boolean(window.__V44_QA||['localhost','127.0.0.1'].includes(location.hostname)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
-const K={name:'inventory_user_name_v2',id:'inventory_employee_id_v2',auth:'inventory_employee_auth_version_v2',token:'inventory_admin_token_v2',accessVersion:'inventory_access_gate_version_v1',accessName:'inventory_access_approved_name_v1',secret:'inventory_v48_device_secret',lastAlias:'inventory_v48_last_alias'};
+const K={name:'inventory_user_name_v2',id:'inventory_employee_id_v2',auth:'inventory_employee_auth_version_v2',token:'inventory_admin_token_v2',photoProof:'inventory_login_photo_proof_v2',accessVersion:'inventory_access_gate_version_v1',accessName:'inventory_access_approved_name_v1',secret:'inventory_v48_device_secret',lastAlias:'inventory_v48_last_alias'};
 const ACK='inventory_v48_reauth_ack_';
 const PENDING='inventory_v48_pending_reauth_';
 const EMPLOYEES='employee_accounts',ALIASES='employee_aliases',RESET_LOGS='employee_password_reset_logs';
@@ -51,7 +51,7 @@ function softLogout(employeeId,epoch,name){
   try{
     localStorage.setItem(PENDING+employeeId,String(epoch));
     if(name)localStorage.setItem(K.lastAlias,name);
-    [K.name,K.id,K.auth,K.token,K.accessVersion,K.accessName].forEach(k=>localStorage.removeItem(k));
+    [K.name,K.id,K.auth,K.token,K.photoProof,K.accessVersion,K.accessName].forEach(k=>localStorage.removeItem(k));
     sessionStorage.setItem('inventory_v48_reauth_notice','1');
   }catch{}
   const target=new URL('./index.html',location.href);target.searchParams.set('employee','1');target.searchParams.set('reauth','1');location.replace(target.href);
@@ -71,19 +71,20 @@ async function watchAuthenticatedSession(){
     const decision=reauthDecision(epoch,ack,pending);
     if(decision==='complete'){
       try{localStorage.setItem(ACK+s.id,String(epoch));localStorage.removeItem(PENDING+s.id)}catch{}
-      if(!QA)await ref.set({lastReauthCompletedAt:serverTs(),lastReauthDeviceHash:hash,forceReauthCompletedEpoch:epoch,...(fresh.passwordResetRequiresPhoto?{passwordResetRequiresPhoto:false,passwordResetPhotoCompletedAt:serverTs()}: {})},{merge:true});
+      if(!QA)await ref.set({lastReauthCompletedAt:serverTs(),lastReauthDeviceHash:hash,forceReauthCompletedEpoch:epoch},{merge:true});
     }else if(decision==='force'){
       if(!QA)ref.set({lastForcedLogoutSeenAt:serverTs(),lastForcedLogoutDeviceHash:hash},{merge:true}).catch(()=>{});
       softLogout(s.id,epoch,s.name);return;
     }else if(fresh.passwordResetRequiresPhoto&&!QA){
-      // وجود جلسة مصادقة V2 يعني أن تدفق الدخول الحالي أنهى التحقق بالصورة قبل منح الجلسة.
-      await ref.set({passwordResetRequiresPhoto:false,passwordResetPhotoCompletedAt:serverTs(),lastReauthDeviceHash:hash},{merge:true});
+      // لا تُمسح هذه العلامة بمجرد وجود جلسة. وحده حفظ صورة مرتبطة بمحاولة الدخول يمسحها.
+      softLogout(s.id,Date.now(),s.name);return;
     }
     watchedId=s.id;
     unsub=ref.onSnapshot(doc=>{
       if(!doc.exists)return;const data=doc.data()||{},now=currentSession();if(now.id!==s.id||now.auth!=='2')return;
       let a=0,p=0;try{a=Number(localStorage.getItem(ACK+s.id)||0);p=Number(localStorage.getItem(PENDING+s.id)||0)}catch{}
       const e=Number(data.forceReauthEpoch)||0,d=reauthDecision(e,a,p);
+      if(data.passwordResetRequiresPhoto&&!QA){softLogout(s.id,Date.now(),now.name);return}
       if(d==='force')softLogout(s.id,e,now.name);
       else if(d==='complete'){
         try{localStorage.setItem(ACK+s.id,String(e));localStorage.removeItem(PENDING+s.id)}catch{}
@@ -116,7 +117,7 @@ function resetForm(account,alias,hash){
       if(!fresh.exists||!freshHash||freshHash!==hash||!trustedRecord(data,freshHash))throw new Error('DEVICE_NOT_TRUSTED');
       const salt=newSalt(),passwordHash=await derivePinHash(a,salt,120000);
       if(!QA){await ref.set({passwordHash,passwordSalt:salt,passwordIterations:120000,passwordPending:false,passwordUpdatedAt:serverTs(),passwordResetAt:serverTs(),passwordResetDeviceHash:freshHash,passwordResetRequiresPhoto:true,securitySchemaVersion:48},{merge:true});await db.collection(RESET_LOGS).add({employeeId:account.id,canonicalName:account.canonicalName||alias,enteredAlias:alias,deviceHash:freshHash,method:'trusted_device_recovery',requiresPhoto:true,createdAt:serverTs(),...deviceMeta()})}
-      try{localStorage.setItem(K.lastAlias,alias)}catch{};card.innerHTML='<div style="padding:18px 4px;text-align:center"><div style="font-size:30px">✓</div><div style="font-size:17px;font-weight:800;margin-top:8px">تم تحديث رمز الدخول</div><div style="font-size:11px;color:#57534e;margin-top:6px;line-height:1.8">سيتم تحديث شاشة الدخول. استخدم الرمز الجديد، وبعده ستظهر الكاميرا للتحقق بالصورة.</div></div>';setTimeout(()=>{const u=new URL('./index.html',location.href);u.searchParams.set('employee','1');u.searchParams.set('resetDone','1');location.replace(u.href)},1100);
+      try{localStorage.setItem(K.lastAlias,alias);[K.name,K.id,K.auth,K.token,K.photoProof,K.accessVersion,K.accessName].forEach(k=>localStorage.removeItem(k))}catch{};card.innerHTML='<div style="padding:18px 4px;text-align:center"><div style="font-size:30px">✓</div><div style="font-size:17px;font-weight:800;margin-top:8px">تم تحديث رمز الدخول</div><div style="font-size:11px;color:#57534e;margin-top:6px;line-height:1.8">سيتم تحديث شاشة الدخول. استخدم الرمز الجديد، وبعده ستظهر الكاميرا للتحقق بالصورة.</div></div>';setTimeout(()=>{const u=new URL('./index.html',location.href);u.searchParams.set('employee','1');u.searchParams.set('resetDone','1');location.replace(u.href)},1100);
     }catch(ex){submit.disabled=false;submit.textContent='تحديث الرمز';err.textContent=ex?.message==='DEVICE_NOT_TRUSTED'?'تعذر التحقق من هذا الجهاز. الاستعادة متاحة فقط من جهاز سبق تسجيل الدخول منه لهذا الحساب.':'تعذر تحديث الرمز الآن. حاول مرة أخرى.';err.style.display='block'}
   }
 }
