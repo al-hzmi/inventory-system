@@ -109,10 +109,25 @@
             measurementId: "G-ZGF5DT9D0K"
         };
         let __fbPromise = null;
-        const loadScript = (src) => new Promise((res, rej) => {
-            const s = document.createElement('script');
-            s.src = src; s.async = true; s.onload = res; s.onerror = () => rej(new Error('load failed: ' + src));
-            document.head.appendChild(s);
+        const FIREBASE_SCRIPT_TIMEOUT_MS = 8000;
+        const loadScript = (src, timeoutMs = FIREBASE_SCRIPT_TIMEOUT_MS) => new Promise((res, rej) => {
+            const existing = [...document.scripts].find(s => String(s.src || '') === src);
+            if (existing && ((src.includes('firebase-app-compat') && window.firebase) || (src.includes('firebase-firestore-compat') && window.firebase?.firestore))) { res(); return; }
+            const s = existing || document.createElement('script');
+            let settled = false;
+            const finish = (ok, error) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                if (ok) res(); else rej(error || new Error('load failed: ' + src));
+            };
+            const timer = setTimeout(() => {
+                if (!existing) try { s.remove(); } catch {}
+                finish(false, Object.assign(new Error('script timeout: ' + src), { code: 'SCRIPT_TIMEOUT' }));
+            }, timeoutMs);
+            s.onload = () => finish(true);
+            s.onerror = () => finish(false, new Error('load failed: ' + src));
+            if (!existing) { s.src = src; s.async = true; document.head.appendChild(s); }
         });
         
         function getDb() {
@@ -126,7 +141,8 @@
                         console.warn("تنبيه: تعذر تفعيل وضع الأوفلاين للفايربيس", err.code);
                     });
                     return db;
-                });
+                })
+                .catch((err) => { __fbPromise = null; throw err; });
             return __fbPromise;
         }
     </script>
@@ -2014,6 +2030,23 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
     </div>;
 };
 
+const LOGIN_LOOKUP_TIMEOUT_MS = 7000;
+const loginLookupTimeout = (promise, ms = LOGIN_LOOKUP_TIMEOUT_MS) => new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(Object.assign(new Error('LOGIN_LOOKUP_TIMEOUT'), { code: 'LOGIN_LOOKUP_TIMEOUT' }));
+    }, ms);
+    Promise.resolve(promise).then(value => {
+        if (settled) return;
+        settled = true; clearTimeout(timer); resolve(value);
+    }, error => {
+        if (settled) return;
+        settled = true; clearTimeout(timer); reject(error);
+    });
+});
+
 const LoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
@@ -2030,8 +2063,10 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     const [pendingAdminToken, setPendingAdminToken] = useState('');
     const codeRef = useRef(null);
     const autoProbeRef = useRef(false);
+    const verifyAttemptRef = useRef(0);
 
     useEffect(() => { if ((step === 'password' || step === 'employee_password' || step === 'activate_password') && codeRef.current) codeRef.current.focus(); }, [step]);
+    useEffect(() => { getDb().catch(err => console.warn('[Employee login prewarm]', err?.message || err)); }, []);
 
     const deniedBySiteControl = (account, fallbackName='') => {
         const allowed = employeeSiteAccessAllowed(employeeSiteControl,{employeeId:account?.id||'',name:account?.canonicalName||fallbackName,isAdmin:false});
@@ -2052,9 +2087,10 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         return ref.id;
     };
 
-    const resolveNameFlow = async (trimmed) => {
+    const resolveNameFlow = async (trimmed, attemptId = verifyAttemptRef.current) => {
         if (isProtectedName(trimmed)) { setStep('password'); return; }
-        const account = await resolveEmployeeAccount(trimmed);
+        const account = await loginLookupTimeout(resolveEmployeeAccount(trimmed));
+        if (attemptId !== verifyAttemptRef.current) return;
         if (account) {
             if (account.status === 'suspended') { setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
             if (deniedBySiteControl(account, trimmed)) return;
@@ -2070,7 +2106,8 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
             }
             return;
         }
-        const legacy = await resolveLegacyEmployeeIdentity(trimmed);
+        const legacy = await loginLookupTimeout(resolveLegacyEmployeeIdentity(trimmed));
+        if (attemptId !== verifyAttemptRef.current) return;
         if (!legacy) {
             setError('هذا الاسم غير موجود ضمن الموظفين المسجلين. جرّب اسمًا آخر تستخدمه في العمل أو راجع مهند.');
             return;
@@ -2101,18 +2138,33 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         e.preventDefault();
         const trimmed = name.trim();
         if (!trimmed || loading) return;
+        const attemptId = ++verifyAttemptRef.current;
         setError(''); setCode(''); setLoading(true);
-        try { await resolveNameFlow(trimmed); }
-        catch (err) { console.error(err); setError('تعذر التحقق من حساب الموظف. حاول مرة أخرى.'); }
-        finally { setLoading(false); }
+        try { await resolveNameFlow(trimmed, attemptId); }
+        catch (err) {
+            if (attemptId !== verifyAttemptRef.current) return;
+            console.error(err);
+            setError(err?.code === 'LOGIN_LOOKUP_TIMEOUT' || err?.code === 'SCRIPT_TIMEOUT'
+                ? 'الاتصال تأخر قليلًا. اضغط متابعة مرة أخرى — لا تحتاج تحديث الصفحة.'
+                : 'تعذر التحقق من حساب الموظف. حاول مرة أخرى.');
+        }
+        finally { if (attemptId === verifyAttemptRef.current) setLoading(false); }
     };
 
     // إذا كان الجهاز يحتفظ باسم موظف قديم لكنه لم يفعّل حسابه بعد، نأخذه مباشرة لشاشة اختيار PIN.
     useEffect(() => {
         if (autoProbeRef.current || !initialName || isProtectedName(initialName)) return;
         autoProbeRef.current = true;
+        const attemptId = ++verifyAttemptRef.current;
         setLoading(true);
-        resolveNameFlow(String(initialName).trim()).catch(()=>{}).finally(()=>setLoading(false));
+        resolveNameFlow(String(initialName).trim(), attemptId)
+            .catch(err => {
+                if (attemptId !== verifyAttemptRef.current) return;
+                console.warn('[Employee auto verify]', err?.message || err);
+                setStep('name');
+                if (err?.code === 'LOGIN_LOOKUP_TIMEOUT' || err?.code === 'SCRIPT_TIMEOUT') setError('الاتصال تأخر قليلًا. اضغط متابعة مرة أخرى.');
+            })
+            .finally(() => { if (attemptId === verifyAttemptRef.current) setLoading(false); });
     }, []);
 
     const handleSelfActivation = async (e) => {
