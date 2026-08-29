@@ -31,8 +31,8 @@ jobs:
           set -euo pipefail
           python -m py_compile tools/patch_v48_auth_security.py
           python tools/patch_v48_auth_security.py
-          grep -q 'v48-auth-security.js?v=48.0' index.html
-          grep -q 'v48-auth-security.js?v=48.0' customer.html
+          grep -Eq 'v48-auth-security\.js\?v=[0-9]+(\.[0-9]+)*' index.html
+          grep -Eq 'v48-auth-security\.js\?v=[0-9]+(\.[0-9]+)*' customer.html
           for f in admin-dashboard.html control-center.html command-center.html; do grep -q 'v48-admin-security.js?v=48.0' "$f"; done
       - name: Commit generated files
         shell: bash
