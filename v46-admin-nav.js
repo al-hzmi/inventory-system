@@ -2,11 +2,12 @@
 'use strict';
 // VERSION='51.2' compatibility marker for retired regression gates.
 // VERSION='52.1' compatibility marker for V50-V52 regression gates.
-const VERSION='54.0',path=(location.pathname.split('/').pop()||'').toLowerCase();
+const VERSION='55.0',path=(location.pathname.split('/').pop()||'').toLowerCase();
 const PAGES=new Set(['admin-home.html','admin-dashboard.html','control-center.html','inventory-analytics.html','admin-stocktake-shell.html','health-center.html','command-center.html']);
 const ADMIN_HASH='1jh297-spgf2z';
-const isAdmin=()=>String(localStorage.getItem('inventory_user_name_v2')||'').trim()==='مهند'&&String(localStorage.getItem('inventory_admin_token_v2')||'')===ADMIN_HASH;
-if(!PAGES.has(path)||!isAdmin())return;
+const isAdmin=()=>{try{const proof=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null'),localQa=['localhost','127.0.0.1'].includes(location.hostname);return String(localStorage.getItem('inventory_user_name_v2')||'').trim()==='مهند'&&String(localStorage.getItem('inventory_admin_token_v2')||'')===ADMIN_HASH&&(localQa||(proof?.role==='admin'&&Boolean(proof?.photoId)))}catch{return false}};
+if(!PAGES.has(path))return;
+if(!isAdmin()){location.replace('./index.html?employee=1');return}
 if(path==='command-center.html'){location.replace('./admin-home.html');return}
 if(path==='admin-dashboard.html'){const q=new URLSearchParams(location.search);if(!q.has('section')&&!q.has('module')){location.replace('./admin-home.html');return}}
 const icons={home:'<path d="M3 11.5 12 4l9 7.5V21h-6v-6H9v6H3Z"/>',sales:'<path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/>',employees:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m7-7a4 4 0 0 1 0 7"/>',customers:'<path d="M4 21v-2a6 6 0 0 1 12 0v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m8-3v6m3-3h-6"/>',orders:'<path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/>',stocktake:'<path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',permissions:'<path d="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M4 21a8 8 0 0 1 16 0M18 8l2 2 3-4"/>',security:'<path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6zM9 12l2 2 4-5"/>',more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',exit:'<path d="M10 17l5-5-5-5M15 12H3M14 3h7v18h-7"/>',health:'<path d="M3 12h4l2-6 4 12 2-6h6"/>'};

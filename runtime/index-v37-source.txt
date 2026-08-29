@@ -137,8 +137,9 @@
 <script type="text/babel">
 
 
-const EMPLOYEE_DIRECT_SESSION = { nameKey:'inventory_user_name_v2', employeeIdKey:'inventory_employee_id_v2', authVersionKey:'inventory_employee_auth_version_v2', authVersion:'2' };
-const hasRememberedEmployeeSession = () => { try { const name=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.nameKey)||'').trim(); const employeeId=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.employeeIdKey)||'').trim(); const authVersion=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.authVersionKey)||''); return Boolean(name&&employeeId&&authVersion===EMPLOYEE_DIRECT_SESSION.authVersion); } catch { return false; } };
+const EMPLOYEE_DIRECT_SESSION = { nameKey:'inventory_user_name_v2', employeeIdKey:'inventory_employee_id_v2', authVersionKey:'inventory_employee_auth_version_v2', authVersion:'2', photoProofKey:'inventory_login_photo_proof_v2' };
+const readLoginPhotoProof = () => { try { return JSON.parse(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.photoProofKey)||'null')||null; } catch { return null; } };
+const hasRememberedEmployeeSession = () => { try { const name=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.nameKey)||'').trim(); const employeeId=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.employeeIdKey)||'').trim(); const authVersion=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.authVersionKey)||''); const proof=readLoginPhotoProof(); return Boolean(name&&employeeId&&authVersion===EMPLOYEE_DIRECT_SESSION.authVersion&&proof?.role==='employee'&&proof?.employeeId===employeeId&&proof?.photoId); } catch { return false; } };
 
 const EntryChooser = () => {
     const goCustomer = () => { window.location.href = './customer.html'; };
@@ -197,7 +198,8 @@ const STORAGE_KEYS = {
     ACCESS_GATE_VERSION: 'inventory_access_gate_version_v1',
     ACCESS_APPROVED_NAME: 'inventory_access_approved_name_v1',
     EMPLOYEE_ID: 'inventory_employee_id_v2',
-    EMPLOYEE_AUTH_VERSION: 'inventory_employee_auth_version_v2'
+    EMPLOYEE_AUTH_VERSION: 'inventory_employee_auth_version_v2',
+    LOGIN_PHOTO_PROOF: 'inventory_login_photo_proof_v2'
 };
 const ACCESS_GATE_VERSION = '1';
 const EMPLOYEE_AUTH_VERSION = '2';
@@ -242,7 +244,7 @@ const WAREHOUSES = {
     riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
 };
 
-const SPECIAL_CATEGORIES = { UNCATEGORIZED : 'بقية الأصناف', MISSING_IMAGES: 'نواقص الصور' };
+const SPECIAL_CATEGORIES = { NEW_ARRIVALS: 'جديدنا', UNCATEGORIZED : 'بقية الأصناف', MISSING_IMAGES: 'نواقص الصور' };
 const ADMIN_ONLY_CATEGORIES = new Set([SPECIAL_CATEGORIES.MISSING_IMAGES]);
 
 // إدارة التصنيف اللحظية عبر Firebase — categories.tsv يبقى كطبقة أساس / fallback
@@ -2024,6 +2026,8 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     const [employeeAccount, setEmployeeAccount] = useState(null);
     const [activationCandidate, setActivationCandidate] = useState(null);
     const [enteredAlias, setEnteredAlias] = useState('');
+    const [loginAttemptId, setLoginAttemptId] = useState('');
+    const [pendingAdminToken, setPendingAdminToken] = useState('');
     const codeRef = useRef(null);
     const autoProbeRef = useRef(false);
 
@@ -2034,6 +2038,18 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         if (allowed) return false;
         setError(employeeSiteControl?.maintenanceMessage || DEFAULT_EMPLOYEE_SITE_CONTROL.maintenanceMessage);
         return true;
+    };
+
+    const createPhotoChallenge = async (account, alias, extra={}) => {
+        const db = await getDb();
+        const ref = db.collection('employee_login_attempts').doc();
+        await ref.set({
+            employeeId: account?.id || '', canonicalName: account?.canonicalName || alias || '', enteredAlias: alias || '',
+            success: true, photoRequired: true, photoCaptured: false, status: 'awaiting_photo',
+            time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent, ...extra
+        });
+        setLoginAttemptId(ref.id);
+        return ref.id;
     };
 
     const resolveNameFlow = async (trimmed) => {
@@ -2107,6 +2123,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         setLoading(true); setError('');
         try {
             const account = await createSelfActivatedEmployeeAccount(activationCandidate, enteredAlias, pin);
+            await createPhotoChallenge(account, enteredAlias, { activation: true });
             setEmployeeAccount(account);
             setActivationCandidate(null);
             setCode('');
@@ -2121,22 +2138,13 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         e.preventDefault();
         const trimmed = name.trim();
         if (!verifyCode(trimmed, code)) { setError('رمز الدخول غير صحيح.'); return; }
-        setLoading(true);
+        setLoading(true); setError('');
         try {
-            const db = await getDb();
-            const userRef = db.collection('users').doc(toSafeDocId(trimmed));
-            const doc = await userRef.get();
-            const info = { userAgent: navigator.userAgent, lastLogin: firebase.firestore.FieldValue.serverTimestamp() };
-            if (doc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
-            else await userRef.set({ name: trimmed, ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
-            await db.collection('login_logs').add({ name: trimmed, isAdmin: true, time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent });
-        } catch (err) {}
-        localStorage.setItem(STORAGE_KEYS.NAME, trimmed);
-        localStorage.setItem(STORAGE_KEYS.TOKEN, hashCode(toEnglishDigits(String(code)).trim()));
-        localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);
-        localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);
-        setLoading(false);
-        onLogin(trimmed, true);
+            const account={id:'admin_mohanad',canonicalName:trimmed,isAdmin:true};
+            await createPhotoChallenge(account,trimmed,{isAdmin:true});
+            setEmployeeAccount(account);setEnteredAlias(trimmed);setPendingAdminToken(hashCode(toEnglishDigits(String(code)).trim()));setCode('');setStep('admin_face');
+        } catch (err) { console.error(err); setError('تعذر إنشاء سجل التحقق. حاول مرة أخرى.'); }
+        finally { setLoading(false); }
     };
 
     const handleEmployeePasswordSubmit = async (e) => {
@@ -2148,15 +2156,8 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         try {
             const ok = await verifyEmployeePassword(employeeAccount, password);
             const db = await getDb();
-            db.collection('employee_login_attempts').add({
-                employeeId: employeeAccount.id,
-                canonicalName: employeeAccount.canonicalName || '',
-                enteredAlias,
-                success: !!ok,
-                time: firebase.firestore.FieldValue.serverTimestamp(),
-                userAgent: navigator.userAgent
-            }).catch(()=>{});
-            if (!ok) { setError('كلمة المرور غير صحيحة.'); return; }
+            if (!ok) { db.collection('employee_login_attempts').add({employeeId:employeeAccount.id,canonicalName:employeeAccount.canonicalName||'',enteredAlias,success:false,photoRequired:false,status:'password_rejected',time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent}).catch(()=>{});setError('كلمة المرور غير صحيحة.');return; }
+            await createPhotoChallenge(employeeAccount, enteredAlias);
             setStep('face');
         } catch (err) {
             console.error(err); setError('تعذر التحقق من كلمة المرور. حاول مرة أخرى.');
@@ -2164,7 +2165,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     };
 
     const finalizeEmployeeLogin = async (photoDataUrl) => {
-        if (!employeeAccount) return;
+        if (!employeeAccount || !loginAttemptId || !/^data:image\/(?:jpeg|png|webp);base64,/.test(String(photoDataUrl||''))) { setError('لم تُحفظ صورة التحقق. أعد المحاولة.'); return; }
         setLoading(true); setError('');
         const canonicalName = employeeAccount.canonicalName || enteredAlias;
         try {
@@ -2188,8 +2189,13 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
             await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).set({
                 lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
                 lastEnteredAlias: enteredAlias,
-                loginCount: firebase.firestore.FieldValue.increment(1)
+                loginCount: firebase.firestore.FieldValue.increment(1),
+                passwordResetRequiresPhoto: false,
+                passwordResetPhotoCompletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                passwordResetPhotoId: photoRef.id,
+                lastPhotoVerifiedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
+            await db.collection('employee_login_attempts').doc(loginAttemptId).set({photoCaptured:true,securityPhotoId:photoRef.id,status:'completed',completedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
             await db.collection('login_logs').add({
                 name: canonicalName,
                 employeeId: employeeAccount.id,
@@ -2204,6 +2210,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
             localStorage.removeItem(STORAGE_KEYS.TOKEN);
             localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, employeeAccount.id);
             localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
+            localStorage.setItem(STORAGE_KEYS.LOGIN_PHOTO_PROOF, JSON.stringify({role:'employee',employeeId:employeeAccount.id,photoId:photoRef.id,loginAttemptId,verifiedAt:Date.now()}));
             localStorage.removeItem(STORAGE_KEYS.ACCESS_GATE_VERSION);
             localStorage.removeItem(STORAGE_KEYS.ACCESS_APPROVED_NAME);
             onLogin(canonicalName, false);
@@ -2212,6 +2219,23 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
             setError('تم التحقق لكن تعذر حفظ سجل الدخول. حاول مرة أخرى.');
             setStep('employee_password');
         } finally { setLoading(false); }
+    };
+
+    const finalizeAdminLogin = async (photoDataUrl) => {
+        if (!employeeAccount?.isAdmin || !loginAttemptId || !pendingAdminToken || !/^data:image\/(?:jpeg|png|webp);base64,/.test(String(photoDataUrl||''))) { setError('لم تُحفظ صورة التحقق. أعد المحاولة.'); return; }
+        setLoading(true);setError('');
+        const canonicalName=employeeAccount.canonicalName||enteredAlias||'مهند';
+        try{
+            const db=await getDb();
+            const photoRef=await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).add({employeeId:employeeAccount.id,canonicalName,enteredAlias:canonicalName,isAdmin:true,photoDataUrl,verificationType:'admin_login_face_presence',loginAttemptId,timestamp:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent,platform:navigator.platform||'',screen:`${window.screen?.width||0}x${window.screen?.height||0}`});
+            const userRef=db.collection('users').doc(toSafeDocId(canonicalName)),doc=await userRef.get(),info={name:canonicalName,isAdmin:true,lastLogin:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent};
+            if(doc.exists)await userRef.update({...info,loginCount:firebase.firestore.FieldValue.increment(1)});else await userRef.set({...info,loginCount:1,firstJoined:firebase.firestore.FieldValue.serverTimestamp(),timeSpentMinutes:0});
+            await db.collection('employee_login_attempts').doc(loginAttemptId).set({photoCaptured:true,securityPhotoId:photoRef.id,status:'completed',completedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+            await db.collection('login_logs').add({name:canonicalName,employeeId:employeeAccount.id,isAdmin:true,faceVerified:true,securityPhotoId:photoRef.id,loginAttemptId,time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent});
+            localStorage.setItem(STORAGE_KEYS.NAME,canonicalName);localStorage.setItem(STORAGE_KEYS.TOKEN,pendingAdminToken);localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);localStorage.setItem(STORAGE_KEYS.LOGIN_PHOTO_PROOF,JSON.stringify({role:'admin',employeeId:employeeAccount.id,photoId:photoRef.id,loginAttemptId,verifiedAt:Date.now()}));
+            onLogin(canonicalName,true);
+        }catch(err){console.error(err);setError('تم التقاط الصورة لكن تعذر حفظ سجل الدخول. حاول مرة أخرى.');setStep('password');}
+        finally{setLoading(false)}
     };
 
     return <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans"><div className="animate-card w-full max-w-[400px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32 flex flex-col items-center">
@@ -2233,7 +2257,8 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         {step === 'employee_password' && <form onSubmit={handleEmployeePasswordSubmit} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-48 h-48 rounded-full bg-accentSoft text-accent mx-auto flex items-center justify-center font-bold text-[18px]">{String(employeeAccount?.canonicalName||'?').trim().charAt(0)}</div><h2 className="text-[17px] font-bold mt-10">{employeeAccount?.canonicalName}</h2><p className="text-[10px] text-muted mt-4">دخلت باسم: {enteredAlias}</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">رمز الدخول</label><input ref={codeRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="current-password" value={code} onChange={e=>{setCode(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-[.35em] outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-primary text-white rounded-12 font-semibold">{loading?'جاري التحقق...':'دخول'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setEmployeeAccount(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
 
         {step === 'face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('employee_password');setCode('')}} onVerified={finalizeEmployeeLogin}/>} 
-        {loading && step === 'face' && <div className="mt-10 text-[11px] text-muted">جاري حفظ سجل الدخول...</div>}
+        {step === 'admin_face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('password');setCode('');setPendingAdminToken('');setLoginAttemptId('')}} onVerified={finalizeAdminLogin}/>}
+        {loading && (step === 'face' || step === 'admin_face') && <div className="mt-10 text-[11px] text-muted">جاري حفظ سجل الدخول...</div>}
     </div></div>;
 };
 
@@ -2461,7 +2486,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
     const createCategory = async () => {
         const name = newCategoryName.trim();
         if (!name) return;
-        if ([SPECIAL_CATEGORIES.UNCATEGORIZED, SPECIAL_CATEGORIES.MISSING_IMAGES].includes(name)) return alert('هذا الاسم محجوز للنظام.');
+        if (Object.values(SPECIAL_CATEGORIES).includes(name)) return alert('هذا الاسم محجوز للنظام.');
         if (categoryNames.some(c => normalizeText(c) === normalizeText(name))) return alert('القسم موجود مسبقاً.');
         setBusy(true);
         try {
@@ -3278,12 +3303,17 @@ const App = () => {
         };
     }, []);
 
-    const [sessionName, setSessionName] = useState(() => localStorage.getItem(STORAGE_KEYS.NAME) || '');
+    const [sessionName, setSessionName] = useState(() => {
+        const n=localStorage.getItem(STORAGE_KEYS.NAME)||'',t=localStorage.getItem(STORAGE_KEYS.TOKEN)||'',proof=readLoginPhotoProof();
+        const admin=Boolean(t)&&PROTECTED_ACCOUNTS[normalizeText(n)]===t;
+        return admin ? (proof?.role==='admin'&&proof?.photoId?n:'') : (hasRememberedEmployeeSession()?n:'');
+    });
 
     const [isAdmin, setIsAdmin] = useState(() => {
         const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
         const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
-        return Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
+        const proof=readLoginPhotoProof();
+        return Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t && proof?.role==='admin' && Boolean(proof?.photoId);
     });
 
     // الجلسات القديمة لا تتجاوز نظام الحسابات الجديد. الموظف يدخل بكلمة المرور ثم تحقق الوجه السريع.
@@ -3291,7 +3321,8 @@ const App = () => {
         const n = localStorage.getItem(STORAGE_KEYS.NAME) || '';
         const t = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
         const admin = Boolean(t) && PROTECTED_ACCOUNTS[normalizeText(n)] === t;
-        if (admin) return true;
+        const proof=readLoginPhotoProof();
+        if (admin) return proof?.role==='admin'&&Boolean(proof?.photoId);
         const employeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
         const authVersion = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION) || '';
         return Boolean(n && employeeId) && authVersion === EMPLOYEE_AUTH_VERSION;
@@ -3385,6 +3416,7 @@ const App = () => {
     
     const [databases, setDatabases]   = useState({ jeddah: [], riyadh: [] });
     const [imagesList, setImagesList] = useState(new Map());
+    const [newArrivalsMeta, setNewArrivalsMeta] = useState({ items: [] });
     const [baseCategories, setBaseCategories] = useState({});
     const [categoryOverrides, setCategoryOverrides] = useState({});
     const [categoryMeta, setCategoryMeta] = useState({});
@@ -3408,8 +3440,8 @@ const App = () => {
         let alive = true;
         (async () => {
             try {
-                const [jT, rT, iT, cT, vJ, pT] = await Promise.all([
-                    fetchText(`${DATA_PATH}jeddah.tsv`), fetchText(`${DATA_PATH}riyadh.tsv`), fetchText(`${DATA_PATH}images_list.txt`), fetchText(`${DATA_PATH}categories.tsv`), fetchJson(`${DATA_PATH}version.json`), fetchText(`${DATA_PATH}pricing.tsv`)
+                const [jT, rT, iT, cT, vJ, pT, nJ] = await Promise.all([
+                    fetchText(`${DATA_PATH}jeddah.tsv`), fetchText(`${DATA_PATH}riyadh.tsv`), fetchText(`${DATA_PATH}images_list.txt`), fetchText(`${DATA_PATH}categories.tsv`), fetchJson(`${DATA_PATH}version.json`), fetchText(`${DATA_PATH}pricing.tsv`), fetchJson(`${DATA_PATH}new-arrivals.json`)
                 ]);
                 if (!alive) return;
 
@@ -3422,6 +3454,7 @@ const App = () => {
 
                 setDatabases({ jeddah, riyadh });
                 setImagesList(buildImagesMap(iT));
+                setNewArrivalsMeta(nJ && Array.isArray(nJ.items) ? nJ : { items: [] });
                 setBaseCategories(parseCategories(cT));
                 setLastUpdate(vJ && vJ.lastUpdate ? (typeof dayjs !== 'undefined' ? dayjs(vJ.lastUpdate).fromNow() : vJ.lastUpdate) : "غير متوفر");
             } catch (err) {
@@ -3548,6 +3581,7 @@ const App = () => {
     }, [search, warehouse, query, sessionName]);
 
     const allCategorizedIds = useMemo(() => new Set(Object.values(categories).flat()), [categories]);
+    const newArrivalIds = useMemo(() => new Set((newArrivalsMeta.items || []).map(row => normalizeCleanId(row.sku)).filter(Boolean)), [newArrivalsMeta]);
     const categoryNames = useMemo(() => Object.keys(categories), [categories]);
     const currentCategoryById = useMemo(() => buildCategoryLookup(categories), [categories]);
     const catalogItems = useMemo(() => {
@@ -3579,17 +3613,18 @@ const App = () => {
         let pool = databases[warehouse] || [];
         if (VISIBILITY_RULES.hideOutOfStockInGallery) pool = pool.filter(i => i.qty > 0);
 
+        if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(i.cleanId) && imagesList.has(i.cleanId));
         if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) return pool.filter(i => !imagesList.has(i.cleanId));
         if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => imagesList.has(i.cleanId) && !allCategorizedIds.has(i.cleanId));
 
         const ids = new Set(categories[activeCategory] || []);
         return pool.filter(i => ids.has(i.cleanId) && imagesList.has(i.cleanId));
-    }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, isAdmin]);
+    }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, newArrivalIds, isAdmin]);
 
     const visibleItems = useMemo(() => galleryResults.slice(0, visibleCount), [galleryResults, visibleCount]);
     const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
     const activeWarehouseName = warehouse ? WAREHOUSES[warehouse].name : '';
-    const totalCategoryCount  = categoryNames.length + 1 + (isAdmin ? 1 : 0);
+    const totalCategoryCount  = categoryNames.length + 2 + (isAdmin ? 1 : 0);
     const currentEmployeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
     const currentStocktakeAccessAllowed = stocktakeAccessAllowed(stocktakeControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
     const currentSiteAccessAllowed = employeeSiteAccessAllowed(employeeSiteControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
@@ -3618,6 +3653,7 @@ const App = () => {
             localStorage.removeItem(STORAGE_KEYS.TOKEN);
             localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);
             localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);
+            localStorage.removeItem(STORAGE_KEYS.LOGIN_PHOTO_PROOF);
             window.location.href='./index.html?employee=1';
         }}/>;
     }
@@ -3839,6 +3875,9 @@ const App = () => {
 
                         const categoryButtons = (
                             <div className="flex flex-wrap gap-8">
+                                <button onClick={() => changeCategory(SPECIAL_CATEGORIES.NEW_ARRIVALS)} aria-pressed={activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS} className={`px-14 py-10 rounded-full text-[13px] font-bold border transition-colors duration-200 flex items-center gap-6 ${activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS ? 'bg-accent text-bg border-accent' : 'bg-accentSoft text-accent border-accent/20 hover:border-accent'}`}>
+                                    <Icon.Grid className="w-14 h-14 flex-shrink-0" /> {SPECIAL_CATEGORIES.NEW_ARRIVALS}
+                                </button>
                                 {categoryNames.map(cat => (
                                     <button key={cat} onClick={() => changeCategory(cat)} aria-pressed={activeCategory === cat} className={chip(activeCategory === cat)}>{cat}</button>
                                 ))}
@@ -3944,6 +3983,7 @@ const EmployeeBootstrap = () => {
             localStorage.removeItem(STORAGE_KEYS.TOKEN);
             localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);
             localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);
+            localStorage.removeItem(STORAGE_KEYS.LOGIN_PHOTO_PROOF);
             window.location.reload();
         }}/>;
     }
