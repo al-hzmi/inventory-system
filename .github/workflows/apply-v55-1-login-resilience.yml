@@ -1,0 +1,55 @@
+name: Apply V55.1 Login Resilience
+
+on:
+  push:
+    branches:
+      - fix/v55-1-login-verification-resilience
+    paths:
+      - 'tools/patch_v55_1_login_resilience.py'
+      - '.github/workflows/apply-v55-1-login-resilience.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/v55-1-login-verification-resilience
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python tools/patch_v55_1_login_resilience.py
+      - name: Static checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          core=Path('runtime/index-v37-source.txt').read_text(encoding='utf-8')
+          index=Path('index.html').read_text(encoding='utf-8')
+          checks={
+            'firebase timeout':'FIREBASE_SCRIPT_TIMEOUT_MS = 8000' in core,
+            'firebase promise reset':'__fbPromise = null; throw err' in core,
+            'lookup timeout':'LOGIN_LOOKUP_TIMEOUT_MS = 7000' in core,
+            'attempt guard':'verifyAttemptRef = useRef(0)' in core,
+            'retry without refresh':'لا تحتاج تحديث الصفحة' in core,
+            'cache bust':"index-v37-source.txt?v=55.1" in index,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          if bad: raise SystemExit('V55_1_STATIC_FAIL: '+', '.join(bad))
+          print('V55_1_STATIC_PASS')
+          PY
+      - name: Commit generated patch
+        run: |
+          if git diff --quiet -- runtime/index-v37-source.txt index.html; then
+            echo 'No generated changes'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/index-v37-source.txt index.html
+          git commit -m 'Apply V55.1 login verification resilience'
+          git push origin HEAD:fix/v55-1-login-verification-resilience
