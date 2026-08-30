@@ -2519,12 +2519,14 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
         const canonicalName = employeeAccount.canonicalName || enteredAlias;
         try {
             const db = await getDb();
+            const employeePhotoVerificationBase = { verificationType: 'login_face_presence' };
             const photoRef = await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).add({
                 employeeId: employeeAccount.id,
                 canonicalName,
                 enteredAlias,
                 photoDataUrl,
-                verificationType: verificationContext.remote ? 'remote_mobile_login_face_presence' : 'login_face_presence',
+                ...employeePhotoVerificationBase,
+                verificationType: verificationContext.remote ? 'remote_mobile_login_face_presence' : employeePhotoVerificationBase.verificationType,
                 remoteApproval: Boolean(verificationContext.remote),
                 remoteChallengeId: verificationContext.challengeId || '',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
