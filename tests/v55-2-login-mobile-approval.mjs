@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import vm from 'node:vm';
 
 const source = fs.readFileSync('runtime/index-v37-source.txt', 'utf8');
 const boot = fs.readFileSync('index.html', 'utf8');
@@ -26,10 +27,14 @@ for (const marker of [
   "readRemoteLoginToken()",
 ]) assert(source.includes(marker), `missing marker: ${marker}`);
 
-assert(boot.includes('runtime/index-v37-source.txt?v=55.2'), 'boot must load V55.2');
+assert(boot.includes('runtime/index-v37-source.txt?v=55.3'), 'boot must load V55.3');
 assert(source.includes('لا تحتاج تحديث الصفحة'), 'lookup timeout must be visible and recoverable');
 assert(source.includes('حاول مرة أخرى'), 'failed lookup must expose a retry action');
 assert(source.includes('التحقق عبر كاميرا الجوال'), 'desktop camera fallback must be visible');
+assert(source.includes('sendRemoteApprovalWithRetry'), 'mobile approval must use the retrying direct write path');
+assert(!source.includes("await db.runTransaction(async transaction => {\n                const snap = await transaction.get(ref);"), 'mobile approval must not depend on a camera-to-transaction round trip');
+assert(source.includes('لقطة الوجه محفوظة على هذا الجهاز'), 'a failed write must not force another face capture');
+assert(source.includes('inventory_remote_login_last_error_v1'), 'client failure must leave a safe diagnostic code');
 
 const challengeSet = source.match(/\.collection\(REMOTE_LOGIN_COLLECTION\)\.doc\(id\)\.set\(\{([\s\S]*?)\}\),\s*6000/)?.[1];
 assert(challengeSet, 'remote challenge write block');
@@ -64,5 +69,44 @@ const timeout = (promise, ms) => new Promise((resolve, reject) => {
   promise.then(value => { clearTimeout(timer); resolve(value); }, error => { clearTimeout(timer); reject(error); });
 });
 await assert.rejects(timeout(new Promise(() => {}), 20), /timeout/);
+
+const retryBody = source.match(/const sendRemoteApprovalWithRetry = ([\s\S]*?)\n};\n\nconst RemoteLoginWait/)?.[1];
+assert(retryBody, 'retry implementation must be extractable for behavior tests');
+const retryContext = {
+  loginLookupTimeout: promise => Promise.resolve(promise),
+  isRemoteChallengeExpired: row => Date.now() > Number(row?.expiresAtMs || 0),
+  remoteApprovalErrorCode: error => String(error?.code || error?.message || 'UNKNOWN'),
+  remoteApprovalDelay: async () => {},
+  Date, Object, Error, Promise,
+};
+vm.createContext(retryContext);
+vm.runInContext(`const sendRemoteApprovalWithRetry = ${retryBody}\n}; this.sendRemoteApprovalWithRetry = sendRemoteApprovalWithRetry;`, retryContext);
+
+{
+  let gets = 0, sets = 0;
+  const ref = {
+    get: async () => { gets += 1; if (gets < 3) throw Object.assign(new Error('temporary'), { code: 'unavailable' }); return { exists: true, data: () => ({ status: 'waiting_phone', expiresAtMs: Date.now() + 60000 }) }; },
+    set: async () => { sets += 1; },
+  };
+  const result = await retryContext.sendRemoteApprovalWithRetry({ ref, payload: { status: 'approved' }, approvalProof: 'proof' });
+  assert.equal(result.attempt, 3, 'transient failures must retry automatically');
+  assert.equal(sets, 1);
+}
+{
+  let approved = false, sets = 0;
+  const ref = {
+    get: async () => ({ exists: true, data: () => approved ? ({ status: 'approved', approvalProof: 'proof', expiresAtMs: Date.now() + 60000 }) : ({ status: 'waiting_phone', expiresAtMs: Date.now() + 60000 }) }),
+    set: async () => { sets += 1; approved = true; throw Object.assign(new Error('reply lost'), { code: 'unavailable' }); },
+  };
+  const result = await retryContext.sendRemoteApprovalWithRetry({ ref, payload: { status: 'approved' }, approvalProof: 'proof' });
+  assert.equal(result.recovered, true, 'lost write replies must recover idempotently');
+  assert.equal(sets, 1, 'an already accepted approval must not resend the image');
+}
+{
+  let gets = 0;
+  const ref = { get: async () => { gets += 1; throw Object.assign(new Error('denied'), { code: 'permission-denied' }); }, set: async () => {} };
+  await assert.rejects(retryContext.sendRemoteApprovalWithRetry({ ref, payload: {}, approvalProof: 'proof' }), /denied/);
+  assert.equal(gets, 1, 'terminal permission failures must not loop');
+}
 
 console.log('V55_2_LOGIN_MOBILE_APPROVAL_PASS');
