@@ -27,7 +27,7 @@ for (const marker of [
   "readRemoteLoginToken()",
 ]) assert(source.includes(marker), `missing marker: ${marker}`);
 
-assert(boot.includes('runtime/index-v37-source.txt?v=55.3'), 'boot must load V55.3');
+assert(boot.includes('runtime/index-v37-source.txt?v=55.4'), 'boot must load V55.4');
 assert(source.includes('لا تحتاج تحديث الصفحة'), 'lookup timeout must be visible and recoverable');
 assert(source.includes('حاول مرة أخرى'), 'failed lookup must expose a retry action');
 assert(source.includes('التحقق عبر كاميرا الجوال'), 'desktop camera fallback must be visible');
