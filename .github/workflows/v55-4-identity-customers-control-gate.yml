@@ -1,0 +1,37 @@
+name: V55.4 Identity and Customers Control Gate
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'customer.html'
+      - 'runtime/index-v37-source.txt'
+      - 'runtime/customer-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'v46-admin-nav.js'
+      - 'control-center.html'
+      - 'tests/v55-4-identity-customers-control.mjs'
+      - '.github/workflows/v55-4-identity-customers-control-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify QR identity and customer controls
+        run: node tests/v55-4-identity-customers-control.mjs
+      - name: Parse JSX sources
+        run: |
+          npm install --no-save --no-package-lock esbuild@0.25.9 >/dev/null 2>&1
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { transformSync } from 'esbuild';
+          for (const file of ['runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html']) {
+            const html=fs.readFileSync(file,'utf8');
+            const blocks=[...html.matchAll(/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/gi)].map(match=>match[1]);
+            if(!blocks.length) throw new Error(`No JSX found in ${file}`);
+            blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}));
+          }
+          console.log('V55_4_JSX_PASS');
+          NODE

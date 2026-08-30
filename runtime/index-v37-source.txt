@@ -1973,6 +1973,29 @@ const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified, onUsePho
 
 const REMOTE_LOGIN_COLLECTION = 'employee_remote_login_challenges';
 const REMOTE_LOGIN_TTL_MS = 2 * 60 * 1000;
+const readRemoteApproverIdentity = () => {
+    try {
+        const proof = readLoginPhotoProof();
+        const name = String(localStorage.getItem(STORAGE_KEYS.NAME) || '').trim();
+        const employeeId = String(proof?.employeeId || '').trim();
+        const role = proof?.role === 'admin' ? 'admin' : proof?.role === 'employee' ? 'employee' : '';
+        const adminToken = String(localStorage.getItem(STORAGE_KEYS.TOKEN) || '');
+        const storedEmployeeId = String(localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '').trim();
+        const authVersion = String(localStorage.getItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION) || '');
+        const adminValid = role === 'admin' && employeeId === 'admin_mohanad' && Boolean(proof?.photoId) && PROTECTED_ACCOUNTS[normalizeText(name)] === adminToken;
+        const employeeValid = role === 'employee' && Boolean(employeeId && proof?.photoId) && storedEmployeeId === employeeId && authVersion === EMPLOYEE_AUTH_VERSION;
+        return { valid: adminValid || employeeValid, name, employeeId, role, photoId: String(proof?.photoId || '') };
+    } catch { return { valid:false, name:'', employeeId:'', role:'', photoId:'' }; }
+};
+const remoteApproverIdentityError = (challenge, identity) => {
+    const expectedRole = challenge?.isAdmin ? 'admin' : 'employee';
+    if (!identity?.valid) return 'يجب فتح النظام على هذا الجوال والدخول بحساب صاحب الطلب أولًا، ثم مسح رمز جديد من الكمبيوتر.';
+    if (identity.role !== expectedRole || identity.employeeId !== String(challenge?.employeeId || '')) {
+        const current = identity.name ? `هذا الجوال مسجل باسم «${identity.name}»` : 'هذا الجوال مسجل بحساب آخر';
+        return `${current}، بينما الطلب يخص «${challenge?.canonicalName || 'مستخدمًا آخر'}». لا يمكن اعتماد دخول شخص من حساب شخص آخر.`;
+    }
+    return '';
+};
 const readRemoteLoginToken = () => {
     try { return new URLSearchParams(String(location.hash || '').replace(/^#/, '')).get('remote-login') || ''; }
     catch { return ''; }
@@ -2063,6 +2086,24 @@ const RemoteLoginWait = ({ request, account, loginAttemptId, onApproved, onCance
                 if (isRemoteChallengeExpired(row)) { setError('انتهت مهلة الطلب. ارجع وأنشئ طلبًا جديدًا.'); return; }
                 if (row.status !== 'approved') return;
                 if (row.employeeId !== account?.id || row.loginAttemptId !== loginAttemptId) { setError('طلب الموافقة لا يطابق جلسة الدخول الحالية.'); return; }
+                const expectedApproverRole = account?.isAdmin ? 'admin' : 'employee';
+                if (row.approverEmployeeId !== account?.id || row.approverRole !== expectedApproverRole || !row.approverPhotoProofId) {
+                    setError('رفض النظام الموافقة لأنها صادرة من حساب جوال مختلف عن صاحب الطلب.');
+                    return;
+                }
+                try {
+                    const approverProofSnap = await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).doc(row.approverPhotoProofId).get();
+                    const approverProof = approverProofSnap.exists ? approverProofSnap.data() : null;
+                    const proofRoleMatches = expectedApproverRole === 'admin' ? approverProof?.isAdmin === true : approverProof?.isAdmin !== true;
+                    if (!approverProof || approverProof.employeeId !== account?.id || !proofRoleMatches) {
+                        setError('رفض النظام هوية الجوال لأنها لا تملك تحققًا سابقًا للحساب نفسه.');
+                        return;
+                    }
+                } catch (err) {
+                    console.error('[Remote approver proof]', err);
+                    setError('تعذر التحقق من هوية حساب الجوال. ألغِ الطلب وحاول مرة أخرى.');
+                    return;
+                }
                 const expected = await remoteApprovalProof(request.token, request.id);
                 if (row.approvalProof !== expected || !row.photoCiphertext || !row.photoIv) {
                     setError('تعذر اعتماد موافقة الجوال بأمان. ألغِ الطلب وحاول من جديد.');
@@ -2125,6 +2166,7 @@ const MobileRemoteLoginApproval = ({ token }) => {
     const [error, setError] = useState('');
     const [errorCode, setErrorCode] = useState('');
     const [photoForRetry, setPhotoForRetry] = useState('');
+    const [identityError, setIdentityError] = useState('');
 
     useEffect(() => {
         let active = true;
@@ -2138,6 +2180,8 @@ const MobileRemoteLoginApproval = ({ token }) => {
                 if (!snap.exists) throw new Error('NOT_FOUND');
                 const row = { id: snap.id, ...snap.data() };
                 if (row.status !== 'waiting_phone' || isRemoteChallengeExpired(row)) throw new Error('EXPIRED');
+                const mismatch = remoteApproverIdentityError(row, readRemoteApproverIdentity());
+                if (mismatch) setIdentityError(mismatch);
                 setChallengeId(id); setChallenge(row);
             } catch (err) {
                 console.error('[Mobile remote login]', err);
@@ -2149,6 +2193,9 @@ const MobileRemoteLoginApproval = ({ token }) => {
 
     const approve = async photoDataUrl => {
         if (!challenge || !challengeId || saving) return;
+        const approverIdentity = readRemoteApproverIdentity();
+        const mismatch = remoteApproverIdentityError(challenge, approverIdentity);
+        if (mismatch) { setIdentityError(mismatch); setPhotoForRetry(''); return; }
         const safePhoto = String(photoDataUrl || photoForRetry || '');
         if (!/^data:image\/(?:jpeg|png|webp);base64,/.test(safePhoto)) { setPhotoForRetry(''); setError('تعذر تجهيز لقطة الوجه. التقط صورة جديدة.'); return; }
         setPhotoForRetry(safePhoto);
@@ -2160,6 +2207,10 @@ const MobileRemoteLoginApproval = ({ token }) => {
             await sendRemoteApprovalWithRetry({ ref, approvalProof: proof, payload: {
                 status: 'approved', approvalProof: proof, ...encryptedPhoto,
                 approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                approverEmployeeId: approverIdentity.employeeId,
+                approverRole: approverIdentity.role,
+                approverName: approverIdentity.name,
+                approverPhotoProofId: approverIdentity.photoId,
                 approverUserAgent: navigator.userAgent,
                 approverPlatform: navigator.platform || '',
                 approverScreen: `${window.screen?.width || 0}x${window.screen?.height || 0}`
@@ -2183,7 +2234,8 @@ const MobileRemoteLoginApproval = ({ token }) => {
         {loading && <div className="py-32 text-center text-[12px] text-muted">جاري فتح طلب الكمبيوتر...</div>}
         {!loading && error && !challenge && <div className="text-center"><div className="w-52 h-52 rounded-full bg-dangerSoft text-danger mx-auto flex items-center justify-center"><Icon.Alert className="w-24 h-24"/></div><h2 className="text-[18px] font-bold mt-12">تعذر فتح الطلب</h2><p className="text-[12px] text-danger mt-8 leading-6">{error}</p><button type="button" onClick={leave} className="w-full h-44 mt-16 rounded-12 bg-primary text-white font-bold">العودة للدخول</button></div>}
         {!loading && approved && <div className="text-center py-12"><div className="w-60 h-60 rounded-full bg-successSoft text-success mx-auto flex items-center justify-center text-[28px]">✓</div><h2 className="text-[19px] font-bold mt-14">تمت الموافقة</h2><p className="text-[12px] text-secondary mt-7 leading-6">تم التحقق من الوجه. سيُفتح الكمبيوتر تلقائيًا، ويمكنك إغلاق هذه الصفحة.</p></div>}
-        {!loading && challenge && !approved && <>
+        {!loading && challenge && !approved && identityError && <div className="text-center"><div className="w-52 h-52 rounded-full bg-dangerSoft text-danger mx-auto flex items-center justify-center"><Icon.Alert className="w-24 h-24"/></div><h2 className="text-[18px] font-bold mt-12">الحساب لا يطابق الطلب</h2><p className="text-[12px] text-danger mt-8 leading-6">{identityError}</p><div className="mt-10 rounded-12 bg-surface border border-border p-10 text-[10px] text-secondary leading-5">لن تُفتح الكاميرا ولن تُرسل أي موافقة حتى يكون الحساب المسجل على الجوال هو صاحب الطلب نفسه.</div><button type="button" onClick={leave} className="w-full h-44 mt-16 rounded-12 bg-primary text-white font-bold">العودة للدخول</button></div>}
+        {!loading && challenge && !approved && !identityError && <>
             <div className="text-center mb-16"><div className="text-[10px] font-bold text-accent">طلب دخول من كمبيوتر</div><h1 className="text-[19px] font-bold text-primary mt-4">{challenge.canonicalName || 'الموظف'}</h1><p className="text-[11px] text-secondary mt-5">تحقق أن الطلب أمامك على الكمبيوتر ثم أكمل لقطة الوجه.</p></div>
             {error && <div className="mb-10 rounded-12 bg-dangerSoft text-danger p-10 text-[11px] text-center"><div>{error}</div>{errorCode && <div className="mt-5 text-[9px] opacity-70">رمز المساعدة: {errorCode}</div>}</div>}
             {saving ? <div className="py-28 text-center text-[12px] text-muted">جاري إرسال الموافقة للكمبيوتر تلقائيًا...</div> : photoForRetry ? <div className="rounded-16 border border-border bg-surface p-14 text-center"><div className="text-[12px] font-bold text-primary">لقطة الوجه محفوظة على هذا الجهاز</div><p className="text-[10px] text-secondary mt-5">لا تحتاج لإعادة التصوير.</p><button type="button" onClick={()=>approve(photoForRetry)} className="w-full h-44 mt-12 rounded-12 bg-primary text-white text-[12px] font-bold">إعادة إرسال الموافقة</button><button type="button" onClick={()=>{setPhotoForRetry('');setError('');setErrorCode('')}} className="w-full h-40 mt-8 rounded-12 border border-border bg-bg text-secondary text-[11px] font-bold">التقاط صورة جديدة</button></div> : <EmployeeFaceCheck account={{ id: challenge.employeeId, canonicalName: challenge.canonicalName }} enteredAlias={challenge.enteredAlias || challenge.canonicalName} onBack={leave} onVerified={approve}/>}
