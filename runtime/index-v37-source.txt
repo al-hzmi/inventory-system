@@ -1995,6 +1995,31 @@ const decryptRemotePhoto = async (row, token) => {
     return new TextDecoder().decode(plaintext);
 };
 const isRemoteChallengeExpired = row => Date.now() > Number(row?.expiresAtMs || 0);
+const remoteApprovalErrorCode = error => String(error?.code || error?.message || error?.name || 'UNKNOWN')
+    .replace(/^firestore\//, '').replace(/^FirebaseError:\s*/i, '').slice(0, 64);
+const remoteApprovalDelay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sendRemoteApprovalWithRetry = async ({ ref, payload, approvalProof }) => {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+            const snap = await loginLookupTimeout(ref.get(), 6000);
+            const fresh = snap.exists ? snap.data() : null;
+            if (!fresh || isRemoteChallengeExpired(fresh)) throw Object.assign(new Error('EXPIRED'), { code: 'EXPIRED' });
+            // إذا وصلت المحاولة السابقة ثم انقطع ردها، نعدّها ناجحة دون إرسال الصورة مرة أخرى.
+            if (fresh.status === 'approved' && fresh.approvalProof === approvalProof) return { recovered: true, attempt };
+            if (fresh.status !== 'waiting_phone') throw Object.assign(new Error('REQUEST_NOT_WAITING'), { code: 'REQUEST_NOT_WAITING' });
+            await loginLookupTimeout(ref.set(payload, { merge: true }), 7000);
+            return { recovered: false, attempt };
+        } catch (error) {
+            lastError = error;
+            const code = remoteApprovalErrorCode(error).toLowerCase();
+            const terminal = ['expired', 'request_not_waiting', 'permission-denied', 'unauthenticated', 'invalid-argument', 'resource-exhausted'].includes(code);
+            if (terminal || attempt >= 3) throw error;
+            await remoteApprovalDelay(attempt === 1 ? 500 : 1100);
+        }
+    }
+    throw lastError || new Error('REMOTE_APPROVAL_FAILED');
+};
 
 const RemoteLoginWait = ({ request, account, loginAttemptId, onApproved, onCancel }) => {
     const qrRef = useRef(null);
@@ -2098,6 +2123,8 @@ const MobileRemoteLoginApproval = ({ token }) => {
     const [saving, setSaving] = useState(false);
     const [approved, setApproved] = useState(false);
     const [error, setError] = useState('');
+    const [errorCode, setErrorCode] = useState('');
+    const [photoForRetry, setPhotoForRetry] = useState('');
 
     useEffect(() => {
         let active = true;
@@ -2122,28 +2149,32 @@ const MobileRemoteLoginApproval = ({ token }) => {
 
     const approve = async photoDataUrl => {
         if (!challenge || !challengeId || saving) return;
-        setSaving(true); setError('');
+        const safePhoto = String(photoDataUrl || photoForRetry || '');
+        if (!/^data:image\/(?:jpeg|png|webp);base64,/.test(safePhoto)) { setPhotoForRetry(''); setError('تعذر تجهيز لقطة الوجه. التقط صورة جديدة.'); return; }
+        setPhotoForRetry(safePhoto);
+        setSaving(true); setError(''); setErrorCode('');
         try {
             const db = await getDb(), ref = db.collection(REMOTE_LOGIN_COLLECTION).doc(challengeId);
             const proof = await remoteApprovalProof(token, challengeId);
-            const encryptedPhoto = await encryptRemotePhoto(photoDataUrl, token);
-            await db.runTransaction(async transaction => {
-                const snap = await transaction.get(ref);
-                const fresh = snap.exists ? snap.data() : null;
-                if (!fresh || fresh.status !== 'waiting_phone' || isRemoteChallengeExpired(fresh)) throw new Error('EXPIRED');
-                transaction.set(ref, {
-                    status: 'approved', approvalProof: proof, ...encryptedPhoto,
-                    approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    approverUserAgent: navigator.userAgent,
-                    approverPlatform: navigator.platform || '',
-                    approverScreen: `${window.screen?.width || 0}x${window.screen?.height || 0}`
-                }, { merge: true });
-            });
+            const encryptedPhoto = await encryptRemotePhoto(safePhoto, token);
+            await sendRemoteApprovalWithRetry({ ref, approvalProof: proof, payload: {
+                status: 'approved', approvalProof: proof, ...encryptedPhoto,
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                approverUserAgent: navigator.userAgent,
+                approverPlatform: navigator.platform || '',
+                approverScreen: `${window.screen?.width || 0}x${window.screen?.height || 0}`
+            }});
+            setPhotoForRetry('');
             setApproved(true);
             history.replaceState(null, '', `${location.pathname}${location.search}`);
         } catch (err) {
-            console.error('[Mobile remote approval]', err);
-            setError(err?.message === 'EXPIRED' ? 'انتهت مهلة الطلب. ارجع إلى الكمبيوتر وأنشئ طلبًا جديدًا.' : 'تعذر إرسال الموافقة. تأكد من الإنترنت وحاول مرة أخرى.');
+            console.error('[Mobile remote approval]', { code: err?.code, message: err?.message, name: err?.name, online: navigator.onLine });
+            const code = remoteApprovalErrorCode(err);
+            setErrorCode(code);
+            try { sessionStorage.setItem('inventory_remote_login_last_error_v1', JSON.stringify({ code, stage: 'approval_write', online: navigator.onLine, at: Date.now(), challengeSuffix: challengeId.slice(-8) })); } catch {}
+            if (code.toUpperCase() === 'EXPIRED') setError('انتهت مهلة الطلب. ارجع إلى الكمبيوتر وأنشئ طلبًا جديدًا.');
+            else if (code.toLowerCase() === 'permission-denied') setError('تعذر تحديث طلب الكمبيوتر بسبب صلاحية النظام. أرسل رمز المساعدة الظاهر أدناه للإدارة.');
+            else setError('لم تصل الموافقة بعد ثلاث محاولات تلقائية. يمكنك إعادة إرسال نفس اللقطة دون فتح الكاميرا من جديد.');
         } finally { setSaving(false); }
     };
 
@@ -2154,8 +2185,8 @@ const MobileRemoteLoginApproval = ({ token }) => {
         {!loading && approved && <div className="text-center py-12"><div className="w-60 h-60 rounded-full bg-successSoft text-success mx-auto flex items-center justify-center text-[28px]">✓</div><h2 className="text-[19px] font-bold mt-14">تمت الموافقة</h2><p className="text-[12px] text-secondary mt-7 leading-6">تم التحقق من الوجه. سيُفتح الكمبيوتر تلقائيًا، ويمكنك إغلاق هذه الصفحة.</p></div>}
         {!loading && challenge && !approved && <>
             <div className="text-center mb-16"><div className="text-[10px] font-bold text-accent">طلب دخول من كمبيوتر</div><h1 className="text-[19px] font-bold text-primary mt-4">{challenge.canonicalName || 'الموظف'}</h1><p className="text-[11px] text-secondary mt-5">تحقق أن الطلب أمامك على الكمبيوتر ثم أكمل لقطة الوجه.</p></div>
-            {error && <div className="mb-10 rounded-12 bg-dangerSoft text-danger p-10 text-[11px] text-center">{error}</div>}
-            {saving ? <div className="py-28 text-center text-[12px] text-muted">جاري إرسال الموافقة للكمبيوتر...</div> : <EmployeeFaceCheck account={{ id: challenge.employeeId, canonicalName: challenge.canonicalName }} enteredAlias={challenge.enteredAlias || challenge.canonicalName} onBack={leave} onVerified={approve}/>}
+            {error && <div className="mb-10 rounded-12 bg-dangerSoft text-danger p-10 text-[11px] text-center"><div>{error}</div>{errorCode && <div className="mt-5 text-[9px] opacity-70">رمز المساعدة: {errorCode}</div>}</div>}
+            {saving ? <div className="py-28 text-center text-[12px] text-muted">جاري إرسال الموافقة للكمبيوتر تلقائيًا...</div> : photoForRetry ? <div className="rounded-16 border border-border bg-surface p-14 text-center"><div className="text-[12px] font-bold text-primary">لقطة الوجه محفوظة على هذا الجهاز</div><p className="text-[10px] text-secondary mt-5">لا تحتاج لإعادة التصوير.</p><button type="button" onClick={()=>approve(photoForRetry)} className="w-full h-44 mt-12 rounded-12 bg-primary text-white text-[12px] font-bold">إعادة إرسال الموافقة</button><button type="button" onClick={()=>{setPhotoForRetry('');setError('');setErrorCode('')}} className="w-full h-40 mt-8 rounded-12 border border-border bg-bg text-secondary text-[11px] font-bold">التقاط صورة جديدة</button></div> : <EmployeeFaceCheck account={{ id: challenge.employeeId, canonicalName: challenge.canonicalName }} enteredAlias={challenge.enteredAlias || challenge.canonicalName} onBack={leave} onVerified={approve}/>}
         </>}
     </div></div>;
 };
