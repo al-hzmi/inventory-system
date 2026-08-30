@@ -29,6 +29,7 @@
     
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -457,6 +458,37 @@ const bytesToBase64 = (bytes) => {
     bytes.forEach(b => { bin += String.fromCharCode(b); });
     return btoa(bin);
 };
+const bytesToBase64Url = (bytes) => bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+const base64UrlToBytes = (value) => {
+    const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+    return base64ToBytes(normalized + '='.repeat((4 - normalized.length % 4) % 4));
+};
+const secureRandomToken = (size = 32) => bytesToBase64Url(crypto.getRandomValues(new Uint8Array(size)));
+const sha256Hex = async (value) => {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(value || '')));
+    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+};
+const LOGIN_ACCOUNT_CACHE_KEY = 'inventory_login_account_cache_v1';
+const LOGIN_ACCOUNT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const readCachedEmployeeAccount = (alias) => {
+    try {
+        const key = employeeAliasVariants(alias)[0];
+        const cache = JSON.parse(sessionStorage.getItem(LOGIN_ACCOUNT_CACHE_KEY) || '{}');
+        const row = key ? cache[key] : null;
+        if (!row || !row.account || Date.now() - Number(row.cachedAt || 0) > LOGIN_ACCOUNT_CACHE_TTL_MS) return null;
+        return row.account;
+    } catch { return null; }
+};
+const cacheEmployeeAccount = (account, aliases = []) => {
+    if (!account?.id) return account;
+    try {
+        const cache = JSON.parse(sessionStorage.getItem(LOGIN_ACCOUNT_CACHE_KEY) || '{}');
+        const keys = [...new Set([account.canonicalName, ...(account.aliases || []), ...aliases].flatMap(employeeAliasVariants))];
+        keys.forEach(key => { cache[key] = { account, cachedAt: Date.now() }; });
+        sessionStorage.setItem(LOGIN_ACCOUNT_CACHE_KEY, JSON.stringify(cache));
+    } catch {}
+    return account;
+};
 const base64ToBytes = (b64) => {
     const bin = atob(String(b64 || ''));
     const out = new Uint8Array(bin.length);
@@ -488,21 +520,24 @@ const verifyEmployeePassword = async (account, password) => {
 const resolveEmployeeAccount = async (alias) => {
     const db = await getDb();
     const variants = employeeAliasVariants(alias);
-    for (const key of variants) {
-        const aliasDoc = await db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)).get();
-        if (aliasDoc.exists) {
-            const info = aliasDoc.data();
-            if (!info?.employeeId) continue;
-            const accountDoc = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(info.employeeId).get();
-            if (accountDoc.exists) return { id: accountDoc.id, ...accountDoc.data(), matchedAlias: key };
-        }
+    if (!variants.length) return null;
+    // كل صيغ الاسم تُفحص بالتوازي؛ النسخة السابقة كانت تنتظر عدة رحلات شبكة متتابعة.
+    const aliasDocs = await Promise.all(variants.map(key =>
+        db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)).get().then(doc => ({ key, doc }))
+    ));
+    const linked = aliasDocs.find(row => row.doc.exists && row.doc.data()?.employeeId);
+    if (linked) {
+        const accountDoc = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(String(linked.doc.data().employeeId)).get();
+        if (accountDoc.exists) return cacheEmployeeAccount({ id: accountDoc.id, ...accountDoc.data(), matchedAlias: linked.key }, [alias]);
     }
     // fallback مفيد عند ترحيل حساب قديم لم تُبنَ له alias docs بعد.
-    for (const key of variants) {
-        try {
-            const snap = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).where('aliasKeys', 'array-contains', key).limit(1).get();
-            if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data(), matchedAlias: key };
-        } catch (e) {}
+    try {
+        const snap = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).where('aliasKeys', 'array-contains-any', variants.slice(0, 10)).limit(1).get();
+        if (!snap.empty) return cacheEmployeeAccount({ id: snap.docs[0].id, ...snap.docs[0].data(), matchedAlias: variants[0] }, [alias]);
+    } catch (e) {
+        // بعض مشاريع Firestore القديمة قد لا تقبل array-contains-any؛ محاولة واحدة متوافقة تكفي.
+        const snap = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).where('aliasKeys', 'array-contains', variants[0]).limit(1).get();
+        if (!snap.empty) return cacheEmployeeAccount({ id: snap.docs[0].id, ...snap.docs[0].data(), matchedAlias: variants[0] }, [alias]);
     }
     return null;
 };
@@ -1799,7 +1834,7 @@ const StateBlock = ({ icon, title, note, tone = 'muted' }) => (
 );
 
 // بوابة دخول الموظفين — حساب موحد + أسماء بديلة + رمز دخول + تحقق وجه سريع
-const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified }) => {
+const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified, onUsePhone }) => {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const meshRef = useRef(null);
@@ -1930,9 +1965,199 @@ const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified }) => {
             <div className={`rounded-10 border p-9 text-center text-[10px] font-bold ${faceDetected?'bg-successSoft text-success border-success/20':'bg-surface text-muted border-border'}`}>{faceDetected?'✓ ':''}الوجه ظاهر</div>
         </div>
         {manualReady && !error && <button type="button" onClick={captureAndContinue} className="w-full h-46 mt-12 rounded-12 bg-primary text-white text-[12px] font-bold">التقاط والمتابعة</button>}
+        {onUsePhone && <button type="button" onClick={() => { stop(); onUsePhone(); }} className={`w-full h-46 mt-10 rounded-12 text-[12px] font-bold ${error ? 'bg-primary text-white' : 'border border-border bg-bg text-primary'}`}>{error ? 'التحقق عبر كاميرا الجوال' : 'استخدام الجوال بدل هذه الكاميرا'}</button>}
         <div className="mt-10 rounded-12 bg-surface border border-border p-10 text-[10px] text-secondary leading-5">إذا لم يلتقط النظام تلقائيًا، استخدم «التقاط والمتابعة». تُحفظ الصورة في السجل الأمني للإدارة فقط.</div>
         <button type="button" onClick={() => { stop(); onBack(); }} className="w-full h-42 mt-10 rounded-12 border border-border bg-bg text-secondary text-[12px] font-bold">العودة</button>
     </div>;
+};
+
+const REMOTE_LOGIN_COLLECTION = 'employee_remote_login_challenges';
+const REMOTE_LOGIN_TTL_MS = 2 * 60 * 1000;
+const readRemoteLoginToken = () => {
+    try { return new URLSearchParams(String(location.hash || '').replace(/^#/, '')).get('remote-login') || ''; }
+    catch { return ''; }
+};
+const remoteLoginChallengeId = token => sha256Hex(`BATCO-REMOTE-LOGIN|${String(token || '')}`);
+const remoteApprovalProof = (token, challengeId) => sha256Hex(`BATCO-REMOTE-APPROVAL|${String(token || '')}|${String(challengeId || '')}`);
+const remoteApprovalCryptoKey = async token => {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`BATCO-REMOTE-PHOTO|${String(token || '')}`));
+    return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+};
+const encryptRemotePhoto = async (photoDataUrl, token) => {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await remoteApprovalCryptoKey(token);
+    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(String(photoDataUrl || '')));
+    return { photoCiphertext: bytesToBase64Url(new Uint8Array(ciphertext)), photoIv: bytesToBase64Url(iv) };
+};
+const decryptRemotePhoto = async (row, token) => {
+    const key = await remoteApprovalCryptoKey(token);
+    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64UrlToBytes(row?.photoIv) }, key, base64UrlToBytes(row?.photoCiphertext));
+    return new TextDecoder().decode(plaintext);
+};
+const isRemoteChallengeExpired = row => Date.now() > Number(row?.expiresAtMs || 0);
+
+const RemoteLoginWait = ({ request, account, loginAttemptId, onApproved, onCancel }) => {
+    const qrRef = useRef(null);
+    const approvedRef = useRef(false);
+    const onApprovedRef = useRef(onApproved);
+    const [status, setStatus] = useState('بانتظار موافقة الجوال...');
+    const [error, setError] = useState('');
+    const [remaining, setRemaining] = useState(() => Math.max(0, Math.ceil((request.expiresAtMs - Date.now()) / 1000)));
+    useEffect(() => { onApprovedRef.current = onApproved; }, [onApproved]);
+
+    useEffect(() => {
+        if (!qrRef.current) return;
+        qrRef.current.innerHTML = '';
+        try {
+            if (!window.QRCode) throw new Error('QR_LIBRARY_UNAVAILABLE');
+            new QRCode(qrRef.current, { text: request.approvalUrl, width: 220, height: 220, colorDark: '#111111', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        } catch (err) {
+            console.error('[Remote login QR]', err);
+            setError('تعذر إنشاء رمز الجوال. ألغِ الطلب وحاول مرة أخرى.');
+        }
+    }, [request.approvalUrl]);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const next = Math.max(0, Math.ceil((request.expiresAtMs - Date.now()) / 1000));
+            setRemaining(next);
+            if (!next && !approvedRef.current) setError('انتهت مهلة الطلب. ارجع وأنشئ طلبًا جديدًا.');
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [request.expiresAtMs]);
+
+    useEffect(() => {
+        let active = true, unsubscribe = null;
+        getDb().then(db => {
+            if (!active) return;
+            const ref = db.collection(REMOTE_LOGIN_COLLECTION).doc(request.id);
+            unsubscribe = ref.onSnapshot(async snap => {
+                if (!active || approvedRef.current || !snap.exists) return;
+                const row = snap.data() || {};
+                if (row.status === 'cancelled' || row.status === 'expired') { setError('تم إلغاء طلب الدخول.'); return; }
+                if (isRemoteChallengeExpired(row)) { setError('انتهت مهلة الطلب. ارجع وأنشئ طلبًا جديدًا.'); return; }
+                if (row.status !== 'approved') return;
+                if (row.employeeId !== account?.id || row.loginAttemptId !== loginAttemptId) { setError('طلب الموافقة لا يطابق جلسة الدخول الحالية.'); return; }
+                const expected = await remoteApprovalProof(request.token, request.id);
+                if (row.approvalProof !== expected || !row.photoCiphertext || !row.photoIv) {
+                    setError('تعذر اعتماد موافقة الجوال بأمان. ألغِ الطلب وحاول من جديد.');
+                    return;
+                }
+                let remotePhoto = '';
+                try { remotePhoto = await decryptRemotePhoto(row, request.token); }
+                catch (err) { console.error('[Remote login decrypt]', err); setError('تعذر فك موافقة الجوال بأمان. ألغِ الطلب وحاول من جديد.'); return; }
+                if (!/^data:image\/(?:jpeg|png|webp);base64,/.test(remotePhoto)) { setError('بيانات موافقة الجوال غير صالحة. ألغِ الطلب وحاول من جديد.'); return; }
+                approvedRef.current = true;
+                setStatus('تمت الموافقة — جاري فتح الكمبيوتر...');
+                try {
+                    const completed = await onApprovedRef.current?.(remotePhoto, {
+                        remote: true,
+                        userAgent: row.approverUserAgent || '',
+                        platform: row.approverPlatform || '',
+                        screen: row.approverScreen || '',
+                        challengeId: request.id
+                    });
+                    if (completed === false) { approvedRef.current = false; setError('تمت الموافقة، لكن تعذر حفظ الدخول على الكمبيوتر. حاول مرة أخرى.'); return; }
+                    ref.set({ status: 'completed', consumedAt: firebase.firestore.FieldValue.serverTimestamp(), photoCiphertext: firebase.firestore.FieldValue.delete(), photoIv: firebase.firestore.FieldValue.delete() }, { merge: true }).catch(() => {});
+                } catch (err) {
+                    approvedRef.current = false;
+                    console.error('[Remote login completion]', err);
+                    setError('تمت الموافقة، لكن تعذر فتح الكمبيوتر. حاول مرة أخرى.');
+                }
+            }, err => {
+                console.error('[Remote login listener]', err);
+                setError('انقطع الاتصال بطلب الجوال. ارجع وحاول مرة أخرى.');
+            });
+        }).catch(err => {
+            console.error('[Remote login db]', err);
+            if (active) setError('تعذر الاتصال بطلب الجوال. ارجع وحاول مرة أخرى.');
+        });
+        return () => { active = false; try { unsubscribe?.(); } catch {} };
+    }, [request.id, request.token, account?.id, loginAttemptId]);
+
+    const cancel = async () => {
+        try { const db = await getDb(); await db.collection(REMOTE_LOGIN_COLLECTION).doc(request.id).set({ status: 'cancelled', cancelledAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); } catch {}
+        onCancel?.();
+    };
+
+    return <div className="w-full animate-flip text-center">
+        <div className="w-52 h-52 rounded-16 bg-accentSoft text-accent mx-auto flex items-center justify-center"><Icon.Camera className="w-24 h-24"/></div>
+        <h2 className="text-[18px] font-bold text-primary mt-12">تحقق من جوالك</h2>
+        <p className="text-[11px] text-secondary mt-5 leading-5">افتح كاميرا الجوال وامسح الرمز، ثم أكمل لقطة الوجه. سيفتح هذا الكمبيوتر تلقائيًا بعد الموافقة.</p>
+        <div className="mt-14 mx-auto w-[244px] min-h-[244px] rounded-20 border border-border bg-white p-12 flex items-center justify-center shadow-card"><div ref={qrRef}></div></div>
+        <div className={`mt-12 rounded-12 p-10 text-[11px] font-bold ${error ? 'bg-dangerSoft text-danger' : 'bg-successSoft text-success'}`}>{error || status}</div>
+        {!error && <div className="text-[10px] text-muted mt-7">ينتهي الطلب خلال {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</div>}
+        <button type="button" onClick={cancel} className="w-full h-44 mt-12 rounded-12 border border-border bg-bg text-secondary text-[12px] font-bold">إلغاء والعودة</button>
+    </div>;
+};
+
+const MobileRemoteLoginApproval = ({ token }) => {
+    const [challenge, setChallenge] = useState(null);
+    const [challengeId, setChallengeId] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [approved, setApproved] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        let active = true;
+        (async () => {
+            try {
+                if (!token || token.length < 32) throw new Error('INVALID_TOKEN');
+                const id = await remoteLoginChallengeId(token);
+                const db = await getDb();
+                const snap = await loginLookupTimeout(db.collection(REMOTE_LOGIN_COLLECTION).doc(id).get(), 6000);
+                if (!active) return;
+                if (!snap.exists) throw new Error('NOT_FOUND');
+                const row = { id: snap.id, ...snap.data() };
+                if (row.status !== 'waiting_phone' || isRemoteChallengeExpired(row)) throw new Error('EXPIRED');
+                setChallengeId(id); setChallenge(row);
+            } catch (err) {
+                console.error('[Mobile remote login]', err);
+                if (active) setError(err?.message === 'EXPIRED' ? 'انتهت مهلة هذا الطلب. أنشئ طلبًا جديدًا من الكمبيوتر.' : 'رابط الموافقة غير صالح أو لم يعد متاحًا.');
+            } finally { if (active) setLoading(false); }
+        })();
+        return () => { active = false; };
+    }, [token]);
+
+    const approve = async photoDataUrl => {
+        if (!challenge || !challengeId || saving) return;
+        setSaving(true); setError('');
+        try {
+            const db = await getDb(), ref = db.collection(REMOTE_LOGIN_COLLECTION).doc(challengeId);
+            const proof = await remoteApprovalProof(token, challengeId);
+            const encryptedPhoto = await encryptRemotePhoto(photoDataUrl, token);
+            await db.runTransaction(async transaction => {
+                const snap = await transaction.get(ref);
+                const fresh = snap.exists ? snap.data() : null;
+                if (!fresh || fresh.status !== 'waiting_phone' || isRemoteChallengeExpired(fresh)) throw new Error('EXPIRED');
+                transaction.set(ref, {
+                    status: 'approved', approvalProof: proof, ...encryptedPhoto,
+                    approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    approverUserAgent: navigator.userAgent,
+                    approverPlatform: navigator.platform || '',
+                    approverScreen: `${window.screen?.width || 0}x${window.screen?.height || 0}`
+                }, { merge: true });
+            });
+            setApproved(true);
+            history.replaceState(null, '', `${location.pathname}${location.search}`);
+        } catch (err) {
+            console.error('[Mobile remote approval]', err);
+            setError(err?.message === 'EXPIRED' ? 'انتهت مهلة الطلب. ارجع إلى الكمبيوتر وأنشئ طلبًا جديدًا.' : 'تعذر إرسال الموافقة. تأكد من الإنترنت وحاول مرة أخرى.');
+        } finally { setSaving(false); }
+    };
+
+    const leave = () => { history.replaceState(null, '', `${location.pathname}?employee=1`); location.reload(); };
+    return <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans"><div className="w-full max-w-[400px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32">
+        {loading && <div className="py-32 text-center text-[12px] text-muted">جاري فتح طلب الكمبيوتر...</div>}
+        {!loading && error && !challenge && <div className="text-center"><div className="w-52 h-52 rounded-full bg-dangerSoft text-danger mx-auto flex items-center justify-center"><Icon.Alert className="w-24 h-24"/></div><h2 className="text-[18px] font-bold mt-12">تعذر فتح الطلب</h2><p className="text-[12px] text-danger mt-8 leading-6">{error}</p><button type="button" onClick={leave} className="w-full h-44 mt-16 rounded-12 bg-primary text-white font-bold">العودة للدخول</button></div>}
+        {!loading && approved && <div className="text-center py-12"><div className="w-60 h-60 rounded-full bg-successSoft text-success mx-auto flex items-center justify-center text-[28px]">✓</div><h2 className="text-[19px] font-bold mt-14">تمت الموافقة</h2><p className="text-[12px] text-secondary mt-7 leading-6">تم التحقق من الوجه. سيُفتح الكمبيوتر تلقائيًا، ويمكنك إغلاق هذه الصفحة.</p></div>}
+        {!loading && challenge && !approved && <>
+            <div className="text-center mb-16"><div className="text-[10px] font-bold text-accent">طلب دخول من كمبيوتر</div><h1 className="text-[19px] font-bold text-primary mt-4">{challenge.canonicalName || 'الموظف'}</h1><p className="text-[11px] text-secondary mt-5">تحقق أن الطلب أمامك على الكمبيوتر ثم أكمل لقطة الوجه.</p></div>
+            {error && <div className="mb-10 rounded-12 bg-dangerSoft text-danger p-10 text-[11px] text-center">{error}</div>}
+            {saving ? <div className="py-28 text-center text-[12px] text-muted">جاري إرسال الموافقة للكمبيوتر...</div> : <EmployeeFaceCheck account={{ id: challenge.employeeId, canonicalName: challenge.canonicalName }} enteredAlias={challenge.enteredAlias || challenge.canonicalName} onBack={leave} onVerified={approve}/>}
+        </>}
+    </div></div>;
 };
 
 // ترقية الحسابات القديمة بدون تسجيل خروج: الموظف يبقى داخل النظام وتظهر له نافذة PIN فقط.
@@ -2030,7 +2255,8 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
     </div>;
 };
 
-const LOGIN_LOOKUP_TIMEOUT_MS = 7000;
+const LOGIN_LOOKUP_TIMEOUT_MS = 5000;
+const LOGIN_TOTAL_DEADLINE_MS = 9000;
 const loginLookupTimeout = (promise, ms = LOGIN_LOOKUP_TIMEOUT_MS) => new Promise((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
@@ -2047,7 +2273,7 @@ const loginLookupTimeout = (promise, ms = LOGIN_LOOKUP_TIMEOUT_MS) => new Promis
     });
 });
 
-const LoginScreen = ({ onLogin, initialName = '' }) => {
+const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
     const employeeSiteControl = useEmployeeSiteControl();
@@ -2061,12 +2287,23 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
     const [enteredAlias, setEnteredAlias] = useState('');
     const [loginAttemptId, setLoginAttemptId] = useState('');
     const [pendingAdminToken, setPendingAdminToken] = useState('');
+    const [remoteRequest, setRemoteRequest] = useState(null);
     const codeRef = useRef(null);
     const autoProbeRef = useRef(false);
     const verifyAttemptRef = useRef(0);
 
     useEffect(() => { if ((step === 'password' || step === 'employee_password' || step === 'activate_password') && codeRef.current) codeRef.current.focus(); }, [step]);
     useEffect(() => { getDb().catch(err => console.warn('[Employee login prewarm]', err?.message || err)); }, []);
+    useEffect(() => {
+        const recover = () => {
+            if (document.visibilityState !== 'visible') return;
+            verifyAttemptRef.current += 1;
+            setLoading(false);
+        };
+        document.addEventListener('visibilitychange', recover);
+        window.addEventListener('pageshow', recover);
+        return () => { document.removeEventListener('visibilitychange', recover); window.removeEventListener('pageshow', recover); };
+    }, []);
 
     const deniedBySiteControl = (account, fallbackName='') => {
         const allowed = employeeSiteAccessAllowed(employeeSiteControl,{employeeId:account?.id||'',name:account?.canonicalName||fallbackName,isAdmin:false});
@@ -2089,6 +2326,20 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
 
     const resolveNameFlow = async (trimmed, attemptId = verifyAttemptRef.current) => {
         if (isProtectedName(trimmed)) { setStep('password'); return; }
+        const cached = readCachedEmployeeAccount(trimmed);
+        if (cached?.id && cached.status !== 'suspended') {
+            setEnteredAlias(trimmed);
+            setEmployeeAccount(cached);
+            setActivationCandidate(null);
+            setStep(cached.passwordHash && cached.passwordSalt ? 'employee_password' : 'activate_password');
+            // تحديث صامت حتى تبقى حالة الإيقاف/كلمة المرور حديثة دون تعطيل واجهة الاسم.
+            resolveEmployeeAccount(trimmed).then(fresh => {
+                if (attemptId !== verifyAttemptRef.current || !fresh) return;
+                if (fresh.status === 'suspended') { setStep('name'); setEmployeeAccount(null); setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
+                setEmployeeAccount(fresh);
+            }).catch(err => console.warn('[Employee cached refresh]', err?.message || err));
+            return;
+        }
         const account = await loginLookupTimeout(resolveEmployeeAccount(trimmed));
         if (attemptId !== verifyAttemptRef.current) return;
         if (account) {
@@ -2139,7 +2390,14 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         const trimmed = name.trim();
         if (!trimmed || loading) return;
         const attemptId = ++verifyAttemptRef.current;
+        let deadline = null;
         setError(''); setCode(''); setLoading(true);
+        deadline = setTimeout(() => {
+            if (attemptId !== verifyAttemptRef.current) return;
+            verifyAttemptRef.current += 1;
+            setLoading(false);
+            setError('تعذر إكمال التحقق بسبب بطء الاتصال. حاول مرة أخرى — لا تحتاج تحديث الصفحة.');
+        }, LOGIN_TOTAL_DEADLINE_MS);
         try { await resolveNameFlow(trimmed, attemptId); }
         catch (err) {
             if (attemptId !== verifyAttemptRef.current) return;
@@ -2148,7 +2406,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
                 ? 'الاتصال تأخر قليلًا. اضغط متابعة مرة أخرى — لا تحتاج تحديث الصفحة.'
                 : 'تعذر التحقق من حساب الموظف. حاول مرة أخرى.');
         }
-        finally { if (attemptId === verifyAttemptRef.current) setLoading(false); }
+        finally { clearTimeout(deadline); if (attemptId === verifyAttemptRef.current) setLoading(false); }
     };
 
     // إذا كان الجهاز يحتفظ باسم موظف قديم لكنه لم يفعّل حسابه بعد، نأخذه مباشرة لشاشة اختيار PIN.
@@ -2206,32 +2464,76 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         if (!validEmployeePin(password)) { setError('رمز الدخول يجب أن يكون 4 أو 6 أرقام.'); return; }
         setLoading(true); setError('');
         try {
-            const ok = await verifyEmployeePassword(employeeAccount, password);
             const db = await getDb();
-            if (!ok) { db.collection('employee_login_attempts').add({employeeId:employeeAccount.id,canonicalName:employeeAccount.canonicalName||'',enteredAlias,success:false,photoRequired:false,status:'password_rejected',time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent}).catch(()=>{});setError('كلمة المرور غير صحيحة.');return; }
-            await createPhotoChallenge(employeeAccount, enteredAlias);
+            // لا نعتمد نسخة الحساب المخبأة عند فحص الرمز؛ نجلب النسخة الحالية بمهلة صريحة.
+            const freshDoc = await loginLookupTimeout(db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).get(), 6000);
+            if (!freshDoc.exists) throw Object.assign(new Error('ACCOUNT_NOT_FOUND'), { code: 'ACCOUNT_NOT_FOUND' });
+            const freshAccount = { id: freshDoc.id, ...freshDoc.data() };
+            if (freshAccount.status === 'suspended') { setStep('name'); setEmployeeAccount(null); setCode(''); setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
+            const ok = await verifyEmployeePassword(freshAccount, password);
+            if (!ok) { db.collection('employee_login_attempts').add({employeeId:freshAccount.id,canonicalName:freshAccount.canonicalName||'',enteredAlias,success:false,photoRequired:false,status:'password_rejected',time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent}).catch(()=>{});setError('كلمة المرور غير صحيحة.');return; }
+            setEmployeeAccount(cacheEmployeeAccount(freshAccount, [enteredAlias]));
+            await loginLookupTimeout(createPhotoChallenge(freshAccount, enteredAlias), 6000);
             setStep('face');
         } catch (err) {
-            console.error(err); setError('تعذر التحقق من كلمة المرور. حاول مرة أخرى.');
+            console.error(err);
+            setError(err?.code === 'LOGIN_LOOKUP_TIMEOUT' ? 'تأخر الاتصال أثناء التحقق. حاول مرة أخرى — لا تحتاج تحديث الصفحة.' : 'تعذر التحقق من كلمة المرور. حاول مرة أخرى.');
         } finally { setLoading(false); }
     };
 
-    const finalizeEmployeeLogin = async (photoDataUrl) => {
-        if (!employeeAccount || !loginAttemptId || !/^data:image\/(?:jpeg|png|webp);base64,/.test(String(photoDataUrl||''))) { setError('لم تُحفظ صورة التحقق. أعد المحاولة.'); return; }
+    const beginRemoteLogin = async () => {
+        if (!employeeAccount?.id || !loginAttemptId || loading) return;
+        setLoading(true); setError('');
+        try {
+            const db = await getDb();
+            const token = secureRandomToken(32);
+            const id = await remoteLoginChallengeId(token);
+            const expiresAtMs = Date.now() + REMOTE_LOGIN_TTL_MS;
+            const approvalUrl = new URL('./index.html', location.href);
+            approvalUrl.search = '?employee=1';
+            approvalUrl.hash = `remote-login=${encodeURIComponent(token)}`;
+            await loginLookupTimeout(db.collection(REMOTE_LOGIN_COLLECTION).doc(id).set({
+                employeeId: employeeAccount.id,
+                canonicalName: employeeAccount.canonicalName || enteredAlias,
+                enteredAlias,
+                loginAttemptId,
+                isAdmin: Boolean(employeeAccount.isAdmin),
+                status: 'waiting_phone',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                expiresAtMs,
+                requesterUserAgent: navigator.userAgent,
+                requesterPlatform: navigator.platform || '',
+                requesterScreen: `${window.screen?.width || 0}x${window.screen?.height || 0}`
+            }), 6000);
+            setRemoteRequest({ id, token, expiresAtMs, approvalUrl: approvalUrl.href });
+            setStep('remote_wait');
+        } catch (err) {
+            console.error('[Remote login create]', err);
+            setError('تعذر إنشاء طلب الجوال الآن. تأكد من الإنترنت وحاول مرة أخرى.');
+        } finally { setLoading(false); }
+    };
+
+    const finalizeEmployeeLogin = async (photoDataUrl, verificationContext = {}) => {
+        if (!employeeAccount || !loginAttemptId || !/^data:image\/(?:jpeg|png|webp);base64,/.test(String(photoDataUrl||''))) { setError('لم تُحفظ صورة التحقق. أعد المحاولة.'); return false; }
         setLoading(true); setError('');
         const canonicalName = employeeAccount.canonicalName || enteredAlias;
         try {
             const db = await getDb();
+            const employeePhotoVerificationBase = { verificationType: 'login_face_presence' };
             const photoRef = await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).add({
                 employeeId: employeeAccount.id,
                 canonicalName,
                 enteredAlias,
                 photoDataUrl,
-                verificationType: 'login_face_presence',
+                ...employeePhotoVerificationBase,
+                verificationType: verificationContext.remote ? 'remote_mobile_login_face_presence' : employeePhotoVerificationBase.verificationType,
+                remoteApproval: Boolean(verificationContext.remote),
+                remoteChallengeId: verificationContext.challengeId || '',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                userAgent: navigator.userAgent,
-                platform: navigator.platform || '',
-                screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`
+                userAgent: verificationContext.userAgent || navigator.userAgent,
+                platform: verificationContext.platform || navigator.platform || '',
+                screen: verificationContext.screen || `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+                requesterUserAgent: navigator.userAgent
             });
             const userRef = db.collection('users').doc(toSafeDocId(canonicalName));
             const userDoc = await userRef.get();
@@ -2254,6 +2556,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
                 enteredAlias,
                 isAdmin: false,
                 faceVerified: true,
+                remoteApproval: Boolean(verificationContext.remote),
                 securityPhotoId: photoRef.id,
                 time: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
@@ -2266,27 +2569,30 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
             localStorage.removeItem(STORAGE_KEYS.ACCESS_GATE_VERSION);
             localStorage.removeItem(STORAGE_KEYS.ACCESS_APPROVED_NAME);
             onLogin(canonicalName, false);
+            return true;
         } catch (err) {
             console.error(err);
             setError('تم التحقق لكن تعذر حفظ سجل الدخول. حاول مرة أخرى.');
             setStep('employee_password');
+            return false;
         } finally { setLoading(false); }
     };
 
-    const finalizeAdminLogin = async (photoDataUrl) => {
-        if (!employeeAccount?.isAdmin || !loginAttemptId || !pendingAdminToken || !/^data:image\/(?:jpeg|png|webp);base64,/.test(String(photoDataUrl||''))) { setError('لم تُحفظ صورة التحقق. أعد المحاولة.'); return; }
+    const finalizeAdminLogin = async (photoDataUrl, verificationContext = {}) => {
+        if (!employeeAccount?.isAdmin || !loginAttemptId || !pendingAdminToken || !/^data:image\/(?:jpeg|png|webp);base64,/.test(String(photoDataUrl||''))) { setError('لم تُحفظ صورة التحقق. أعد المحاولة.'); return false; }
         setLoading(true);setError('');
         const canonicalName=employeeAccount.canonicalName||enteredAlias||'مهند';
         try{
             const db=await getDb();
-            const photoRef=await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).add({employeeId:employeeAccount.id,canonicalName,enteredAlias:canonicalName,isAdmin:true,photoDataUrl,verificationType:'admin_login_face_presence',loginAttemptId,timestamp:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent,platform:navigator.platform||'',screen:`${window.screen?.width||0}x${window.screen?.height||0}`});
+            const photoRef=await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).add({employeeId:employeeAccount.id,canonicalName,enteredAlias:canonicalName,isAdmin:true,photoDataUrl,verificationType:verificationContext.remote?'remote_mobile_admin_login_face_presence':'admin_login_face_presence',remoteApproval:Boolean(verificationContext.remote),remoteChallengeId:verificationContext.challengeId||'',loginAttemptId,timestamp:firebase.firestore.FieldValue.serverTimestamp(),userAgent:verificationContext.userAgent||navigator.userAgent,platform:verificationContext.platform||navigator.platform||'',screen:verificationContext.screen||`${window.screen?.width||0}x${window.screen?.height||0}`,requesterUserAgent:navigator.userAgent});
             const userRef=db.collection('users').doc(toSafeDocId(canonicalName)),doc=await userRef.get(),info={name:canonicalName,isAdmin:true,lastLogin:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent};
             if(doc.exists)await userRef.update({...info,loginCount:firebase.firestore.FieldValue.increment(1)});else await userRef.set({...info,loginCount:1,firstJoined:firebase.firestore.FieldValue.serverTimestamp(),timeSpentMinutes:0});
             await db.collection('employee_login_attempts').doc(loginAttemptId).set({photoCaptured:true,securityPhotoId:photoRef.id,status:'completed',completedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-            await db.collection('login_logs').add({name:canonicalName,employeeId:employeeAccount.id,isAdmin:true,faceVerified:true,securityPhotoId:photoRef.id,loginAttemptId,time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent});
+            await db.collection('login_logs').add({name:canonicalName,employeeId:employeeAccount.id,isAdmin:true,faceVerified:true,remoteApproval:Boolean(verificationContext.remote),securityPhotoId:photoRef.id,loginAttemptId,time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent});
             localStorage.setItem(STORAGE_KEYS.NAME,canonicalName);localStorage.setItem(STORAGE_KEYS.TOKEN,pendingAdminToken);localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_ID);localStorage.removeItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION);localStorage.setItem(STORAGE_KEYS.LOGIN_PHOTO_PROOF,JSON.stringify({role:'admin',employeeId:employeeAccount.id,photoId:photoRef.id,loginAttemptId,verifiedAt:Date.now()}));
             onLogin(canonicalName,true);
-        }catch(err){console.error(err);setError('تم التقاط الصورة لكن تعذر حفظ سجل الدخول. حاول مرة أخرى.');setStep('password');}
+            return true;
+        }catch(err){console.error(err);setError('تم التقاط الصورة لكن تعذر حفظ سجل الدخول. حاول مرة أخرى.');setStep('password');return false;}
         finally{setLoading(false)}
     };
 
@@ -2296,7 +2602,7 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
         {step === 'name' && <div className="w-full">
             {customerPortalReleased && <div className="grid grid-cols-2 gap-4 bg-surface border border-border rounded-12 p-4 mb-16"><div className="h-40 rounded-10 bg-primary text-bg flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>الموظفون</div><a href="./customer.html" className="h-40 rounded-10 bg-bg text-secondary border border-border flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>العملاء</a></div>}
             <form onSubmit={handleNameSubmit} className="flex flex-col gap-16">
-                <div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اسم الموظف</label><input type="text" autoComplete="username" value={name} onChange={e=>{setName(e.target.value);setError('')}} placeholder="اكتب اسم الدخول" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none text-center font-bold"/><p className="text-[10px] text-muted text-center mt-6">استخدم اسمك الأساسي أو أي اسم بديل سجّلته لك الإدارة.</p></div>
+                <div><label className="text-[13px] font-medium text-primary mb-8 block text-center">اسم الموظف</label><input type="text" autoComplete="username" value={name} onChange={e=>{verifyAttemptRef.current+=1;setLoading(false);setName(e.target.value);setError('')}} placeholder="اكتب اسم الدخول" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-primary outline-none text-center font-bold"/><p className="text-[10px] text-muted text-center mt-6">استخدم اسمك الأساسي أو أي اسم بديل سجّلته لك الإدارة.</p></div>
                 {error&&<p className="text-[12px] text-danger text-center">{error}</p>}
                 <button disabled={loading} className="w-full h-48 bg-primary text-bg rounded-12 font-semibold text-[15px] disabled:opacity-50">{loading?'جاري التحقق...':'متابعة'}</button>
             </form>
@@ -2308,10 +2614,16 @@ const LoginScreen = ({ onLogin, initialName = '' }) => {
 
         {step === 'employee_password' && <form onSubmit={handleEmployeePasswordSubmit} className="flex flex-col gap-16 w-full animate-flip"><div className="text-center"><div className="w-48 h-48 rounded-full bg-accentSoft text-accent mx-auto flex items-center justify-center font-bold text-[18px]">{String(employeeAccount?.canonicalName||'?').trim().charAt(0)}</div><h2 className="text-[17px] font-bold mt-10">{employeeAccount?.canonicalName}</h2><p className="text-[10px] text-muted mt-4">دخلت باسم: {enteredAlias}</p></div><div><label className="text-[13px] font-medium text-primary mb-8 block text-center">رمز الدخول</label><input ref={codeRef} type="password" inputMode="numeric" pattern="[0-9]*" maxLength="6" autoComplete="current-password" value={code} onChange={e=>{setCode(toEnglishDigits(e.target.value).replace(/\D/g,'').slice(0,6));setError('')}} placeholder="••••••" className="w-full h-48 px-16 rounded-12 border border-border bg-bg focus:border-accent text-center font-bold tracking-[.35em] outline-none"/></div>{error&&<p className="text-[12px] text-danger text-center">{error}</p>}<button disabled={loading} className="w-full h-48 bg-primary text-white rounded-12 font-semibold">{loading?'جاري التحقق...':'دخول'}</button><button type="button" onClick={()=>{setStep('name');setCode('');setEmployeeAccount(null);setError('')}} className="text-[12px] text-muted">استخدام اسم آخر</button></form>}
 
-        {step === 'face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('employee_password');setCode('')}} onVerified={finalizeEmployeeLogin}/>} 
-        {step === 'admin_face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('password');setCode('');setPendingAdminToken('');setLoginAttemptId('')}} onVerified={finalizeAdminLogin}/>}
+        {step === 'face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('employee_password');setCode('')}} onVerified={finalizeEmployeeLogin} onUsePhone={beginRemoteLogin}/>}
+        {step === 'admin_face' && <EmployeeFaceCheck account={employeeAccount} enteredAlias={enteredAlias} onBack={()=>{setStep('password');setCode('');setPendingAdminToken('');setLoginAttemptId('')}} onVerified={finalizeAdminLogin} onUsePhone={beginRemoteLogin}/>}
+        {step === 'remote_wait' && remoteRequest && <RemoteLoginWait request={remoteRequest} account={employeeAccount} loginAttemptId={loginAttemptId} onApproved={employeeAccount?.isAdmin?finalizeAdminLogin:finalizeEmployeeLogin} onCancel={()=>{setRemoteRequest(null);setError('');setStep(employeeAccount?.isAdmin?'password':'employee_password')}}/>}
         {loading && (step === 'face' || step === 'admin_face') && <div className="mt-10 text-[11px] text-muted">جاري حفظ سجل الدخول...</div>}
     </div></div>;
+};
+
+const LoginScreen = props => {
+    const token = readRemoteLoginToken();
+    return token ? <MobileRemoteLoginApproval token={token}/> : <StandardLoginScreen {...props}/>;
 };
 
 // ============================================================
@@ -3356,6 +3668,7 @@ const App = () => {
     }, []);
 
     const [sessionName, setSessionName] = useState(() => {
+        if (readRemoteLoginToken()) return '';
         const n=localStorage.getItem(STORAGE_KEYS.NAME)||'',t=localStorage.getItem(STORAGE_KEYS.TOKEN)||'',proof=readLoginPhotoProof();
         const admin=Boolean(t)&&PROTECTED_ACCOUNTS[normalizeText(n)]===t;
         return admin ? (proof?.role==='admin'&&proof?.photoId?n:'') : (hasRememberedEmployeeSession()?n:'');

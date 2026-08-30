@@ -1,0 +1,30 @@
+name: V55.2 Login and Mobile Approval Gate
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'runtime/index-v37-source.txt'
+      - 'tests/v55-2-login-mobile-approval.mjs'
+      - '.github/workflows/v55-2-login-mobile-approval-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify login deadlines and cross-device approval
+        run: node tests/v55-2-login-mobile-approval.mjs
+      - name: Parse JSX
+        run: |
+          npm install --no-save --no-package-lock esbuild@0.25.9 >/dev/null 2>&1
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { transformSync } from 'esbuild';
+          const html=fs.readFileSync('runtime/index-v37-source.txt','utf8');
+          const blocks=[...html.matchAll(/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/gi)].map(match=>match[1]);
+          if(!blocks.length) throw new Error('No JSX found');
+          blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}));
+          console.log('V55_2_JSX_PASS');
+          NODE
