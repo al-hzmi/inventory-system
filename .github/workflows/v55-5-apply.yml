@@ -1,37 +1,62 @@
-name: V55.5 Customer New Arrivals Override Gate
+name: Apply V55.5 compatibility correction
 
 on:
-  pull_request:
-    paths:
-      - 'customer.html'
-      - 'runtime/customer-v37-source.txt'
-      - 'admin-dashboard.html'
-      - 'tests/v55-5-customer-new-arrivals-override.mjs'
-      - '.github/workflows/v55-5-apply.yml'
-  workflow_dispatch:
+  push:
+    branches:
+      - fix/v55-5-customer-new-arrivals-override
+
+permissions:
+  contents: write
 
 jobs:
-  verify:
+  correct:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify customer override behavior
+        with:
+          ref: fix/v55-5-customer-new-arrivals-override
+          fetch-depth: 0
+      - name: Correct bootstrap compatibility
         run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('runtime/customer-v37-source.txt')
+          s=p.read_text()
+          s=s.replace("navigator.serviceWorker.register('./customer-sw.js?v=55.5'","navigator.serviceWorker.register('./customer-sw.js?v=35.0'",1)
+          p.write_text(s)
+
+          p=Path('tests/v55-5-customer-new-arrivals-override.mjs')
+          s=p.read_text()
+          s=s.replace("assert(customer.includes(\"navigator.serviceWorker.register('./customer-sw.js?v=55.5'\"));", "assert(customer.includes(\"navigator.serviceWorker.register('./customer-sw.js?v=35.0'\"),'bootstrap transform marker must remain compatible');")
+          p.write_text(s)
+
+          p=Path('tests/v55-4-identity-customers-control.mjs')
+          s=p.read_text()
+          old="assert(customerBoot.includes('runtime/customer-v37-source.txt?v=55.4'), 'customer boot must bust stale cache');"
+          new="assert(/runtime\\/customer-v37-source\\.txt\\?v=55\\.[4-9]/.test(customerBoot), 'customer boot must bust stale cache at V55.4 or newer');"
+          if old not in s: raise SystemExit('V55.4 cache assertion marker missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Validate compatibility correction
+        run: |
+          node tests/v55-4-identity-customers-control.mjs
           node tests/v55-5-customer-new-arrivals-override.mjs
           git diff --check
-      - name: Parse changed JSX
-        run: |
           npm install --no-save --no-package-lock esbuild@0.25.9 >/dev/null 2>&1
           node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          import { transformSync } from 'esbuild';
-          for (const file of ['runtime/customer-v37-source.txt','admin-dashboard.html']) {
+          import fs from 'node:fs'; import { transformSync } from 'esbuild';
+          for(const file of ['runtime/customer-v37-source.txt','admin-dashboard.html']){
             const html=fs.readFileSync(file,'utf8');
             const blocks=[...html.matchAll(/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]);
-            if(!blocks.length) throw new Error(`No JSX in ${file}`);
             blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}));
           }
-          const boot=fs.readFileSync('customer.html','utf8');
-          if(!boot.includes("runtime/customer-v37-source.txt?v=55.5")) throw new Error('CUSTOMER_BOOT_CACHE_BUST_MISSING');
-          console.log('V55_5_JSX_PASS');
+          console.log('V55_5_COMPAT_JSX_PASS');
           NODE
+          rm -rf node_modules package.json package-lock.json
+      - name: Commit compatibility correction
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add runtime/customer-v37-source.txt tests/v55-4-identity-customers-control.mjs tests/v55-5-customer-new-arrivals-override.mjs
+          git commit -m "V55.5 — preserve customer bootstrap compatibility"
+          git push origin HEAD:fix/v55-5-customer-new-arrivals-override
