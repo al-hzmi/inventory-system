@@ -1,0 +1,43 @@
+name: Apply V55.5 customer override
+
+on:
+  push:
+    branches:
+      - fix/v55-5-customer-new-arrivals-override
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/v55-5-customer-new-arrivals-override
+          fetch-depth: 0
+      - name: Apply focused patch
+        run: python tools/apply_v55_5.py
+      - name: Validate patch
+        run: |
+          node tests/v55-5-customer-new-arrivals-override.mjs
+          git diff --check
+          npm install --no-save --no-package-lock esbuild@0.25.9 >/dev/null 2>&1
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { transformSync } from 'esbuild';
+          for (const file of ['runtime/customer-v37-source.txt','customer.html','admin-dashboard.html']) {
+            const html=fs.readFileSync(file,'utf8');
+            const blocks=[...html.matchAll(/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]);
+            if(!blocks.length) throw new Error(`No JSX in ${file}`);
+            blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}));
+          }
+          console.log('V55_5_APPLY_JSX_PASS');
+          NODE
+      - name: Commit generated patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "V55.5 — per-customer new arrivals control"
+          git push origin HEAD:fix/v55-5-customer-new-arrivals-override
