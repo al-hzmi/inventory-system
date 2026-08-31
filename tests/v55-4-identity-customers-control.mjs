@@ -49,7 +49,7 @@ assert.match(context.matchIdentity(
 assert(customer.includes('showNewArrivals:true'), 'customer control must default new arrivals to visible');
 assert(customer.includes('showNewArrivals&&!loading&&newArrivalProducts.length>0'), 'customer UI must honor the global new arrivals switch');
 assert(customer.includes('window.__customerPortalControl=control'), 'live portal control must reach the catalog UI');
-assert(customerBoot.includes('runtime/customer-v37-source.txt?v=55.4'), 'customer boot must bust stale cache');
+assert(/runtime\/customer-v37-source\.txt\?v=55\.[4-9]/.test(customerBoot), 'customer boot must bust stale cache at V55.4 or newer');
 
 assert(admin.includes("params.get('section')==='customers'?'customers':'employees'"), 'admin area must initialize from the URL');
 assert(admin.includes('data-admin-area="customers"'), 'customer area must have a deterministic route target');

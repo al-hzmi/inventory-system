@@ -124,7 +124,7 @@
 window.__customerInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window.__customerInstallPrompt = e; window.dispatchEvent(new Event('customerinstallready')); });
 window.addEventListener('appinstalled', function(){ window.__customerInstallPrompt = null; });
-if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=55.5',{updateViaCache:'none'}).catch(function(){}); }); }
+if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./customer-sw.js?v=35.0',{updateViaCache:'none'}).catch(function(){}); }); }
 </script>
 <script type="text/babel">
 
