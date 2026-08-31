@@ -1,0 +1,39 @@
+name: V55.5 Customer New Arrivals Override Gate
+
+on:
+  pull_request:
+    paths:
+      - 'customer.html'
+      - 'runtime/customer-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'tests/v55-4-identity-customers-control.mjs'
+      - 'tests/v55-5-customer-new-arrivals-override.mjs'
+      - '.github/workflows/v55-5-apply.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify identity regression and customer override
+        run: |
+          node tests/v55-4-identity-customers-control.mjs
+          node tests/v55-5-customer-new-arrivals-override.mjs
+          git diff --check
+      - name: Parse changed JSX
+        run: |
+          npm install --no-save --no-package-lock esbuild@0.25.9 >/dev/null 2>&1
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { transformSync } from 'esbuild';
+          for (const file of ['runtime/customer-v37-source.txt','admin-dashboard.html']) {
+            const html=fs.readFileSync(file,'utf8');
+            const blocks=[...html.matchAll(/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]);
+            if(!blocks.length) throw new Error(`No JSX in ${file}`);
+            blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}));
+          }
+          const boot=fs.readFileSync('customer.html','utf8');
+          if(!boot.includes("runtime/customer-v37-source.txt?v=55.5")) throw new Error('CUSTOMER_BOOT_CACHE_BUST_MISSING');
+          console.log('V55_5_JSX_PASS');
+          NODE
