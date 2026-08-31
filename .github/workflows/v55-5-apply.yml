@@ -17,9 +17,7 @@ jobs:
           ref: fix/v55-5-customer-new-arrivals-override
           fetch-depth: 0
       - name: Apply focused patch
-        run: |
-          python tools/apply_v55_5.py
-          sed -i 's/[[:space:]]\+$//' admin-dashboard.html
+        run: python tools/apply_v55_5.py
       - name: Validate patch
         run: |
           node tests/v55-5-customer-new-arrivals-override.mjs
@@ -38,6 +36,7 @@ jobs:
           if(!boot.includes("runtime/customer-v37-source.txt?v=55.5")) throw new Error('CUSTOMER_BOOT_CACHE_BUST_MISSING');
           console.log('V55_5_APPLY_JSX_PASS');
           NODE
+          rm -rf node_modules
       - name: Commit generated patch
         run: |
           git config user.name github-actions[bot]
