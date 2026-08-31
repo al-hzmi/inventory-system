@@ -58,11 +58,11 @@ jobs:
 
           test = Path('tests/v55-4-identity-customers-control.mjs')
           t = test.read_text(encoding='utf-8')
-          old = """assert.equal(context.matchIdentity(\n  { employeeId:'admin_mohanad', canonicalName:'مهند', isAdmin:true },\n  { valid:true, employeeId:'employee_2', name:'خالد', role:'employee' },\n).includes('لا يمكن اعتماد دخول شخص من حساب شخص آخر'), true, 'employee must not approve admin');"""
-          new = """assert.equal(context.matchIdentity(\n  { employeeId:'admin_mohanad', canonicalName:'مهند', isAdmin:true },\n  { valid:true, employeeId:'employee_2', name:'خالد', role:'employee' },\n), '', 'trusted ROOT admin must be allowed to approve any account');"""
-          if old not in t:
-              raise SystemExit('OLD_ROOT_TEST_MARKER_MISSING')
-          t = t.replace(old, new, 1)
+          marker = """assert.equal(context.matchIdentity(\n  { employeeId:'admin_mohanad', canonicalName:'مهند', isAdmin:true },\n  { valid:true, employeeId:'admin_mohanad', name:'مهند', role:'admin' },\n), '', 'same admin identity should pass');"""
+          addition = marker + """\nassert.equal(context.matchIdentity(\n  { employeeId:'employee_2', canonicalName:'خالد', isAdmin:false },\n  { valid:true, employeeId:'admin_mohanad', name:'مهند', role:'admin' },\n), '', 'trusted ROOT admin must be allowed to approve another employee');"""
+          if marker not in t:
+              raise SystemExit('ROOT_TEST_INSERT_MARKER_MISSING')
+          t = t.replace(marker, addition, 1)
           test.write_text(t, encoding='utf-8')
 
           new_test = Path('tests/v55-6-root-admin-approval.mjs')
