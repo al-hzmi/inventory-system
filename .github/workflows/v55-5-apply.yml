@@ -1,27 +1,26 @@
-name: Apply V55.5 customer override
+name: V55.5 Customer New Arrivals Override Gate
 
 on:
-  push:
-    branches:
-      - fix/v55-5-customer-new-arrivals-override
-
-permissions:
-  contents: write
+  pull_request:
+    paths:
+      - 'customer.html'
+      - 'runtime/customer-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'tests/v55-5-customer-new-arrivals-override.mjs'
+      - '.github/workflows/v55-5-apply.yml'
+  workflow_dispatch:
 
 jobs:
-  apply:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: fix/v55-5-customer-new-arrivals-override
-          fetch-depth: 0
-      - name: Apply focused patch
-        run: python tools/apply_v55_5.py
-      - name: Validate patch
+      - name: Verify customer override behavior
         run: |
           node tests/v55-5-customer-new-arrivals-override.mjs
           git diff --check
+      - name: Parse changed JSX
+        run: |
           npm install --no-save --no-package-lock esbuild@0.25.9 >/dev/null 2>&1
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -34,13 +33,5 @@ jobs:
           }
           const boot=fs.readFileSync('customer.html','utf8');
           if(!boot.includes("runtime/customer-v37-source.txt?v=55.5")) throw new Error('CUSTOMER_BOOT_CACHE_BUST_MISSING');
-          console.log('V55_5_APPLY_JSX_PASS');
+          console.log('V55_5_JSX_PASS');
           NODE
-          rm -rf node_modules
-      - name: Commit generated patch
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m "V55.5 — per-customer new arrivals control"
-          git push origin HEAD:fix/v55-5-customer-new-arrivals-override
