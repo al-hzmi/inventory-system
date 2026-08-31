@@ -17,7 +17,9 @@ jobs:
           ref: fix/v55-5-customer-new-arrivals-override
           fetch-depth: 0
       - name: Apply focused patch
-        run: python tools/apply_v55_5.py
+        run: |
+          python tools/apply_v55_5.py
+          sed -i 's/[[:space:]]\+$//' admin-dashboard.html
       - name: Validate patch
         run: |
           node tests/v55-5-customer-new-arrivals-override.mjs
