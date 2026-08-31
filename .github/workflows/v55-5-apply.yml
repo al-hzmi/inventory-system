@@ -26,12 +26,14 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import { transformSync } from 'esbuild';
-          for (const file of ['runtime/customer-v37-source.txt','customer.html','admin-dashboard.html']) {
+          for (const file of ['runtime/customer-v37-source.txt','admin-dashboard.html']) {
             const html=fs.readFileSync(file,'utf8');
             const blocks=[...html.matchAll(/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/gi)].map(x=>x[1]);
             if(!blocks.length) throw new Error(`No JSX in ${file}`);
             blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}));
           }
+          const boot=fs.readFileSync('customer.html','utf8');
+          if(!boot.includes("runtime/customer-v37-source.txt?v=55.5")) throw new Error('CUSTOMER_BOOT_CACHE_BUST_MISSING');
           console.log('V55_5_APPLY_JSX_PASS');
           NODE
       - name: Commit generated patch
