@@ -1973,6 +1973,8 @@ const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified, onUsePho
 
 const REMOTE_LOGIN_COLLECTION = 'employee_remote_login_challenges';
 const REMOTE_LOGIN_TTL_MS = 2 * 60 * 1000;
+const ROOT_ADMIN_EMPLOYEE_ID = 'admin_mohanad';
+const isRootRemoteApprover = identity => Boolean(identity?.valid && identity.role === 'admin' && identity.employeeId === ROOT_ADMIN_EMPLOYEE_ID);
 const readRemoteApproverIdentity = () => {
     try {
         const proof = readLoginPhotoProof();
@@ -1990,6 +1992,8 @@ const readRemoteApproverIdentity = () => {
 const remoteApproverIdentityError = (challenge, identity) => {
     const expectedRole = challenge?.isAdmin ? 'admin' : 'employee';
     if (!identity?.valid) return 'يجب فتح النظام على هذا الجوال والدخول بحساب صاحب الطلب أولًا، ثم مسح رمز جديد من الكمبيوتر.';
+    // مهند هو ROOT الوحيد: حسابه الموثوق يستطيع اعتماد أي مستخدم. أي حساب آخر يظل مقيدًا بهويته فقط.
+    if (identity.role === 'admin' && identity.employeeId === 'admin_mohanad') return '';
     if (identity.role !== expectedRole || identity.employeeId !== String(challenge?.employeeId || '')) {
         const current = identity.name ? `هذا الجوال مسجل باسم «${identity.name}»` : 'هذا الجوال مسجل بحساب آخر';
         return `${current}، بينما الطلب يخص «${challenge?.canonicalName || 'مستخدمًا آخر'}». لا يمكن اعتماد دخول شخص من حساب شخص آخر.`;
@@ -2087,16 +2091,20 @@ const RemoteLoginWait = ({ request, account, loginAttemptId, onApproved, onCance
                 if (row.status !== 'approved') return;
                 if (row.employeeId !== account?.id || row.loginAttemptId !== loginAttemptId) { setError('طلب الموافقة لا يطابق جلسة الدخول الحالية.'); return; }
                 const expectedApproverRole = account?.isAdmin ? 'admin' : 'employee';
-                if (row.approverEmployeeId !== account?.id || row.approverRole !== expectedApproverRole || !row.approverPhotoProofId) {
-                    setError('رفض النظام الموافقة لأنها صادرة من حساب جوال مختلف عن صاحب الطلب.');
+                const approvedByRoot = row.approverEmployeeId === ROOT_ADMIN_EMPLOYEE_ID && row.approverRole === 'admin';
+                const approvedByOwner = row.approverEmployeeId === account?.id && row.approverRole === expectedApproverRole;
+                if ((!approvedByRoot && !approvedByOwner) || !row.approverPhotoProofId) {
+                    setError('رفض النظام الموافقة لأنها صادرة من حساب غير مخول لاعتماد هذا الطلب.');
                     return;
                 }
                 try {
                     const approverProofSnap = await db.collection(EMPLOYEE_SECURITY_PHOTO_COLLECTION).doc(row.approverPhotoProofId).get();
                     const approverProof = approverProofSnap.exists ? approverProofSnap.data() : null;
+                    const proofMatchesRoot = approvedByRoot && approverProof?.employeeId === ROOT_ADMIN_EMPLOYEE_ID && approverProof?.isAdmin === true;
                     const proofRoleMatches = expectedApproverRole === 'admin' ? approverProof?.isAdmin === true : approverProof?.isAdmin !== true;
-                    if (!approverProof || approverProof.employeeId !== account?.id || !proofRoleMatches) {
-                        setError('رفض النظام هوية الجوال لأنها لا تملك تحققًا سابقًا للحساب نفسه.');
+                    const proofMatchesOwner = approvedByOwner && approverProof?.employeeId === account?.id && proofRoleMatches;
+                    if (!approverProof || (!proofMatchesRoot && !proofMatchesOwner)) {
+                        setError('رفض النظام هوية الجوال لأنها لا تملك تحققًا موثوقًا للحساب المخول.');
                         return;
                     }
                 } catch (err) {
@@ -2211,6 +2219,7 @@ const MobileRemoteLoginApproval = ({ token }) => {
                 approverRole: approverIdentity.role,
                 approverName: approverIdentity.name,
                 approverPhotoProofId: approverIdentity.photoId,
+                approverIsRoot: isRootRemoteApprover(approverIdentity),
                 approverUserAgent: navigator.userAgent,
                 approverPlatform: navigator.platform || '',
                 approverScreen: `${window.screen?.width || 0}x${window.screen?.height || 0}`

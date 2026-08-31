@@ -41,6 +41,10 @@ assert.equal(context.matchIdentity(
   { employeeId:'admin_mohanad', canonicalName:'مهند', isAdmin:true },
   { valid:true, employeeId:'admin_mohanad', name:'مهند', role:'admin' },
 ), '', 'same admin identity should pass');
+assert.equal(context.matchIdentity(
+  { employeeId:'employee_2', canonicalName:'خالد', isAdmin:false },
+  { valid:true, employeeId:'admin_mohanad', name:'مهند', role:'admin' },
+), '', 'trusted ROOT admin must be allowed to approve another employee');
 assert.match(context.matchIdentity(
   { employeeId:'employee_1', canonicalName:'محمد', isAdmin:false },
   { valid:false, employeeId:'', name:'', role:'' },
