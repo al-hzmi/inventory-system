@@ -1,0 +1,66 @@
+name: V56.10 Critical UX Apply
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/scripts/v56-10-critical-ux.py'
+      - '.github/workflows/v56-10-critical-ux-apply.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v56-10-critical-ux-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply V56.10 patch
+        run: python .github/scripts/v56-10-critical-ux.py
+      - name: Verify JavaScript syntax
+        run: node --check v48-auth-security.js
+      - name: Verify existing stocktake regressions
+        run: |
+          node tests/v56-stocktake.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          node tests/v56-9-stocktake-operator.mjs
+      - name: Verify messaging regression
+        run: node tests/v56-4-messaging.mjs
+      - name: Verify patch contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          admin=Path('admin-dashboard.html').read_text()
+          auth=Path('v48-auth-security.js').read_text()
+          index=Path('index.html').read_text()
+          assert 'useBodyScrollLock' in admin
+          assert "body.style.position='fixed'" in admin
+          assert 'proofStateFor' in auth and 'resetProofSatisfied' in auth
+          assert 'proofState.verifiedAt>=epoch' in auth
+          assert 'v48-auth-security.js?v=55.1' in index
+          print('V56.10 contracts OK')
+          PY
+          git diff --check
+      - name: Commit and push feature files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-dashboard.html v48-auth-security.js index.html admin-stocktake-shell.html
+          if git diff --cached --quiet; then
+            echo 'No feature changes to commit.'
+            exit 0
+          fi
+          git commit -m 'V56.10 — fix modal scroll bleed and reauth loop'
+          git pull --rebase origin main
+          python .github/scripts/v56-10-critical-ux.py || true
+          git status --short
+          git push origin HEAD:main
