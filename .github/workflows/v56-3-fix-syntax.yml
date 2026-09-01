@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Fix test button selector typo
         shell: bash
         run: |
@@ -55,7 +57,7 @@ jobs:
           node tests/v56-stocktake-workflow.mjs
           node tests/v56-3-stocktake-test-mode.mjs
           git diff --check
-      - name: Commit verified syntax fix
+      - name: Commit verified syntax fix safely
         shell: bash
         run: |
           set -euo pipefail
@@ -63,4 +65,12 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add admin-stocktake.html
           git commit -m 'V56.3 — fix stocktake test button syntax'
-          git push origin main
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin main; then
+              exit 0
+            fi
+            echo "push attempt ${attempt} raced; retrying"
+          done
+          exit 1
