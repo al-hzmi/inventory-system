@@ -15,6 +15,15 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Start from latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
       - name: Apply V56.5 stocktake model and mobile redesign
         run: python3 .github/scripts/v56-5-stocktake-direct-mobile.py
       - name: Verify old and new stocktake regressions
@@ -64,7 +73,7 @@ jobs:
           await b.close();
           JS
           node ./.v565-apply-smoke.mjs
-      - name: Commit verified V56.5
+      - name: Commit, rebase and reverify V56.5
         shell: bash
         run: |
           set -euo pipefail
@@ -72,4 +81,9 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add admin-stocktake.html tests/v56-5-stocktake-direct-mobile.mjs .github/workflows/v56-5-stocktake-direct-mobile-regression.yml
           git commit -m 'V56.5 — direct inventory stocktake and mobile admin redesign'
-          git push origin main
+          git pull --rebase origin main
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          git diff --check
+          git push origin HEAD:main
