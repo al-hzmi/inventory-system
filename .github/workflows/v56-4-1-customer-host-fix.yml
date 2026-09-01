@@ -47,8 +47,8 @@ jobs:
           set -euo pipefail
           npx playwright install chromium >/dev/null
           python3 -m http.server 4173 >/tmp/v5641-http.log 2>&1 &
-          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
-          cat > /tmp/v5641-smoke.mjs <<'JS'
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .v5641-smoke.mjs' EXIT
+          cat > .v5641-smoke.mjs <<'JS'
           import {chromium} from 'playwright';
           const base='http://127.0.0.1:4173';
           const b=await chromium.launch({headless:true});
@@ -69,7 +69,7 @@ jobs:
           }
           await b.close();if(failed)process.exit(1);
           JS
-          node /tmp/v5641-smoke.mjs
+          node ./.v5641-smoke.mjs
       - name: Commit verified customer host fix
         shell: bash
         run: |
@@ -80,4 +80,4 @@ jobs:
           git commit -m 'V56.4.1 — keep customer messaging outside V42 bootstrap replacement'
           git push origin main
 
-# trigger: 1
+# trigger: 2
