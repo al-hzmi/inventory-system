@@ -1,0 +1,64 @@
+name: V56.5 Stocktake Direct Mobile Regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify stocktake invariants and JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          failures=[]
+          for path in ['admin-stocktake.html','stocktake.html','admin-stocktake-shell.html']:
+              s=Path(path).read_text()
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+                  code=m.group(2)
+                  if not code.strip(): continue
+                  f=Path('/tmp')/f'{Path(path).stem}-{i}.js';f.write_text(code)
+                  r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+                  if r.returncode: failures.append(f'{path} script#{i}: {r.stderr}')
+          if failures:
+              print('\n'.join(failures));sys.exit(1)
+          print('V56_5_STOCKTAKE_SYNTAX_OK')
+          PY
+          git diff --check
+      - name: Android browser smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v565-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .v565-smoke.mjs' EXIT
+          cat > .v565-smoke.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const b=await chromium.launch({headless:true});
+          const c=await b.newContext({viewport:{width:390,height:844},deviceScaleFactor:1});
+          await c.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});
+          const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(String(e)));
+          const r=await p.goto('http://127.0.0.1:4173/admin-stocktake.html?embedded=1',{waitUntil:'domcontentloaded',timeout:30000});
+          await p.waitForTimeout(2500);
+          const measure=await p.evaluate(()=>({w:document.documentElement.scrollWidth,v:innerWidth,button:[...document.querySelectorAll('.btn')].find(x=>x.offsetParent!==null)?.getBoundingClientRect().height||0}));
+          console.log('android-stocktake',r?.status(),measure,errors);
+          if(!r||r.status()>=400||measure.w>measure.v+2||measure.button<40||errors.some(x=>/SyntaxError|ReferenceError/.test(x)))process.exitCode=1;
+          await b.close();
+          JS
+          node ./.v565-smoke.mjs
