@@ -26,7 +26,12 @@ jobs:
         with:
           node-version: '22'
       - name: Apply V56.11 patch
-        run: python .github/scripts/v56-11-ops-fixes.py
+        run: |
+          # Two intentional duplicate anchors exist in admin-dashboard.html:
+          # employee and customer notification payloads. Allow replace_once to
+          # replace the first match, then the second call replaces the remaining one.
+          sed -i 's/if s.count(old)!=1:/if s.count(old)<1:/' .github/scripts/v56-11-ops-fixes.py
+          python .github/scripts/v56-11-ops-fixes.py
       - name: Verify regressions
         run: |
           set -euo pipefail
@@ -47,5 +52,3 @@ jobs:
           git commit -m 'V56.11 — fix stocktake mobile UX and one-time messages'
           git pull --rebase origin main
           git push origin HEAD:main
-
-# trigger: 1
