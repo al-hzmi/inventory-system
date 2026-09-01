@@ -1,0 +1,62 @@
+name: V56.7 Readable Stocktake Audit Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/v56-7-readable-audit-trigger.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v56-7-readable-audit-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply readable audit UI
+        run: python3 .github/scripts/v56-7-readable-audit.py
+      - name: Verify regressions and syntax
+        run: |
+          set -euo pipefail
+          node tests/v56-7-readable-audit.mjs
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          node tests/v56-6-admin-responsive.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, sys
+          s=Path('admin-stocktake.html').read_text()
+          failures=[]
+          for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+              code=m.group(2)
+              if not code.strip(): continue
+              f=Path('/tmp')/f'v567-{i}.js'; f.write_text(code)
+              r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+              if r.returncode: failures.append(r.stderr)
+          if failures:
+              print('\n'.join(failures)); sys.exit(1)
+          print('V56_7_SYNTAX_OK')
+          PY
+          git diff --check
+      - name: Commit feature
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- admin-stocktake.html; then
+            echo 'No feature changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-stocktake.html
+          git commit -m 'V56.7 — make stocktake audit human-readable'
+          git pull --rebase origin main
+          node tests/v56-7-readable-audit.mjs
+          git push origin HEAD:main
