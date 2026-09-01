@@ -1,0 +1,29 @@
+name: V56.10 Critical UX Regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify critical UX contracts
+        run: |
+          set -euo pipefail
+          node tests/v56-10-critical-ux.mjs
+          node --check v48-auth-security.js
+          node tests/v56-4-messaging.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          git diff --check
