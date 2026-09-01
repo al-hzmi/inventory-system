@@ -12,7 +12,7 @@ permissions:
 jobs:
   regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Verify messaging delivery, customer targeting and Android UI
@@ -21,7 +21,7 @@ jobs:
           set -euo pipefail
           node tests/v56-4-messaging.mjs
           npm init -y >/dev/null 2>&1
-          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 playwright@1.55.0 >/dev/null 2>&1
           python3 - <<'PY'
           from pathlib import Path
           import re,subprocess,sys
@@ -44,3 +44,33 @@ jobs:
           print('V56_4_MESSAGING_SYNTAX_PASS',count)
           PY
           git diff --check
+      - name: Browser smoke customer messaging bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v564-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f .v564-messaging-smoke.mjs' EXIT
+          cat > .v564-messaging-smoke.mjs <<'JS'
+          import {chromium} from 'playwright';
+          const base='http://127.0.0.1:4173';
+          const b=await chromium.launch({headless:true});
+          let failed=false;
+          const scenarios=[
+            ['customer-public','/customer.html',{}],
+            ['customer-employee-manual','/customer.html?employeeView=1',{inventory_user_name_v2:'اختبار موظف',inventory_employee_id_v2:'audit_employee',inventory_employee_auth_version_v2:'2'}]
+          ];
+          for(const [name,path,store] of scenarios){
+            const c=await b.newContext();
+            await c.addInitScript(s=>{localStorage.clear();sessionStorage.clear();for(const[k,v]of Object.entries(s))localStorage.setItem(k,v)},store);
+            const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(String(e)));
+            const r=await p.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});await p.waitForTimeout(6000);
+            const text=await p.locator('body').innerText().catch(()=>''),url=p.url();
+            console.log(name,r?.status(),url,text.replace(/\s+/g,' ').slice(0,220));if(errs.length)console.error(name,'pageerrors',errs.join(' | '));
+            if(!r||r.status()>=400||text.trim().length<8||errs.some(x=>/CustomerAdminNotificationHost is not defined|ReferenceError/.test(x)))failed=true;
+            if(name==='customer-employee-manual'&&(text.includes('اسمك الكريم')||!text.includes('اختبار موظف')||!text.includes('الموظفين')))failed=true;
+            await c.close();
+          }
+          await b.close();if(failed)process.exit(1);
+          JS
+          node ./.v564-messaging-smoke.mjs
