@@ -13,7 +13,7 @@
 (async function(){
   // V44_QA_BOOTSTRAP: automated browsers must never pollute production presence or logs.
   window.__V44_QA=Boolean(['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
-  const CORE='./runtime/index-v37-source.txt?v=55.6';
+  const CORE='./runtime/index-v37-source.txt?v=56.0';
   const TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';
   const TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';
   const TRANSFER_APPLIED_PREFIX='batco_employee_customer_cart_transfer_applied_v1_';

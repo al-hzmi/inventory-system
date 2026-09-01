@@ -4194,13 +4194,13 @@ const App = () => {
                                 </button>
                             )}
                             {isAdmin ? (
-                                <button onClick={() => { window.location.href = './admin-stocktake.html'; }} title="إدارة الجرد"
+                                <button onClick={() => { window.location.href = './admin-stocktake.html?v=56.0'; }} title="إدارة الجرد"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
                                     <Icon.Archive className="w-20 h-20" />
                                     <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">إدارة الجرد</span>
                                 </button>
                             ) : (currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (
-                                <button onClick={() => { window.location.href = './stocktake.html'; }} title="فتح الجرد"
+                                <button onClick={() => { window.location.href = './stocktake.html?v=56.0'; }} title="فتح الجرد"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
                                     <Icon.Archive className="w-20 h-20" />
                                     <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">الجرد</span>
