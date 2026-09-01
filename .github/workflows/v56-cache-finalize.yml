@@ -1,0 +1,59 @@
+name: V56 Cache Finalize
+on:
+  push:
+    branches: [v56-stocktake-build]
+    paths: [.github/workflows/v56-cache-finalize.yml]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v56-stocktake-build
+          fetch-depth: 0
+      - name: Patch latest main only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B v56-publish origin/main
+          python - <<'PY'
+          from pathlib import Path
+          patches={
+            'index.html': [("./runtime/index-v37-source.txt?v=55.6","./runtime/index-v37-source.txt?v=56.0")],
+            'runtime/index-v37-source.txt': [
+              ("window.location.href = './admin-stocktake.html';","window.location.href = './admin-stocktake.html?v=56.0';"),
+              ("window.location.href = './stocktake.html';","window.location.href = './stocktake.html?v=56.0';")
+            ],
+            'admin-dashboard.html': [("window.location.href='./admin-stocktake.html'","window.location.href='./admin-stocktake.html?v=56.0'")]
+          }
+          for name,repls in patches.items():
+              p=Path(name); s=p.read_text(encoding='utf-8'); before=s
+              for old,new in repls:
+                  if old in s: s=s.replace(old,new)
+                  elif new not in s: raise SystemExit(f'missing cache marker {name}: {old}')
+              p.write_text(s,encoding='utf-8')
+              print(name, 'changed' if s!=before else 'already-current')
+          PY
+      - name: Verify V56 and cache routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/v56-stocktake-workflow.mjs
+          grep -q "index-v37-source.txt?v=56.0" index.html
+          grep -q "admin-stocktake.html?v=56.0" runtime/index-v37-source.txt
+          grep -q "stocktake.html?v=56.0" runtime/index-v37-source.txt
+          grep -q "admin-stocktake.html?v=56.0" admin-dashboard.html
+          git diff --check
+      - name: Publish cache finalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then echo 'No changes needed'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html runtime/index-v37-source.txt admin-dashboard.html
+          git commit -m 'V56.1 — force fresh stocktake routes and employee runtime'
+          git push origin HEAD:main
