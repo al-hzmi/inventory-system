@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
+// V56.10 regression trigger: protect iOS modal scrolling, durable employee sessions, and V56.9 stocktake routing.
 const admin=fs.readFileSync('admin-dashboard.html','utf8');
 const auth=fs.readFileSync('v48-auth-security.js','utf8');
 const adminAuth=fs.readFileSync('v48-admin-security.js','utf8');
