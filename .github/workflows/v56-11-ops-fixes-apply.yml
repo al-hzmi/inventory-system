@@ -47,3 +47,5 @@ jobs:
           git commit -m 'V56.11 — fix stocktake mobile UX and one-time messages'
           git pull --rebase origin main
           git push origin HEAD:main
+
+# trigger: 1
