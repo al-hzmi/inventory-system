@@ -1,0 +1,28 @@
+name: V56.11 Operations Regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify stocktake mobile UX and one-time messaging
+        run: |
+          set -euo pipefail
+          node tests/v56-11-ops-fixes.mjs
+          node tests/v56-4-messaging.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          node tests/v56-10-critical-ux.mjs
+          git diff --check
