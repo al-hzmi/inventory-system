@@ -79,3 +79,5 @@ jobs:
           git add runtime/customer-v37-source.txt tests/v56-4-messaging.mjs
           git commit -m 'V56.4.1 — keep customer messaging outside V42 bootstrap replacement'
           git push origin main
+
+# trigger: 1
