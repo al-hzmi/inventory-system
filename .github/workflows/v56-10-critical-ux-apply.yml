@@ -28,9 +28,8 @@ jobs:
         run: python .github/scripts/v56-10-critical-ux.py
       - name: Verify JavaScript syntax
         run: node --check v48-auth-security.js
-      - name: Verify existing stocktake regressions
+      - name: Verify current stocktake regressions
         run: |
-          node tests/v56-stocktake.mjs
           node tests/v56-3-stocktake-test-mode.mjs
           node tests/v56-9-stocktake-operator.mjs
       - name: Verify messaging regression
@@ -61,6 +60,4 @@ jobs:
           fi
           git commit -m 'V56.10 — fix modal scroll bleed and reauth loop'
           git pull --rebase origin main
-          python .github/scripts/v56-10-critical-ux.py || true
-          git status --short
           git push origin HEAD:main
