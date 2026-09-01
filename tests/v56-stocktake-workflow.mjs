@@ -11,10 +11,10 @@ has(admin,"ROOT_ID='admin_mohanad'",'admin stocktake must use immutable ROOT id'
 has(employee,"photo?.employeeId===ROOT_ID",'ROOT access must be photo-bound');
 has(admin,"adminPhoto?.employeeId!==ROOT_ID",'admin page must reject non-root photo identity');
 
-// Blind-first-count invariant: expected quantity is only rendered in counted branch.
+// Blind-first-count invariant: verify behavior, not explanatory UI copy.
 has(employee,"counted?`<div class=\"qtygrid\"",'expected qty must be behind counted branch');
+has(employee,'`:`<div class="blind"></div>`','uncounted branch must not render expected quantity');
 assert.ok(!employee.includes('كاملة ✓'),'blind count must not expose a full/expected shortcut');
-has(employee,'لن تظهر كمية النظام أو الفرق قبل الاعتماد الأول.','first count must remain blind');
 
 // Fast floor workflow.
 has(employee,'placeholder="اكتب رقم الصنف"','SKU entry must be primary');
