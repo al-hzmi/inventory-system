@@ -1,0 +1,59 @@
+name: V56.4 Messaging Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-4-messaging-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply V56.4 messaging patch
+        run: python3 .github/scripts/v56-4-messaging-apply.py
+      - name: Verify V56.4 messaging
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/v56-4-messaging.mjs
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          npm init -y >/dev/null 2>&1
+          npm install --no-save esbuild@0.25.9 >/dev/null 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,sys
+          files=['admin-dashboard.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','index.html','customer.html']
+          fail=[];count=0
+          for pstr in files:
+              p=Path(pstr);s=p.read_text()
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+                  attrs,code=m.group(1),m.group(2)
+                  if not code.strip(): continue
+                  count+=1
+                  babel='text/babel' in attrs
+                  f=Path('/tmp')/f'{p.stem}-{i}.{"jsx" if babel else "js"}'
+                  f.write_text(code)
+                  cmd=['npx','esbuild',str(f),'--loader:.jsx=jsx','--outfile=/tmp/v56-4-check.js'] if babel else ['node','--check',str(f)]
+                  r=subprocess.run(cmd,capture_output=True,text=True)
+                  if r.returncode: fail.append(f'{p} script#{i}: {r.stderr}')
+          if fail:
+              print('\n'.join(fail));sys.exit(1)
+          print('V56_4_SYNTAX_PASS',count)
+          PY
+          git diff --check
+      - name: Commit V56.4 feature
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-dashboard.html runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html tests/v56-4-messaging.mjs
+          git commit -m 'V56.4 — repair messaging, add customer and guest messages, improve Android UI'
+          git push origin main
