@@ -1,0 +1,34 @@
+name: V56.8 Stocktake Field UX Apply
+
+on:
+  push:
+    paths:
+      - '.github/v56-8-stocktake-field-ux-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply V56.8 field UX
+        run: python .github/scripts/v56-8-stocktake-field-ux.py
+      - name: Verify stocktake regressions and syntax
+        run: |
+          node tests/v56-8-stocktake-field-ux.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          node tests/v56-6-admin-responsive.mjs
+          node tests/v56-7-readable-audit.mjs
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+      - name: Commit V56.8
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add stocktake.html admin-stocktake.html admin-stocktake-shell.html tests/v56-5-stocktake-direct-mobile.mjs tests/v56-8-stocktake-field-ux.mjs .github/workflows/v56-8-stocktake-field-ux-regression.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'V56.8 — upgrade stocktake field UX and barcode search'
+          git push
