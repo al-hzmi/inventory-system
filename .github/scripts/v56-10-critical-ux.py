@@ -1,6 +1,7 @@
 from pathlib import Path
 
 ROOT = Path('.')
+# trigger: v56.10 critical UX apply
 
 
 def replace_once(text, old, new, label):
