@@ -52,7 +52,7 @@ jobs:
             'stocktake employee gate': 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx,
             'stocktake V56 blind audit/count': 'stocktake_audit' in stock and 'العد الأول أعمى' in stock and 'quantity_found_later' in stock and '+ كمية عُثر عليها' in stock and 'navigator.vibrate' in stock and 'ملاحظات' in stock,
             'stocktake V56 Excel duplicate prevention': 'XLSX.read' in stockadm and 'سيتم رفض أي تكرار داخل الملف أو بين المجموعات' in stockadm and 'ملف Excel مستقل' in stockadm,
-            'stocktake V56 flexible committees': 'memberEmployeeIds' in stockadm and 'أعضاء لجنة الجرد' in stockadm and 'نطاق الجرد' in stockadm,
+            'stocktake V56 flexible committees': 'memberEmployeeIds' in stockadm and 'عضو / أعضاء اللجنة (أصحاب الحسابات)' in stockadm and 'المساعد / المساعدون' in stockadm and '<th>عضو اللجنة</th><th>المساعد</th>' in stockadm and 'نطاق الجرد' in stockadm,
             'stocktake V56 accountant-only settlement': 'لا يوجد أي تعديل تلقائي للمخزون' in stockadm and 'التسوية الفعلية تبقى من صلاحيات المحاسب' in stockadm,
             'stocktake V56 immutable root': "ROOT_ID='admin_mohanad'" in stock and "ROOT_ID='admin_mohanad'" in stockadm,
           }
