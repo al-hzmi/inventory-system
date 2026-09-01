@@ -25,6 +25,7 @@ assert.ok(cust.includes('visitorId===customerVisitorId'),'guest visitor identity
 assert.ok(cust.includes('setNotification(candidate);markShown(candidate)'),'customer UI must display before best-effort receipt write');
 assert.ok(cust.includes('.customer-admin-message-card'),'Android customer message card CSS missing');
 assert.ok(cust.includes('<CustomerPortalBootstrap/><CustomerAdminNotificationHost/>'),'customer notification host must be mounted');
+assert.ok(cust.indexOf('function CustomerPortalBootstrap(){') < cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") && cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") < cust.indexOf("ReactDOM.createRoot(document.getElementById('root')).render"),'customer notification host must live after the V42 bootstrap replacement boundary');
 
 assert.ok(boot.includes("index-v37-source.txt?v=56.4"),'employee cache bust missing');
 assert.ok(custBoot.includes("customer-v37-source.txt?v=56.4"),'customer cache bust missing');

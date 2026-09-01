@@ -1290,30 +1290,6 @@ function Root({registrationEnabled=true,loginEnabled=true}){
 }
 
 
-const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';
-function CustomerAdminNotificationHost(){
-  const [notification,setNotification]=useState(null);
-  const currentRef=useRef(null),claimedRef=useRef(new Set()),feedsRef=useRef(new Map()),uidRef=useRef(auth.currentUser?.uid||''),evaluateRef=useRef(null);
-  useEffect(()=>{currentRef.current=notification},[notification]);
-  useEffect(()=>{
-    if(window.__employeeCustomerView)return;
-    let active=true,visitorUnsub=null,uidUnsub=null,authUnsub=null,timer=null;
-    const matches=row=>Boolean((row.visitorId&&row.visitorId===customerVisitorId)||(uidRef.current&&row.customerUid&&row.customerUid===uidRef.current));
-    const due=row=>{if(row.status!=='active'||!matches(row))return false;const max=Math.max(1,Number(row.maxShows)||1),shown=Math.max(0,Number(row.shownCount)||0);if(shown>=max)return false;if(row.deliveryMode==='scheduled'){const ms=row.scheduledAt?.toMillis?row.scheduledAt.toMillis():new Date(row.scheduledAt||0).getTime();if(!ms||ms>Date.now())return false;}return true};
-    const markShown=async candidate=>{const ref=db.collection(CUSTOMER_NOTIFICATION_COLLECTION).doc(candidate.id);try{await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)return;const row={id:snap.id,...snap.data()};if(!due(row))return;const shown=Math.max(0,Number(row.shownCount)||0),max=Math.max(1,Number(row.maxShows)||1),next=shown+1;tx.set(ref,{shownCount:next,lastShownAt:firebase.firestore.FieldValue.serverTimestamp(),lastShownVisitorId:customerVisitorId,lastShownCustomerUid:uidRef.current||'',status:next>=max?'completed':'active',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})})}catch(e){console.warn('[Customer notification receipt]',e)}};
-    const evaluate=()=>{if(!active||currentRef.current)return;const all=[...feedsRef.current.values()].flat(),dedup=[...new Map(all.map(r=>[r.id,r])).values()],at=x=>x?.toMillis?x.toMillis():new Date(x||0).getTime()||0,candidate=dedup.filter(due).filter(r=>!claimedRef.current.has(r.id)).sort((a,b)=>(a.deliveryMode==='scheduled'?at(a.scheduledAt):at(a.createdAt))-(b.deliveryMode==='scheduled'?at(b.scheduledAt):at(b.createdAt)))[0];if(!candidate)return;claimedRef.current.add(candidate.id);currentRef.current=candidate;setNotification(candidate);markShown(candidate)};
-    evaluateRef.current=evaluate;
-    const bind=(key,field,value)=>{if(!value)return null;try{return db.collection(CUSTOMER_NOTIFICATION_COLLECTION).where(field,'==',value).limit(50).onSnapshot(s=>{if(!active)return;feedsRef.current.set(key,s.docs.map(d=>({id:d.id,...d.data()})));evaluate()},e=>console.warn('[Customer notifications realtime]',key,e))}catch(e){console.warn('[Customer notifications query]',key,e);return null}};
-    visitorUnsub=bind('visitor','visitorId',customerVisitorId);
-    authUnsub=auth.onAuthStateChanged(u=>{uidRef.current=u?.uid||'';try{uidUnsub?.()}catch{};feedsRef.current.delete('uid');uidUnsub=bind('uid','customerUid',uidRef.current);evaluate()});
-    timer=setInterval(evaluate,15000);
-    return()=>{active=false;evaluateRef.current=null;if(timer)clearInterval(timer);try{visitorUnsub?.()}catch{}try{uidUnsub?.()}catch{}try{authUnsub?.()}catch{}feedsRef.current.clear()};
-  },[]);
-  if(!notification)return null;
-  const dismiss=()=>{currentRef.current=null;setNotification(null);setTimeout(()=>evaluateRef.current?.(),0)};
-  return <div className="customer-admin-message-host" aria-live="polite"><section className="customer-admin-message-card fade-in" role="dialog" aria-label="رسالة من الإدارة"><div className="p-4 border-b border-border flex items-start gap-3"><div className="w-11 h-11 rounded-12 bg-infoSoft text-info flex items-center justify-center shrink-0"><Icon name="info" className="w-5 h-5"/></div><div className="min-w-0 flex-1"><div className="text-[10px] font-bold text-info">رسالة من الإدارة</div><h2 className="text-[16px] font-bold text-primary mt-1 leading-6">{notification.title||'رسالة من الإدارة'}</h2></div><button onClick={dismiss} aria-label="إغلاق" className="w-11 h-11 rounded-xl border border-border text-muted flex items-center justify-center shrink-0"><Icon name="close" className="w-4 h-4"/></button></div><div className="customer-admin-message-body p-4"><p className="text-[13px] text-secondary leading-7 whitespace-pre-wrap m-0">{notification.message||''}</p><button onClick={dismiss} className="ui-btn ui-btn-primary w-full mt-5">تم</button></div></section></div>;
-}
-
 function CustomerPortalBootstrap(){
   const [control,setControl]=useState({...DEFAULT_CUSTOMER_PORTAL_CONTROL,__loading:true});
   const previewAllowed=useMemo(()=>{
@@ -1358,6 +1334,30 @@ function CustomerPortalBootstrap(){
     {previewAllowed&&!control.enabled&&<div className="fixed top-2 left-1/2 -translate-x-1/2 z-[200] px-3 py-2 rounded-full bg-info text-white shadow-lift text-[11px] font-bold whitespace-nowrap">معاينة الإدارة — البوابة متوقفة للعامة</div>}
     {EMPLOYEE_CUSTOMER_VIEW?<CustomerApp user={null} profile={{name:EMPLOYEE_CUSTOMER_SESSION.name,company:'',phone:'',branches:[]}} guestMode={true} onProfileUpdate={()=>{}} onRequireAuth={()=>{}}/>:<Root registrationEnabled={effectiveRegistration} loginEnabled={effectiveLogin}/>}
   </>;
+}
+
+const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';
+function CustomerAdminNotificationHost(){
+  const [notification,setNotification]=useState(null);
+  const currentRef=useRef(null),claimedRef=useRef(new Set()),feedsRef=useRef(new Map()),uidRef=useRef(auth.currentUser?.uid||''),evaluateRef=useRef(null);
+  useEffect(()=>{currentRef.current=notification},[notification]);
+  useEffect(()=>{
+    if(window.__employeeCustomerView)return;
+    let active=true,visitorUnsub=null,uidUnsub=null,authUnsub=null,timer=null;
+    const matches=row=>Boolean((row.visitorId&&row.visitorId===customerVisitorId)||(uidRef.current&&row.customerUid&&row.customerUid===uidRef.current));
+    const due=row=>{if(row.status!=='active'||!matches(row))return false;const max=Math.max(1,Number(row.maxShows)||1),shown=Math.max(0,Number(row.shownCount)||0);if(shown>=max)return false;if(row.deliveryMode==='scheduled'){const ms=row.scheduledAt?.toMillis?row.scheduledAt.toMillis():new Date(row.scheduledAt||0).getTime();if(!ms||ms>Date.now())return false;}return true};
+    const markShown=async candidate=>{const ref=db.collection(CUSTOMER_NOTIFICATION_COLLECTION).doc(candidate.id);try{await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)return;const row={id:snap.id,...snap.data()};if(!due(row))return;const shown=Math.max(0,Number(row.shownCount)||0),max=Math.max(1,Number(row.maxShows)||1),next=shown+1;tx.set(ref,{shownCount:next,lastShownAt:firebase.firestore.FieldValue.serverTimestamp(),lastShownVisitorId:customerVisitorId,lastShownCustomerUid:uidRef.current||'',status:next>=max?'completed':'active',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})})}catch(e){console.warn('[Customer notification receipt]',e)}};
+    const evaluate=()=>{if(!active||currentRef.current)return;const all=[...feedsRef.current.values()].flat(),dedup=[...new Map(all.map(r=>[r.id,r])).values()],at=x=>x?.toMillis?x.toMillis():new Date(x||0).getTime()||0,candidate=dedup.filter(due).filter(r=>!claimedRef.current.has(r.id)).sort((a,b)=>(a.deliveryMode==='scheduled'?at(a.scheduledAt):at(a.createdAt))-(b.deliveryMode==='scheduled'?at(b.scheduledAt):at(b.createdAt)))[0];if(!candidate)return;claimedRef.current.add(candidate.id);currentRef.current=candidate;setNotification(candidate);markShown(candidate)};
+    evaluateRef.current=evaluate;
+    const bind=(key,field,value)=>{if(!value)return null;try{return db.collection(CUSTOMER_NOTIFICATION_COLLECTION).where(field,'==',value).limit(50).onSnapshot(s=>{if(!active)return;feedsRef.current.set(key,s.docs.map(d=>({id:d.id,...d.data()})));evaluate()},e=>console.warn('[Customer notifications realtime]',key,e))}catch(e){console.warn('[Customer notifications query]',key,e);return null}};
+    visitorUnsub=bind('visitor','visitorId',customerVisitorId);
+    authUnsub=auth.onAuthStateChanged(u=>{uidRef.current=u?.uid||'';try{uidUnsub?.()}catch{};feedsRef.current.delete('uid');uidUnsub=bind('uid','customerUid',uidRef.current);evaluate()});
+    timer=setInterval(evaluate,15000);
+    return()=>{active=false;evaluateRef.current=null;if(timer)clearInterval(timer);try{visitorUnsub?.()}catch{}try{uidUnsub?.()}catch{}try{authUnsub?.()}catch{}feedsRef.current.clear()};
+  },[]);
+  if(!notification)return null;
+  const dismiss=()=>{currentRef.current=null;setNotification(null);setTimeout(()=>evaluateRef.current?.(),0)};
+  return <div className="customer-admin-message-host" aria-live="polite"><section className="customer-admin-message-card fade-in" role="dialog" aria-label="رسالة من الإدارة"><div className="p-4 border-b border-border flex items-start gap-3"><div className="w-11 h-11 rounded-12 bg-infoSoft text-info flex items-center justify-center shrink-0"><Icon name="info" className="w-5 h-5"/></div><div className="min-w-0 flex-1"><div className="text-[10px] font-bold text-info">رسالة من الإدارة</div><h2 className="text-[16px] font-bold text-primary mt-1 leading-6">{notification.title||'رسالة من الإدارة'}</h2></div><button onClick={dismiss} aria-label="إغلاق" className="w-11 h-11 rounded-xl border border-border text-muted flex items-center justify-center shrink-0"><Icon name="close" className="w-4 h-4"/></button></div><div className="customer-admin-message-body p-4"><p className="text-[13px] text-secondary leading-7 whitespace-pre-wrap m-0">{notification.message||''}</p><button onClick={dismiss} className="ui-btn ui-btn-primary w-full mt-5">تم</button></div></section></div>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><CustomerPortalBootstrap/><CustomerAdminNotificationHost/></>);
