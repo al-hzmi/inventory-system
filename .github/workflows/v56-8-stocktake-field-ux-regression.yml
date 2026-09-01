@@ -1,0 +1,33 @@
+name: V56.8 Stocktake Field UX Regression
+
+on:
+  push:
+    paths:
+      - 'stocktake.html'
+      - 'admin-stocktake.html'
+      - 'admin-stocktake-shell.html'
+      - 'tests/v56-8-stocktake-field-ux.mjs'
+      - 'tests/v56-5-stocktake-direct-mobile.mjs'
+      - '.github/workflows/v56-8-stocktake-field-ux-regression.yml'
+  pull_request:
+    paths:
+      - 'stocktake.html'
+      - 'admin-stocktake.html'
+      - 'admin-stocktake-shell.html'
+      - 'tests/v56-8-stocktake-field-ux.mjs'
+      - 'tests/v56-5-stocktake-direct-mobile.mjs'
+      - '.github/workflows/v56-8-stocktake-field-ux-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify stocktake field UX, barcode parity and strip persistence
+        run: |
+          node tests/v56-8-stocktake-field-ux.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          node tests/v56-6-admin-responsive.mjs
+          node tests/v56-7-readable-audit.mjs
+          node tests/v56-stocktake-workflow.mjs
