@@ -1,1 +1,1 @@
-apply V56.8 stocktake field UX, barcode parity, and strip persistence
+apply V56.8 stocktake field UX, barcode parity, and strip persistence — retry 2
