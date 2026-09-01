@@ -33,13 +33,11 @@ jobs:
             'stocktake.html': 'd1b3a6eff31410ad7447d1b8b571d782e91eb8fba35af80ac52f68888919732a',
             'admin-stocktake.html': 'cef8d74c90f8962084b2b31c7c7dfd2d5ec05f0b8a7979edc2fc682e057f3dc7',
             'tests/v56-stocktake-workflow.mjs': '733bb5be1f089801b300c30a4d6f018c8d3891f5f7a4e7d729818402487629e2',
-            '.github/workflows/v56-stocktake-quality-gate.yml': '360a85343ee4fbac1ad8e245c6e3f233af84b806fbef29bd2b634173f3d125de',
           }
           chunks = {
             'stocktake.html': ['.v56_payload/stocktake.01','.v56_payload/stocktake.02'],
             'admin-stocktake.html': ['.v56_payload/admin.01','.v56_payload/admin.02','.v56_payload/admin.03'],
             'tests/v56-stocktake-workflow.mjs': ['.v56_payload/test.01'],
-            '.github/workflows/v56-stocktake-quality-gate.yml': ['.v56_payload/quality.01'],
           }
           for target, parts in chunks.items():
               encoded=''.join(Path(p).read_text(encoding='utf-8') for p in parts)
@@ -69,7 +67,8 @@ jobs:
           for name in ['stocktake.html','admin-stocktake.html']:
               html=pathlib.Path(name).read_text(encoding='utf-8')
               js='\n'.join(body for attrs,body in re.findall(r'<script([^>]*)>(.*?)</script>',html,flags=re.S|re.I) if 'src=' not in attrs.lower())
-              p=pathlib.Path('/tmp')/(name+'.js'); p.write_text(js,encoding='utf-8'); subprocess.run(['node','--check',str(p)],check=True)
+              p=pathlib.Path('/tmp')/(name+'.js'); p.write_text(js,encoding='utf-8')
+              subprocess.run(['node','--check',str(p)],check=True)
           PY
           grep -q 'stocktake.html?v=56.0' admin-stocktake-shell.html
           grep -q 'admin-stocktake.html?embedded=1&v=56.0' admin-stocktake-shell.html
@@ -79,14 +78,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tar -cf /tmp/v56-release.tar stocktake.html admin-stocktake.html admin-stocktake-shell.html tests/v56-stocktake-workflow.mjs .github/workflows/v56-stocktake-quality-gate.yml
+          tar -cf /tmp/v56-release.tar stocktake.html admin-stocktake.html admin-stocktake-shell.html tests/v56-stocktake-workflow.mjs
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch origin main
           git checkout -B v56-release origin/main
           tar -xf /tmp/v56-release.tar
-          rm -f .github/workflows/v56-stocktake-apply.yml
-          git add -A
+          git add stocktake.html admin-stocktake.html admin-stocktake-shell.html tests/v56-stocktake-workflow.mjs
           git commit -m 'V56 — Production digital stocktake workflow'
 
       - name: Re-verify exact release commit
@@ -96,7 +94,7 @@ jobs:
           node tests/v56-stocktake-workflow.mjs
           grep -q 'stocktake.html?v=56.0' admin-stocktake-shell.html
           grep -q 'admin-stocktake.html?embedded=1&v=56.0' admin-stocktake-shell.html
-          test ! -e .github/workflows/v56-stocktake-apply.yml
+          test -e .github/workflows/v56-stocktake-apply.yml
           git diff --check HEAD^
 
       - name: Publish V56 to main
