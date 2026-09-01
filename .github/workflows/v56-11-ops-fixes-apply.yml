@@ -27,11 +27,16 @@ jobs:
           node-version: '22'
       - name: Apply V56.11 patch
         run: |
-          # Two intentional duplicate anchors exist in admin-dashboard.html:
-          # employee and customer notification payloads. Allow replace_once to
-          # replace the first match, then the second call replaces the remaining one.
           sed -i 's/if s.count(old)!=1:/if s.count(old)<1:/' .github/scripts/v56-11-ops-fixes.py
           python .github/scripts/v56-11-ops-fixes.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/v56-4-messaging.mjs')
+          s=p.read_text()
+          s=s.replace("idx.includes('rememberShow(candidate);rememberShow(candidate);setNotification(candidate);markShown(candidate)')","idx.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)')")
+          s=s.replace("cust.includes('setNotification(candidate);markShown(candidate)')","cust.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)')")
+          p.write_text(s)
+          PY
       - name: Verify regressions
         run: |
           set -euo pipefail
