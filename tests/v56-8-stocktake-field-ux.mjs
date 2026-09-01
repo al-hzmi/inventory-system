@@ -21,14 +21,21 @@ has(employee,'const resolved=resolveStocktakeSearch(e.target.value)','manual/pas
 has(employee,'fps:10','scanner must retain the proven inventory scanning cadence');
 has(employee,'disableFlip:true','scanner must retain proven decode behavior');
 
-has(employee,'id="v56-8-field-ux"','employee stocktake must use the V56.8 field UX');
-has(employee,'class="panel mission"','employee stocktake must expose a progress mission panel');
-has(employee,'class="scanPrompt"','employee stocktake must expose a scanner-first workbench');
-has(employee,'class="scanLabel">مسح','scanner CTA must be explicit instead of a cryptic glyph-only button');
+has(employee,'id="v56-9-operator-ux"','employee stocktake must use the V56.9 operator UX');
+has(employee,'class="searchWrap"','scanner/search control must mirror inventory search composition');
+has(employee,'class="inventoryScanButton"','scanner must be an embedded icon button, not a separate oversized CTA');
+has(employee,'المنجز حديثًا','completed items must be separated from the active count flow');
+has(employee,'لن تظهر بقية الأصناف هنا','pending inventory must not be dumped below the search field');
+has(employee,'function completedCardHtml','completed items must use compact operator rows');
+has(employee,'let stocktakeAudioCtx=null','audio context must persist across asynchronous Firestore save');
+has(employee,'function ensureFeedbackAudio()','audio must be unlocked from a user gesture');
+has(employee,"window.addEventListener('pointerdown',ensureFeedbackAudio",'audio context must be primed before async save');
+has(employee,'feedback(status,finishedAll)','save must trigger sound/haptic feedback after success');
 has(employee,'العد الأول أعمى','blind-count control must remain intact');
-has(employee,'كمية النظام تبقى مخفية حتى اعتماد العد الأول','expected quantity must remain hidden before the first count');
-has(admin,'id="v56-8-admin-polish"','admin stocktake should share the polished V56.8 visual system');
-has(shell,'stocktake.html?v=56.8','employee stocktake cache key must be V56.8');
-has(shell,'admin-stocktake.html?embedded=1&v=56.8','admin stocktake cache key must be V56.8');
+has(employee,'كمية النظام تبقى مخفية حتى اعتماد العد الأول','expected quantity must remain hidden before first count');
+assert.ok(!employee.includes('class="panel mission"'),'AI-like dark mission scoreboard must be removed from employee render');
+has(admin,'id="v56-8-admin-polish"','admin stocktake should retain its proven responsive polish');
+has(shell,'stocktake.html?v=56.9','employee stocktake cache key must be V56.9');
+has(shell,'admin-stocktake.html?embedded=1&v=56.8','admin stocktake cache key remains V56.8');
 
-console.log('V56.8 stocktake field UX + barcode parity + sticky strips regression: OK');
+console.log('V56.9 stocktake operator UX + barcode parity + feedback regression: OK');
