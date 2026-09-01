@@ -15,7 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Apply V56.8 field UX
-        run: python .github/scripts/v56-8-stocktake-field-ux.py
+        run: |
+          python .github/scripts/v56-8-stocktake-field-ux.py
+          python .github/scripts/v56-8-stocktake-field-ux-fix.py
       - name: Verify stocktake regressions and syntax
         run: |
           node tests/v56-8-stocktake-field-ux.mjs
