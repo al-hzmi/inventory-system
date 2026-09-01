@@ -1,11 +1,14 @@
 name: V56.3 Stocktake Test Mode Apply
+
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/v56-3-stocktake-test-mode-apply.yml'
+
 permissions:
   contents: write
+
 jobs:
   apply:
     if: contains(github.event.head_commit.message, 'V56.3 bootstrap')
@@ -13,109 +16,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Apply isolated stocktake test mode
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
 
-          path=Path('admin-stocktake.html')
-          s=path.read_text()
+      - name: Apply V56.3 patch
+        run: python3 .github/scripts/v56-3-stocktake-test-mode-apply.py
 
-          def once(old,new,label):
-              global s
-              count=s.count(old)
-              if count != 1:
-                  raise SystemExit(f'{label}: expected one anchor, found {count}')
-              s=s.replace(old,new,1)
-
-          team_anchor='\n<div id="teamModal" class="modalbg">'
-          test_modal='''
-<div id="testModal" class="modalbg"><div class="modal"><h3>🧪 تجربة الجرد</h3><div class="success">وضع اختبار معزول: يأخذ عينة مباشرة من المخزون الحالي، بدون Excel، ولا يغيّر كميات المخزون الحقيقي.</div><div class="fields section"><div class="field"><label>المخزون المستخدم في التجربة</label><select id="testWarehouse" class="select"><option value="jeddah">مخزون جدة</option><option value="riyadh">مخزون الرياض</option></select></div><div class="field"><label>عدد أصناف التجربة</label><input id="testCount" class="input" type="number" inputmode="numeric" min="1" max="30" value="12"></div></div><div class="muted section">سيُنشأ ملف جرد باسم «🧪 تجربة الجرد» ومجموعة اختبار مرتبطة بحساب مهند. بعدها استخدم نفس زر «بدء الجرد الآن» ونفس واجهة الجرد الحقيقية.</div><div class="modalactions"><button id="testCancel" class="btn">إلغاء</button><button id="testCreate" class="btn info">إنشاء التجربة</button></div></div></div>
-<div id="teamModal" class="modalbg">'''
-          once(team_anchor,test_modal,'test modal')
-
-          once('</div><button id="newCampaign" class="btn primary">+ ملف جديد</button></div><div class="campaigns section">','</div><button id="testCampaign" class="btn info">🧪 تجربة الجرد</button><button id="newCampaign" class="btn primary">+ ملف جديد</button></div><div class="campaigns section">','test button')
-
-          once('</div><div class="muted section">لا يوجد أي تعديل تلقائي للمخزون. النتائج هنا مرجع للمحاسب فقط، والتسوية الفعلية تبقى من صلاحيات المحاسب في النظام المحاسبي.</div>`}','</div>${cp.isTest?\'<div class="success">🧪 وضع اختبار — المصدر هو المخزون الحالي مباشرة، ولا يحتاج Excel، ولا يغيّر كميات المخزون الحقيقي.</div>\':\'\'}<div class="muted section">لا يوجد أي تعديل تلقائي للمخزون. النتائج هنا مرجع للمحاسب فقط، والتسوية الفعلية تبقى من صلاحيات المحاسب في النظام المحاسبي.</div>`}','test campaign banner')
-
-          once("function importHtml(cp){const im=state.import,canImport=['draft','ready'].includes(cp.status);", "function importHtml(cp){if(cp.isTest)return '<div class=\"success section\">🧪 أصناف هذه التجربة مأخوذة تلقائيًا من المخزون الحالي؛ رفع Excel غير مطلوب في وضع الاختبار.</div>';const im=state.import,canImport=['draft','ready'].includes(cp.status);", 'test import bypass')
-
-          once("function bindUi(){$('#newCampaign')?.addEventListener('click',openCampaignModal);", "function bindUi(){$('#testCampaign')?.addEventListener('click',openTestModal);$('#newCampaign')?.addEventListener('click',openCampaignModal);", 'bind test button')
-
-          test_logic=r'''const TEST_INVENTORY_SOURCES={jeddah:{label:'جدة',url:'./data/jeddah.tsv'},riyadh:{label:'الرياض',url:'./data/riyadh.tsv'}};
-function parseTestInventoryTsv(text){const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)return[];const headers=lines[0].split('\t').map(x=>String(x||'').trim()),find=tests=>headers.findIndex(h=>tests.some(rx=>rx.test(h))),skuIdx=find([/رقم\s*الصنف/i,/كود\s*الصنف/i,/item\s*(?:no|code)/i,/sku/i]),qtyIdx=find([/الكمية\s*المتوفرة/i,/كمية\s*النظام/i,/الكمية/i,/الرصيد/i,/qty/i,/quantity/i]),nameIdx=find([/اسم\s*الصنف/i,/الوصف/i,/description/i,/name/i]),packIdx=find([/الشد/i,/pack/i]);if(skuIdx<0||qtyIdx<0)return[];return lines.slice(1).map((line,i)=>{const c=line.split('\t'),sku=String(c[skuIdx]??'').trim(),qty=num(c[qtyIdx]);return{row:i+2,sku,qty,name:nameIdx>=0?String(c[nameIdx]??'').trim():'',pack:packIdx>=0?String(c[packIdx]??'').trim():''}}).filter(r=>r.sku&&Number.isFinite(r.qty)&&r.qty>=0)}
-function pickTestInventoryRows(rows,count){const wanted=Math.min(30,Math.max(1,Math.trunc(Number(count)||12))),positive=rows.filter(r=>r.qty>0),pool=positive.length>=wanted?positive:rows;if(!pool.length)return[];const step=Math.max(1,Math.floor(pool.length/wanted)),out=[],seen=new Set();for(let i=0;i<pool.length&&out.length<wanted;i+=step){const r=pool[i],k=norm(r.sku);if(k&&!seen.has(k)){seen.add(k);out.push(r)}}if(out.length<wanted){for(const r of pool){const k=norm(r.sku);if(k&&!seen.has(k)){seen.add(k);out.push(r);if(out.length>=wanted)break}}}return out}
-function openTestModal(){if(state.campaign?.status==='active')return toast('أنه الجرد النشط أولًا قبل إنشاء تجربة جديدة');$('#testWarehouse').value='jeddah';$('#testCount').value='12';$('#testModal').classList.add('open');setTimeout(()=>$('#testWarehouse').focus(),60)}
-$('#testCancel').onclick=()=>$('#testModal').classList.remove('open');$('#testModal').onclick=e=>{if(e.target.id==='testModal')$('#testCancel').click()};$('#testCreate').onclick=()=>createTestCampaign();
-async function createTestCampaign(){const key=$('#testWarehouse').value,source=TEST_INVENTORY_SOURCES[key]||TEST_INVENTORY_SOURCES.jeddah,wanted=Math.min(30,Math.max(1,Math.trunc(Number($('#testCount').value)||12))),button=$('#testCreate');button.disabled=true;button.textContent='جاري تجهيز التجربة...';try{const response=await fetch(`${source.url}?test=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`INVENTORY_HTTP_${response.status}`);const rows=pickTestInventoryRows(parseTestInventoryTsv(await response.text()),wanted);if(!rows.length)throw new Error('NO_TEST_INVENTORY_ROWS');const campaignRef=db.collection('stocktake_campaigns').doc(),teamRef=db.collection('stocktake_teams').doc(),now=firebase.firestore.FieldValue.serverTimestamp(),stocktakeDate=new Date(Date.now()+3*3600*1000).toISOString().slice(0,10),name=`🧪 تجربة الجرد — ${source.label}`,scope=`تجربة من المخزون الحالي — ${source.label}`,campaignPayload={name,warehouse:source.label,stocktakeDate,status:'draft',isTest:true,testMode:true,testSource:'current_inventory',testWarehouseKey:key,testSampleSize:rows.length,schemaVersion:2,createdAt:now,createdBy:'مهند'},teamPayload={campaignId:campaignRef.id,name:'🧪 مجموعة الاختبار',scope,zone:scope,memberEmployeeIds:[ROOT_ID],memberEmployeeNames:['مهند'],extraMemberNames:[],status:'active',isTest:true,testMode:true,testSource:'current_inventory',orderIndex:0,updatedAt:now,updatedBy:'مهند',createdAt:now,createdBy:'مهند',schemaVersion:2},batch=db.batch();batch.set(campaignRef,campaignPayload);batch.set(teamRef,teamPayload);rows.forEach((r,index)=>batch.set(db.collection('stocktake_items').doc(itemId(campaignRef.id,r.sku)),{campaignId:campaignRef.id,campaignName:name,teamId:teamRef.id,teamName:teamPayload.name,scope,zone:scope,sku:r.sku,normalizedSku:norm(r.sku),name:r.name,expectedQty:Number(r.qty),pack:r.pack,countStatus:'pending',actualQty:null,difference:null,note:'',hasNote:false,revision:0,orderIndex:index,updatedAt:now,importedAt:now,importedBy:'مهند',importFileName:'',sourceMode:'current_inventory',isTest:true,testMode:true,schemaVersion:2}));await batch.commit();state.campaign={id:campaignRef.id,name,warehouse:source.label,stocktakeDate,status:'draft',isTest:true,testMode:true,testSource:'current_inventory',testSampleSize:rows.length};state.import={file:null,rows:[],headers:[],map:{sku:'',qty:'',pack:'',name:''},teamId:'',errors:[],headerRow:0};$('#testCancel').click();bindSelected();render();await auditAdmin('test_campaign_created',{campaignId:campaignRef.id,teamId:teamRef.id,warehouse:source.label,testSource:'current_inventory',itemCount:rows.length});toast(`تم إنشاء تجربة الجرد من ${source.label}: ${rows.length} صنف`)}catch(e){console.error(e);toast(e.message==='NO_TEST_INVENTORY_ROWS'?'لا توجد أصناف صالحة للتجربة في المخزون الحالي':'تعذر تجهيز تجربة الجرد من المخزون الحالي')}finally{button.disabled=false;button.textContent='إنشاء التجربة'}}
-'''
-          once('function openCampaignModal(){',test_logic+'function openCampaignModal(){','test implementation')
-
-          once("function campaignReadiness(){const problems=[];if(!state.teams.length)problems.push('لا توجد مجموعات');for(const t of state.teams){const count=state.items.filter(i=>i.teamId===t.id).length;if(!count)problems.push(`${t.name}: لم يرفع ملف Excel`);", "function campaignReadiness(){const problems=[];if(!state.teams.length)problems.push('لا توجد مجموعات');for(const t of state.teams){const count=state.items.filter(i=>i.teamId===t.id).length;if(!count)problems.push(state.campaign?.isTest?`${t.name}: لا توجد أصناف اختبار`:`${t.name}: لم يرفع ملف Excel`);", 'test readiness message')
-
-          old_activate="if(!confirm('بدء الجرد الآن؟ ستظهر الميزة لأعضاء اللجان أصحاب الحسابات وتثبت ملفات Excel كمرجع للجرد.'))return;"
-          new_activate="const startMessage=state.campaign.isTest?'بدء تجربة الجرد الآن؟ ستستخدم نفس واجهة الجرد الحقيقية، لكن الحملة موسومة كتجربة ولا تغيّر المخزون الحقيقي.':'بدء الجرد الآن؟ ستظهر الميزة لأعضاء اللجان أصحاب الحسابات وتثبت ملفات Excel كمرجع للجرد.';if(!confirm(startMessage))return;"
-          once(old_activate,new_activate,'test activation copy')
-
-          once("campaign_created:'إنشاء ملف الجرد',", "campaign_created:'إنشاء ملف الجرد',test_campaign_created:'إنشاء تجربة جرد',", 'test audit label')
-
-          path.write_text(s)
-
-          test=Path('tests/v56-3-stocktake-test-mode.mjs')
-          test.write_text(r'''import fs from 'node:fs';
-import assert from 'node:assert/strict';
-const admin=fs.readFileSync('admin-stocktake.html','utf8');
-const jed=fs.readFileSync('data/jeddah.tsv','utf8');
-const ruh=fs.readFileSync('data/riyadh.tsv','utf8');
-const has=(s,x,msg)=>assert.ok(s.includes(x),msg||`missing ${x}`);
-
-has(admin,'id="testCampaign"','stocktake admin must expose a test button');
-has(admin,'🧪 تجربة الجرد','test mode must be visibly labelled');
-has(admin,'id="testModal"','test setup must have an explicit modal');
-has(admin,"jeddah:{label:'جدة',url:'./data/jeddah.tsv'}",'test must read the live Jeddah inventory source');
-has(admin,"riyadh:{label:'الرياض',url:'./data/riyadh.tsv'}",'test must read the live Riyadh inventory source');
-has(admin,"testSource:'current_inventory'",'test records must identify the authoritative source');
-has(admin,'memberEmployeeIds:[ROOT_ID]','root admin must be able to run the generated test team');
-has(admin,'expectedQty:Number(r.qty)','test must freeze the real current inventory quantity into the same stocktake item schema');
-has(admin,"sourceMode:'current_inventory'",'test items must be distinguishable from Excel imports');
-has(admin,'Math.min(30,Math.max(1','sample size must be bounded');
-has(admin,'لا تغيّر المخزون الحقيقي','test UI must state its isolation clearly');
-has(admin,"if(cp.isTest)return '<div",'test campaigns must not require Excel upload');
-has(admin,"test_campaign_created:'إنشاء تجربة جرد'",'test creation must be auditable');
-
-const fn=admin.match(/async function createTestCampaign\(\)\{[\s\S]*?\nfunction openCampaignModal\(\)\{/);
-assert.ok(fn,'createTestCampaign function must exist');
-assert.ok(!fn[0].includes('XLSX.read'),'test creation must not depend on Excel parsing');
-assert.ok(!fn[0].includes('state.import.rows'),'test creation must not depend on uploaded rows');
-
-for(const [name,text] of [['jeddah',jed],['riyadh',ruh]]){
-  const lines=text.replace(/^\uFEFF/,'').trim().split(/\r?\n/);
-  assert.ok(lines.length>1,`${name} inventory must contain rows`);
-  const headers=lines[0].split('\t');
-  assert.ok(headers.includes('رقم الصنف'),`${name} must expose SKU header`);
-  assert.ok(headers.includes('الكمية المتوفرة'),`${name} must expose current quantity header`);
-}
-console.log('V56.3 stocktake test mode regression: OK');
-''')
-
-          gate=Path('.github/workflows/site-quality-gate.yml')
-          g=gate.read_text()
-          old="files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','tests/v56-stocktake-workflow.mjs']"
-          new="files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','tests/v56-stocktake-workflow.mjs','tests/v56-3-stocktake-test-mode.mjs']"
-          if g.count(old)!=1: raise SystemExit('quality file list anchor mismatch')
-          g=g.replace(old,new,1)
-          inv="            'stocktake V56 immutable root': \"ROOT_ID='admin_mohanad'\" in stock and \"ROOT_ID='admin_mohanad'\" in stockadm,"
-          inv_new="            'stocktake V56 test mode from current inventory': 'تجربة الجرد' in stockadm and \"testSource:'current_inventory'\" in stockadm and './data/jeddah.tsv' in stockadm and './data/riyadh.tsv' in stockadm,\n"+inv
-          if g.count(inv)!=1: raise SystemExit('quality invariant anchor mismatch')
-          g=g.replace(inv,inv_new,1)
-          node='          node tests/v56-stocktake-workflow.mjs\n'
-          node_new=node+'          node tests/v56-3-stocktake-test-mode.mjs\n'
-          if g.count(node)!=1: raise SystemExit('quality node anchor mismatch')
-          g=g.replace(node,node_new,1)
-          gate.write_text(g)
-          PY
       - name: Verify V56.3
         shell: bash
         run: |
@@ -125,16 +29,13 @@ console.log('V56.3 stocktake test mode regression: OK');
           git diff --check
           grep -q 'id="testCampaign"' admin-stocktake.html
           grep -q "testSource:'current_inventory'" admin-stocktake.html
+
       - name: Commit V56.3
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet; then
-            echo 'No changes to commit'
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add admin-stocktake.html tests/v56-3-stocktake-test-mode.mjs .github/workflows/site-quality-gate.yml
+          git add admin-stocktake.html .github/workflows/site-quality-gate.yml
           git commit -m 'V56.3 — add isolated stocktake test mode from current inventory'
           git push origin main
