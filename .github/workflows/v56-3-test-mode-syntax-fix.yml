@@ -51,4 +51,4 @@ jobs:
           git commit -m 'V56.3.1 — fix stocktake test-mode JavaScript syntax'
           git push origin main
 
-# trigger: v56.3.1-dual
+# trigger: v56.3.1-selector-current-main
