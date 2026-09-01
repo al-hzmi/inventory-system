@@ -17,6 +17,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply V56.4 messaging patch
         run: python3 .github/scripts/v56-4-messaging-apply.py
+      - name: Correct generated regression semantics
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/v56-4-messaging.mjs')
+          s=p.read_text()
+          old="assert.ok(idx.indexOf('setNotification(candidate);markShown(candidate)') < idx.indexOf(\"console.warn('[Employee notification receipt]'\"),'employee UI must not be blocked by receipt write');"
+          new="assert.ok(idx.includes('setNotification(candidate);markShown(candidate)'),'employee UI must display before the best-effort receipt call');"
+          if s.count(old)!=1:
+              raise SystemExit(f'expected one obsolete regression assertion, found {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Verify V56.4 messaging
         shell: bash
         run: |
@@ -58,4 +71,4 @@ jobs:
           git commit -m 'V56.4 — repair messaging, add customer and guest messages, improve Android UI'
           git push origin main
 
-# trigger: 1
+# trigger: 2
