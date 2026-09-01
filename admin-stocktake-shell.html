@@ -8,8 +8,8 @@
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fafaf9;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;color:#1c1917}.context{height:52px;border-bottom:1px solid #e7e5e4;background:#fafaf9;display:flex;align-items:center;gap:10px;padding:0 14px}.context b{font-size:13px;flex:1}.context span{font-size:9px;color:#78716c;margin-right:7px;font-weight:500}.action{height:34px;padding:0 11px;border:1px solid #e7e5e4;border-radius:10px;background:#fff;color:#1c1917;text-decoration:none;display:inline-flex;align-items:center;font-size:10px;font-weight:700}.frame{display:block;width:100%;height:calc(100dvh - var(--v51-shell-h,64px) - 52px);border:0;background:#fafaf9}@media(max-width:780px){.context{height:48px}.context span{display:none}.frame{height:calc(100dvh - var(--v51-shell-h,108px) - 48px)}}</style>
 </head>
 <body>
-<div class="context"><b>إدارة الجرد <span>الحملات · الفرق · الفروقات · التصدير</span></b><a class="action" href="./stocktake.html">واجهة الموظف</a></div>
-<iframe id="stocktakeFrame" class="frame" src="./admin-stocktake.html?embedded=1" title="إدارة الجرد"></iframe>
+<div class="context"><b>إدارة الجرد <span>الحملات · الفرق · الفروقات · التصدير</span></b><a class="action" href="./stocktake.html?v=56.0">واجهة الموظف</a></div>
+<iframe id="stocktakeFrame" class="frame" src="./admin-stocktake.html?embedded=1&v=56.0" title="إدارة الجرد"></iframe>
 <script>
 const f=document.getElementById('stocktakeFrame');
 function normalizeFrame(){try{const d=f.contentDocument;if(!d)return;const top=d.querySelector('.top');if(top)top.style.display='none';const wrap=d.querySelector('.wrap');if(wrap){wrap.style.maxWidth='1460px';wrap.style.paddingTop='0'}d.documentElement.style.background='#fafaf9';d.body.style.background='#fafaf9'}catch(e){console.warn('[stocktake shell]',e)}}
