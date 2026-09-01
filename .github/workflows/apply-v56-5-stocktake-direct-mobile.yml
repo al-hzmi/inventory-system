@@ -1,0 +1,74 @@
+name: Apply V56.5 Direct Stocktake Mobile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/patch_v56_5_stocktake_direct_mobile.py'
+      - '.github/workflows/apply-v56-5-stocktake-direct-mobile.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Rebase on latest main
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V56.5 patch
+        run: python tools/patch_v56_5_stocktake_direct_mobile.py
+      - name: Syntax and regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, sys
+          for name in ['admin-stocktake.html','admin-stocktake-shell.html']:
+              s=Path(name).read_text(encoding='utf-8')
+              failures=[]
+              for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+                  code=m.group(2)
+                  if not code.strip() or 'src=' in m.group(1):
+                      continue
+                  f=Path('/tmp')/f'{Path(name).stem}-{i}.js'
+                  f.write_text(code,encoding='utf-8')
+                  r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+                  if r.returncode:
+                      failures.append(r.stderr)
+              if failures:
+                  print('\n'.join(failures))
+                  sys.exit(1)
+          print('V56_5_SCRIPT_SYNTAX_OK')
+          PY
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          git diff --check
+      - name: Remove bootstrap files
+        run: |
+          rm -f tools/patch_v56_5_stocktake_direct_mobile.py
+          rm -f .github/workflows/apply-v56-5-stocktake-direct-mobile.yml
+      - name: Commit V56.5
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A admin-stocktake.html admin-stocktake-shell.html tests/v56-5-stocktake-direct-mobile.mjs .github/workflows/v56-3-stocktake-regression.yml tools/patch_v56_5_stocktake_direct_mobile.py .github/workflows/apply-v56-5-stocktake-direct-mobile.yml
+          git commit -m 'V56.5 — direct inventory stocktake and mobile admin'
+          git pull --rebase origin main
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          git push origin HEAD:main
