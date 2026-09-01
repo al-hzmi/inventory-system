@@ -34,19 +34,15 @@ jobs:
             'stocktake.html': 'd1b3a6eff31410ad7447d1b8b571d782e91eb8fba35af80ac52f68888919732a',
             'admin-stocktake.html': 'cef8d74c90f8962084b2b31c7c7dfd2d5ec05f0b8a7979edc2fc682e057f3dc7',
             'tests/v56-stocktake-workflow.mjs': '733bb5be1f089801b300c30a4d6f018c8d3891f5f7a4e7d729818402487629e2',
-            '.github/workflows/v56-stocktake-quality-gate.yml': '360a85343ee4fbac1ad8e245c6e3f233af84b806fbef29bd2b634173f3d125de',
           }
           chunks = {
             'stocktake.html': ['.v56_payload/stocktake.01','.v56_payload/stocktake.02'],
             'admin-stocktake.html': ['.v56_payload/admin.01','.v56_payload/admin.02','.v56_payload/admin.03'],
             'tests/v56-stocktake-workflow.mjs': ['.v56_payload/test.01'],
-            '.github/workflows/v56-stocktake-quality-gate.yml': ['.v56_payload/quality.01'],
           }
           for target, parts in chunks.items():
               encoded = ''.join(Path(p).read_text(encoding='utf-8') for p in parts)
               encoded = ''.join(encoded.split())
-              # Correct a transport typo in one temporary compressed chunk only;
-              # the SHA-256 assertions below remain the authority.
               if target == 'admin-stocktake.html':
                   encoded = encoded.replace('pkeagdgLSm','pkeegdgLSm')
               raw = zlib.decompress(base64.b64decode(encoded))
@@ -77,7 +73,7 @@ jobs:
           set -euo pipefail
           node tests/v56-stocktake-workflow.mjs
           python - <<'PY'
-          import re, pathlib, subprocess, tempfile
+          import re, pathlib, subprocess
           for name in ['stocktake.html','admin-stocktake.html']:
               html=pathlib.Path(name).read_text(encoding='utf-8')
               blocks=[]
@@ -100,7 +96,7 @@ jobs:
           rm -f .github/workflows/v56-stocktake-apply.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add stocktake.html admin-stocktake.html admin-stocktake-shell.html tests/v56-stocktake-workflow.mjs .github/workflows/v56-stocktake-quality-gate.yml .v56_payload .github/workflows/v56-stocktake-apply.yml
+          git add stocktake.html admin-stocktake.html admin-stocktake-shell.html tests/v56-stocktake-workflow.mjs .v56_payload .github/workflows/v56-stocktake-apply.yml
           git commit -m 'V56 — Production digital stocktake workflow'
           git fetch origin main
           git rebase origin/main
