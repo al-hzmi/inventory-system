@@ -36,3 +36,5 @@ jobs:
           git commit -m 'Verify stocktake blind behavior without UI copy'
           git pull --rebase origin main
           git push origin HEAD:main
+
+# trigger
