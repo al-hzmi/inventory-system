@@ -1,0 +1,66 @@
+name: V56.3 Syntax Fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-3-fix-syntax.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix test button selector typo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('admin-stocktake.html')
+          s=p.read_text()
+          old="button=$('#testCreate'];"
+          new="button=$('#testCreate');"
+          if s.count(old)!=1:
+              raise SystemExit(f'expected one typo anchor, found {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Verify syntax and stocktake regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, sys
+          s=Path('admin-stocktake.html').read_text()
+          fail=[]
+          for i,m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I)):
+              code=m.group(2)
+              if not code.strip():
+                  continue
+              f=Path('/tmp')/f'admin-stocktake-{i}.js'
+              f.write_text(code)
+              r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+              if r.returncode:
+                  fail.append(r.stderr)
+          if fail:
+              print('\n'.join(fail))
+              sys.exit(1)
+          print('ADMIN_STOCKTAKE_SYNTAX_OK')
+          PY
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          git diff --check
+      - name: Commit verified syntax fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-stocktake.html
+          git commit -m 'V56.3 — fix stocktake test button syntax'
+          git push origin main
