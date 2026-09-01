@@ -25,8 +25,8 @@ has('لا يوجد أي تعديل تلقائي للمخزون','stocktake must 
 const directBranch=admin.match(/function importHtml\(cp\)\{[\s\S]*?function mappingHtml/);
 assert.ok(directBranch,'import rendering function must exist');
 assert.ok(directBranch[0].indexOf("cp.sourceMode==='current_inventory'")<directBranch[0].indexOf('id="importFile"'),'direct source branch must return before legacy Excel input');
-shellHas('admin-stocktake.html?embedded=1&v=56.5','admin shell must cache-bust the V56.5 stocktake page');
-shellHas('stocktake.html?v=56.5','employee stocktake link must use the V56.5 cache key');
+shellHas('admin-stocktake.html?embedded=1&v=56.6','admin shell must cache-bust the current V56.6 stocktake page');
+shellHas('stocktake.html?v=56.6','employee stocktake link must use the current V56.6 cache key');
 shellHas('.context b{font-size:16px}','mobile shell heading must be readable without zoom');
 shellHas('.action{height:40px;padding:0 12px;font-size:13px}','mobile shell action must be readable and tappable');
-console.log('V56.5 direct inventory + mobile stocktake regression: OK');
+console.log('V56.5 direct inventory + V56.6 responsive stocktake regression: OK');
