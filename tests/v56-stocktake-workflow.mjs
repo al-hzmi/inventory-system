@@ -27,7 +27,9 @@ has(employee,'+ كمية عُثر عليها','found-later correction control re
 has(employee,"action:wasCounted?'count_revised':'count_created'",'first count and revisions must be distinguishable');
 
 // Flexible team model and admin root control.
-has(admin,'أعضاء لجنة الجرد أصحاب الحسابات','teams must support flexible committee membership');
+has(admin,'عضو / أعضاء اللجنة (أصحاب الحسابات)','committee member terminology must match the stocktake form');
+has(admin,'المساعد / المساعدون','assistant terminology must match the stocktake form');
+has(admin,'<th>عضو اللجنة</th><th>المساعد</th>','printable report must preserve committee/assistant columns');
 has(admin,'memberEmployeeIds','team membership must be multi-member');
 has(admin,'extraMemberNames','non-account committee members must be supported');
 has(admin,'نطاق الجرد','scope must be free text');
