@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='55.0';
+const VERSION='55.1';
 const PATH=(location.pathname.split('/').pop()||'index.html').toLowerCase();
 const IS_EMPLOYEE_SURFACE=PATH==='index.html'||(PATH==='customer.html'&&new URLSearchParams(location.search).get('employeeView')==='1');
 if(!IS_EMPLOYEE_SURFACE)return;
@@ -21,6 +21,10 @@ const randomB64=(n=32)=>bytesToBase64(crypto.getRandomValues(new Uint8Array(n)))
 const serverTs=()=>window.firebase?.firestore?.FieldValue?.serverTimestamp?.()||new Date();
 const deviceMeta=()=>({platform:navigator.platform||'',userAgent:navigator.userAgent||'',screen:`${screen.width||0}x${screen.height||0}`,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'',standalone:Boolean(matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone)});
 const currentSession=()=>{try{return {name:String(localStorage.getItem(K.name)||'').trim(),id:String(localStorage.getItem(K.id)||'').trim(),auth:String(localStorage.getItem(K.auth)||'')}}catch{return{name:'',id:'',auth:''}}};
+const readSessionProof=()=>{try{return JSON.parse(localStorage.getItem(K.photoProof)||'null')||null}catch{return null}};
+const tsMs=v=>{try{if(!v)return 0;if(typeof v.toMillis==='function')return v.toMillis();if(Number.isFinite(Number(v.seconds)))return Number(v.seconds)*1000;const n=new Date(v).getTime();return Number.isFinite(n)?n:0}catch{return 0}};
+const proofStateFor=(session)=>{const proof=readSessionProof(),verifiedAt=Number(proof?.verifiedAt)||0,matches=Boolean(proof?.role==='employee'&&proof?.employeeId===session.id&&proof?.photoId);return {proof,verifiedAt,matches}};
+const resetProofSatisfied=(session,account)=>{const ps=proofStateFor(session);if(!ps.matches)return false;if(account?.passwordResetPhotoId||account?.passwordResetPhotoCompletedAt)return true;const resetAt=Math.max(tsMs(account?.passwordResetAt),tsMs(account?.passwordUpdatedAt));return Boolean(resetAt&&ps.verifiedAt>=resetAt)};
 const loadScript=src=>new Promise((resolve,reject)=>{const existing=[...document.scripts].find(s=>String(s.src||'').includes(src.split('/').pop()));if(existing&&window.firebase){resolve();return}const s=document.createElement('script');s.src=src;s.async=true;s.onload=resolve;s.onerror=()=>reject(new Error('SCRIPT_LOAD'));document.head.appendChild(s)});
 let dbPromise=null;
 async function ensureDb(){
@@ -68,6 +72,9 @@ async function watchAuthenticatedSession(){
     const account={id:snap.id,...snap.data()},hash=await enrollTrustedDevice(ref,account);
     const fresh=(await ref.get()).data()||account,epoch=Number(fresh.forceReauthEpoch)||0;
     let ack=0,pending=0;try{ack=Number(localStorage.getItem(ACK+s.id)||0);pending=Number(localStorage.getItem(PENDING+s.id)||0)}catch{}
+    const proofState=proofStateFor(s),serverCompleted=Number(fresh.forceReauthCompletedEpoch)||0;
+    if(epoch&&(serverCompleted>=epoch||(proofState.matches&&proofState.verifiedAt>=epoch))){ack=epoch;pending=0;try{localStorage.setItem(ACK+s.id,String(epoch));localStorage.removeItem(PENDING+s.id)}catch{};if(!QA)ref.set({lastReauthCompletedAt:serverTs(),lastReauthDeviceHash:hash,forceReauthCompletedEpoch:epoch},{merge:true}).catch(()=>{})}
+    if(fresh.passwordResetRequiresPhoto&&resetProofSatisfied(s,fresh)){fresh.passwordResetRequiresPhoto=false;if(!QA)ref.set({passwordResetRequiresPhoto:false,passwordResetPhotoCompletedAt:fresh.passwordResetPhotoCompletedAt||serverTs(),passwordResetPhotoId:fresh.passwordResetPhotoId||proofState.proof?.photoId||''},{merge:true}).catch(()=>{})}
     const decision=reauthDecision(epoch,ack,pending);
     if(decision==='complete'){
       try{localStorage.setItem(ACK+s.id,String(epoch));localStorage.removeItem(PENDING+s.id)}catch{}
@@ -83,7 +90,10 @@ async function watchAuthenticatedSession(){
     unsub=ref.onSnapshot(doc=>{
       if(!doc.exists)return;const data=doc.data()||{},now=currentSession();if(now.id!==s.id||now.auth!=='2')return;
       let a=0,p=0;try{a=Number(localStorage.getItem(ACK+s.id)||0);p=Number(localStorage.getItem(PENDING+s.id)||0)}catch{}
-      const e=Number(data.forceReauthEpoch)||0,d=reauthDecision(e,a,p);
+      const e=Number(data.forceReauthEpoch)||0,proofState=proofStateFor(now),serverCompleted=Number(data.forceReauthCompletedEpoch)||0;
+      if(e&&(serverCompleted>=e||(proofState.matches&&proofState.verifiedAt>=e))){a=e;p=0;try{localStorage.setItem(ACK+s.id,String(e));localStorage.removeItem(PENDING+s.id)}catch{};if(!QA)ref.set({lastReauthCompletedAt:serverTs(),lastReauthDeviceHash:hash,forceReauthCompletedEpoch:e},{merge:true}).catch(()=>{})}
+      if(data.passwordResetRequiresPhoto&&resetProofSatisfied(now,data)){data.passwordResetRequiresPhoto=false;if(!QA)ref.set({passwordResetRequiresPhoto:false,passwordResetPhotoCompletedAt:data.passwordResetPhotoCompletedAt||serverTs(),passwordResetPhotoId:data.passwordResetPhotoId||proofState.proof?.photoId||''},{merge:true}).catch(()=>{})}
+      const d=reauthDecision(e,a,p);
       if(data.passwordResetRequiresPhoto&&!QA){softLogout(s.id,Date.now(),now.name);return}
       if(d==='force')softLogout(s.id,e,now.name);
       else if(d==='complete'){

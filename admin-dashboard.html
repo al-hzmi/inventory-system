@@ -34,9 +34,9 @@ html,body,#root{min-height:100%;background:#FAFAF9;color:#1C1917}*{box-sizing:bo
 @media(prefers-reduced-motion:reduce){#app-loader img{animation:none}}
 
 /* V56.4 messaging — mobile/Android ergonomics */
-.admin-message-overlay{overscroll-behavior:contain}
-.admin-message-sheet{max-height:min(92dvh,760px);min-height:0}
-.admin-message-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.admin-message-overlay{overscroll-behavior:none;overflow:hidden;touch-action:none}
+.admin-message-sheet{max-height:min(92dvh,760px);min-height:0;touch-action:pan-y}
+.admin-message-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;min-height:0}
 @media(max-width:639px){
   .admin-message-overlay{align-items:flex-end!important;padding-top:max(10px,env(safe-area-inset-top))!important}
   .admin-message-sheet{width:100%!important;max-height:calc(100dvh - max(10px,env(safe-area-inset-top)))!important;border-radius:22px 22px 0 0!important}
@@ -53,6 +53,30 @@ const firebaseConfig={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomai
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const {useState,useEffect,useMemo,useCallback}=React;
+
+// V56.10 — iOS-safe modal scroll lock. Prevents a bottom sheet from scrolling the page behind it.
+const useBodyScrollLock=()=>{useEffect(()=>{
+  const w=window,body=document.body,html=document.documentElement;
+  let lock=w.__BATCO_BODY_SCROLL_LOCK;
+  if(!lock){lock=w.__BATCO_BODY_SCROLL_LOCK={count:0,y:0,body:{},htmlOverflow:''}}
+  if(lock.count===0){
+    lock.y=window.scrollY||window.pageYOffset||0;
+    lock.body={position:body.style.position,top:body.style.top,left:body.style.left,right:body.style.right,width:body.style.width,overflow:body.style.overflow};
+    lock.htmlOverflow=html.style.overflow;
+    body.style.position='fixed';body.style.top=`-${lock.y}px`;body.style.left='0';body.style.right='0';body.style.width='100%';body.style.overflow='hidden';
+    html.style.overflow='hidden';
+  }
+  lock.count+=1;
+  return()=>{
+    const active=w.__BATCO_BODY_SCROLL_LOCK;if(!active)return;
+    active.count=Math.max(0,active.count-1);
+    if(active.count===0){
+      Object.assign(body.style,active.body);html.style.overflow=active.htmlOverflow||'';
+      const y=active.y||0;delete w.__BATCO_BODY_SCROLL_LOCK;
+      requestAnimationFrame(()=>window.scrollTo(0,y));
+    }
+  };
+},[])};
 
 const STORAGE_KEYS={NAME:'inventory_user_name_v2',TOKEN:'inventory_admin_token_v2',PHOTO_PROOF:'inventory_login_photo_proof_v2'};
 const PREVIEW_KEY='batco_customer_portal_preview_v2';
@@ -257,6 +281,7 @@ function EmployeeMergeModal({source,accounts,onClose,onSaved}){
 
 
 function EmployeeMessageModal({target,notifications,onClose}){
+  useBodyScrollLock();
   const [title,setTitle]=useState('رسالة من الإدارة');
   const [message,setMessage]=useState('');
   const [mode,setMode]=useState('next_open');
@@ -341,6 +366,7 @@ function CustomerManagerModal({customer,devices=[],busy=false,onClose,onSave,onN
 
 
 function CustomerMessageModal({target,onClose}){
+  useBodyScrollLock();
   const [title,setTitle]=useState('رسالة من الإدارة');
   const [message,setMessage]=useState('');
   const [mode,setMode]=useState('next_open');

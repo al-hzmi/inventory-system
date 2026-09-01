@@ -258,7 +258,7 @@
     html=html.replace(submitMarker,submitMarker+'\n        '+stockGuard);
 
     if(!html.includes('EmployeeAdminNotification')||html.includes('return <EmployeeAdminMessageScreen')||!html.includes('./customer.html?employeeView=1')||!html.includes('>عملاء</span>')||!html.includes('batco_employee_transfer_open_cart_v1')||!html.includes('batco_employee_transfer_warehouse_v1')||!html.includes('batco_employee_transfer_notes_v1')||!html.includes('const stockConflicts = items.filter'))throw new Error('V40_OUTPUT_CHECK');
-    html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.0"></scr'+'ipt></body>');
+    html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.1"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V40 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
