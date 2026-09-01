@@ -29,7 +29,9 @@ jobs:
           p.write_text(s.replace(old,new,1),encoding='utf-8')
           PY
       - name: Apply V56.9 operator UX
-        run: python3 tools/apply_v56_9_stocktake_operator.py
+        run: |
+          python3 tools/apply_v56_9_stocktake_operator.py
+          git restore tools/apply_v56_9_stocktake_operator.py
       - name: Verify stocktake contracts
         run: |
           node tests/v56-stocktake-workflow.mjs
