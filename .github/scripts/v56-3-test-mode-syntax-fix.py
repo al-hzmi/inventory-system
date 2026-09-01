@@ -2,9 +2,9 @@ from pathlib import Path
 
 path = Path('admin-stocktake.html')
 s = path.read_text()
-old = '||12)))'
-new = '||12))))'
+old = "button=$('#testCreate'];"
+new = "button=$('#testCreate');"
 count = s.count(old)
-if count != 2:
-    raise SystemExit(f'expected exactly two V56.3 sample-size syntax anchors, found {count}')
-path.write_text(s.replace(old, new))
+if count != 1:
+    raise SystemExit(f'expected exactly one V56.3 selector typo, found {count}')
+path.write_text(s.replace(old, new, 1))
