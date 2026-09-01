@@ -19,7 +19,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json,sys
-          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js']
+          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','tests/v56-stocktake-workflow.mjs']
           missing=[x for x in files if not Path(x).exists()]
           if missing: raise SystemExit('MISSING: '+', '.join(missing))
           for p in Path('.').rglob('*'):
@@ -50,13 +50,17 @@ jobs:
             'customer portal control': 'CustomerPortalBootstrap' in cust and 'CUSTOMER_PORTAL_CONTROL_DOC' in cust,
             'admin customer monitoring': 'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
             'stocktake employee gate': 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx,
-            'stocktake audit/count': 'stocktake_audit' in stock and 'data-full' in stock and 'النواقص' in stock and 'ملاحظات' in stock,
-            'stocktake duplicate prevention': 'صنف موجود في فرق أخرى' in stockadm,
+            'stocktake V56 blind audit/count': 'stocktake_audit' in stock and 'العد الأول أعمى' in stock and 'quantity_found_later' in stock and '+ كمية عُثر عليها' in stock and 'navigator.vibrate' in stock and 'ملاحظات' in stock,
+            'stocktake V56 Excel duplicate prevention': 'XLSX.read' in stockadm and 'سيتم رفض أي تكرار داخل الملف أو بين المجموعات' in stockadm and 'ملف Excel مستقل' in stockadm,
+            'stocktake V56 flexible committees': 'memberEmployeeIds' in stockadm and 'أعضاء لجنة الجرد' in stockadm and 'نطاق الجرد' in stockadm,
+            'stocktake V56 accountant-only settlement': 'لا يوجد أي تعديل تلقائي للمخزون' in stockadm and 'التسوية الفعلية تبقى من صلاحيات المحاسب' in stockadm,
+            'stocktake V56 immutable root': "ROOT_ID='admin_mohanad'" in stock and "ROOT_ID='admin_mohanad'" in stockadm,
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: print('\n'.join('FAIL '+x for x in bad)); sys.exit(1)
           print('STRUCTURAL_BUSINESS_PASS',len(checks))
           PY
+          node tests/v56-stocktake-workflow.mjs
       - name: Parse every JavaScript and JSX script
         shell: bash
         run: |
