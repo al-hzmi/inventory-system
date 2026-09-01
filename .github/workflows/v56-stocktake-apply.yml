@@ -17,7 +17,7 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout isolated build branch
+      - name: Checkout isolated payload branch
         uses: actions/checkout@v4
         with:
           ref: v56-stocktake-build
@@ -42,63 +42,61 @@ jobs:
             '.github/workflows/v56-stocktake-quality-gate.yml': ['.v56_payload/quality.01'],
           }
           for target, parts in chunks.items():
-              encoded = ''.join(Path(p).read_text(encoding='utf-8') for p in parts)
-              encoded = ''.join(encoded.split())
-              if target == 'admin-stocktake.html':
-                  encoded = encoded.replace('pkeagdgLSm','pkeegdgLSm')
-              raw = zlib.decompress(base64.b64decode(encoded))
-              digest = hashlib.sha256(raw).hexdigest()
-              if digest != expected[target]:
-                  raise SystemExit(f'PAYLOAD HASH MISMATCH: {target}: {digest}')
-              out = Path(target); out.parent.mkdir(parents=True, exist_ok=True); out.write_bytes(raw)
+              encoded=''.join(Path(p).read_text(encoding='utf-8') for p in parts)
+              encoded=''.join(encoded.split())
+              if target=='admin-stocktake.html': encoded=encoded.replace('pkeagdgLSm','pkeegdgLSm')
+              raw=zlib.decompress(base64.b64decode(encoded))
+              digest=hashlib.sha256(raw).hexdigest()
+              if digest != expected[target]: raise SystemExit(f'PAYLOAD HASH MISMATCH {target}: {digest}')
+              out=Path(target); out.parent.mkdir(parents=True,exist_ok=True); out.write_bytes(raw)
               print(f'OK {target} {digest}')
-          shell = Path('admin-stocktake-shell.html')
-          text = shell.read_text(encoding='utf-8')
-          old_employee = 'href="./stocktake.html"'
-          old_admin = 'src="./admin-stocktake.html?embedded=1"'
+          shell=Path('admin-stocktake-shell.html')
+          text=shell.read_text(encoding='utf-8')
+          old_employee='href="./stocktake.html"'; old_admin='src="./admin-stocktake.html?embedded=1"'
           if old_employee not in text and 'href="./stocktake.html?v=56.0"' not in text: raise SystemExit('employee shell marker missing')
           if old_admin not in text and 'src="./admin-stocktake.html?embedded=1&v=56.0"' not in text: raise SystemExit('admin shell marker missing')
-          text = text.replace(old_employee, 'href="./stocktake.html?v=56.0"').replace(old_admin, 'src="./admin-stocktake.html?embedded=1&v=56.0"')
-          shell.write_text(text, encoding='utf-8')
+          text=text.replace(old_employee,'href="./stocktake.html?v=56.0"').replace(old_admin,'src="./admin-stocktake.html?embedded=1&v=56.0"')
+          shell.write_text(text,encoding='utf-8')
           PY
 
-      - name: Verify V56 stocktake behavior and syntax
+      - name: Verify V56 before release
         shell: bash
         run: |
           set -euo pipefail
           node tests/v56-stocktake-workflow.mjs
           python - <<'PY'
-          import re, pathlib, subprocess
+          import re,pathlib,subprocess
           for name in ['stocktake.html','admin-stocktake.html']:
               html=pathlib.Path(name).read_text(encoding='utf-8')
-              blocks=[body for attrs,body in re.findall(r'<script([^>]*)>(.*?)</script>',html,flags=re.S|re.I) if 'src=' not in attrs.lower()]
-              p=pathlib.Path('/tmp')/(name+'.js'); p.write_text('\n'.join(blocks),encoding='utf-8')
-              subprocess.run(['node','--check',str(p)],check=True)
+              js='\n'.join(body for attrs,body in re.findall(r'<script([^>]*)>(.*?)</script>',html,flags=re.S|re.I) if 'src=' not in attrs.lower())
+              p=pathlib.Path('/tmp')/(name+'.js'); p.write_text(js,encoding='utf-8'); subprocess.run(['node','--check',str(p)],check=True)
           PY
           grep -q 'stocktake.html?v=56.0' admin-stocktake-shell.html
           grep -q 'admin-stocktake.html?embedded=1&v=56.0' admin-stocktake-shell.html
           git diff --check
 
-      - name: Commit production change and rebase latest main
+      - name: Build clean release on latest main
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf .v56_payload
-          rm -f .github/workflows/v56-stocktake-apply.yml
+          tar -cf /tmp/v56-release.tar stocktake.html admin-stocktake.html admin-stocktake-shell.html tests/v56-stocktake-workflow.mjs .github/workflows/v56-stocktake-quality-gate.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          git checkout -B v56-release origin/main
+          tar -xf /tmp/v56-release.tar
+          rm -f .github/workflows/v56-stocktake-apply.yml
           git add -A
           git commit -m 'V56 — Production digital stocktake workflow'
-          git fetch origin main
-          git rebase origin/main
 
-      - name: Re-verify after rebase
+      - name: Re-verify exact release commit
         shell: bash
         run: |
           set -euo pipefail
           node tests/v56-stocktake-workflow.mjs
           grep -q 'stocktake.html?v=56.0' admin-stocktake-shell.html
           grep -q 'admin-stocktake.html?embedded=1&v=56.0' admin-stocktake-shell.html
+          test ! -e .github/workflows/v56-stocktake-apply.yml
           git diff --check HEAD^
 
       - name: Publish V56 to main
