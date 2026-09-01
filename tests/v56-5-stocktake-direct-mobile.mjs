@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const admin=fs.readFileSync('admin-stocktake.html','utf8');
+const shell=fs.readFileSync('admin-stocktake-shell.html','utf8');
 const has=(x,m)=>assert.ok(admin.includes(x),m||`missing ${x}`);
+const shellHas=(x,m)=>assert.ok(shell.includes(x),m||`shell missing ${x}`);
 has('<select id="campaignWarehouse"','real stocktake must choose a live inventory source');
 has('إنشاء من المخزون الحالي','real stocktake must not require Excel');
 has("fetch(`${source.url}?stocktake=${Date.now()}`,{cache:'no-store'})",'real stocktake must bypass stale cache');
@@ -23,4 +25,8 @@ has('لا يوجد أي تعديل تلقائي للمخزون','stocktake must 
 const directBranch=admin.match(/function importHtml\(cp\)\{[\s\S]*?function mappingHtml/);
 assert.ok(directBranch,'import rendering function must exist');
 assert.ok(directBranch[0].indexOf("cp.sourceMode==='current_inventory'")<directBranch[0].indexOf('id="importFile"'),'direct source branch must return before legacy Excel input');
+shellHas('admin-stocktake.html?embedded=1&v=56.5','admin shell must cache-bust the V56.5 stocktake page');
+shellHas('stocktake.html?v=56.5','employee stocktake link must use the V56.5 cache key');
+shellHas('.context b{font-size:16px}','mobile shell heading must be readable without zoom');
+shellHas('.action{height:40px;padding:0 12px;font-size:13px}','mobile shell action must be readable and tappable');
 console.log('V56.5 direct inventory + mobile stocktake regression: OK');
