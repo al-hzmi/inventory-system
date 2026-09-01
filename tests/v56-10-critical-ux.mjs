@@ -31,8 +31,8 @@ assert.ok(adminAuth.includes('forceReauthEpoch:epoch'),'admin must retain the ab
 assert.ok(boot.includes('./v48-auth-security.js?v=55.1'),'employee bootstrap must cache-bust the fixed auth layer');
 
 // Stocktake V56.9 must be the surface linked by admin and employee shells.
-assert.ok(shell.includes('admin-stocktake.html?embedded=1&v=56.9'),'admin stocktake shell must load V56.9');
-assert.ok(shell.includes('stocktake.html?v=56.9'),'employee stocktake link must load V56.9');
+assert.ok(shell.includes('admin-stocktake.html?embedded=1&v=56.11'),'admin stocktake shell must load V56.9');
+assert.ok(shell.includes('stocktake.html?v=56.11'),'employee stocktake link must load V56.9');
 assert.ok(stock.includes('المنجز حديثًا') || stock.includes('recentComplete') || stock.includes('v56-9-operator'),'V56.9 operator workflow missing');
 
 console.log('V56.10 critical UX regression: OK');

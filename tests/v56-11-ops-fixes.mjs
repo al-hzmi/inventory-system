@@ -1,0 +1,30 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const stock=fs.readFileSync('stocktake.html','utf8');
+const shell=fs.readFileSync('admin-stocktake-shell.html','utf8');
+const idx=fs.readFileSync('runtime/index-v37-source.txt','utf8');
+const cust=fs.readFileSync('runtime/customer-v37-source.txt','utf8');
+const admin=fs.readFileSync('admin-dashboard.html','utf8');
+const boot=fs.readFileSync('index.html','utf8');
+const custBoot=fs.readFileSync('customer.html','utf8');
+assert.ok(stock.includes('grid-template-columns:minmax(0,1fr) auto!important'),'edit row must shrink safely');
+assert.ok(stock.includes('@media(max-width:520px){.editrow{grid-template-columns:minmax(0,1fr)!important}.save{width:100%'),'mobile edit must stack the save button');
+assert.ok(stock.includes('.actual{width:100%;min-width:0}'),'quantity input must never force horizontal overflow');
+assert.ok(stock.includes("searchKeyboardMode:'numeric'"),'numeric keyboard must be the stocktake default');
+assert.ok(stock.includes("user.isAdmin?`<button id=\"keyboardModeBtn\""),'keyboard override must be root/admin-only');
+assert.ok(stock.includes("searchKeyboardMode:next")&&stock.includes("searchKeyboardUpdatedBy:ROOT_ID"),'root keyboard override must be global through stocktake control');
+assert.ok(stock.includes('inputmode=\"${keyboardMode}\"'),'search input must use central keyboard mode');
+assert.ok(!stock.includes('يمكن مسح الباركود الطويل مباشرة؛ النظام يستخرج رقم الصنف منه تلقائيًا مثل بحث المخزون.'),'verbose operator hint must be removed');
+assert.ok(!stock.includes('لن تظهر بقية الأصناف هنا حتى لا تربك عملية الجرد.'),'empty-state guidance must be removed');
+assert.ok(!stock.includes('يمكن تعديل الإجمالي النهائي. سيُحفظ التعديل كاملًا في سجل الجرد.'),'edit guidance must be removed');
+assert.ok(shell.includes('stocktake.html?v=56.11')&&shell.includes('admin-stocktake.html?embedded=1&v=56.11'),'stocktake cache keys must be V56.11');
+for(const [name,src] of [['employee',idx],['customer',cust]]){
+  assert.ok(src.includes('NOTIFICATION_LEGACY_ONCE_CUTOFF_MS'),`${name}: legacy once cutoff missing`);
+  assert.ok(src.includes('LocalNotificationShows'),`${name}: local receipt ledger missing`);
+  assert.ok(src.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),`${name}: local receipt must be persisted before display`);
+  assert.ok(src.includes('if(!due(row,true))return'),`${name}: remote receipt must bypass local replay guard`);
+}
+assert.ok(admin.match(/receiptPolicyVersion:2/g)?.length>=2,'new employee and customer messages must carry receipt policy v2');
+assert.ok(boot.includes('index-v37-source.txt?v=56.11'),'employee runtime cache bust missing');
+assert.ok(custBoot.includes('customer-v37-source.txt?v=56.11'),'customer runtime cache bust missing');
+console.log('V56.11 stocktake + one-time messaging regression: OK');

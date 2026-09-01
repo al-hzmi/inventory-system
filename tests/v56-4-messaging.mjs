@@ -10,7 +10,7 @@ const custBoot=fs.readFileSync('customer.html','utf8');
 assert.match(idx,/where\('employeeId','==',employeeId\)\.limit\(50\)/,'employee messages must query recipient directly');
 assert.match(idx,/where\('targetKey','==',targetKeys\[0\]\)\.limit\(50\)/,'employee alias fallback must be targeted');
 assert.ok(!idx.includes("collection(EMPLOYEE_NOTIFICATION_COLLECTION).limit(150).onSnapshot"),'legacy global 150 listener must be removed');
-assert.ok(idx.includes('setNotification(candidate);markShown(candidate)'),'employee UI must display before the best-effort receipt call');
+assert.ok(idx.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'employee UI must display before the best-effort receipt call');
 
 assert.ok(adm.includes("db.collection('customer_notifications').add"),'admin must be able to create customer messages');
 assert.ok(adm.includes('CustomerMessageModal'),'customer message modal missing');
@@ -22,13 +22,13 @@ assert.ok(cust.includes("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifi
 assert.ok(cust.includes('CustomerAdminNotificationHost'),'customer notification host missing');
 assert.match(cust,/where\(field,'==',value\)\.limit\(50\)/,'customer notifications must use targeted equality query');
 assert.ok(cust.includes('visitorId===customerVisitorId'),'guest visitor identity targeting missing');
-assert.ok(cust.includes('setNotification(candidate);markShown(candidate)'),'customer UI must display before best-effort receipt write');
+assert.ok(cust.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'customer UI must display before best-effort receipt write');
 assert.ok(cust.includes('.customer-admin-message-card'),'Android customer message card CSS missing');
 assert.ok(cust.includes('<CustomerPortalBootstrap/><CustomerAdminNotificationHost/>'),'customer notification host must be mounted');
 assert.ok(cust.indexOf('function CustomerPortalBootstrap(){') < cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") && cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") < cust.indexOf("ReactDOM.createRoot(document.getElementById('root')).render"),'customer notification host must live after the V42 bootstrap replacement boundary');
 
-assert.ok(boot.includes("index-v37-source.txt?v=56.4"),'employee cache bust missing');
-assert.ok(custBoot.includes("customer-v37-source.txt?v=56.4"),'customer cache bust missing');
+assert.ok(boot.includes("index-v37-source.txt?v=56.11"),'employee cache bust missing');
+assert.ok(custBoot.includes("customer-v37-source.txt?v=56.11"),'customer cache bust missing');
 assert.ok(boot.includes('maxHeight:\'min(72dvh, 560px)\''),'employee Android dynamic viewport card missing');
 
 console.log('V56.4 messaging regression: OK');

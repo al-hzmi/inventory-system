@@ -1337,6 +1337,12 @@ function CustomerPortalBootstrap(){
 }
 
 const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';
+const CUSTOMER_NOTIFICATION_LEGACY_ONCE_CUTOFF_MS=Date.parse('2026-09-02T02:24:00+03:00');
+const CUSTOMER_NOTIFICATION_RECEIPT_PREFIX='batco_customer_notification_receipts_v2_';
+const readCustomerNotificationLedger=key=>{try{const v=JSON.parse(localStorage.getItem(key)||'{}');return v&&typeof v==='object'?v:{}}catch{return{}}};
+const customerLocalNotificationShows=(key,id)=>Math.max(0,Number(readCustomerNotificationLedger(key)[id])||0);
+const bumpCustomerLocalNotificationShows=(key,id)=>{try{const v=readCustomerNotificationLedger(key);v[id]=Math.max(0,Number(v[id])||0)+1;localStorage.setItem(key,JSON.stringify(v));return v[id]}catch{return 0}};
+
 function CustomerAdminNotificationHost(){
   const [notification,setNotification]=useState(null);
   const currentRef=useRef(null),claimedRef=useRef(new Set()),feedsRef=useRef(new Map()),uidRef=useRef(auth.currentUser?.uid||''),evaluateRef=useRef(null);
@@ -1344,10 +1350,14 @@ function CustomerAdminNotificationHost(){
   useEffect(()=>{
     if(window.__employeeCustomerView)return;
     let active=true,visitorUnsub=null,uidUnsub=null,authUnsub=null,timer=null;
+    const receiptKey=CUSTOMER_NOTIFICATION_RECEIPT_PREFIX+(customerVisitorId||'unknown');
+    const localShows=id=>customerLocalNotificationShows(receiptKey,id);
+    const rememberShow=row=>bumpCustomerLocalNotificationShows(receiptKey,row.id);
+    const rowTime=v=>v?.toMillis?v.toMillis():new Date(v||0).getTime()||0;
     const matches=row=>Boolean((row.visitorId&&row.visitorId===customerVisitorId)||(uidRef.current&&row.customerUid&&row.customerUid===uidRef.current));
-    const due=row=>{if(row.status!=='active'||!matches(row))return false;const max=Math.max(1,Number(row.maxShows)||1),shown=Math.max(0,Number(row.shownCount)||0);if(shown>=max)return false;if(row.deliveryMode==='scheduled'){const ms=row.scheduledAt?.toMillis?row.scheduledAt.toMillis():new Date(row.scheduledAt||0).getTime();if(!ms||ms>Date.now())return false;}return true};
-    const markShown=async candidate=>{const ref=db.collection(CUSTOMER_NOTIFICATION_COLLECTION).doc(candidate.id);try{await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)return;const row={id:snap.id,...snap.data()};if(!due(row))return;const shown=Math.max(0,Number(row.shownCount)||0),max=Math.max(1,Number(row.maxShows)||1),next=shown+1;tx.set(ref,{shownCount:next,lastShownAt:firebase.firestore.FieldValue.serverTimestamp(),lastShownVisitorId:customerVisitorId,lastShownCustomerUid:uidRef.current||'',status:next>=max?'completed':'active',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})})}catch(e){console.warn('[Customer notification receipt]',e)}};
-    const evaluate=()=>{if(!active||currentRef.current)return;const all=[...feedsRef.current.values()].flat(),dedup=[...new Map(all.map(r=>[r.id,r])).values()],at=x=>x?.toMillis?x.toMillis():new Date(x||0).getTime()||0,candidate=dedup.filter(due).filter(r=>!claimedRef.current.has(r.id)).sort((a,b)=>(a.deliveryMode==='scheduled'?at(a.scheduledAt):at(a.createdAt))-(b.deliveryMode==='scheduled'?at(b.scheduledAt):at(b.createdAt)))[0];if(!candidate)return;claimedRef.current.add(candidate.id);currentRef.current=candidate;setNotification(candidate);markShown(candidate)};
+    const due=(row,serverOnly=false)=>{if(row.status!=='active'||!matches(row))return false;const max=Math.max(1,Number(row.maxShows)||1),serverShown=Math.max(0,Number(row.shownCount)||0),localShown=serverOnly?0:localShows(row.id),shown=Math.max(serverShown,localShown);if(shown>=max)return false;if(!serverOnly&&max===1&&row.deliveryMode!=='scheduled'&&serverShown===0&&localShown===0){const created=rowTime(row.createdAt);if(created&&created<CUSTOMER_NOTIFICATION_LEGACY_ONCE_CUTOFF_MS)return false}if(row.deliveryMode==='scheduled'){const ms=rowTime(row.scheduledAt);if(!ms||ms>Date.now())return false;}return true};
+    const markShown=async candidate=>{const ref=db.collection(CUSTOMER_NOTIFICATION_COLLECTION).doc(candidate.id);try{await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)return;const row={id:snap.id,...snap.data()};if(!due(row,true))return;const shown=Math.max(0,Number(row.shownCount)||0),max=Math.max(1,Number(row.maxShows)||1),next=shown+1;tx.set(ref,{shownCount:next,lastShownAt:firebase.firestore.FieldValue.serverTimestamp(),lastShownVisitorId:customerVisitorId,lastShownCustomerUid:uidRef.current||'',status:next>=max?'completed':'active',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})})}catch(e){console.warn('[Customer notification receipt]',e)}};
+    const evaluate=()=>{if(!active||currentRef.current)return;const all=[...feedsRef.current.values()].flat(),dedup=[...new Map(all.map(r=>[r.id,r])).values()],at=x=>x?.toMillis?x.toMillis():new Date(x||0).getTime()||0,candidate=dedup.filter(due).filter(r=>!claimedRef.current.has(r.id)).sort((a,b)=>(a.deliveryMode==='scheduled'?at(a.scheduledAt):at(a.createdAt))-(b.deliveryMode==='scheduled'?at(b.scheduledAt):at(b.createdAt)))[0];if(!candidate)return;claimedRef.current.add(candidate.id);currentRef.current=candidate;rememberShow(candidate);setNotification(candidate);markShown(candidate)};
     evaluateRef.current=evaluate;
     const bind=(key,field,value)=>{if(!value)return null;try{return db.collection(CUSTOMER_NOTIFICATION_COLLECTION).where(field,'==',value).limit(50).onSnapshot(s=>{if(!active)return;feedsRef.current.set(key,s.docs.map(d=>({id:d.id,...d.data()})));evaluate()},e=>console.warn('[Customer notifications realtime]',key,e))}catch(e){console.warn('[Customer notifications query]',key,e);return null}};
     visitorUnsub=bind('visitor','visitorId',customerVisitorId);
