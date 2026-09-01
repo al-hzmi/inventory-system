@@ -8,7 +8,7 @@
   window.__V44_QA=Boolean((['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||window.__V44_QA===true)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
   const params=new URLSearchParams(location.search),employeeName=(()=>{try{return String(localStorage.getItem('inventory_user_name_v2')||'').trim()}catch{return''}})();
   if(employeeName&&params.get('employeeView')!=='1'){location.replace('./index.html?employee=1');return}
-  const CORE='./runtime/customer-v37-source.txt?v=55.5';
+  const CORE='./runtime/customer-v37-source.txt?v=56.4';
   const replaceBetween=(src,start,end,replacement,label)=>{const a=src.indexOf(start);if(a<0)throw new Error(label+'_START');const b=src.indexOf(end,a+start.length);if(b<0)throw new Error(label+'_END');return src.slice(0,a)+replacement+src.slice(b)};
   const loadCore=async()=>{try{const r=await fetch(CORE,{cache:'no-store'});if(!r.ok)throw new Error('CORE_HTTP_'+r.status);const text=await r.text();try{const c=await caches.open('batco-v37-core');await c.put(CORE,new Response(text,{headers:{'Content-Type':'text/plain;charset=utf-8'}}))}catch{}return text}catch(e){try{const hit=await caches.match(CORE);if(hit)return await hit.text()}catch{}throw e}};
   try{

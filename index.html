@@ -13,7 +13,7 @@
 (async function(){
   // V44_QA_BOOTSTRAP: automated browsers must never pollute production presence or logs.
   window.__V44_QA=Boolean(['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
-  const CORE='./runtime/index-v37-source.txt?v=56.0';
+  const CORE='./runtime/index-v37-source.txt?v=56.4';
   const TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';
   const TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';
   const TRANSFER_APPLIED_PREFIX='batco_employee_customer_cart_transfer_applied_v1_';
@@ -206,11 +206,14 @@
     useEffect(() => { closeRef.current = onClose; }, [onClose]);
     useEffect(() => { if (!notification?.id) return; const timer = setTimeout(() => closeRef.current?.(), 10000); return () => clearTimeout(timer); }, [notification?.id]);
     return (
-        <div className="fixed inset-x-0 top-0 z-[280] pointer-events-none px-12 font-sans" style={{paddingTop:'max(10px, env(safe-area-inset-top))'}} aria-live="polite">
-            <div role="status" className="pointer-events-auto mx-auto w-full max-w-[430px] bg-white/95 backdrop-blur border border-border rounded-16 shadow-lift px-12 py-11 flex items-start gap-10 animate-card">
-                <div className="w-40 h-40 rounded-12 bg-successSoft text-success flex items-center justify-center flex-shrink-0" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-20 h-20"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg></div>
-                <div className="min-w-0 flex-1"><div className="flex items-center gap-6 text-[10px] text-muted"><span className="font-bold text-success">الإدارة</span><span>الآن</span></div><div className="text-[13px] font-bold text-primary mt-1 truncate">{notification?.title || 'رسالة من الإدارة'}</div><div className="text-[11px] text-secondary leading-5 mt-2 whitespace-pre-wrap overflow-hidden" style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{notification?.message || ''}</div></div>
-                <button type="button" onClick={onClose} aria-label="إغلاق الإشعار" title="إغلاق" className="w-32 h-32 rounded-10 flex items-center justify-center text-muted hover:text-primary hover:bg-surface flex-shrink-0">×</button>
+        <div className="fixed inset-0 z-[280] pointer-events-none flex items-end justify-center px-10 font-sans" style={{paddingBottom:'max(10px, env(safe-area-inset-bottom))'}} aria-live="polite">
+            <div role="status" className="pointer-events-auto w-full max-w-[520px] bg-white border border-border rounded-[20px] shadow-lift overflow-hidden animate-card" style={{maxHeight:'min(72dvh, 560px)'}}>
+                <div className="px-14 py-12 border-b border-border flex items-start gap-10">
+                    <div className="w-40 h-40 rounded-12 bg-infoSoft text-info flex items-center justify-center flex-shrink-0" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-20 h-20"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg></div>
+                    <div className="min-w-0 flex-1"><div className="text-[10px] text-info font-bold">رسالة من الإدارة</div><div className="text-[15px] font-bold text-primary mt-2 leading-6">{notification?.title || 'رسالة من الإدارة'}</div></div>
+                    <button type="button" onClick={onClose} aria-label="إغلاق الإشعار" title="إغلاق" className="w-40 h-40 rounded-12 border border-border flex items-center justify-center text-muted flex-shrink-0 active:bg-surface" style={{touchAction:'manipulation'}}>×</button>
+                </div>
+                <div className="px-14 py-14 overflow-y-auto" style={{WebkitOverflowScrolling:'touch'}}><div className="text-[13px] text-secondary leading-7 whitespace-pre-wrap">{notification?.message || ''}</div><button type="button" onClick={onClose} className="w-full h-48 rounded-12 bg-primary text-white text-[12px] font-bold mt-14" style={{touchAction:'manipulation'}}>تم</button></div>
             </div>
         </div>
     );
