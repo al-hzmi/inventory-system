@@ -55,5 +55,6 @@ jobs:
             exit 0
           fi
           git commit -m 'V56.11 — fix stocktake mobile UX and one-time messages'
+          git restore .github/scripts/v56-11-ops-fixes.py
           git pull --rebase origin main
           git push origin HEAD:main
