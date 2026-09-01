@@ -2,7 +2,7 @@ name: V56.2 Stocktake Nomenclature
 
 on:
   push:
-    branches: [v56-stocktake-nomenclature]
+    branches: [main]
     paths:
       - '.github/workflows/v56-2-nomenclature.yml'
 
@@ -17,10 +17,10 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout nomenclature branch
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: v56-stocktake-nomenclature
+          ref: main
           fetch-depth: 0
 
       - name: Align terminology with historical stocktake form
@@ -97,4 +97,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add admin-stocktake.html stocktake.html tests/v56-stocktake-workflow.mjs
           git commit -m 'V56.2 — align stocktake committee terminology'
-          git push origin HEAD:v56-stocktake-nomenclature
+          git push origin HEAD:main
