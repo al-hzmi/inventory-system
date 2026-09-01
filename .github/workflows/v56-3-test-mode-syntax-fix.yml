@@ -1,0 +1,52 @@
+name: V56.3 Test Mode Syntax Fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-3-test-mode-syntax-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply syntax correction
+        run: python3 .github/scripts/v56-3-test-mode-syntax-fix.py
+      - name: Verify stocktake syntax and regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess, sys
+          s=Path('admin-stocktake.html').read_text()
+          scripts=list(re.finditer(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I))
+          fail=[]
+          for i,m in enumerate(scripts):
+              code=m.group(2)
+              if not code.strip(): continue
+              p=Path('/tmp')/f'admin-stocktake-{i}.js'
+              p.write_text(code)
+              r=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
+              if r.returncode: fail.append(r.stderr)
+          if fail:
+              print('\n'.join(fail)); sys.exit(1)
+          print('ADMIN_STOCKTAKE_SYNTAX_OK')
+          PY
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-3-stocktake-test-mode.mjs
+          git diff --check
+      - name: Commit syntax correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-stocktake.html
+          git commit -m 'V56.3.1 — fix stocktake test-mode JavaScript syntax'
+          git push origin main
