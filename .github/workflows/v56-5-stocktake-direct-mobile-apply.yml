@@ -79,7 +79,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add admin-stocktake.html tests/v56-5-stocktake-direct-mobile.mjs .github/workflows/v56-5-stocktake-direct-mobile-regression.yml
+          git add admin-stocktake.html tests/v56-5-stocktake-direct-mobile.mjs
           git commit -m 'V56.5 — direct inventory stocktake and mobile admin redesign'
           git pull --rebase origin main
           node tests/v56-stocktake-workflow.mjs
