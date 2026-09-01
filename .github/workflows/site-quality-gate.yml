@@ -19,7 +19,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json,sys
-          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','tests/v56-stocktake-workflow.mjs']
+          files=['index.html','customer.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','admin-dashboard.html','stocktake.html','admin-stocktake.html','security-center.html','customer-sw.js','tests/v56-stocktake-workflow.mjs','tests/v56-5-stocktake-direct-mobile.mjs']
           missing=[x for x in files if not Path(x).exists()]
           if missing: raise SystemExit('MISSING: '+', '.join(missing))
           for p in Path('.').rglob('*'):
@@ -51,9 +51,9 @@ jobs:
             'admin customer monitoring': 'العملاء والزوار الآن' in adm and 'customerSessionOnline' in adm,
             'stocktake employee gate': 'currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId' in idx,
             'stocktake V56 blind audit/count': 'stocktake_audit' in stock and 'العد الأول أعمى' in stock and 'quantity_found_later' in stock and '+ كمية عُثر عليها' in stock and 'navigator.vibrate' in stock and 'ملاحظات' in stock,
-            'stocktake V56 Excel duplicate prevention': 'XLSX.read' in stockadm and 'سيتم رفض أي تكرار داخل الملف أو بين المجموعات' in stockadm and 'ملف Excel مستقل' in stockadm,
+            'stocktake V56 direct inventory snapshot': "sourceMode:'current_inventory'" in stockadm and "inventorySnapshotStatus:'loading'" in stockadm and "inventorySnapshotStatus:'ready'" in stockadm and 'expectedQty:Number(r.qty)' in stockadm and 'إنشاء من المخزون الحالي' in stockadm and "if(cp.sourceMode==='current_inventory')return" in stockadm,
             'stocktake V56 flexible committees': 'memberEmployeeIds' in stockadm and 'عضو / أعضاء اللجنة (أصحاب الحسابات)' in stockadm and 'المساعد / المساعدون' in stockadm and '<th>عضو اللجنة</th><th>المساعد</th>' in stockadm and 'نطاق الجرد' in stockadm,
-            'stocktake V56 accountant-only settlement': 'لا يوجد أي تعديل تلقائي للمخزون' in stockadm and 'التسوية الفعلية تبقى من صلاحيات المحاسب' in stockadm,
+            'stocktake V56 accountant-only settlement': 'لا يوجد أي تعديل تلقائي للمخزون' in stockadm and 'التعديل الفعلي يبقى في النظام المحاسبي' in stockadm,
             'stocktake V56 immutable root': "ROOT_ID='admin_mohanad'" in stock and "ROOT_ID='admin_mohanad'" in stockadm,
           }
           bad=[k for k,v in checks.items() if not v]
@@ -61,6 +61,7 @@ jobs:
           print('STRUCTURAL_BUSINESS_PASS',len(checks))
           PY
           node tests/v56-stocktake-workflow.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
       - name: Parse every JavaScript and JSX script
         shell: bash
         run: |
