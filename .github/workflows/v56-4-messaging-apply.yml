@@ -57,3 +57,5 @@ jobs:
           git add admin-dashboard.html runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html tests/v56-4-messaging.mjs
           git commit -m 'V56.4 — repair messaging, add customer and guest messages, improve Android UI'
           git push origin main
+
+# trigger: 1
