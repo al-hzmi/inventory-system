@@ -14,12 +14,8 @@ assert.ok(!admin.includes('id="testCount"'),'test UI must not expose sample-size
 assert.ok(!admin.includes('Math.min(30,Math.max(1'),'test mode must not cap training inventory');
 has(admin,'for(let x=0;x<rows.length;x+=350)','full test writes must be chunked below Firestore batch limits');
 
-// Previous test cleanup is destructive only for explicitly test-marked campaigns.
-has(admin,'stocktake_test_cleanup_v5612','legacy test cleanup must be one-time and versioned');
-has(admin,'c.isTest||c.testMode','cleanup must target only campaigns explicitly marked as test');
-has(admin,"db.collection('stocktake_items').where('campaignId','==',d.id)",'cleanup must remove test items');
-has(admin,"db.collection('stocktake_teams').where('campaignId','==',d.id)",'cleanup must remove test teams');
-has(admin,"db.collection('stocktake_audit').where('campaignId','==',d.id)",'cleanup must remove test audit rows');
+// Historical test cleanup was executed once from CI; normal admin use must never auto-delete future tests.
+assert.ok(!admin.includes('bindSelected();cleanupLegacyTestsOnce()'),'opening admin must not auto-delete newly created test campaigns');
 
 // Accountant control and admin preview.
 has(admin,'stocktake_accountant_access','admin must own accountant visibility control');
