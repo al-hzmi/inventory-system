@@ -1,0 +1,72 @@
+name: Apply V56.13 Firestore Quota Hardening
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/patch_v56_13_firestore_quota.py'
+      - '.github/workflows/apply-v56-13-firestore-quota.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V56.13 patch
+        run: python tools/patch_v56_13_firestore_quota.py
+      - name: Verify durable messaging and quota hardening
+        run: |
+          set -euo pipefail
+          node tests/v56-4-messaging.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          adm=Path('admin-dashboard.html').read_text()
+          emp=Path('runtime/index-v37-source.txt').read_text()
+          cust=Path('runtime/customer-v37-source.txt').read_text()
+          boot=Path('index.html').read_text()
+          cboot=Path('customer.html').read_text()
+          assert 'REALTIME_KEYS=new Set' in adm
+          assert 'const limit=REALTIME_LIMIT[key]||160' in adm
+          assert "if(!REALTIME_KEYS.has(key)){loadOnce();return()=>{}}" in adm
+          assert "customerDevices:180" in adm and "search:160" in adm and "adminAudit:120" in adm
+          assert emp.count('durationMinutes: firebase.firestore.FieldValue.increment(5)') >= 2
+          assert emp.count('timeSpentMinutes: firebase.firestore.FieldValue.increment(5)') >= 2
+          assert emp.count('}, 300000);') >= 2
+          assert emp.count(".where('employeeId','==',employeeId).limit(20)") >= 2
+          assert emp.count(".where('targetKey','==',targetKeys[0]).limit(20)") >= 2
+          assert cust.count("visibilityState==='visible'") >= 2
+          assert cust.count('},300000)') >= 2
+          assert cust.count(".where(field,'==',value).limit(20).onSnapshot") >= 2
+          assert cust.count("where('customerUid','==',user.uid).limit(100).onSnapshot") >= 2
+          assert cust.count("where('customerUid','==',user.uid).limit(60).onSnapshot") >= 2
+          for name,src in [('employee',emp),('customer',cust)]:
+              assert 'NOTIFICATION_RECEIPT_GLOBAL_KEY' in src, name+' global receipt missing'
+              assert 'legacyReceiptSuppressed:true' in src, name+' legacy retirement missing'
+              assert 'receiptPolicyVersion' in src and 'policy>=2' in src, name+' receipt policy guard missing'
+              assert 'rememberShow(candidate);setNotification(candidate);markShown(candidate)' in src, name+' local-first receipt order broken'
+          assert "index-v37-source.txt?v=56.13" in boot
+          assert "customer-v37-source.txt?v=56.13" in cboot
+          print('V56_13_FIRESTORE_QUOTA_PASS')
+          PY
+          git diff --check
+      - name: Commit and push V56.13
+        run: |
+          if git diff --quiet -- admin-dashboard.html runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html tests/v56-4-messaging.mjs; then
+            echo 'No generated changes'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-dashboard.html runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html tests/v56-4-messaging.mjs
+          git commit -m 'V56.13 — harden Firestore quota usage'
+          git pull --rebase origin main
+          git push origin HEAD:main
