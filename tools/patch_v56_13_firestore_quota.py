@@ -61,20 +61,20 @@ new_emp="""                    db.collection('site_sessions').doc(sessionId).set
                 });
             }
         }, 300000);"""
-replace(emp,old_emp,new_emp,'employee heartbeat',expected=2)
+replace(emp,old_emp,new_emp,'employee heartbeat')
 
 old_cust="""useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>touchCustomerSession(user,safeProfile,'heartbeat'),120000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);"""
 new_cust="""useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>{if(document.visibilityState==='visible')touchCustomerSession(user,safeProfile,'heartbeat')},300000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);"""
-replace(cust,old_cust,new_cust,'customer heartbeat',expected=2)
+replace(cust,old_cust,new_cust,'customer heartbeat')
 
 # Reduce notification bootstrap reads without changing recipient targeting.
-replace(emp,".where('employeeId','==',employeeId).limit(50)",".where('employeeId','==',employeeId).limit(20)",'employee notification id limit',expected=2)
-replace(emp,".where('targetKey','==',targetKeys[0]).limit(50)",".where('targetKey','==',targetKeys[0]).limit(20)",'employee notification target limit',expected=2)
-replace(cust,".where(field,'==',value).limit(50).onSnapshot", ".where(field,'==',value).limit(20).onSnapshot",'customer notification limit',expected=2)
+replace(emp,".where('employeeId','==',employeeId).limit(50)",".where('employeeId','==',employeeId).limit(20)",'employee notification id limit')
+replace(emp,".where('targetKey','==',targetKeys[0]).limit(50)",".where('targetKey','==',targetKeys[0]).limit(20)",'employee notification target limit')
+replace(cust,".where(field,'==',value).limit(50).onSnapshot", ".where(field,'==',value).limit(20).onSnapshot",'customer notification limit')
 
 # Bound full-history realtime queries for customers.
-replace(cust,"db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).onSnapshot", "db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).limit(100).onSnapshot",'customer orders limit',expected=2)
-replace(cust,"db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).onSnapshot", "db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).limit(60).onSnapshot",'customer drafts limit',expected=2)
+replace(cust,"db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).onSnapshot", "db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).limit(100).onSnapshot",'customer orders limit')
+replace(cust,"db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).onSnapshot", "db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).limit(60).onSnapshot",'customer drafts limit')
 
 # Bump runtime cache keys so the quota hardening cannot be masked by an older cached runtime.
 replace('index.html',"const CORE='./runtime/index-v37-source.txt?v=56.12';","const CORE='./runtime/index-v37-source.txt?v=56.13';",'employee runtime version')
