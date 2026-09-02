@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const health=fs.readFileSync('health-center.html','utf8'),admin=fs.readFileSync('admin-dashboard.html','utf8'),stock=fs.readFileSync('admin-stocktake.html','utf8'),acct=fs.readFileSync('stocktake-accountant.html','utf8'),cust=fs.readFileSync('customer.html','utf8'),idx=fs.readFileSync('index.html','utf8'),runtime=fs.readFileSync('runtime/index-v37-source.txt','utf8');
+assert.ok(health.includes('صور مفهرسة')&&!health.includes('missingImage'));
+assert.ok(stock.includes('<h3>متابعة الجرد</h3>')&&!stock.includes('معاينة منظور المحاسب'));
+assert.ok(!stock.includes('id="testCount"')&&stock.includes('function pickTestInventoryRows(rows)')&&stock.includes('for(let x=0;x<rows.length;x+=350)'));
+assert.ok(stock.includes('stocktake_test_cleanup_v5617')&&stock.includes('setTimeout(cleanupLegacyTestsOnce,900)')&&stock.includes('v56-17-modal-scroll-guard'));
+assert.ok(!acct.includes('منظور المحاسب · قراءة فقط')&&acct.includes('<div class="sub">متابعة الجرد</div>')&&!acct.includes('data-save='));
+assert.ok(admin.includes('data-admin-scroll-root="1"')&&admin.includes("document.querySelectorAll('[data-admin-scroll-root]')")&&admin.includes('height:min(92dvh,760px)'));
+assert.ok((admin.match(/useBodyScrollLock\(\);/g)||[]).length>=6&&admin.includes('customer_guest_presence')&&admin.includes('onCustomerMessage={target=>'));
+assert.ok(cust.includes("customer_guest_name_v1")&&cust.includes("==='هارون'")&&cust.includes('onboard=haroon'));
+assert.ok(idx.includes('onboardHaroon')&&idx.includes('هارون — دخول الموظفين')&&idx.includes("index-v37-source.txt?v=56.17"));
+assert.ok(cust.includes("customer-v37-source.txt?v=56.17")&&runtime.includes('./stocktake-accountant.html?v=56.17'));
+console.log('V56.17 operations polish regression: OK');

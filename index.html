@@ -13,7 +13,7 @@
 (async function(){
   // V44_QA_BOOTSTRAP: automated browsers must never pollute production presence or logs.
   window.__V44_QA=Boolean(['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
-  const CORE='./runtime/index-v37-source.txt?v=56.16';
+  const CORE='./runtime/index-v37-source.txt?v=56.17';
   const TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';
   const TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';
   const TRANSFER_APPLIED_PREFIX='batco_employee_customer_cart_transfer_applied_v1_';
@@ -21,6 +21,7 @@
   const TRANSFER_WAREHOUSE_KEY='batco_employee_transfer_warehouse_v1';
   const TRANSFER_NOTES_KEY='batco_employee_transfer_notes_v1';
   const employeeName=(()=>{try{return String(localStorage.getItem('inventory_user_name_v2')||'').trim()}catch{return''}})();
+  const onboardHaroon=(()=>{try{return new URLSearchParams(location.search).get('onboard')==='haroon'||sessionStorage.getItem('batco_employee_onboarding_notice_v1')==='haroon'}catch{return false}})();
   if(employeeName){
     const u=new URL(location.href);
     if(u.searchParams.get('employee')!=='1'){
@@ -258,6 +259,7 @@
     html=html.replace(submitMarker,submitMarker+'\n        '+stockGuard);
 
     if(!html.includes('EmployeeAdminNotification')||html.includes('return <EmployeeAdminMessageScreen')||!html.includes('./customer.html?employeeView=1')||!html.includes('>عملاء</span>')||!html.includes('batco_employee_transfer_open_cart_v1')||!html.includes('batco_employee_transfer_warehouse_v1')||!html.includes('batco_employee_transfer_notes_v1')||!html.includes('const stockConflicts = items.filter'))throw new Error('V40_OUTPUT_CHECK');
+    if(onboardHaroon&&!employeeName){html=html.replace('</body>','<div style="position:fixed;z-index:999999;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(92vw,520px);background:#1c1917;color:#fff;border-radius:18px;padding:15px 18px;text-align:center;font:700 14px/1.8 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.24)"><b>هارون — دخول الموظفين</b><br><span style="font-weight:500;color:#e7e5e4">أكمل دخولك من قسم الموظفين، أنشئ رمز الدخول ثم نفّذ تصوير التحقق مرة واحدة.</span></div></body>');}
     html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.1"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V40 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}

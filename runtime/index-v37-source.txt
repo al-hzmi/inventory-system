@@ -4242,7 +4242,7 @@ const App = () => {
                                 </button>
                             ))}
                             {!isAdmin && currentStocktakeAccountantAccessAllowed && (
-                                <button onClick={() => { window.location.href = './stocktake-accountant.html?v=56.12'; }} title="متابعة الجرد"
+                                <button onClick={() => { window.location.href = './stocktake-accountant.html?v=56.17'; }} title="متابعة الجرد"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-infoSoft border border-info/20 text-info hover:bg-info hover:text-white transition-colors animate-flip">
                                     <Icon.Eye className="w-20 h-20" />
                                     <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">متابعة الجرد</span>

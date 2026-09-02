@@ -35,16 +35,20 @@ html,body,#root{min-height:100%;background:#FAFAF9;color:#1C1917}*{box-sizing:bo
 
 /* V56.4 messaging — mobile/Android ergonomics */
 .admin-message-overlay{overscroll-behavior:none;overflow:hidden;touch-action:none}
-.admin-message-sheet{max-height:min(92dvh,760px);min-height:0;touch-action:pan-y}
+.admin-message-sheet{height:min(92dvh,760px);max-height:min(92dvh,760px);min-height:0;touch-action:pan-y;overscroll-behavior:none}
 .admin-message-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;min-height:0}
 @media(max-width:639px){
   .admin-message-overlay{align-items:flex-end!important;padding-top:max(10px,env(safe-area-inset-top))!important}
-  .admin-message-sheet{width:100%!important;max-height:calc(100dvh - max(10px,env(safe-area-inset-top)))!important;border-radius:22px 22px 0 0!important}
+  .admin-message-sheet{width:100%!important;height:calc(100dvh - max(10px,env(safe-area-inset-top)))!important;max-height:calc(100dvh - max(10px,env(safe-area-inset-top)))!important;border-radius:22px 22px 0 0!important}
   .admin-message-sheet input,.admin-message-sheet select,.admin-message-sheet textarea{font-size:16px!important}
   .admin-message-sheet button{min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .admin-message-scroll{padding-bottom:max(18px,env(safe-area-inset-bottom))!important}
 }
 
+
+/* V56.17 — all overlay surfaces keep wheel/touch scroll inside themselves. */
+.fixed.inset-0{overscroll-behavior:none}
+.fixed.inset-0 [class*="overflow-y-auto"]{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body><div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./icons/icon-512.png" onerror="this.onerror=null;this.src='./icons/icon-192.png'" alt="بيت الأواني الطيبة"></div><div id="root"></div>
@@ -54,28 +58,21 @@ if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const {useState,useEffect,useMemo,useCallback}=React;
 
-// V56.10 — iOS-safe modal scroll lock. Prevents a bottom sheet from scrolling the page behind it.
+// V56.17 — systemic modal scroll isolation for mobile + desktop.
 const useBodyScrollLock=()=>{useEffect(()=>{
   const w=window,body=document.body,html=document.documentElement;
   let lock=w.__BATCO_BODY_SCROLL_LOCK;
-  if(!lock){lock=w.__BATCO_BODY_SCROLL_LOCK={count:0,y:0,body:{},htmlOverflow:''}}
+  if(!lock){lock=w.__BATCO_BODY_SCROLL_LOCK={count:0,y:0,body:{},htmlOverflow:'',roots:[]}}
   if(lock.count===0){
     lock.y=window.scrollY||window.pageYOffset||0;
-    lock.body={position:body.style.position,top:body.style.top,left:body.style.left,right:body.style.right,width:body.style.width,overflow:body.style.overflow};
+    lock.body={position:body.style.position,top:body.style.top,left:body.style.left,right:body.style.right,width:body.style.width,overflow:body.style.overflow,overscrollBehavior:body.style.overscrollBehavior};
     lock.htmlOverflow=html.style.overflow;
-    body.style.position='fixed';body.style.top=`-${lock.y}px`;body.style.left='0';body.style.right='0';body.style.width='100%';body.style.overflow='hidden';
-    html.style.overflow='hidden';
+    lock.roots=[...document.querySelectorAll('[data-admin-scroll-root]')].map(el=>({el,top:el.scrollTop,overflow:el.style.overflow,overflowY:el.style.overflowY,overscrollBehavior:el.style.overscrollBehavior}));
+    body.style.position='fixed';body.style.top=`-${lock.y}px`;body.style.left='0';body.style.right='0';body.style.width='100%';body.style.overflow='hidden';body.style.overscrollBehavior='none';html.style.overflow='hidden';
+    lock.roots.forEach(x=>{x.el.style.overflow='hidden';x.el.style.overflowY='hidden';x.el.style.overscrollBehavior='none'});
   }
   lock.count+=1;
-  return()=>{
-    const active=w.__BATCO_BODY_SCROLL_LOCK;if(!active)return;
-    active.count=Math.max(0,active.count-1);
-    if(active.count===0){
-      Object.assign(body.style,active.body);html.style.overflow=active.htmlOverflow||'';
-      const y=active.y||0;delete w.__BATCO_BODY_SCROLL_LOCK;
-      requestAnimationFrame(()=>window.scrollTo(0,y));
-    }
-  };
+  return()=>{const active=w.__BATCO_BODY_SCROLL_LOCK;if(!active)return;active.count=Math.max(0,active.count-1);if(active.count===0){Object.assign(body.style,active.body);html.style.overflow=active.htmlOverflow||'';(active.roots||[]).forEach(x=>{x.el.style.overflow=x.overflow;x.el.style.overflowY=x.overflowY;x.el.style.overscrollBehavior=x.overscrollBehavior;x.el.scrollTop=x.top});const y=active.y||0;delete w.__BATCO_BODY_SCROLL_LOCK;requestAnimationFrame(()=>window.scrollTo(0,y))}};
 },[])};
 
 const STORAGE_KEYS={NAME:'inventory_user_name_v2',TOKEN:'inventory_admin_token_v2',PHOTO_PROOF:'inventory_login_photo_proof_v2'};
@@ -191,7 +188,8 @@ function FriendlyValue({name,value,depth=0}){
   }
   return <div className="grid sm:grid-cols-2 gap-2">{Object.entries(value).filter(([k])=>k!=='photoDataUrl'&&!TECHNICAL_FIELDS.has(k)&&!/^(__|password|token|secret)/i.test(k)).map(([k,v])=><div key={k} className="bg-white border border-border rounded-xl p-2.5 min-w-0"><div className="text-[9px] text-muted font-bold">{fieldLabel(k)}</div><div className="text-[11px] mt-1 break-words"><FriendlyValue name={k} value={v} depth={depth+1}/></div></div>)}</div>;
 }
-function DetailDrawer({row,onClose}){
+function DetailDrawer({row,onClose,onCustomerMessage}){
+  useBodyScrollLock();
   const [showRaw,setShowRaw]=useState(false);
   if(!row)return null;
   const safeRow=redactSensitive(row);
@@ -199,8 +197,9 @@ function DetailDrawer({row,onClose}){
   const simple=fields.filter(([,v])=>v==null||typeof v!=='object'||v?.toMillis||v?.toDate);
   const complex=fields.filter(([,v])=>v&&typeof v==='object'&&!v?.toMillis&&!v?.toDate);
   const title=row.company||row.name||row.customer?.company||row.orderNo||row.invoiceNo||row.draftNo||row.id||'التفاصيل';
+  const guestMessageTarget=row.__collection==='customer_guest_presence'&&row.visitorId?{kind:'guest',customerUid:'',visitorId:row.visitorId,name:row.name||row.displayName||'',company:row.company||''}:null;
   const copy=()=>navigator.clipboard?.writeText(JSON.stringify(safeRow,(k,v)=>v?.toDate?v.toDate().toISOString():v,2));
-  return <div className="fixed inset-0 z-[120] bg-black/35 flex justify-end" onClick={onClose}><aside className="w-full sm:max-w-[680px] h-full bg-surface shadow-lift flex flex-col fade" onClick={e=>e.stopPropagation()}><header className="p-4 bg-white border-b border-border flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-accent font-bold">ملف تفصيلي</div><b className="text-base block mt-1 truncate">{title}</b></div><button onClick={onClose} className="w-10 h-10 rounded-xl border border-border flex items-center justify-center bg-white"><Icon name="x" className="w-4 h-4"/></button></header><div className="flex-1 overflow-y-auto p-4 space-y-4">{row.photoDataUrl&&<div className="bg-white border border-border rounded-2xl p-3"><div className="text-[10px] font-bold text-secondary mb-2">صورة التحقق</div><img src={row.photoDataUrl} className="w-full max-h-[360px] object-contain bg-surface rounded-xl"/></div>}<section className="bg-white border border-border rounded-2xl p-4"><div className="text-xs font-bold mb-3">البيانات الأساسية</div><div className="grid sm:grid-cols-2 gap-2">{simple.map(([k,v])=><div key={k} className="bg-surface border border-border rounded-xl p-3"><div className="text-[9px] font-bold text-muted">{fieldLabel(k)}</div><div className="text-xs mt-1.5 leading-5 break-words">{valueText(v,k)}</div></div>)}</div></section>{complex.length>0&&<section className="bg-white border border-border rounded-2xl p-4"><div className="text-xs font-bold mb-3">التفاصيل المرتبطة</div><div className="grid gap-3">{complex.map(([k,v])=><details key={k} className="border border-border rounded-xl bg-surface overflow-hidden" open={['customer','branches','items','customers'].includes(k)}><summary className="p-3 text-xs font-bold cursor-pointer flex items-center justify-between"><span>{fieldLabel(k)}</span><span className="text-[9px] text-muted">فتح / إغلاق</span></summary><div className="px-3 pb-3"><FriendlyValue name={k} value={v}/></div></details>)}</div></section>}<details className="bg-white border border-border rounded-2xl overflow-hidden"><summary className="p-4 text-xs font-bold cursor-pointer">تفاصيل تقنية متقدمة</summary><div className="p-4 pt-0"><p className="text-[10px] text-muted leading-5 mb-3">هذه البيانات مخصصة للتشخيص التقني عند الحاجة.</p><div className="flex gap-2"><button onClick={copy} className="h-9 px-3 rounded-xl border border-border text-[10px] font-bold">نسخ البيانات التقنية</button><button onClick={()=>setShowRaw(v=>!v)} className="h-9 px-3 rounded-xl border border-border text-[10px] font-bold">{showRaw?'إخفاء':'عرض'}</button></div>{showRaw&&<pre className="mt-3 bg-primary text-white rounded-xl p-3 text-[9px] leading-5 whitespace-pre-wrap break-words ltr text-left">{JSON.stringify(safeRow,(k,v)=>v?.toDate?v.toDate().toISOString():v,2)}</pre>}</div></details></div></aside></div>
+  return <div className="fixed inset-0 z-[120] bg-black/35 flex justify-end" onClick={onClose}><aside className="w-full sm:max-w-[680px] h-full bg-surface shadow-lift flex flex-col fade" onClick={e=>e.stopPropagation()}><header className="p-4 bg-white border-b border-border flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-accent font-bold">ملف تفصيلي</div><b className="text-base block mt-1 truncate">{title}</b></div><div className="flex items-center gap-2">{guestMessageTarget&&<button onClick={()=>onCustomerMessage?.(guestMessageTarget)} className="h-10 px-3 rounded-xl bg-infoSoft text-info border border-info/10 text-[10px] font-bold">إرسال رسالة</button>}<button onClick={onClose} className="w-10 h-10 rounded-xl border border-border flex items-center justify-center bg-white"><Icon name="x" className="w-4 h-4"/></button></div></header><div className="flex-1 overflow-y-auto p-4 space-y-4">{row.photoDataUrl&&<div className="bg-white border border-border rounded-2xl p-3"><div className="text-[10px] font-bold text-secondary mb-2">صورة التحقق</div><img src={row.photoDataUrl} className="w-full max-h-[360px] object-contain bg-surface rounded-xl"/></div>}<section className="bg-white border border-border rounded-2xl p-4"><div className="text-xs font-bold mb-3">البيانات الأساسية</div><div className="grid sm:grid-cols-2 gap-2">{simple.map(([k,v])=><div key={k} className="bg-surface border border-border rounded-xl p-3"><div className="text-[9px] font-bold text-muted">{fieldLabel(k)}</div><div className="text-xs mt-1.5 leading-5 break-words">{valueText(v,k)}</div></div>)}</div></section>{complex.length>0&&<section className="bg-white border border-border rounded-2xl p-4"><div className="text-xs font-bold mb-3">التفاصيل المرتبطة</div><div className="grid gap-3">{complex.map(([k,v])=><details key={k} className="border border-border rounded-xl bg-surface overflow-hidden" open={['customer','branches','items','customers'].includes(k)}><summary className="p-3 text-xs font-bold cursor-pointer flex items-center justify-between"><span>{fieldLabel(k)}</span><span className="text-[9px] text-muted">فتح / إغلاق</span></summary><div className="px-3 pb-3"><FriendlyValue name={k} value={v}/></div></details>)}</div></section>}<details className="bg-white border border-border rounded-2xl overflow-hidden"><summary className="p-4 text-xs font-bold cursor-pointer">تفاصيل تقنية متقدمة</summary><div className="p-4 pt-0"><p className="text-[10px] text-muted leading-5 mb-3">هذه البيانات مخصصة للتشخيص التقني عند الحاجة.</p><div className="flex gap-2"><button onClick={copy} className="h-9 px-3 rounded-xl border border-border text-[10px] font-bold">نسخ البيانات التقنية</button><button onClick={()=>setShowRaw(v=>!v)} className="h-9 px-3 rounded-xl border border-border text-[10px] font-bold">{showRaw?'إخفاء':'عرض'}</button></div>{showRaw&&<pre className="mt-3 bg-primary text-white rounded-xl p-3 text-[9px] leading-5 whitespace-pre-wrap break-words ltr text-left">{JSON.stringify(safeRow,(k,v)=>v?.toDate?v.toDate().toISOString():v,2)}</pre>}</div></details></div></aside></div>
 }
 
 function SearchBar({value,onChange,placeholder='ابحث...'}){return <div className="relative"><Icon name="search" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted"/><input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} className="w-full h-11 pr-10 pl-3 rounded-xl border border-border bg-white outline-none focus:border-accent text-sm"/></div>}
@@ -217,6 +216,7 @@ function PortalControlCard({control,onSave,busy}){
 
 
 function EmployeeAccountEditor({value,onClose,onSaved}){
+  useBodyScrollLock();
   const existing=value?.account||null;
   const resetOnly=!!value?.resetOnly;
   const [canonicalName,setCanonicalName]=useState(existing?.canonicalName||value?.initialName||'');
@@ -255,6 +255,7 @@ function EmployeeAccountEditor({value,onClose,onSaved}){
  }
 
 function EmployeeMergeModal({source,accounts,onClose,onSaved}){
+  useBodyScrollLock();
   const [targetId,setTargetId]=useState(accounts?.[0]?.id||'');
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const target=(accounts||[]).find(a=>a.id===targetId);
@@ -337,6 +338,7 @@ function EmployeeMessageModal({target,notifications,onClose}){
 }
 
 function CustomerManagerModal({customer,devices=[],busy=false,onClose,onSave,onNewArrivals,onStatus,onDelete,onRestore,onDeviceStatus,onDeviceDelete}){
+  useBodyScrollLock();
   const [tab,setTab]=useState('profile');
   const [name,setName]=useState(customer?.name||'');
   const [company,setCompany]=useState(customer?.company||'');
@@ -354,7 +356,7 @@ function CustomerManagerModal({customer,devices=[],busy=false,onClose,onSave,onN
     try{await onSave(customer,{name:cleanName,company:cleanCompany,branches});}catch(e){setError(e?.message||'تعذر حفظ البيانات.');}
   };
   const sorted=[...devices].sort((a,b)=>tsMs(b.lastSeen||b.updatedAt||b.firstSeen)-tsMs(a.lastSeen||a.updatedAt||a.firstSeen));
-  return <div className="fixed inset-0 z-[160] bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}><div className="w-full sm:max-w-[720px] max-h-[94dvh] bg-white rounded-t-[24px] sm:rounded-[24px] shadow-lift overflow-hidden flex flex-col" onClick={e=>e.stopPropagation()}>
+  return <div className="fixed inset-0 z-[160] bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}><div className="w-full sm:max-w-[720px] h-[94dvh] max-h-[94dvh] bg-white rounded-t-[24px] sm:rounded-[24px] shadow-lift overflow-hidden flex flex-col" onClick={e=>e.stopPropagation()}>
     <header className="p-4 border-b border-border flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-accent font-bold">إدارة العميل</div><b className="text-base block truncate">{customer.name||customer.company||customer.phone||'حساب عميل'}</b><div className="text-[10px] text-muted mt-1 ltr text-right">{customer.phone||'—'}</div></div><button onClick={onClose} className="w-9 h-9 rounded-lg border border-border flex items-center justify-center"><Icon name="x" className="w-4 h-4"/></button></header>
     <div className="grid grid-cols-3 border-b border-border bg-surface"><button onClick={()=>setTab('profile')} className={`h-11 text-xs font-bold ${tab==='profile'?'bg-white text-accent border-b-2 border-accent':'text-secondary'}`}>البيانات</button><button onClick={()=>setTab('devices')} className={`h-11 text-xs font-bold ${tab==='devices'?'bg-white text-accent border-b-2 border-accent':'text-secondary'}`}>الأجهزة {devices.length?`(${devices.length})`:''}</button><button onClick={()=>setTab('actions')} className={`h-11 text-xs font-bold ${tab==='actions'?'bg-white text-accent border-b-2 border-accent':'text-secondary'}`}>الصلاحيات</button></div>
     <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-surface">
@@ -636,7 +638,7 @@ function AdminApp(){
     return <div className="grid gap-4">
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2"><Stat label="متصل الآن" value={customerOnlineCount} tone="success"/><Stat label="زوار سجّلوا الاسم" value={namedGuestCount} tone="info"/><Stat label="طلبات اليوم" value={todayCustomerOrders.length}/><Stat label="قيمة اليوم" value={`${num(todayCustomerOrderValue)} ر.س`} tone="accent"/><Stat label="بوابة العملاء" value={control.enabled?'تعمل':'متوقفة'} tone={control.enabled?'success':'danger'}/></div>
       <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-4">
-        <section className="bg-white border border-border rounded-2xl shadow-card overflow-hidden"><div className="p-4 border-b border-border flex justify-between items-center"><div><b className="text-sm">العملاء والزوار الآن</b><div className="text-[10px] text-muted mt-1">يظهر الزائر من أول دخوله، وبمجرد كتابة الاسم يظهر آخر ما يفعله داخل البوابة.</div></div><button onClick={()=>setTab('portal')} className="h-9 px-3 rounded-xl border border-border text-[10px] font-bold">تشغيل البوابة</button></div><div className="divide-y divide-border max-h-[520px] overflow-y-auto">{presence.length?presence.map((s,i)=>{const c=customers.find(x=>x.id===s.customerUid||(s.visitorId&&x.visitorId===s.visitorId))||{},on=customerSessionOnline(s),isGuest=!s.customerUid;const title=c.name||s.name||(isGuest?'زائر غير مسمى':'عميل');const stage=isGuest?(String(s.name||'').trim()?'سجّل اسمه فقط · لم ينشئ حسابًا بعد':'دخل البوابة · لم يسجل اسمه بعد'):(c.company||s.company||'حساب عميل');const lastAction=recentCustomerActivity.find(a=>(s.customerUid&&a.customerUid===s.customerUid)||(s.visitorId&&a.visitorId===s.visitorId));const actionText=lastAction?`${eventName(lastAction.type)}${lastAction.label?` · ${lastAction.label}`:''}`:'';return <button key={s.id||i} onClick={()=>c.id?setCustomerManager(c):(String(s.name||'').trim()?setCustomerMessageTarget({kind:'guest',customerUid:'',visitorId:s.visitorId||'',name:s.name||'',company:''}):setDetail(s))} className="w-full p-3.5 text-right hover:bg-surface flex items-center gap-3"><span className={`w-2.5 h-2.5 rounded-full ${on?'bg-success':'bg-muted'}`}></span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><b className="text-xs block truncate">{title}</b>{isGuest&&<Pill tone={String(s.name||'').trim()?'info':'neutral'}>{String(s.name||'').trim()?'بالاسم فقط':'زائر'}</Pill>}</div><span className="text-[10px] text-muted block mt-1 truncate">{stage} · {on?'داخل البوابة الآن':`آخر نشاط ${ago(s.lastActive||s.updatedAt)}`}{actionText?` · ${actionText}`:''}</span></div></button>}):<div className="py-12 text-center text-xs text-muted">لا توجد زيارات عملاء بعد.</div>}</div></section>
+        <section className="bg-white border border-border rounded-2xl shadow-card overflow-hidden"><div className="p-4 border-b border-border flex justify-between items-center"><div><b className="text-sm">العملاء والزوار الآن</b><div className="text-[10px] text-muted mt-1">يظهر الزائر من أول دخوله، وبمجرد كتابة الاسم يظهر آخر ما يفعله داخل البوابة.</div></div><button onClick={()=>setTab('portal')} className="h-9 px-3 rounded-xl border border-border text-[10px] font-bold">تشغيل البوابة</button></div><div className="divide-y divide-border max-h-[520px] overflow-y-auto">{presence.length?presence.map((s,i)=>{const c=customers.find(x=>x.id===s.customerUid||(s.visitorId&&x.visitorId===s.visitorId))||{},on=customerSessionOnline(s),isGuest=!s.customerUid;const title=c.name||s.name||(isGuest?'زائر غير مسمى':'عميل');const stage=isGuest?(String(s.name||'').trim()?'سجّل اسمه فقط · لم ينشئ حسابًا بعد':'دخل البوابة · لم يسجل اسمه بعد'):(c.company||s.company||'حساب عميل');const lastAction=recentCustomerActivity.find(a=>(s.customerUid&&a.customerUid===s.customerUid)||(s.visitorId&&a.visitorId===s.visitorId));const actionText=lastAction?`${eventName(lastAction.type)}${lastAction.label?` · ${lastAction.label}`:''}`:'';return <button key={s.id||i} onClick={()=>c.id?setCustomerManager(c):setDetail({...s,__collection:'customer_guest_presence',identityType:'guest',displayName:title,stage,lastAction:actionText})} className="w-full p-3.5 text-right hover:bg-surface flex items-center gap-3"><span className={`w-2.5 h-2.5 rounded-full ${on?'bg-success':'bg-muted'}`}></span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><b className="text-xs block truncate">{title}</b>{isGuest&&<Pill tone={String(s.name||'').trim()?'info':'neutral'}>{String(s.name||'').trim()?'بالاسم فقط':'زائر'}</Pill>}</div><span className="text-[10px] text-muted block mt-1 truncate">{stage} · {on?'داخل البوابة الآن':`آخر نشاط ${ago(s.lastActive||s.updatedAt)}`}{actionText?` · ${actionText}`:''}</span></div></button>}):<div className="py-12 text-center text-xs text-muted">لا توجد زيارات عملاء بعد.</div>}</div></section>
         <section className="bg-white border border-border rounded-2xl shadow-card overflow-hidden"><div className="p-4 border-b border-border"><b className="text-sm">الدخول والخروج</b><div className="text-[10px] text-muted mt-1">الدخول يظهر حتى قبل إنشاء الحساب، والخروج يُستنتج عند توقف نشاط الجلسة.</div></div><div className="divide-y divide-border max-h-[520px] overflow-y-auto">{timeline.length?timeline.map((e,i)=>{const c=customers.find(x=>x.id===e.customerUid||(e.visitorId&&x.visitorId===e.visitorId))||{};const isEnter=e.type==='login'||e.type==='guest_login';const isGuest=e.type==='guest_login'||(!e.customerUid&&e.visitorId);return <div key={`${e.type}_${e.customerUid||e.visitorId||i}_${tsMs(e.time)}_${i}`} className="p-3.5 flex items-center gap-3"><div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isEnter?'bg-successSoft text-success':'bg-surface text-secondary'}`}><Icon name={isEnter?'check':'back'} className="w-4 h-4"/></div><div className="min-w-0 flex-1"><div className="flex gap-2 items-center"><b className="text-xs truncate">{c.name||e.name||(isGuest?'زائر غير مسمى':'عميل')}</b><Pill tone={isEnter?'ok':'neutral'}>{isEnter?'دخل':'غادر'}</Pill>{isGuest&&<Pill tone="info">{c.id?'تحول لحساب':'زائر'}</Pill>}</div><div className="text-[9px] text-muted mt-1 truncate">{c.company||e.company||(isGuest?'قبل التسجيل الكامل':'—')} · {deviceLabel(e.device)}</div></div><span className="text-[10px] text-muted">{dateTime(e.time)}</span></div>}):<div className="py-12 text-center text-xs text-muted">لا توجد حركات مسجلة بعد.</div>}</div></section>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2"><button onClick={()=>setTab('activity')} className="h-11 rounded-xl border border-border bg-white text-xs font-bold">كل نشاط العملاء</button><button onClick={()=>setTab('accounts')} className="h-11 rounded-xl border border-border bg-white text-xs font-bold">بيانات العملاء</button><button onClick={()=>setTab('sessions')} className="h-11 rounded-xl border border-border bg-white text-xs font-bold">الجلسات والأجهزة</button><button onClick={()=>{window.location.href='./control-center.html?tab=permissions&scope=customers'}} className="h-11 rounded-xl bg-primary text-white text-xs font-bold">صلاحيات العملاء</button></div>
@@ -775,9 +777,9 @@ function AdminApp(){
   return <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-0 sm:p-4 safe-top safe-bottom">
     <div className="w-full max-w-[1080px] h-[100dvh] sm:h-[94vh] bg-white sm:rounded-2xl overflow-hidden shadow-lift flex flex-col fade">
       <CommandHeader/>
-      <><TabsBar/><ToolBar/><div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-surface"><ActiveContent/></div></>
+      <><TabsBar/><ToolBar/><div data-admin-scroll-root="1" className="flex-1 overflow-y-auto p-3 sm:p-4 bg-surface"><ActiveContent/></div></>
     </div>
-    <DetailDrawer row={detail} onClose={()=>setDetail(null)}/>
+    <DetailDrawer row={detail} onClose={()=>setDetail(null)} onCustomerMessage={target=>{setDetail(null);setCustomerMessageTarget(target)}}/>
     {employeeEditor&&<EmployeeAccountEditor value={employeeEditor} onClose={()=>setEmployeeEditor(null)} onSaved={()=>setEmployeeEditor(null)}/>}
     {employeeMerge&&<EmployeeMergeModal source={employeeMerge} accounts={eAccounts} onClose={()=>setEmployeeMerge(null)} onSaved={()=>setEmployeeMerge(null)}/>}
     {employeeMessageTarget&&<EmployeeMessageModal target={employeeMessageTarget} notifications={eNotifications} onClose={()=>setEmployeeMessageTarget(null)}/>}
