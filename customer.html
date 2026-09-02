@@ -15,6 +15,7 @@
   const routeStickyVisitor=(()=>{try{return String(localStorage.getItem('batco_employee_onboarding_target_v1')||'').trim()}catch{return''}})();
   const redirectHarounToEmployee=()=>{try{sessionStorage.setItem('batco_employee_onboarding_notice_v1','haroon')}catch{}location.replace('./index.html?employee=1&onboard=haroon');};
   const routeKnownCustomerName=routeNormName(routeQuickProfile?.name||routeGuestName||'');
+  const routeIsHarounName=value=>{const first=routeNormName(value).split(' ')[0]||'';return ['هارون','haroun','haroon','harun'].includes(first);};
   const migrateHarounCustomerDevice=()=>{try{
     if(routeVisitorId)localStorage.setItem('batco_employee_onboarding_target_v1',routeVisitorId);
     localStorage.removeItem('batco_quick_customer_profile_v1');
@@ -23,7 +24,7 @@
   }catch{}};
   // V56.19: Haroun was already saved as a passwordless customer. That old quickProfile.uid
   // must never suppress employee routing; migrate this device out of customer identity first.
-  if(!employeeName&&params.get('employeeView')!=='1'&&routeKnownCustomerName==='هارون'){migrateHarounCustomerDevice();redirectHarounToEmployee();return;}
+  if(!employeeName&&params.get('employeeView')!=='1'&&routeIsHarounName(routeKnownCustomerName)){migrateHarounCustomerDevice();redirectHarounToEmployee();return;}
   if(!employeeName&&routeVisitorId&&routeStickyVisitor===routeVisitorId){redirectHarounToEmployee();return;}
   const centralEmployeeRoute=async()=>{if(employeeName||!routeVisitorId||!window.firebase)return false;try{
     const cfg={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};

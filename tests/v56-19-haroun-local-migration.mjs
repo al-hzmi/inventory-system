@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const customer=fs.readFileSync('customer.html','utf8');
 assert.ok(customer.includes("const routeKnownCustomerName=routeNormName(routeQuickProfile?.name||routeGuestName||'');"),'routing must inspect an already-created quick customer profile');
-assert.ok(customer.includes("routeKnownCustomerName==='هارون'"),'Haroun must be recognized even after becoming a passwordless customer');
+assert.ok(customer.includes("const routeIsHarounName=value=>")&&customer.includes("['هارون','haroun','haroon','harun'].includes(first)")&&customer.includes("routeIsHarounName(routeKnownCustomerName)"),'Haroun must be recognized by first name and common spellings even after becoming a passwordless customer');
 assert.ok(customer.includes("localStorage.removeItem('batco_quick_customer_profile_v1')")&&customer.includes("localStorage.removeItem('customer_guest_name_v1')"),'migration must clear the stale customer identity on Haroun device');
 assert.ok(customer.includes("localStorage.setItem('batco_employee_onboarding_target_v1',routeVisitorId)"),'migration must persist the visitor-specific employee route');
 assert.ok(customer.includes("localStorage.setItem('batco_haroun_customer_migrated_v1','1')"),'migration must leave a durable local migration marker');

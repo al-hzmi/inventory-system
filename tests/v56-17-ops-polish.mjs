@@ -8,7 +8,7 @@ assert.ok(stock.includes('stocktake_test_cleanup_v5617')&&stock.includes('setTim
 assert.ok(!acct.includes('منظور المحاسب · قراءة فقط')&&acct.includes('<div class="sub">متابعة الجرد</div>')&&!acct.includes('data-save='));
 assert.ok(admin.includes('data-admin-scroll-root="1"')&&admin.includes("document.querySelectorAll('[data-admin-scroll-root]')")&&admin.includes('height:min(92dvh,760px)'));
 assert.ok((admin.match(/useBodyScrollLock\(\);/g)||[]).length>=5&&admin.includes('useBodyScrollLock(Boolean(row));')&&admin.includes('const useBodyScrollLock=(active=true)=>')&&admin.includes('customer_guest_presence')&&admin.includes('onCustomerMessage={target=>'));
-assert.ok(cust.includes("customer_guest_name_v1")&&cust.includes("==='هارون'")&&cust.includes('onboard=haroon'));
+assert.ok(cust.includes("customer_guest_name_v1")&&cust.includes('routeIsHarounName(routeKnownCustomerName)')&&cust.includes('onboard=haroon'));
 assert.ok(idx.includes('onboardHaroon')&&idx.includes('هارون — دخول الموظفين')&&idx.includes("index-v37-source.txt?v=56.17"));
 assert.ok(cust.includes("customer-v37-source.txt?v=56.19")&&runtime.includes('./stocktake-accountant.html?v=56.17'));
 console.log('V56.17 operations polish regression: OK');
