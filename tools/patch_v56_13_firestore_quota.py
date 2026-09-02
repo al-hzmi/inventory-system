@@ -62,6 +62,8 @@ new_emp="""                    db.collection('site_sessions').doc(sessionId).set
             }
         }, 300000);"""
 replace(emp,old_emp,new_emp,'employee heartbeat')
+# The legacy source line carries one trailing blank after the interval literal; remove it after replacement.
+p=Path(emp); s=p.read_text(encoding='utf-8'); p.write_text(s.replace('        }, 300000); \n','        }, 300000);\n'),encoding='utf-8')
 
 old_cust="""useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>touchCustomerSession(user,safeProfile,'heartbeat'),120000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);"""
 new_cust="""useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>{if(document.visibilityState==='visible')touchCustomerSession(user,safeProfile,'heartbeat')},300000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);"""
