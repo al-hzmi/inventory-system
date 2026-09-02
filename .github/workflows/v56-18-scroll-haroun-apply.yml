@@ -1,0 +1,106 @@
+name: V56.18 Page Scroll and Haroun Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/v56-18-scroll-haroun.py'
+      - '.github/workflows/v56-18-scroll-haroun-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply V56.18
+        run: python3 .github/scripts/v56-18-scroll-haroun.py
+      - name: V56.18 regression
+        run: node tests/v56-18-scroll-haroun.mjs
+      - name: Existing critical regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in tests/v56-17-ops-polish.mjs tests/v56-4-messaging.mjs tests/v56-10-critical-ux.mjs tests/v56-11-ops-fixes.mjs tests/v56-stocktake-workflow.mjs tests/v56-5-stocktake-direct-mobile.mjs; do
+            if [ -f "$t" ]; then node "$t"; fi
+          done
+      - name: Immediate Haroun visitor binding
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, urllib.parse, urllib.error
+          from datetime import datetime, timezone, timedelta
+          PROJECT='inventory-system-ca3dc'
+          KEY='AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw'
+          BASE=f'https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents'
+          def norm(s):
+              import re
+              s=str(s or '').lower()
+              s=re.sub(r'[\u064B-\u065F\u0670]','',s).replace('\u0640','')
+              for a,b in [('أ','ا'),('إ','ا'),('آ','ا'),('ٱ','ا'),('ى','ي'),('ئ','ي'),('ؤ','و'),('ة','ه')]: s=s.replace(a,b)
+              return ' '.join(s.split())
+          def value(v):
+              if not isinstance(v,dict): return None
+              for k in ('stringValue','timestampValue','integerValue','doubleValue','booleanValue'):
+                  if k in v:return v[k]
+              return None
+          def docs(collection):
+              url=f'{BASE}/{collection}?pageSize=300&key={urllib.parse.quote(KEY)}'
+              with urllib.request.urlopen(url,timeout=20) as r:return json.load(r).get('documents',[])
+          try:
+              sessions=docs('customer_sessions'); customers=docs('customers')
+              cmap={d['name'].rsplit('/',1)[-1]:d.get('fields',{}) for d in customers}
+              now=datetime.now(timezone.utc); candidates=[]
+              for d in sessions:
+                  f=d.get('fields',{}); uid=str(value(f.get('customerUid')) or ''); cf=cmap.get(uid,{})
+                  visitor=str(value(f.get('visitorId')) or value(cf.get('visitorId')) or '')
+                  name=str(value(cf.get('name')) or value(f.get('name')) or '')
+                  raw=value(f.get('lastActive')) or value(f.get('updatedAt')) or value(f.get('startedAt')) or value(cf.get('lastSeenAt')) or value(cf.get('updatedAt'))
+                  try:t=datetime.fromisoformat(str(raw).replace('Z','+00:00')) if raw else datetime.fromtimestamp(0,timezone.utc)
+                  except:t=datetime.fromtimestamp(0,timezone.utc)
+                  if visitor and norm(name)=='هارون' and timedelta(0)<=now-t<=timedelta(hours=2):candidates.append((t,visitor,uid))
+              if not candidates:
+                  for uid,cf in cmap.items():
+                      visitor=str(value(cf.get('visitorId')) or '');name=str(value(cf.get('name')) or '')
+                      raw=value(cf.get('lastSeenAt')) or value(cf.get('lastActivityAt')) or value(cf.get('lastLoginAt')) or value(cf.get('updatedAt'))
+                      try:t=datetime.fromisoformat(str(raw).replace('Z','+00:00')) if raw else datetime.fromtimestamp(0,timezone.utc)
+                      except:t=datetime.fromtimestamp(0,timezone.utc)
+                      if visitor and norm(name)=='هارون' and timedelta(0)<=now-t<=timedelta(hours=2):candidates.append((t,visitor,uid))
+              if not candidates:
+                  print('V56_18_HAROUN_BIND=NO_RECENT_MATCH');raise SystemExit(0)
+              _,visitor,uid=sorted(candidates,reverse=True)[0]
+              body={'fields':{
+                  'active':{'booleanValue':True},'targetVisitorId':{'stringValue':visitor},'targetCustomerUid':{'stringValue':uid},'targetName':{'stringValue':'هارون'},'purpose':{'stringValue':'employee_onboarding'},'source':{'stringValue':'v56.18_github_live_bind'},'boundAt':{'timestampValue':now.isoformat().replace('+00:00','Z')},'expiresAt':{'timestampValue':(now+timedelta(days=7)).isoformat().replace('+00:00','Z')}
+              }}
+              req=urllib.request.Request(f'{BASE}/system_controls/employee_onboarding_redirects?key={urllib.parse.quote(KEY)}',data=json.dumps(body).encode(),method='PATCH',headers={'Content-Type':'application/json'})
+              with urllib.request.urlopen(req,timeout=20) as r:r.read()
+              print('V56_18_HAROUN_BIND=OK')
+          except urllib.error.HTTPError as e:
+              print(f'V56_18_HAROUN_BIND=HTTP_{e.code}')
+          except Exception as e:
+              print('V56_18_HAROUN_BIND=UNAVAILABLE')
+          PY
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit V56.18
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add admin-dashboard.html customer.html tests/v56-4-messaging.mjs tests/v56-17-ops-polish.mjs tests/v56-18-scroll-haroun.mjs
+          git commit -m "V56.18 — restore page scrolling and target Haroun onboarding"
+          git pull --rebase origin main
+          node tests/v56-18-scroll-haroun.mjs
+          node tests/v56-17-ops-polish.mjs
+          node tests/v56-4-messaging.mjs
+          git push origin HEAD:main
