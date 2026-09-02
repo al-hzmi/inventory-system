@@ -86,7 +86,7 @@ jobs:
               print('V56_18_HAROUN_BIND=OK')
           except urllib.error.HTTPError as e:
               print(f'V56_18_HAROUN_BIND=HTTP_{e.code}')
-          except Exception as e:
+          except Exception:
               print('V56_18_HAROUN_BIND=UNAVAILABLE')
           PY
       - name: Diff safety
@@ -104,3 +104,5 @@ jobs:
           node tests/v56-17-ops-polish.mjs
           node tests/v56-4-messaging.mjs
           git push origin HEAD:main
+
+# trigger: 2
