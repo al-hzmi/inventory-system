@@ -44,12 +44,18 @@ jobs:
           if 'useBodyScrollLock(Boolean(row));' not in s: raise SystemExit('V56.22 conditional DetailDrawer lock missing')
           p.write_text(s)
 
-          t=Path('tests/v56-17-ops-polish.mjs')
-          ts=t.read_text()
+          t=Path('tests/v56-17-ops-polish.mjs');ts=t.read_text()
           old="assert.ok((admin.match(/useBodyScrollLock\\(\\);/g)||[]).length>=6&&admin.includes('customer_guest_presence')&&admin.includes('onCustomerMessage={target=>'));"
           new="assert.ok((admin.match(/useBodyScrollLock\\(\\);/g)||[]).length>=5&&admin.includes('useBodyScrollLock(Boolean(row));')&&admin.includes('const useBodyScrollLock=(active=true)=>')&&admin.includes('customer_guest_presence')&&admin.includes('onCustomerMessage={target=>'));"
           if old in ts: ts=ts.replace(old,new,1)
           elif new not in ts: raise SystemExit('V56.22 v56-17 regression anchor missing')
+          t.write_text(ts)
+
+          t=Path('tests/v56-10-critical-ux.mjs');ts=t.read_text()
+          old="assert.ok(admin.includes('const useBodyScrollLock=()=>{useEffect(()=>{'),'body scroll lock hook missing');"
+          new="assert.ok(admin.includes('const useBodyScrollLock=(active=true)=>{useEffect(()=>{')&&admin.includes('if(!active)return;'),'conditional body scroll lock hook missing');"
+          if old in ts: ts=ts.replace(old,new,1)
+          elif new not in ts: raise SystemExit('V56.22 v56-10 regression anchor missing')
           t.write_text(ts)
           PY
       - name: V56.22 regression
@@ -79,8 +85,9 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add admin-dashboard.html tests/v56-17-ops-polish.mjs
+          git add admin-dashboard.html tests/v56-17-ops-polish.mjs tests/v56-10-critical-ux.mjs
           git commit -m "V56.22 — only lock admin page scroll for open detail drawer"
           git pull --rebase origin main
           node tests/v56-17-ops-polish.mjs
+          node tests/v56-10-critical-ux.mjs
           git push origin HEAD:main
