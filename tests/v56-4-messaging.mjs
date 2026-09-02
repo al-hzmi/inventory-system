@@ -18,8 +18,10 @@ assert.ok(idx.includes("if(row.status!=='active'||!legacyOnce(row))return;"),'em
 
 assert.ok(adm.includes("db.collection('customer_notifications').add"),'admin must be able to create customer messages');
 assert.ok(adm.includes('CustomerMessageModal'),'customer message modal missing');
-assert.ok(adm.includes("setCustomerMessageTarget({kind:'guest'"),'named guest message action missing');
+assert.ok(adm.includes("const guestMessageTarget=row.__collection==='customer_guest_presence'&&row.visitorId?")&&adm.includes('onCustomerMessage?.(guestMessageTarget)')&&adm.includes('>إرسال رسالة</button>'),'named guest detail must expose a separate message action');
 assert.ok(adm.includes("setCustomerMessageTarget({kind:'customer'"),'registered customer message action missing');
+assert.ok(adm.includes("row.__collection==='customer_guest_presence'?")&&adm.includes('setDetail(row)'),'named guest row must open details first');
+assert.ok(adm.includes('onCustomerMessage={target=>')&&adm.includes('setCustomerMessageTarget(target)'),'guest detail message action must reach the message modal');
 assert.ok(adm.includes('.admin-message-sheet'),'Android admin message sheet CSS missing');
 assert.ok(adm.includes('receiptPolicyVersion:2'),'new messages must carry durable receipt policy version');
 
@@ -36,8 +38,8 @@ assert.ok(cust.includes('.customer-admin-message-card'),'Android customer messag
 assert.ok(cust.includes('<CustomerPortalBootstrap/><CustomerAdminNotificationHost/>'),'customer notification host must be mounted');
 assert.ok(cust.indexOf('function CustomerPortalBootstrap(){') < cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") && cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") < cust.indexOf("ReactDOM.createRoot(document.getElementById('root')).render"),'customer notification host must live after the V42 bootstrap replacement boundary');
 
-assert.ok(boot.includes("index-v37-source.txt?v=56.16"),'employee current cache bust missing');
-assert.ok(custBoot.includes("customer-v37-source.txt?v=56.15"),'customer V56.15 cache bust missing');
+assert.ok(boot.includes("index-v37-source.txt?v=56.17"),'employee current cache bust missing');
+assert.ok(custBoot.includes("customer-v37-source.txt?v=56.17"),'customer current cache bust missing');
 assert.ok(boot.includes('maxHeight:\'min(72dvh, 560px)\''),'employee Android dynamic viewport card missing');
 
-console.log('V56.15 messaging + quota regression: OK');
+console.log('V56.17 messaging + quota regression: OK');
