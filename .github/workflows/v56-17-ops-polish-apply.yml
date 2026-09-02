@@ -1,0 +1,45 @@
+name: V56.17 Operations Polish Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/v56-17-ops-polish.py'
+      - '.github/workflows/v56-17-ops-polish-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply V56.17 package
+        run: python3 .github/scripts/v56-17-ops-polish.py
+      - name: V56.17 regression
+        run: node tests/v56-17-ops-polish.mjs
+      - name: Existing critical regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in tests/v56-10-critical-ux.mjs tests/v56-11-ops-fixes.mjs tests/v56-stocktake-workflow.mjs tests/v56-5-stocktake-direct-mobile.mjs; do
+            if [ -f "$t" ]; then node "$t"; fi
+          done
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit feature
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add health-center.html admin-dashboard.html admin-stocktake.html stocktake-accountant.html customer.html index.html runtime/index-v37-source.txt tests/v56-17-ops-polish.mjs
+          git commit -m "V56.17 — stocktake follow-up and operations polish"
+          git pull --rebase origin main
+          node tests/v56-17-ops-polish.mjs
+          git push origin HEAD:main
