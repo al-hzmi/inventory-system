@@ -1,0 +1,39 @@
+name: V56.12 Stop Future Auto Cleanup
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/v56-12-stop-auto-cleanup.py'
+      - '.github/workflows/v56-12-stop-auto-cleanup.yml'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: python3 .github/scripts/v56-12-stop-auto-cleanup.py
+      - run: node tests/v56-3-stocktake-test-mode.mjs
+      - run: node tests/v56-12-stocktake-accountant.mjs
+      - name: Syntax
+        run: |
+          python3 - <<'PY'
+          import re,pathlib
+          p=pathlib.Path('admin-stocktake.html').read_text(encoding='utf-8')
+          pathlib.Path('/tmp/admin.js').write_text('\n'.join(re.findall(r'<script(?:[^>]*)>([\s\S]*?)</script>',p)),encoding='utf-8')
+          PY
+          node --check /tmp/admin.js
+      - run: git diff --check
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add admin-stocktake.html
+          git commit -m "V56.12 — protect future full test campaigns"
+          git pull --rebase origin main
+          git push origin HEAD:main
