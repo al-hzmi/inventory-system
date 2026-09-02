@@ -21,3 +21,4 @@ jobs:
         run: node --check tools/cleanup_v56_12_stocktake_tests.mjs
       - name: Delete legacy test campaigns and related rows
         run: node tools/cleanup_v56_12_stocktake_tests.mjs
+# trigger
