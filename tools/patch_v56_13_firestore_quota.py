@@ -1,4 +1,5 @@
 from pathlib import Path
+# V56.13 workflow trigger: apply the already-reviewed quota hardening to generated runtime files.
 
 def replace(path, old, new, label, expected=1):
     p=Path(path); s=p.read_text(encoding='utf-8'); n=s.count(old)
