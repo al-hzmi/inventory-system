@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:82px;height:82px;object-fit:contain}.v37box p{font-size:12px;color:#78716c;margin:12px 0 0}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:82px;height:82px;object-fit:contain}.v37box p{font-size:12px;color:#78716c;margin:12px 0 0}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script></head>
 <body><div id="v37boot"><div class="v37box"><img src="./icons/icon-192.png" alt="بيت الأواني الطيبة"><p>جاري فتح بوابة العملاء...</p></div></div>
 <script>
 (async function(){
@@ -11,8 +11,21 @@
   const routeGuestName=(()=>{try{return String(localStorage.getItem('customer_guest_name_v1')||'').trim()}catch{return''}})();
   const routeQuickProfile=(()=>{try{return JSON.parse(localStorage.getItem('batco_quick_customer_profile_v1')||'null')}catch{return null}})();
   const routeNormName=value=>String(value||'').toLowerCase().replace(/[\u064B-\u065F\u0670]/g,'').replace(/\u0640/g,'').replace(/[أإآٱ]/g,'ا').replace(/[ىئ]/g,'ي').replace(/ؤ/g,'و').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
+  const routeVisitorId=(()=>{try{return String(localStorage.getItem('batco_customer_visitor_id_v1')||'').trim()}catch{return''}})();
+  const routeStickyVisitor=(()=>{try{return String(localStorage.getItem('batco_employee_onboarding_target_v1')||'').trim()}catch{return''}})();
+  const redirectHarounToEmployee=()=>{try{sessionStorage.setItem('batco_employee_onboarding_notice_v1','haroon')}catch{}location.replace('./index.html?employee=1&onboard=haroon');};
+  if(!employeeName&&routeVisitorId&&routeStickyVisitor===routeVisitorId){redirectHarounToEmployee();return;}
+  const centralEmployeeRoute=async()=>{if(employeeName||!routeVisitorId||!window.firebase)return false;try{
+    const cfg={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};
+    if(!firebase.apps.length)firebase.initializeApp(cfg);const firestore=firebase.firestore();
+    const snap=await Promise.race([firestore.collection('system_controls').doc('employee_onboarding_redirects').get(),new Promise(resolve=>setTimeout(()=>resolve(null),1800))]);
+    if(!snap?.exists)return false;const row=snap.data()||{},expires=row.expiresAt?.toMillis?row.expiresAt.toMillis():0;
+    if(row.active!==true||String(row.targetVisitorId||'')!==routeVisitorId||(expires&&expires<Date.now()))return false;
+    try{localStorage.setItem('batco_employee_onboarding_target_v1',routeVisitorId)}catch{}return true;
+  }catch(error){console.warn('[V56.18] central employee route unavailable',error);return false}};
+  if(await centralEmployeeRoute()){redirectHarounToEmployee();return;}
   if(!employeeName&&params.get('employeeView')!=='1'&&!routeQuickProfile?.uid&&routeNormName(routeGuestName)==='هارون'){try{sessionStorage.setItem('batco_employee_onboarding_notice_v1','haroon')}catch{}location.replace('./index.html?employee=1&onboard=haroon');return;}
-  const CORE='./runtime/customer-v37-source.txt?v=56.17';
+  const CORE='./runtime/customer-v37-source.txt?v=56.18';
   const replaceBetween=(src,start,end,replacement,label)=>{const a=src.indexOf(start);if(a<0)throw new Error(label+'_START');const b=src.indexOf(end,a+start.length);if(b<0)throw new Error(label+'_END');return src.slice(0,a)+replacement+src.slice(b)};
   const loadCore=async()=>{try{const r=await fetch(CORE,{cache:'no-store'});if(!r.ok)throw new Error('CORE_HTTP_'+r.status);const text=await r.text();try{const c=await caches.open('batco-v37-core');await c.put(CORE,new Response(text,{headers:{'Content-Type':'text/plain;charset=utf-8'}}))}catch{}return text}catch(e){try{const hit=await caches.match(CORE);if(hit)return await hit.text()}catch{}throw e}};
   try{

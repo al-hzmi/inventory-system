@@ -39,7 +39,7 @@ assert.ok(cust.includes('<CustomerPortalBootstrap/><CustomerAdminNotificationHos
 assert.ok(cust.indexOf('function CustomerPortalBootstrap(){') < cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") && cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") < cust.indexOf("ReactDOM.createRoot(document.getElementById('root')).render"),'customer notification host must live after the V42 bootstrap replacement boundary');
 
 assert.ok(boot.includes("index-v37-source.txt?v=56.17"),'employee current cache bust missing');
-assert.ok(custBoot.includes("customer-v37-source.txt?v=56.17"),'customer current cache bust missing');
+assert.ok(custBoot.includes("customer-v37-source.txt?v=56.18"),'customer current cache bust missing');
 assert.ok(boot.includes('maxHeight:\'min(72dvh, 560px)\''),'employee Android dynamic viewport card missing');
 
 console.log('V56.17 messaging + quota regression: OK');

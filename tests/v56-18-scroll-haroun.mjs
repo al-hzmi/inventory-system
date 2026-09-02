@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const admin=fs.readFileSync('admin-dashboard.html','utf8');
+const customer=fs.readFileSync('customer.html','utf8');
+assert.ok(admin.includes('return <div className="min-h-[100dvh] bg-black/75 p-0 sm:p-4 safe-top safe-bottom">'),'admin shell must use document scrolling');
+assert.ok(admin.includes('data-admin-scroll-root="1" className="flex-1 p-3 sm:p-4 bg-surface overflow-visible"'),'main admin content must not be the page scroll container');
+assert.ok(!admin.includes('data-admin-scroll-root="1" className="flex-1 overflow-y-auto'),'legacy nested admin root scroll must be gone');
+assert.ok(!admin.includes('divide-y divide-border max-h-[520px] overflow-y-auto'),'live customer/employee lists must flow with the page');
+assert.ok(!admin.includes('divide-y divide-border max-h-[620px] overflow-y-auto'),'generic record lists must flow with the page');
+assert.ok(!admin.includes('function DomainHome(){\n    return <div className="flex-1 overflow-y-auto'),'domain home must use document scroll');
+assert.ok(admin.includes("HAROUN_REDIRECT_DOC='employee_onboarding_redirects'")&&admin.includes("normalizeText(x.name)==='هارون'")&&admin.includes('targetVisitorId:target.visitorId'),'admin must bind the latest Haroun session by visitorId');
+assert.ok(admin.includes('windowMs=2*60*60*1000'),'Haroun automatic binding must be limited to a recent session window');
+assert.ok(customer.includes("localStorage.getItem('batco_customer_visitor_id_v1')")&&customer.includes("doc('employee_onboarding_redirects').get()"),'customer boot must read the targeted central route');
+assert.ok(customer.includes("String(row.targetVisitorId||'')!==routeVisitorId")&&customer.includes("batco_employee_onboarding_target_v1"),'customer route must be visitor-specific and sticky for the installed PWA');
+assert.ok(customer.includes("customer-v37-source.txt?v=56.18"),'customer cache bust must advance');
+console.log('V56.18 page scroll + targeted Haroun routing: OK');

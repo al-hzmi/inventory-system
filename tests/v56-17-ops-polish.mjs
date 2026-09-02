@@ -10,5 +10,5 @@ assert.ok(admin.includes('data-admin-scroll-root="1"')&&admin.includes("document
 assert.ok((admin.match(/useBodyScrollLock\(\);/g)||[]).length>=6&&admin.includes('customer_guest_presence')&&admin.includes('onCustomerMessage={target=>'));
 assert.ok(cust.includes("customer_guest_name_v1")&&cust.includes("==='هارون'")&&cust.includes('onboard=haroon'));
 assert.ok(idx.includes('onboardHaroon')&&idx.includes('هارون — دخول الموظفين')&&idx.includes("index-v37-source.txt?v=56.17"));
-assert.ok(cust.includes("customer-v37-source.txt?v=56.17")&&runtime.includes('./stocktake-accountant.html?v=56.17'));
+assert.ok(cust.includes("customer-v37-source.txt?v=56.18")&&runtime.includes('./stocktake-accountant.html?v=56.17'));
 console.log('V56.17 operations polish regression: OK');
