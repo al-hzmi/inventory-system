@@ -20,7 +20,7 @@ assert.ok(adm.includes("db.collection('customer_notifications').add"),'admin mus
 assert.ok(adm.includes('CustomerMessageModal'),'customer message modal missing');
 assert.ok(adm.includes("const guestMessageTarget=row.__collection==='customer_guest_presence'&&row.visitorId?")&&adm.includes('onCustomerMessage?.(guestMessageTarget)')&&adm.includes('>إرسال رسالة</button>'),'named guest detail must expose a separate message action');
 assert.ok(adm.includes("setCustomerMessageTarget({kind:'customer'"),'registered customer message action missing');
-assert.ok(adm.includes("row.__collection==='customer_guest_presence'?")&&adm.includes('setDetail(row)'),'named guest row must open details first');
+assert.ok(adm.includes("c.id?setCustomerManager(c):setDetail({...s,__collection:'customer_guest_presence'"),'named guest row must open details first');
 assert.ok(adm.includes('onCustomerMessage={target=>')&&adm.includes('setCustomerMessageTarget(target)'),'guest detail message action must reach the message modal');
 assert.ok(adm.includes('.admin-message-sheet'),'Android admin message sheet CSS missing');
 assert.ok(adm.includes('receiptPolicyVersion:2'),'new messages must carry durable receipt policy version');
