@@ -1,0 +1,67 @@
+name: V56.23 Haroun Robust Local Migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-23-haroun-robust-local-migration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply robust Haroun device migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('customer.html');s=p.read_text()
+          old="const routeKnownCustomerName=routeNormName(routeQuickProfile?.name||routeGuestName||'');"
+          new="const routeKnownCustomerName=routeNormName(routeQuickProfile?.name||routeGuestName||'');\n  const routeIsHarounName=value=>{const first=routeNormName(value).split(' ')[0]||'';return ['هارون','haroun','haroon','harun'].includes(first);};"
+          if old in s and 'const routeIsHarounName=' not in s:s=s.replace(old,new,1)
+          elif 'const routeIsHarounName=' not in s:raise SystemExit('V56.23 name helper anchor missing')
+          old_if="if(!employeeName&&params.get('employeeView')!=='1'&&routeKnownCustomerName==='هارون'){migrateHarounCustomerDevice();redirectHarounToEmployee();return;}"
+          new_if="if(!employeeName&&params.get('employeeView')!=='1'&&routeIsHarounName(routeKnownCustomerName)){migrateHarounCustomerDevice();redirectHarounToEmployee();return;}"
+          if old_if in s:s=s.replace(old_if,new_if,1)
+          elif new_if not in s:raise SystemExit('V56.23 routing condition anchor missing')
+          p.write_text(s)
+
+          t=Path('tests/v56-19-haroun-local-migration.mjs');ts=t.read_text()
+          ts=ts.replace("assert.ok(customer.includes(\"routeKnownCustomerName==='هارون'\"),'Haroun must be recognized even after becoming a passwordless customer');","assert.ok(customer.includes(\"const routeIsHarounName=value=>\")&&customer.includes(\"['هارون','haroun','haroon','harun'].includes(first)\")&&customer.includes(\"routeIsHarounName(routeKnownCustomerName)\"),'Haroun must be recognized by first name and common spellings even after becoming a passwordless customer');")
+          t.write_text(ts)
+
+          t2=Path('tests/v56-17-ops-polish.mjs');x=t2.read_text()
+          x=x.replace("cust.includes(\"==='هارون'\")","cust.includes('routeIsHarounName(routeKnownCustomerName)')")
+          t2.write_text(x)
+          PY
+      - name: Regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/v56-19-haroun-local-migration.mjs
+          node tests/v56-17-ops-polish.mjs
+          git diff --check
+      - name: Commit V56.23
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer.html tests/v56-19-haroun-local-migration.mjs tests/v56-17-ops-polish.mjs
+          git commit -m "V56.23 — recognize Haroun device by first name and spelling variants"
+          git pull --rebase origin main
+          node tests/v56-19-haroun-local-migration.mjs
+          node tests/v56-17-ops-polish.mjs
+          git push origin HEAD:main
