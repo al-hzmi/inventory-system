@@ -1,0 +1,45 @@
+name: V56.12 Stocktake Accountant Regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-stocktake.html'
+      - 'stocktake-accountant.html'
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'tests/v56-3-stocktake-test-mode.mjs'
+      - 'tests/v56-12-stocktake-accountant.mjs'
+      - '.github/workflows/v56-12-stocktake-accountant-regression.yml'
+  pull_request:
+    paths:
+      - 'admin-stocktake.html'
+      - 'stocktake-accountant.html'
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'tests/v56-3-stocktake-test-mode.mjs'
+      - 'tests/v56-12-stocktake-accountant.mjs'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Full test stocktake regression
+        run: node tests/v56-3-stocktake-test-mode.mjs
+      - name: Accountant/full-test regression
+        run: node tests/v56-12-stocktake-accountant.mjs
+      - name: JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          import re, pathlib
+          for src,out in [('stocktake-accountant.html','/tmp/accountant.js'),('admin-stocktake.html','/tmp/admin-stocktake.js')]:
+            p=pathlib.Path(src).read_text(encoding='utf-8')
+            scripts=re.findall(r'<script(?:[^>]*)>([\s\S]*?)</script>',p)
+            pathlib.Path(out).write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/accountant.js
+          node --check /tmp/admin-stocktake.js
+      - name: Diff check
+        run: git diff --check
