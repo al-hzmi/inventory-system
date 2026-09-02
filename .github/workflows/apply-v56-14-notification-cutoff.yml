@@ -1,0 +1,53 @@
+name: Apply V56.14 Legacy Notification Cutoff
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/patch_v56_14_notification_cutoff.py'
+      - '.github/workflows/apply-v56-14-notification-cutoff.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V56.14 patch
+        run: python tools/patch_v56_14_notification_cutoff.py
+      - name: Static contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          employee=Path('runtime/index-v37-source.txt').read_text(encoding='utf-8')
+          customer=Path('runtime/customer-v37-source.txt').read_text(encoding='utf-8')
+          index=Path('index.html').read_text(encoding='utf-8')
+          portal=Path('customer.html').read_text(encoding='utf-8')
+          for name,text in [('employee',employee),('customer',customer)]:
+              assert "LEGACY_ONCE_CUTOFF_MS=Date.parse('2026-09-02T00:26:00Z')" in text, name
+              assert "policy<2||(created>0&&created<LEGACY_ONCE_CUTOFF_MS)" in text, name
+              assert "if(row.status!=='active'||!legacyOnce(row))return;" in text, name
+          assert 'index-v37-source.txt?v=56.14' in index
+          assert 'customer-v37-source.txt?v=56.14' in portal
+          print('V56.14 static contract PASS')
+          PY
+      - name: Commit generated patch
+        run: |
+          if git diff --quiet -- runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html; then
+            echo 'No generated changes'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html
+          git commit -m 'V56.14 stop legacy one-time message replay'
+          git push origin HEAD:main
