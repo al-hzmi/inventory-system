@@ -26,7 +26,9 @@ jobs:
         with:
           node-version: '22'
       - name: Apply V56.16 stocktake/accounting package
-        run: python .github/scripts/v56-16-stocktake-accounting.py
+        run: |
+          python .github/scripts/v56-16-stocktake-accounting.py
+          python .github/scripts/v56-16-regression-contract.py
       - name: Verify regressions before live cleanup
         run: |
           set -euo pipefail
@@ -40,6 +42,7 @@ jobs:
           node tests/v56-5-stocktake-direct-mobile.mjs
           node tests/v56-8-stocktake-field-ux.mjs
           node tests/v56-10-critical-ux.mjs
+          node tests/v56-16-stocktake-accounting.mjs
           git diff --check
       - name: Delete previous test stocktakes from Firestore
         shell: bash
@@ -96,8 +99,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -f .github/scripts/v56-16-stocktake-accounting.py .github/workflows/v56-16-stocktake-accounting-apply.yml .github/v56-16-trigger.txt
-          git add admin-stocktake.html admin-stocktake-shell.html admin-dashboard.html runtime/index-v37-source.txt index.html tests/v56-11-ops-fixes.mjs accountant-stocktake.html
+          git rm -f .github/scripts/v56-16-stocktake-accounting.py .github/scripts/v56-16-regression-contract.py .github/workflows/v56-16-stocktake-accounting-apply.yml .github/v56-16-trigger.txt
+          git add admin-stocktake.html admin-stocktake-shell.html admin-dashboard.html runtime/index-v37-source.txt index.html tests/v56-11-ops-fixes.mjs accountant-stocktake.html tests/v56-16-stocktake-accounting.mjs .github/workflows/v56-16-stocktake-accounting-regression.yml
           git diff --cached --check
           git commit -m "V56.16 — full test inventory and accountant stocktake view"
           git push origin HEAD:main
