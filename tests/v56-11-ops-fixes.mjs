@@ -17,7 +17,7 @@ assert.ok(stock.includes('inputmode=\"${keyboardMode}\"'),'search input must use
 assert.ok(!stock.includes('يمكن مسح الباركود الطويل مباشرة؛ النظام يستخرج رقم الصنف منه تلقائيًا مثل بحث المخزون.'),'verbose operator hint must be removed');
 assert.ok(!stock.includes('لن تظهر بقية الأصناف هنا حتى لا تربك عملية الجرد.'),'empty-state guidance must be removed');
 assert.ok(!stock.includes('يمكن تعديل الإجمالي النهائي. سيُحفظ التعديل كاملًا في سجل الجرد.'),'edit guidance must be removed');
-assert.ok(shell.includes('stocktake.html?v=56.11')&&shell.includes('admin-stocktake.html?embedded=1&v=56.11'),'stocktake cache keys must be V56.11');
+assert.ok(shell.includes('stocktake.html?v=56.11')&&shell.includes('admin-stocktake.html?embedded=1&v=56.11'),'stocktake shell cache keys must retain V56.11 operator surface');
 for(const [name,src] of [['employee',idx],['customer',cust]]){
   assert.ok(src.includes('NOTIFICATION_RECEIPT_GLOBAL_KEY'),`${name}: identity-independent receipt ledger missing`);
   assert.ok(src.includes('LocalNotificationShows'),`${name}: local receipt ledger missing`);
@@ -27,6 +27,8 @@ for(const [name,src] of [['employee',idx],['customer',cust]]){
   assert.ok(src.includes('receiptPolicyVersion')&&src.includes('policy>=2'),`${name}: legacy detection must use receipt policy, not timestamps`);
 }
 assert.ok(admin.match(/receiptPolicyVersion:2/g)?.length>=2,'new employee and customer messages must carry receipt policy v2');
-assert.ok(boot.includes('index-v37-source.txt?v=56.12'),'employee runtime cache bust missing');
-assert.ok(custBoot.includes('customer-v37-source.txt?v=56.12'),'customer runtime cache bust missing');
-console.log('V56.12 durable one-time messaging regression: OK');
+const employeeCache=Number(boot.match(/index-v37-source\.txt\?v=56\.(\d+)/)?.[1]||0);
+const customerCache=Number(custBoot.match(/customer-v37-source\.txt\?v=56\.(\d+)/)?.[1]||0);
+assert.ok(employeeCache>=12,`employee runtime cache bust regressed below V56.12: ${employeeCache}`);
+assert.ok(customerCache>=12,`customer runtime cache bust regressed below V56.12: ${customerCache}`);
+console.log('V56.12+ durable one-time messaging regression: OK');
