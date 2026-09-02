@@ -1,0 +1,57 @@
+name: Apply V56.12 Durable Message Receipts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/patch_v56_12_message_receipts.py'
+      - '.github/workflows/apply-v56-12-message-receipts.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply V56.12 patch
+        run: python tools/patch_v56_12_message_receipts.py
+      - name: Verify messaging invariants
+        run: |
+          set -euo pipefail
+          node tests/v56-11-ops-fixes.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          idx=Path('runtime/index-v37-source.txt').read_text()
+          cust=Path('runtime/customer-v37-source.txt').read_text()
+          boot=Path('index.html').read_text()
+          cboot=Path('customer.html').read_text()
+          for name,src in [('employee',idx),('customer',cust)]:
+              assert 'NOTIFICATION_RECEIPT_GLOBAL_KEY' in src, name+' global receipt missing'
+              assert 'legacyReceiptSuppressed:true' in src, name+' legacy retirement missing'
+              assert 'receiptPolicyVersion' in src and 'policy>=2' in src, name+' policy guard missing'
+              assert 'rememberShow(candidate);setNotification(candidate);markShown(candidate)' in src, name+' local-first receipt order broken'
+          assert "index-v37-source.txt?v=56.12" in boot
+          assert "customer-v37-source.txt?v=56.12" in cboot
+          print('V56_12_MESSAGE_RECEIPTS_PASS')
+          PY
+          git diff --check
+      - name: Commit and push V56.12
+        run: |
+          if git diff --quiet -- runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html tests/v56-11-ops-fixes.mjs; then
+            echo 'No generated changes'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html tests/v56-11-ops-fixes.mjs
+          git commit -m 'V56.12 — retire legacy one-time messages durably'
+          git pull --rebase origin main
+          git push origin HEAD:main
