@@ -1,5 +1,5 @@
 from pathlib import Path
-# V56.13 workflow trigger: apply the already-reviewed quota hardening to generated runtime files.
+# V56.15: preserve V56.14 durable legacy-message cutoff and reduce Firestore quota pressure.
 
 def replace(path, old, new, label, expected=1):
     p=Path(path); s=p.read_text(encoding='utf-8'); n=s.count(old)
@@ -62,34 +62,29 @@ new_emp="""                    db.collection('site_sessions').doc(sessionId).set
             }
         }, 300000);"""
 replace(emp,old_emp,new_emp,'employee heartbeat')
-# The legacy source line carries one trailing blank after the interval literal; remove it after replacement.
 p=Path(emp); s=p.read_text(encoding='utf-8'); p.write_text(s.replace('        }, 300000); \n','        }, 300000);\n'),encoding='utf-8')
 
 old_cust="""useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>touchCustomerSession(user,safeProfile,'heartbeat'),120000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);"""
 new_cust="""useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>{if(document.visibilityState==='visible')touchCustomerSession(user,safeProfile,'heartbeat')},300000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);"""
 replace(cust,old_cust,new_cust,'customer heartbeat')
 
-# Reduce notification bootstrap reads without changing recipient targeting.
 replace(emp,".where('employeeId','==',employeeId).limit(50)",".where('employeeId','==',employeeId).limit(20)",'employee notification id limit')
 replace(emp,".where('targetKey','==',targetKeys[0]).limit(50)",".where('targetKey','==',targetKeys[0]).limit(20)",'employee notification target limit')
 replace(cust,".where(field,'==',value).limit(50).onSnapshot", ".where(field,'==',value).limit(20).onSnapshot",'customer notification limit')
 
-# Bound full-history realtime queries for customers.
 replace(cust,"db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).onSnapshot", "db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).limit(100).onSnapshot",'customer orders limit')
 replace(cust,"db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).onSnapshot", "db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).limit(60).onSnapshot",'customer drafts limit')
 
-# Bump runtime cache keys so the quota hardening cannot be masked by an older cached runtime.
-replace('index.html',"const CORE='./runtime/index-v37-source.txt?v=56.12';","const CORE='./runtime/index-v37-source.txt?v=56.13';",'employee runtime version')
-replace('customer.html',"const CORE='./runtime/customer-v37-source.txt?v=56.12';","const CORE='./runtime/customer-v37-source.txt?v=56.13';",'customer runtime version')
+replace('index.html',"const CORE='./runtime/index-v37-source.txt?v=56.14';","const CORE='./runtime/index-v37-source.txt?v=56.15';",'employee runtime version')
+replace('customer.html',"const CORE='./runtime/customer-v37-source.txt?v=56.14';","const CORE='./runtime/customer-v37-source.txt?v=56.15';",'customer runtime version')
 
-# Keep the messaging regression contract aligned with the stricter, lower-read queries.
 replace(test,"/where\\('employeeId','==',employeeId\\)\\.limit\\(50\\)/","/where\\('employeeId','==',employeeId\\)\\.limit\\(20\\)/",'employee messaging test query')
 replace(test,"/where\\('targetKey','==',targetKeys\\[0\\]\\)\\.limit\\(50\\)/","/where\\('targetKey','==',targetKeys\\[0\\]\\)\\.limit\\(20\\)/",'employee alias messaging test query')
 replace(test,"/where\\(field,'==',value\\)\\.limit\\(50\\)/","/where\\(field,'==',value\\)\\.limit\\(20\\)/",'customer messaging test query')
-replace(test,"index-v37-source.txt?v=56.12","index-v37-source.txt?v=56.13",'employee messaging test version')
-replace(test,"customer-v37-source.txt?v=56.12","customer-v37-source.txt?v=56.13",'customer messaging test version')
-replace(test,"employee V56.12 cache bust missing","employee V56.13 cache bust missing",'employee messaging test label')
-replace(test,"customer V56.12 cache bust missing","customer V56.13 cache bust missing",'customer messaging test label')
-replace(test,"V56.12 messaging regression: OK","V56.13 messaging + quota regression: OK",'messaging test log')
+replace(test,"index-v37-source.txt?v=56.14","index-v37-source.txt?v=56.15",'employee messaging test version')
+replace(test,"customer-v37-source.txt?v=56.14","customer-v37-source.txt?v=56.15",'customer messaging test version')
+replace(test,"employee V56.14 cache bust missing","employee V56.15 cache bust missing",'employee messaging test label')
+replace(test,"customer V56.14 cache bust missing","customer V56.15 cache bust missing",'customer messaging test label')
+replace(test,"V56.14 messaging regression: OK","V56.15 messaging + quota regression: OK",'messaging test log')
 
-print('V56.13 Firestore quota hardening patch applied')
+print('V56.15 Firestore quota hardening patch applied over V56.14')
