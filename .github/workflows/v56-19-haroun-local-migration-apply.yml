@@ -1,0 +1,51 @@
+name: V56.19 Haroun Local Migration Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/v56-19-haroun-local-migration.py'
+      - '.github/workflows/v56-19-haroun-local-migration-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply V56.19
+        run: python3 .github/scripts/v56-19-haroun-local-migration.py
+      - name: Haroun migration regression
+        run: node tests/v56-19-haroun-local-migration.mjs
+      - name: Scroll and critical regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in tests/v56-18-scroll-haroun.mjs tests/v56-17-ops-polish.mjs tests/v56-4-messaging.mjs tests/v56-10-critical-ux.mjs tests/v56-11-ops-fixes.mjs tests/v56-stocktake-workflow.mjs tests/v56-5-stocktake-direct-mobile.mjs; do
+            if [ -f "$t" ]; then node "$t"; fi
+          done
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit V56.19
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer.html tests/v56-4-messaging.mjs tests/v56-17-ops-polish.mjs tests/v56-18-scroll-haroun.mjs tests/v56-19-haroun-local-migration.mjs
+          git commit -m "V56.19 — migrate Haroun out of customer profile routing"
+          git pull --rebase origin main
+          node tests/v56-19-haroun-local-migration.mjs
+          node tests/v56-18-scroll-haroun.mjs
+          node tests/v56-17-ops-polish.mjs
+          node tests/v56-4-messaging.mjs
+          git push origin HEAD:main
