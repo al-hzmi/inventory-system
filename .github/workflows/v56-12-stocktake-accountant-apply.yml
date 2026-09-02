@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/scripts/v56-12-stocktake-accountant.py'
       - '.github/workflows/v56-12-stocktake-accountant-apply.yml'
+      - 'tests/v56-3-stocktake-test-mode.mjs'
 permissions:
   contents: write
 jobs:
@@ -71,4 +72,4 @@ jobs:
           git commit -m "V56.12 — full test stocktake and accountant view"
           git pull --rebase origin main
           git push origin HEAD:main
-# trigger 2
+# trigger 3
