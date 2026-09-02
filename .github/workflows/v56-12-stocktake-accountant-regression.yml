@@ -43,3 +43,4 @@ jobs:
           node --check /tmp/admin-stocktake.js
       - name: Diff check
         run: git diff --check
+# clean-main verification
