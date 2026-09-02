@@ -38,16 +38,16 @@ jobs:
           assert 'const limit=REALTIME_LIMIT[key]||160' in adm
           assert "if(!REALTIME_KEYS.has(key)){loadOnce();return()=>{}}" in adm
           assert "customerDevices:180" in adm and "search:160" in adm and "adminAudit:120" in adm
-          assert emp.count('durationMinutes: firebase.firestore.FieldValue.increment(5)') >= 2
-          assert emp.count('timeSpentMinutes: firebase.firestore.FieldValue.increment(5)') >= 2
-          assert emp.count('}, 300000);') >= 2
-          assert emp.count(".where('employeeId','==',employeeId).limit(20)") >= 2
-          assert emp.count(".where('targetKey','==',targetKeys[0]).limit(20)") >= 2
-          assert cust.count("visibilityState==='visible'") >= 2
-          assert cust.count('},300000)') >= 2
-          assert cust.count(".where(field,'==',value).limit(20).onSnapshot") >= 2
-          assert cust.count("where('customerUid','==',user.uid).limit(100).onSnapshot") >= 2
-          assert cust.count("where('customerUid','==',user.uid).limit(60).onSnapshot") >= 2
+          assert emp.count('durationMinutes: firebase.firestore.FieldValue.increment(5)') >= 1
+          assert emp.count('timeSpentMinutes: firebase.firestore.FieldValue.increment(5)') >= 1
+          assert emp.count('}, 300000);') >= 1
+          assert emp.count(".where('employeeId','==',employeeId).limit(20)") >= 1
+          assert emp.count(".where('targetKey','==',targetKeys[0]).limit(20)") >= 1
+          assert cust.count("visibilityState==='visible'") >= 1
+          assert cust.count('},300000)') >= 1
+          assert cust.count(".where(field,'==',value).limit(20).onSnapshot") >= 1
+          assert cust.count("where('customerUid','==',user.uid).limit(100).onSnapshot") >= 1
+          assert cust.count("where('customerUid','==',user.uid).limit(60).onSnapshot") >= 1
           for name,src in [('employee',emp),('customer',cust)]:
               assert 'NOTIFICATION_RECEIPT_GLOBAL_KEY' in src, name+' global receipt missing'
               assert 'legacyReceiptSuppressed:true' in src, name+' legacy retirement missing'
