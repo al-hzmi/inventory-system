@@ -1,0 +1,103 @@
+name: V56.16 Stocktake Accounting Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/v56-16-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply V56.16 stocktake/accounting package
+        run: python .github/scripts/v56-16-stocktake-accounting.py
+      - name: Verify regressions before live cleanup
+        run: |
+          set -euo pipefail
+          test -f accountant-stocktake.html
+          grep -q "CONTROL_DOC='stocktake_accounting'" accountant-stocktake.html
+          grep -q "قراءة فقط" accountant-stocktake.html
+          grep -q "inventorySnapshotCount:rows.length" admin-stocktake.html
+          ! grep -q 'id="testCount"' admin-stocktake.html
+          node tests/v56-11-ops-fixes.mjs
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v56-5-stocktake-direct-mobile.mjs
+          node tests/v56-8-stocktake-field-ux.mjs
+          node tests/v56-10-critical-ux.mjs
+          git diff --check
+      - name: Delete previous test stocktakes from Firestore
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const project='inventory-system-ca3dc';
+          const key='AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw';
+          const root=`https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents`;
+          const api=(path='')=>`${root}${path}${path.includes('?')?'&':'?'}key=${encodeURIComponent(key)}`;
+          async function req(path,init={}){
+            const r=await fetch(api(path),{...init,headers:{'content-type':'application/json',...(init.headers||{})}});
+            const text=await r.text(); let data=null; try{data=text?JSON.parse(text):null}catch{data=text}
+            if(!r.ok)throw new Error(`${r.status} ${r.statusText}: ${typeof data==='string'?data:JSON.stringify(data)}`);
+            return data;
+          }
+          async function query(collection,field,value){
+            const body={structuredQuery:{from:[{collectionId:collection}],where:{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value}}}};
+            const rows=await req(':runQuery',{method:'POST',body:JSON.stringify(body)});
+            return (Array.isArray(rows)?rows:[]).map(x=>x.document).filter(Boolean);
+          }
+          async function commit(writes){
+            for(let i=0;i<writes.length;i+=400)await req(':commit',{method:'POST',body:JSON.stringify({writes:writes.slice(i,i+400)})});
+          }
+          async function getDoc(path){try{return await req('/'+path)}catch(e){if(String(e.message).startsWith('404 '))return null;throw e}}
+          const tests=await query('stocktake_campaigns','isTest',{booleanValue:true});
+          const testIds=tests.map(d=>d.name.split('/').pop());
+          console.log(`Previous test campaigns found: ${testIds.length}`);
+          let deletedItems=0,deletedTeams=0,deletedAudit=0;
+          for(const id of testIds){
+            const [items,teams,audit]=await Promise.all([
+              query('stocktake_items','campaignId',{stringValue:id}),
+              query('stocktake_teams','campaignId',{stringValue:id}),
+              query('stocktake_audit','campaignId',{stringValue:id})
+            ]);
+            deletedItems+=items.length;deletedTeams+=teams.length;deletedAudit+=audit.length;
+            await commit([...items,...teams,...audit].map(d=>({delete:d.name})));
+          }
+          if(tests.length)await commit(tests.map(d=>({delete:d.name})));
+          const feature=await getDoc('system_controls/stocktake_feature');
+          const activeId=feature?.fields?.activeCampaignId?.stringValue||'';
+          if(testIds.includes(activeId)){
+            await commit([{update:{name:`projects/${project}/databases/(default)/documents/system_controls/stocktake_feature`,fields:{enabled:{booleanValue:false},accessMode:{stringValue:'none'},activeCampaignId:{stringValue:''},allowedEmployeeIds:{arrayValue:{values:[]}},allowedEmployeeNames:{arrayValue:{values:[]}},updatedBy:{stringValue:'مهند'}}},updateMask:{fieldPaths:['enabled','accessMode','activeCampaignId','allowedEmployeeIds','allowedEmployeeNames','updatedBy']}}]);
+          }
+          const accounting=await getDoc('system_controls/stocktake_accounting');
+          const accountingCampaign=accounting?.fields?.campaignId?.stringValue||'';
+          if(testIds.includes(accountingCampaign)){
+            await commit([{update:{name:`projects/${project}/databases/(default)/documents/system_controls/stocktake_accounting`,fields:{enabled:{booleanValue:false},accessMode:{stringValue:'none'},campaignId:{stringValue:''},allowedEmployeeIds:{arrayValue:{values:[]}},allowedEmployeeNames:{arrayValue:{values:[]}},updatedBy:{stringValue:'مهند'}}},updateMask:{fieldPaths:['enabled','accessMode','campaignId','allowedEmployeeIds','allowedEmployeeNames','updatedBy']}}]);
+          }
+          console.log(`Deleted test campaigns=${testIds.length}, items=${deletedItems}, teams=${deletedTeams}, audit=${deletedAudit}`);
+          NODE
+      - name: Commit production package and self-clean bootstrap files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/scripts/v56-16-stocktake-accounting.py .github/workflows/v56-16-stocktake-accounting-apply.yml .github/v56-16-trigger.txt
+          git add admin-stocktake.html admin-stocktake-shell.html admin-dashboard.html runtime/index-v37-source.txt index.html tests/v56-11-ops-fixes.mjs accountant-stocktake.html
+          git diff --cached --check
+          git commit -m "V56.16 — full test inventory and accountant stocktake view"
+          git push origin HEAD:main
