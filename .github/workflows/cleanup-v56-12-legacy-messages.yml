@@ -1,0 +1,26 @@
+name: V56.12 Cleanup Legacy One-Time Messages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/cleanup_v56_12_legacy_notifications.mjs'
+      - '.github/workflows/cleanup-v56-12-legacy-messages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify cleanup script syntax
+        run: node --check tools/cleanup_v56_12_legacy_notifications.mjs
+      - name: Retire legacy stuck one-time notifications in Firestore
+        run: node tools/cleanup_v56_12_legacy_notifications.mjs
