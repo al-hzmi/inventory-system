@@ -21,6 +21,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,6 +42,34 @@ jobs:
           PY
           node --check /tmp/accountant.js
           node --check /tmp/admin-stocktake.js
+      - name: Accountant mobile and desktop browser smoke
+        run: |
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4174 >/tmp/v5612-http.log 2>&1 &
+          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
+          cat >/tmp/v5612-smoke.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          let failed=false;
+          for(const cfg of [{name:'mobile',width:390,height:844},{name:'desktop',width:1440,height:900}]){
+            const context=await browser.newContext({viewport:{width:cfg.width,height:cfg.height}});
+            await context.addInitScript(()=>{
+              localStorage.setItem('inventory_user_name_v2','مهند');
+              localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');
+            });
+            const page=await context.newPage();
+            const errs=[];page.on('pageerror',e=>errs.push(String(e)));
+            const res=await page.goto('http://127.0.0.1:4174/stocktake-accountant.html?preview=1&v=56.12',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForTimeout(2500);
+            const dims=await page.evaluate(()=>({vw:document.documentElement.clientWidth,sw:document.documentElement.scrollWidth,bw:document.body.scrollWidth,text:document.body.innerText}));
+            console.log(cfg.name,res?.status(),dims.vw,dims.sw,dims.bw,dims.text.replace(/\s+/g,' ').slice(0,180),errs);
+            if(!res||res.status()>=400||errs.length||dims.sw>dims.vw+1||dims.bw>dims.vw+1||dims.text.trim().length<8)failed=true;
+            if(cfg.name==='mobile'&&!dims.text.includes('متابعة الجرد'))failed=true;
+            await context.close();
+          }
+          await browser.close();if(failed)process.exit(1);
+          JS
+          node /tmp/v5612-smoke.mjs
       - name: Diff check
         run: git diff --check
-# clean-main verification
