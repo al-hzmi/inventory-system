@@ -1,0 +1,50 @@
+name: V56.17 Operations Polish Regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'health-center.html'
+      - 'admin-dashboard.html'
+      - 'admin-stocktake.html'
+      - 'stocktake-accountant.html'
+      - 'customer.html'
+      - 'index.html'
+      - 'runtime/index-v37-source.txt'
+      - 'tests/v56-17-ops-polish.mjs'
+      - '.github/workflows/v56-17-ops-polish-regression.yml'
+  pull_request:
+    paths:
+      - 'health-center.html'
+      - 'admin-dashboard.html'
+      - 'admin-stocktake.html'
+      - 'stocktake-accountant.html'
+      - 'customer.html'
+      - 'index.html'
+      - 'runtime/index-v37-source.txt'
+      - 'tests/v56-17-ops-polish.mjs'
+      - '.github/workflows/v56-17-ops-polish-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: V56.17 contract
+        run: node tests/v56-17-ops-polish.mjs
+      - name: Critical compatibility regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in tests/v56-10-critical-ux.mjs tests/v56-11-ops-fixes.mjs tests/v56-stocktake-workflow.mjs tests/v56-5-stocktake-direct-mobile.mjs; do
+            if [ -f "$t" ]; then node "$t"; fi
+          done
+      - name: Diff safety
+        run: git diff --check
