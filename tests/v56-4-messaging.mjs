@@ -10,25 +10,32 @@ const custBoot=fs.readFileSync('customer.html','utf8');
 assert.match(idx,/where\('employeeId','==',employeeId\)\.limit\(50\)/,'employee messages must query recipient directly');
 assert.match(idx,/where\('targetKey','==',targetKeys\[0\]\)\.limit\(50\)/,'employee alias fallback must be targeted');
 assert.ok(!idx.includes("collection(EMPLOYEE_NOTIFICATION_COLLECTION).limit(150).onSnapshot"),'legacy global 150 listener must be removed');
-assert.ok(idx.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'employee UI must display before the best-effort receipt call');
+assert.ok(idx.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'employee local receipt must be persisted before display and Firestore sync');
+assert.ok(idx.includes('EMPLOYEE_NOTIFICATION_RECEIPT_GLOBAL_KEY'),'employee receipt must survive identity-key changes');
+assert.ok(idx.includes('legacyReceiptSuppressed:true'),'legacy employee one-time messages must be retired server-side');
+assert.ok(idx.includes('receiptPolicyVersion')&&idx.includes('policy>=2'),'employee legacy detection must use receipt policy version');
 
 assert.ok(adm.includes("db.collection('customer_notifications').add"),'admin must be able to create customer messages');
 assert.ok(adm.includes('CustomerMessageModal'),'customer message modal missing');
 assert.ok(adm.includes("setCustomerMessageTarget({kind:'guest'"),'named guest message action missing');
 assert.ok(adm.includes("setCustomerMessageTarget({kind:'customer'"),'registered customer message action missing');
 assert.ok(adm.includes('.admin-message-sheet'),'Android admin message sheet CSS missing');
+assert.ok(adm.includes('receiptPolicyVersion:2'),'new messages must carry durable receipt policy version');
 
 assert.ok(cust.includes("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications'"),'customer notification collection missing');
 assert.ok(cust.includes('CustomerAdminNotificationHost'),'customer notification host missing');
 assert.match(cust,/where\(field,'==',value\)\.limit\(50\)/,'customer notifications must use targeted equality query');
 assert.ok(cust.includes('visitorId===customerVisitorId'),'guest visitor identity targeting missing');
-assert.ok(cust.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'customer UI must display before best-effort receipt write');
+assert.ok(cust.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'customer local receipt must be persisted before display and Firestore sync');
+assert.ok(cust.includes('CUSTOMER_NOTIFICATION_RECEIPT_GLOBAL_KEY'),'customer receipt must survive identity-key changes');
+assert.ok(cust.includes('legacyReceiptSuppressed:true'),'legacy customer one-time messages must be retired server-side');
+assert.ok(cust.includes('receiptPolicyVersion')&&cust.includes('policy>=2'),'customer legacy detection must use receipt policy version');
 assert.ok(cust.includes('.customer-admin-message-card'),'Android customer message card CSS missing');
 assert.ok(cust.includes('<CustomerPortalBootstrap/><CustomerAdminNotificationHost/>'),'customer notification host must be mounted');
 assert.ok(cust.indexOf('function CustomerPortalBootstrap(){') < cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") && cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") < cust.indexOf("ReactDOM.createRoot(document.getElementById('root')).render"),'customer notification host must live after the V42 bootstrap replacement boundary');
 
-assert.ok(boot.includes("index-v37-source.txt?v=56.11"),'employee cache bust missing');
-assert.ok(custBoot.includes("customer-v37-source.txt?v=56.11"),'customer cache bust missing');
+assert.ok(boot.includes("index-v37-source.txt?v=56.12"),'employee V56.12 cache bust missing');
+assert.ok(custBoot.includes("customer-v37-source.txt?v=56.12"),'customer V56.12 cache bust missing');
 assert.ok(boot.includes('maxHeight:\'min(72dvh, 560px)\''),'employee Android dynamic viewport card missing');
 
-console.log('V56.4 messaging regression: OK');
+console.log('V56.12 messaging regression: OK');
