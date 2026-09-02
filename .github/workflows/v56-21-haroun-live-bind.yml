@@ -1,0 +1,148 @@
+name: V56.21 Haroun Live Visitor Binding
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-21-haroun-live-bind.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Bind latest Haroun customer device to employee onboarding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, re, sys, urllib.request, urllib.parse, urllib.error
+          from datetime import datetime, timezone, timedelta
+
+          PROJECT='inventory-system-ca3dc'
+          KEY='AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw'
+          BASE=f'https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents'
+          NOW=datetime.now(timezone.utc)
+          WINDOW=timedelta(hours=4)
+
+          def norm(value):
+              s=str(value or '').lower().strip()
+              s=re.sub(r'[\u064B-\u065F\u0670]','',s).replace('\u0640','')
+              for a,b in [('أ','ا'),('إ','ا'),('آ','ا'),('ٱ','ا'),('ى','ي'),('ئ','ي'),('ؤ','و'),('ة','ه')]:
+                  s=s.replace(a,b)
+              s=re.sub(r'[^\w\u0600-\u06FF ]+',' ',s)
+              return ' '.join(s.split())
+
+          def is_haroun(name):
+              n=norm(name)
+              if not n: return False
+              first=n.split(' ',1)[0]
+              return first in {'هارون','haroun','haroon','harun'}
+
+          def scalar(v):
+              if not isinstance(v,dict): return None
+              for k in ('stringValue','timestampValue','integerValue','doubleValue','booleanValue'):
+                  if k in v: return v[k]
+              return None
+
+          def when(*values):
+              for raw in values:
+                  if not raw: continue
+                  try:
+                      dt=datetime.fromisoformat(str(raw).replace('Z','+00:00'))
+                      return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+                  except Exception:
+                      pass
+              return datetime.fromtimestamp(0, timezone.utc)
+
+          def list_docs(collection):
+              out=[]; token=''
+              for _ in range(5):
+                  qs={'pageSize':'300','key':KEY}
+                  if token: qs['pageToken']=token
+                  url=f'{BASE}/{collection}?'+urllib.parse.urlencode(qs)
+                  with urllib.request.urlopen(url,timeout=20) as r:
+                      payload=json.load(r)
+                  out.extend(payload.get('documents',[]))
+                  token=payload.get('nextPageToken','')
+                  if not token: break
+              return out
+
+          try:
+              sessions=list_docs('customer_sessions')
+              customers=list_docs('customers')
+          except urllib.error.HTTPError as e:
+              print(f'V56_21_HAROUN_BIND=READ_HTTP_{e.code}')
+              sys.exit(2)
+          except Exception as e:
+              print('V56_21_HAROUN_BIND=READ_UNAVAILABLE')
+              sys.exit(2)
+
+          cmap={d.get('name','').rsplit('/',1)[-1]:d.get('fields',{}) for d in customers}
+          candidates=[]
+
+          for d in sessions:
+              f=d.get('fields',{})
+              uid=str(scalar(f.get('customerUid')) or '')
+              cf=cmap.get(uid,{})
+              visitor=str(scalar(f.get('visitorId')) or scalar(cf.get('visitorId')) or '')
+              name=str(scalar(cf.get('name')) or scalar(f.get('name')) or '')
+              t=when(scalar(f.get('lastActive')),scalar(f.get('updatedAt')),scalar(f.get('startedAt')),scalar(cf.get('lastSeenAt')),scalar(cf.get('lastActivityAt')),scalar(cf.get('updatedAt')))
+              age=NOW-t
+              if visitor and is_haroun(name) and timedelta(0) <= age <= WINDOW:
+                  candidates.append((t,visitor,uid,name,'session'))
+
+          for uid,cf in cmap.items():
+              visitor=str(scalar(cf.get('visitorId')) or '')
+              name=str(scalar(cf.get('name')) or '')
+              t=when(scalar(cf.get('lastSeenAt')),scalar(cf.get('lastActivityAt')),scalar(cf.get('lastLoginAt')),scalar(cf.get('updatedAt')),scalar(cf.get('createdAt')))
+              age=NOW-t
+              if visitor and is_haroun(name) and timedelta(0) <= age <= WINDOW:
+                  candidates.append((t,visitor,uid,name,'customer'))
+
+          if not candidates:
+              print('V56_21_HAROUN_BIND=NO_RECENT_MATCH')
+              sys.exit(3)
+
+          # Deduplicate by visitor and choose the newest observed Haroun device only.
+          by_visitor={}
+          for row in candidates:
+              if row[1] not in by_visitor or row[0] > by_visitor[row[1]][0]:
+                  by_visitor[row[1]]=row
+          chosen=sorted(by_visitor.values(), key=lambda r:r[0], reverse=True)[0]
+          t,visitor,uid,name,source=chosen
+
+          body={'fields':{
+              'active':{'booleanValue':True},
+              'targetVisitorId':{'stringValue':visitor},
+              'targetCustomerUid':{'stringValue':uid},
+              'targetName':{'stringValue':name or 'هارون'},
+              'purpose':{'stringValue':'employee_onboarding'},
+              'source':{'stringValue':'v56.21_github_live_bind'},
+              'matchedFrom':{'stringValue':source},
+              'boundAt':{'timestampValue':NOW.isoformat().replace('+00:00','Z')},
+              'expiresAt':{'timestampValue':(NOW+timedelta(days=14)).isoformat().replace('+00:00','Z')}
+          }}
+          url=f'{BASE}/system_controls/employee_onboarding_redirects?'+urllib.parse.urlencode({'key':KEY})
+          req=urllib.request.Request(url,data=json.dumps(body).encode(),method='PATCH',headers={'Content-Type':'application/json'})
+          try:
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  saved=json.load(r)
+          except urllib.error.HTTPError as e:
+              print(f'V56_21_HAROUN_BIND=WRITE_HTTP_{e.code}')
+              sys.exit(4)
+          except Exception:
+              print('V56_21_HAROUN_BIND=WRITE_UNAVAILABLE')
+              sys.exit(4)
+
+          fields=saved.get('fields',{})
+          ok=(scalar(fields.get('active')) is True and str(scalar(fields.get('targetVisitorId')) or '')==visitor)
+          if not ok:
+              print('V56_21_HAROUN_BIND=VERIFY_MISMATCH')
+              sys.exit(5)
+          age_minutes=max(0,int((NOW-t).total_seconds()//60))
+          print(f'V56_21_HAROUN_BIND=OK source={source} age_minutes={age_minutes} candidates={len(by_visitor)}')
+          PY
