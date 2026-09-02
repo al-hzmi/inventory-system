@@ -1,0 +1,83 @@
+name: V56.22 Admin Page Scroll Lock Fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-22-admin-page-scroll-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply V56.22 body scroll lock fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('admin-dashboard.html')
+          s=p.read_text()
+          old="""const useBodyScrollLock=()=>{useEffect(()=>{\n  const w=window,body=document.body,html=document.documentElement;"""
+          new="""const useBodyScrollLock=(active=true)=>{useEffect(()=>{\n  if(!active)return;\n  const w=window,body=document.body,html=document.documentElement;"""
+          if old not in s: raise SystemExit('V56.22 hook start anchor missing')
+          s=s.replace(old,new,1)
+          old_end="""delete w.__BATCO_BODY_SCROLL_LOCK;requestAnimationFrame(()=>window.scrollTo(0,y))}};\n},[])};"""
+          new_end="""delete w.__BATCO_BODY_SCROLL_LOCK;requestAnimationFrame(()=>window.scrollTo(0,y))}};\n},[active])};"""
+          if old_end not in s: raise SystemExit('V56.22 hook dependency anchor missing')
+          s=s.replace(old_end,new_end,1)
+          old_drawer="""function DetailDrawer({row,onClose,onCustomerMessage}){\n  useBodyScrollLock();"""
+          new_drawer="""function DetailDrawer({row,onClose,onCustomerMessage}){\n  useBodyScrollLock(Boolean(row));"""
+          if old_drawer not in s: raise SystemExit('V56.22 DetailDrawer anchor missing')
+          s=s.replace(old_drawer,new_drawer,1)
+          p.write_text(s)
+          PY
+      - name: V56.22 regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('admin-dashboard.html','utf8');
+          const assert=require('assert/strict');
+          assert.ok(s.includes('const useBodyScrollLock=(active=true)=>{useEffect(()=>{\n  if(!active)return;'),'body lock must support inactive modal state');
+          assert.ok(s.includes('},[active])};'),'body lock effect must track active state');
+          assert.ok(s.includes('function DetailDrawer({row,onClose,onCustomerMessage}){\n  useBodyScrollLock(Boolean(row));'),'closed DetailDrawer must not lock the page');
+          assert.ok(!s.includes('function DetailDrawer({row,onClose,onCustomerMessage}){\n  useBodyScrollLock();'),'unconditional DetailDrawer body lock must be gone');
+          console.log('V56.22 admin page scrolling regression: OK');
+          NODE
+          git diff --check
+      - name: Existing UX regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in tests/v56-17-ops-polish.mjs tests/v56-10-critical-ux.mjs tests/v56-11-ops-fixes.mjs tests/v56-4-messaging.mjs; do
+            if [ -f "$t" ]; then node "$t"; fi
+          done
+      - name: Commit V56.22
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add admin-dashboard.html
+          git commit -m "V56.22 — only lock admin page scroll for open detail drawer"
+          git pull --rebase origin main
+          node - <<'NODE'
+          const fs=require('fs'),assert=require('assert/strict');
+          const s=fs.readFileSync('admin-dashboard.html','utf8');
+          assert.ok(s.includes('useBodyScrollLock(Boolean(row));'));
+          assert.ok(s.includes('const useBodyScrollLock=(active=true)=>'));
+          NODE
+          git push origin HEAD:main
