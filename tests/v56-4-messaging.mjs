@@ -12,8 +12,9 @@ assert.match(idx,/where\('targetKey','==',targetKeys\[0\]\)\.limit\(50\)/,'emplo
 assert.ok(!idx.includes("collection(EMPLOYEE_NOTIFICATION_COLLECTION).limit(150).onSnapshot"),'legacy global 150 listener must be removed');
 assert.ok(idx.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'employee local receipt must be persisted before display and Firestore sync');
 assert.ok(idx.includes('EMPLOYEE_NOTIFICATION_RECEIPT_GLOBAL_KEY'),'employee receipt must survive identity-key changes');
-assert.ok(idx.includes('legacyReceiptSuppressed:true'),'legacy employee one-time messages must be retired server-side');
-assert.ok(idx.includes('receiptPolicyVersion')&&idx.includes('policy>=2'),'employee legacy detection must use receipt policy version');
+assert.ok(idx.includes('legacyReceiptSuppressed:true'),'legacy employee one-time messages must be retired server-side when quota permits');
+assert.ok(idx.includes('receiptPolicyVersion')&&idx.includes('LEGACY_ONCE_CUTOFF_MS')&&idx.includes('policy<2||(created>0&&created<LEGACY_ONCE_CUTOFF_MS)'),'employee legacy detection must cover receipt policy and pre-V56.12 creation cutoff');
+assert.ok(idx.includes("if(row.status!=='active'||!legacyOnce(row))return;"),'employee legacy retirement must share the cutoff classifier');
 
 assert.ok(adm.includes("db.collection('customer_notifications').add"),'admin must be able to create customer messages');
 assert.ok(adm.includes('CustomerMessageModal'),'customer message modal missing');
@@ -28,14 +29,15 @@ assert.match(cust,/where\(field,'==',value\)\.limit\(50\)/,'customer notificatio
 assert.ok(cust.includes('visitorId===customerVisitorId'),'guest visitor identity targeting missing');
 assert.ok(cust.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),'customer local receipt must be persisted before display and Firestore sync');
 assert.ok(cust.includes('CUSTOMER_NOTIFICATION_RECEIPT_GLOBAL_KEY'),'customer receipt must survive identity-key changes');
-assert.ok(cust.includes('legacyReceiptSuppressed:true'),'legacy customer one-time messages must be retired server-side');
-assert.ok(cust.includes('receiptPolicyVersion')&&cust.includes('policy>=2'),'customer legacy detection must use receipt policy version');
+assert.ok(cust.includes('legacyReceiptSuppressed:true'),'legacy customer one-time messages must be retired server-side when quota permits');
+assert.ok(cust.includes('receiptPolicyVersion')&&cust.includes('LEGACY_ONCE_CUTOFF_MS')&&cust.includes('policy<2||(created>0&&created<LEGACY_ONCE_CUTOFF_MS)'),'customer legacy detection must cover receipt policy and pre-V56.12 creation cutoff');
+assert.ok(cust.includes("if(row.status!=='active'||!legacyOnce(row))return;"),'customer legacy retirement must share the cutoff classifier');
 assert.ok(cust.includes('.customer-admin-message-card'),'Android customer message card CSS missing');
 assert.ok(cust.includes('<CustomerPortalBootstrap/><CustomerAdminNotificationHost/>'),'customer notification host must be mounted');
 assert.ok(cust.indexOf('function CustomerPortalBootstrap(){') < cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") && cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") < cust.indexOf("ReactDOM.createRoot(document.getElementById('root')).render"),'customer notification host must live after the V42 bootstrap replacement boundary');
 
-assert.ok(boot.includes("index-v37-source.txt?v=56.12"),'employee V56.12 cache bust missing');
-assert.ok(custBoot.includes("customer-v37-source.txt?v=56.12"),'customer V56.12 cache bust missing');
+assert.ok(boot.includes("index-v37-source.txt?v=56.14"),'employee V56.14 cache bust missing');
+assert.ok(custBoot.includes("customer-v37-source.txt?v=56.14"),'customer V56.14 cache bust missing');
 assert.ok(boot.includes('maxHeight:\'min(72dvh, 560px)\''),'employee Android dynamic viewport card missing');
 
-console.log('V56.12 messaging regression: OK');
+console.log('V56.14 messaging regression: OK');
