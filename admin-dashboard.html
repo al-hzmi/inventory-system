@@ -802,7 +802,7 @@ function AdminApp(){
       <CommandHeader/>
       <><TabsBar/><ToolBar/><div data-admin-scroll-root="1" className="flex-1 p-3 sm:p-4 bg-surface overflow-visible"><ActiveContent/></div></>
     </div>
-    <DetailDrawer row={detail} onClose={()=>setDetail(null)} onCustomerMessage={target=>{setDetail(null);setCustomerMessageTarget(target)}}/>
+    {detail&&<DetailDrawer row={detail} onClose={()=>setDetail(null)} onCustomerMessage={target=>{setDetail(null);setCustomerMessageTarget(target)}}/>}
     {employeeEditor&&<EmployeeAccountEditor value={employeeEditor} onClose={()=>setEmployeeEditor(null)} onSaved={()=>setEmployeeEditor(null)}/>}
     {employeeMerge&&<EmployeeMergeModal source={employeeMerge} accounts={eAccounts} onClose={()=>setEmployeeMerge(null)} onSaved={()=>setEmployeeMerge(null)}/>}
     {employeeMessageTarget&&<EmployeeMessageModal target={employeeMessageTarget} notifications={eNotifications} onClose={()=>setEmployeeMessageTarget(null)}/>}
