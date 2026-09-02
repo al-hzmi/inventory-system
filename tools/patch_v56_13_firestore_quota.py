@@ -8,6 +8,7 @@ def replace(path, old, new, label, expected=1):
 admin='admin-dashboard.html'
 emp='runtime/index-v37-source.txt'
 cust='runtime/customer-v37-source.txt'
+test='tests/v56-4-messaging.mjs'
 
 old_limits="""const REALTIME_LIMIT={customerDevices:1200,customerActivity:1200,customerSessions:900,customerLogins:900,customerOrders:900,customerDrafts:900,customerSecurityPhotos:900,employeeNotifications:600,employeeSecurityPhotos:900,employeeLoginAttempts:1000,employeeSessions:1000,employeeLogins:1000,access:1000,search:1200,employeeOrders:1000,employeeDrafts:1000,categoryAudit:1000,adminAudit:1000};"""
 new_limits="""const REALTIME_LIMIT={customers:350,customerDevices:180,customerSessions:160,customerLogins:100,customerActivity:140,customerOrders:300,customerDrafts:220,customerSecurityPhotos:80,employeeUsers:350,employeeAccounts:350,employeeAliases:350,employeeNotifications:120,employeeSecurityPhotos:80,employeeLoginAttempts:120,employeeSessions:180,employeeLogins:120,access:120,search:160,employeeOrders:300,employeeDrafts:220,categoryAudit:100,newArrivalReviews:120,adminAudit:120};
@@ -59,7 +60,6 @@ new_emp="""                    db.collection('site_sessions').doc(sessionId).set
                 });
             }
         }, 300000);"""
-# Runtime currently contains the tracker twice; harden both copies.
 replace(emp,old_emp,new_emp,'employee heartbeat',expected=2)
 
 old_cust="""useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>touchCustomerSession(user,safeProfile,'heartbeat'),120000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);"""
@@ -78,5 +78,15 @@ replace(cust,"db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid)
 # Bump runtime cache keys so the quota hardening cannot be masked by an older cached runtime.
 replace('index.html',"const CORE='./runtime/index-v37-source.txt?v=56.12';","const CORE='./runtime/index-v37-source.txt?v=56.13';",'employee runtime version')
 replace('customer.html',"const CORE='./runtime/customer-v37-source.txt?v=56.12';","const CORE='./runtime/customer-v37-source.txt?v=56.13';",'customer runtime version')
+
+# Keep the messaging regression contract aligned with the stricter, lower-read queries.
+replace(test,"/where\\('employeeId','==',employeeId\\)\\.limit\\(50\\)/","/where\\('employeeId','==',employeeId\\)\\.limit\\(20\\)/",'employee messaging test query')
+replace(test,"/where\\('targetKey','==',targetKeys\\[0\\]\\)\\.limit\\(50\\)/","/where\\('targetKey','==',targetKeys\\[0\\]\\)\\.limit\\(20\\)/",'employee alias messaging test query')
+replace(test,"/where\\(field,'==',value\\)\\.limit\\(50\\)/","/where\\(field,'==',value\\)\\.limit\\(20\\)/",'customer messaging test query')
+replace(test,"index-v37-source.txt?v=56.12","index-v37-source.txt?v=56.13",'employee messaging test version')
+replace(test,"customer-v37-source.txt?v=56.12","customer-v37-source.txt?v=56.13",'customer messaging test version')
+replace(test,"employee V56.12 cache bust missing","employee V56.13 cache bust missing",'employee messaging test label')
+replace(test,"customer V56.12 cache bust missing","customer V56.13 cache bust missing",'customer messaging test label')
+replace(test,"V56.12 messaging regression: OK","V56.13 messaging + quota regression: OK",'messaging test log')
 
 print('V56.13 Firestore quota hardening patch applied')
