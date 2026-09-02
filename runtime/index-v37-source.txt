@@ -3747,7 +3747,7 @@ const useEmployeeAdminMessages = ({sessionName,employeeId,isAdmin}) => {
         const evaluate=()=>{if(!active||currentRef.current)return;const all=[...feedsRef.current.values()].flat(),dedup=[...new Map(all.map(r=>[r.id,r])).values()],at=x=>x?.toMillis?x.toMillis():new Date(x||0).getTime()||0;dedup.filter(r=>r.status==='active'&&matchesTarget(r)&&legacyOnce(r)).forEach(r=>{if(claimedRef.current.has(r.id))return;claimedRef.current.add(r.id);retireLegacy(r)});const candidates=dedup.filter(due).filter(r=>!claimedRef.current.has(r.id)).sort((a,b)=>(a.deliveryMode==='scheduled'?at(a.scheduledAt):at(a.createdAt))-(b.deliveryMode==='scheduled'?at(b.scheduledAt):at(b.createdAt)));const candidate=candidates[0];if(!candidate)return;claimedRef.current.add(candidate.id);currentRef.current=candidate;rememberShow(candidate);setNotification(candidate);markShown(candidate)};
         evaluateRef.current=evaluate;
         const bind=(key,query)=>{try{const unsub=query.onSnapshot(snap=>{if(!active)return;feedsRef.current.set(key,snap.docs.map(d=>({id:d.id,...d.data()})));evaluate()},e=>console.warn('[Employee notifications realtime]',key,e));unsubs.push(unsub)}catch(e){console.warn('[Employee notifications query]',key,e)}};
-        getDb().then(db=>{if(!active)return;dbRef.current=db;if(employeeId)bind('employeeId',db.collection(EMPLOYEE_NOTIFICATION_COLLECTION).where('employeeId','==',employeeId).limit(50));if(targetKeys[0])bind('targetKey',db.collection(EMPLOYEE_NOTIFICATION_COLLECTION).where('targetKey','==',targetKeys[0]).limit(50));timer=setInterval(evaluate,15000)}).catch(e=>console.warn('[Employee notifications]',e));
+        getDb().then(db=>{if(!active)return;dbRef.current=db;if(employeeId)bind('employeeId',db.collection(EMPLOYEE_NOTIFICATION_COLLECTION).where('employeeId','==',employeeId).limit(20));if(targetKeys[0])bind('targetKey',db.collection(EMPLOYEE_NOTIFICATION_COLLECTION).where('targetKey','==',targetKeys[0]).limit(20));timer=setInterval(evaluate,15000)}).catch(e=>console.warn('[Employee notifications]',e));
         return()=>{active=false;evaluateRef.current=null;if(timer)clearInterval(timer);unsubs.forEach(u=>{try{u?.()}catch{}});feedsRef.current.clear()};
     },[sessionName,employeeId,isAdmin]);
     const dismiss=()=>{currentRef.current=null;setNotification(null);setTimeout(()=>evaluateRef.current?.(),0)};
@@ -3864,16 +3864,16 @@ const App = () => {
                 getDb().then(db => {
                     db.collection('site_sessions').doc(sessionId).set({
                         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-                        durationMinutes: firebase.firestore.FieldValue.increment(1)
+                        durationMinutes: firebase.firestore.FieldValue.increment(5)
                     }, { merge: true }).catch(()=>{});
                     
                     db.collection('users').doc(toSafeDocId(sessionName)).set({
-                        timeSpentMinutes: firebase.firestore.FieldValue.increment(1),
+                        timeSpentMinutes: firebase.firestore.FieldValue.increment(5),
                         lastActive: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true }).catch(()=>{});
                 });
             }
-        }, 60000); 
+        }, 300000);
         
         return () => {
             isTracking = false;

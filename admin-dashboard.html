@@ -154,7 +154,8 @@ const Icon=({name,className='w-5 h-5'})=>{const p={fill:'none',stroke:'currentCo
 
 async function getRows(name,limit=750){try{const s=await db.collection(name).limit(limit).get();return s.docs.map(d=>({id:d.id,...d.data(),__collection:name}))}catch(e){console.warn('[Dashboard]',name,e);return[]}}
 const REALTIME_ORDER={customerDevices:'lastSeen',customerSessions:'lastActive',customerLogins:'createdAt',customerActivity:'createdAt',customerOrders:'createdAt',customerDrafts:'updatedAt',customerSecurityPhotos:'createdAt',employeeNotifications:'createdAt',employeeSecurityPhotos:'timestamp',employeeLoginAttempts:'time',employeeSessions:'lastActive',employeeLogins:'time',access:'timestamp',search:'time',categoryAudit:'timestamp',adminAudit:'timestamp'};
-const REALTIME_LIMIT={customerDevices:1200,customerActivity:1200,customerSessions:900,customerLogins:900,customerOrders:900,customerDrafts:900,customerSecurityPhotos:900,employeeNotifications:600,employeeSecurityPhotos:900,employeeLoginAttempts:1000,employeeSessions:1000,employeeLogins:1000,access:1000,search:1200,employeeOrders:1000,employeeDrafts:1000,categoryAudit:1000,adminAudit:1000};
+const REALTIME_LIMIT={customers:350,customerDevices:180,customerSessions:160,customerLogins:100,customerActivity:140,customerOrders:300,customerDrafts:220,customerSecurityPhotos:80,employeeUsers:350,employeeAccounts:350,employeeAliases:350,employeeNotifications:120,employeeSecurityPhotos:80,employeeLoginAttempts:120,employeeSessions:180,employeeLogins:120,access:120,search:160,employeeOrders:300,employeeDrafts:220,categoryAudit:100,newArrivalReviews:120,adminAudit:120};
+const REALTIME_KEYS=new Set(['customers','customerSessions','customerOrders','customerDrafts','employeeUsers','employeeAccounts','employeeNotifications','employeeSessions','employeeOrders','employeeDrafts','access']);
 async function adminAudit(action,data={}){try{await db.collection(COLLECTIONS.adminAudit).add({admin:'مهند',action,data,createdAt:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent||''})}catch(e){console.warn('[Admin audit]',e)}}
 
 function AdminGate({onPass}){
@@ -426,12 +427,13 @@ function AdminApp(){
     const markReady=key=>{waiting.delete(key);if(!waiting.size&&!stopped)setSyncing(false)};
     const apply=(key,name,snap)=>{if(stopped)return;const rows=snap.docs.map(d=>({id:d.id,...d.data(),__collection:name}));setData(prev=>({...prev,[key]:rows}));markReady(key)};
     const attach=(key,name)=>{
-      const limit=REALTIME_LIMIT[key]||900;let unsubscribe=null,usingFallback=false;
+      const limit=REALTIME_LIMIT[key]||160;let unsubscribe=null,usingFallback=false;
+      const field=REALTIME_ORDER[key];
+      const ordered=()=>field?db.collection(name).orderBy(field,'desc').limit(limit):db.collection(name).limit(limit);
+      const loadOnce=async()=>{try{const s=await ordered().get();apply(key,name,s)}catch(e){try{const s=await db.collection(name).limit(limit).get();apply(key,name,s)}catch(err){console.warn('[Dashboard snapshot]',name,err);markReady(key)}}};
+      if(!REALTIME_KEYS.has(key)){loadOnce();return()=>{}};
       const fallback=()=>{if(stopped||usingFallback)return;usingFallback=true;try{unsubscribe?.()}catch{};unsubscribe=db.collection(name).limit(limit).onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime fallback]',name,e);markReady(key)})};
-      try{
-        const field=REALTIME_ORDER[key];const q=field?db.collection(name).orderBy(field,'desc').limit(limit):db.collection(name).limit(limit);
-        unsubscribe=q.onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);field?fallback():markReady(key)});
-      }catch(e){fallback()}
+      try{unsubscribe=ordered().onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);field?fallback():markReady(key)})}catch(e){fallback()}
       return()=>{try{unsubscribe?.()}catch{}}
     };
     Object.entries(COLLECTIONS).forEach(([key,name])=>unsubs.push(attach(key,name)));

@@ -987,7 +987,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     return()=>unsub();
   },[user?.uid]);
   const markImageMissing=useCallback(cleanId=>setMissingImages(prev=>{const next=new Set(prev);next.add(cleanId);return next}),[]);
-  useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>touchCustomerSession(user,safeProfile,'heartbeat'),120000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);
+  useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>{if(document.visibilityState==='visible')touchCustomerSession(user,safeProfile,'heartbeat')},300000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);
   useEffect(()=>{if(!guestMode)logCustomerEvent(user,'page_view',page,{company:safeProfile.company})},[page,guestMode]);
   useEffect(()=>{
     let alive=true,unsubO=null,unsubM=null;
@@ -1002,8 +1002,8 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     let firstOrders=false,firstDrafts=false;setHistoryLoading(true);
     const done=()=>{if(firstOrders&&firstDrafts)setHistoryLoading(false)};
     const cv=x=>x?.toMillis?.()||0;
-    const unsubOrders=db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).onSnapshot(snap=>{firstOrders=true;setOrders(snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.recordStatus!=='deleted'&&!x.deletedAt).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));done()},e=>{console.warn('[Orders realtime]',e);firstOrders=true;done()});
-    const unsubDrafts=db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).onSnapshot(snap=>{firstDrafts=true;setDrafts(snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.updatedAt||b.createdAt)-cv(a.updatedAt||a.createdAt)));done()},e=>{console.warn('[Drafts realtime]',e);firstDrafts=true;done()});
+    const unsubOrders=db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).limit(100).onSnapshot(snap=>{firstOrders=true;setOrders(snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.recordStatus!=='deleted'&&!x.deletedAt).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));done()},e=>{console.warn('[Orders realtime]',e);firstOrders=true;done()});
+    const unsubDrafts=db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).limit(60).onSnapshot(snap=>{firstDrafts=true;setDrafts(snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.updatedAt||b.createdAt)-cv(a.updatedAt||a.createdAt)));done()},e=>{console.warn('[Drafts realtime]',e);firstDrafts=true;done()});
     return()=>{unsubOrders();unsubDrafts()};
   },[user?.uid]);
   const categories=useMemo(()=>effectiveCategories(baseCategories,overrides,meta),[baseCategories,overrides,meta]);const catLookup=useMemo(()=>categoryLookup(categories),[categories]);
@@ -1362,7 +1362,7 @@ function CustomerAdminNotificationHost(){
     const markShown=async candidate=>{const ref=db.collection(CUSTOMER_NOTIFICATION_COLLECTION).doc(candidate.id);try{await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)return;const row={id:snap.id,...snap.data()};if(!due(row,true))return;const shown=Math.max(0,Number(row.shownCount)||0),max=Math.max(1,Number(row.maxShows)||1),next=shown+1;tx.set(ref,{shownCount:next,lastShownAt:firebase.firestore.FieldValue.serverTimestamp(),lastShownVisitorId:customerVisitorId,lastShownCustomerUid:uidRef.current||'',status:next>=max?'completed':'active',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})})}catch(e){console.warn('[Customer notification receipt]',e)}};
     const evaluate=()=>{if(!active||currentRef.current)return;const all=[...feedsRef.current.values()].flat(),dedup=[...new Map(all.map(r=>[r.id,r])).values()],at=x=>x?.toMillis?x.toMillis():new Date(x||0).getTime()||0;dedup.filter(r=>r.status==='active'&&matches(r)&&legacyOnce(r)).forEach(r=>{if(claimedRef.current.has(r.id))return;claimedRef.current.add(r.id);retireLegacy(r)});const candidate=dedup.filter(due).filter(r=>!claimedRef.current.has(r.id)).sort((a,b)=>(a.deliveryMode==='scheduled'?at(a.scheduledAt):at(a.createdAt))-(b.deliveryMode==='scheduled'?at(b.scheduledAt):at(b.createdAt)))[0];if(!candidate)return;claimedRef.current.add(candidate.id);currentRef.current=candidate;rememberShow(candidate);setNotification(candidate);markShown(candidate)};
     evaluateRef.current=evaluate;
-    const bind=(key,field,value)=>{if(!value)return null;try{return db.collection(CUSTOMER_NOTIFICATION_COLLECTION).where(field,'==',value).limit(50).onSnapshot(s=>{if(!active)return;feedsRef.current.set(key,s.docs.map(d=>({id:d.id,...d.data()})));evaluate()},e=>console.warn('[Customer notifications realtime]',key,e))}catch(e){console.warn('[Customer notifications query]',key,e);return null}};
+    const bind=(key,field,value)=>{if(!value)return null;try{return db.collection(CUSTOMER_NOTIFICATION_COLLECTION).where(field,'==',value).limit(20).onSnapshot(s=>{if(!active)return;feedsRef.current.set(key,s.docs.map(d=>({id:d.id,...d.data()})));evaluate()},e=>console.warn('[Customer notifications realtime]',key,e))}catch(e){console.warn('[Customer notifications query]',key,e);return null}};
     visitorUnsub=bind('visitor','visitorId',customerVisitorId);
     authUnsub=auth.onAuthStateChanged(u=>{uidRef.current=u?.uid||'';try{uidUnsub?.()}catch{};feedsRef.current.delete('uid');uidUnsub=bind('uid','customerUid',uidRef.current);evaluate()});
     timer=setInterval(evaluate,15000);
