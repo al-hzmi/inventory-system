@@ -24,7 +24,8 @@ for(const [name,src] of [['employee',idx],['customer',cust]]){
   assert.ok(src.includes('rememberShow(candidate);setNotification(candidate);markShown(candidate)'),`${name}: local receipt must be persisted before display`);
   assert.ok(src.includes('if(!due(row,true))return'),`${name}: remote receipt must bypass local replay guard`);
   assert.ok(src.includes('legacyReceiptSuppressed:true'),`${name}: legacy stuck once messages must retire server-side`);
-  assert.ok(src.includes('receiptPolicyVersion')&&src.includes('policy>=2'),`${name}: legacy detection must use receipt policy, not timestamps`);
+  assert.ok(src.includes('receiptPolicyVersion')&&src.includes('LEGACY_ONCE_CUTOFF_MS')&&src.includes('policy<2||(created>0&&created<LEGACY_ONCE_CUTOFF_MS)'),`${name}: legacy detection must use durable receipt policy plus migration cutoff`);
+  assert.ok(src.includes("if(row.status!=='active'||!legacyOnce(row))return;"),`${name}: legacy retirement must reuse the same classifier`);
 }
 assert.ok(admin.match(/receiptPolicyVersion:2/g)?.length>=2,'new employee and customer messages must carry receipt policy v2');
 const employeeCache=Number(boot.match(/index-v37-source\.txt\?v=56\.(\d+)/)?.[1]||0);
