@@ -19,6 +19,17 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+      - name: Repair V56.17 bootstrap anchor
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/scripts/v56-17-ops-polish.py')
+          s=p.read_text()
+          s=s.replace('anchor="}start();\\nlet selectedId="','anchor="start();\\nlet selectedId="')
+          s=s.replace('s=s.replace(anchor,"}start();setTimeout(cleanupLegacyTestsOnce,900);\\nlet selectedId=",1)','s=s.replace(anchor,"start();setTimeout(cleanupLegacyTestsOnce,900);\\nlet selectedId=",1)')
+          p.write_text(s)
+          PY
       - name: Apply V56.17 package
         run: python3 .github/scripts/v56-17-ops-polish.py
       - name: V56.17 regression
