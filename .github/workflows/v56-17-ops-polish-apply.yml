@@ -51,6 +51,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add health-center.html admin-dashboard.html admin-stocktake.html stocktake-accountant.html customer.html index.html runtime/index-v37-source.txt tests/v56-17-ops-polish.mjs
           git commit -m "V56.17 — stocktake follow-up and operations polish"
+          git restore .github/scripts/v56-17-ops-polish.py
           git pull --rebase origin main
           node tests/v56-17-ops-polish.mjs
           git push origin HEAD:main
