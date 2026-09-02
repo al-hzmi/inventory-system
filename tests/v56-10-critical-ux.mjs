@@ -10,7 +10,7 @@ const shell=fs.readFileSync('admin-stocktake-shell.html','utf8');
 const stock=fs.readFileSync('stocktake.html','utf8');
 
 // iOS bottom sheets must own the gesture while the background page is frozen.
-assert.ok(admin.includes('const useBodyScrollLock=()=>{useEffect(()=>{'),'body scroll lock hook missing');
+assert.ok(admin.includes('const useBodyScrollLock=(active=true)=>{useEffect(()=>{')&&admin.includes('if(!active)return;'),'conditional body scroll lock hook missing');
 assert.ok(admin.includes("body.style.position='fixed'"),'body must be fixed while a message sheet is open');
 assert.ok(admin.includes("html.style.overflow='hidden'"),'document scrolling must be disabled while message sheet is open');
 assert.ok(admin.includes('requestAnimationFrame(()=>window.scrollTo(0,y))'),'closing a sheet must restore the exact original scroll position');

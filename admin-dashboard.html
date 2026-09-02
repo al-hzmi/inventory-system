@@ -59,7 +59,8 @@ const db=firebase.firestore();
 const {useState,useEffect,useMemo,useCallback}=React;
 
 // V56.17 — systemic modal scroll isolation for mobile + desktop.
-const useBodyScrollLock=()=>{useEffect(()=>{
+const useBodyScrollLock=(active=true)=>{useEffect(()=>{
+  if(!active)return;
   const w=window,body=document.body,html=document.documentElement;
   let lock=w.__BATCO_BODY_SCROLL_LOCK;
   if(!lock){lock=w.__BATCO_BODY_SCROLL_LOCK={count:0,y:0,body:{},htmlOverflow:'',roots:[]}}
@@ -73,7 +74,7 @@ const useBodyScrollLock=()=>{useEffect(()=>{
   }
   lock.count+=1;
   return()=>{const active=w.__BATCO_BODY_SCROLL_LOCK;if(!active)return;active.count=Math.max(0,active.count-1);if(active.count===0){Object.assign(body.style,active.body);html.style.overflow=active.htmlOverflow||'';(active.roots||[]).forEach(x=>{x.el.style.overflow=x.overflow;x.el.style.overflowY=x.overflowY;x.el.style.overscrollBehavior=x.overscrollBehavior;x.el.scrollTop=x.top});const y=active.y||0;delete w.__BATCO_BODY_SCROLL_LOCK;requestAnimationFrame(()=>window.scrollTo(0,y))}};
-},[])};
+},[active])};
 
 const STORAGE_KEYS={NAME:'inventory_user_name_v2',TOKEN:'inventory_admin_token_v2',PHOTO_PROOF:'inventory_login_photo_proof_v2'};
 const PREVIEW_KEY='batco_customer_portal_preview_v2';
@@ -189,7 +190,7 @@ function FriendlyValue({name,value,depth=0}){
   return <div className="grid sm:grid-cols-2 gap-2">{Object.entries(value).filter(([k])=>k!=='photoDataUrl'&&!TECHNICAL_FIELDS.has(k)&&!/^(__|password|token|secret)/i.test(k)).map(([k,v])=><div key={k} className="bg-white border border-border rounded-xl p-2.5 min-w-0"><div className="text-[9px] text-muted font-bold">{fieldLabel(k)}</div><div className="text-[11px] mt-1 break-words"><FriendlyValue name={k} value={v} depth={depth+1}/></div></div>)}</div>;
 }
 function DetailDrawer({row,onClose,onCustomerMessage}){
-  useBodyScrollLock();
+  useBodyScrollLock(Boolean(row));
   const [showRaw,setShowRaw]=useState(false);
   if(!row)return null;
   const safeRow=redactSensitive(row);
