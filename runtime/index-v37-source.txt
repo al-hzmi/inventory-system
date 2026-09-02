@@ -339,6 +339,23 @@ const useEmployeeSiteControl = () => {
     return control;
 };
 
+const STOCKTAKE_ACCOUNTANT_CONTROL_DOC = 'stocktake_accountant_access';
+const DEFAULT_STOCKTAKE_ACCOUNTANT_CONTROL = { enabled:false, accessMode:'none', allowedEmployeeIds:[], allowedEmployeeNames:[] };
+const useStocktakeAccountantControl = () => {
+    const [control, setControl] = useState(DEFAULT_STOCKTAKE_ACCOUNTANT_CONTROL);
+    useEffect(() => {
+        let active = true, unsubscribe = null;
+        (async () => {
+            try {
+                const db = await getDb(); if (!active) return;
+                unsubscribe = db.collection('system_controls').doc(STOCKTAKE_ACCOUNTANT_CONTROL_DOC).onSnapshot(snap => { if(active) setControl({...DEFAULT_STOCKTAKE_ACCOUNTANT_CONTROL,...(snap.exists?snap.data():{})}); });
+            } catch(e) { console.warn('accountant control unavailable',e); }
+        })();
+        return () => { active=false; try{unsubscribe?.()}catch{} };
+    }, []);
+    return control;
+};
+
 const STOCKTAKE_CONTROL_DOC = 'stocktake_feature';
 const DEFAULT_STOCKTAKE_CONTROL = { enabled:false, accessMode:'none', allowedEmployeeIds:[], allowedEmployeeNames:[], activeCampaignId:'' };
 const useStocktakeControl = () => {
@@ -3762,6 +3779,7 @@ const App = () => {
     const customerPortalReleased = !!customerPortalControl.enabled;
     const employeeSiteControl = useEmployeeSiteControl();
     const stocktakeControl = useStocktakeControl();
+    const stocktakeAccountantControl = useStocktakeAccountantControl();
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     
     useEffect(() => {
@@ -4100,6 +4118,7 @@ const App = () => {
     const totalCategoryCount  = categoryNames.length + 2 + (isAdmin ? 1 : 0);
     const currentEmployeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
     const currentStocktakeAccessAllowed = stocktakeAccessAllowed(stocktakeControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
+    const currentStocktakeAccountantAccessAllowed = stocktakeAccessAllowed(stocktakeAccountantControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
     const currentSiteAccessAllowed = employeeSiteAccessAllowed(employeeSiteControl,{name:sessionName,employeeId:currentEmployeeId,isAdmin});
     const { employeeAdminMessage, dismissEmployeeAdminMessage } = useEmployeeAdminMessages({sessionName,employeeId:currentEmployeeId,isAdmin});
 
@@ -4210,18 +4229,25 @@ const App = () => {
                                 </button>
                             )}
                             {isAdmin ? (
-                                <button onClick={() => { window.location.href = './admin-stocktake.html?v=56.0'; }} title="إدارة الجرد"
+                                <button onClick={() => { window.location.href = './admin-stocktake.html?v=56.12'; }} title="إدارة الجرد"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
                                     <Icon.Archive className="w-20 h-20" />
                                     <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">إدارة الجرد</span>
                                 </button>
                             ) : (currentStocktakeAccessAllowed && stocktakeControl.activeCampaignId && (
-                                <button onClick={() => { window.location.href = './stocktake.html?v=56.0'; }} title="فتح الجرد"
+                                <button onClick={() => { window.location.href = './stocktake.html?v=56.12'; }} title="فتح الجرد"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-successSoft border border-success/20 text-success hover:bg-success hover:text-white transition-colors animate-flip">
                                     <Icon.Archive className="w-20 h-20" />
                                     <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">الجرد</span>
                                 </button>
                             ))}
+                            {!isAdmin && currentStocktakeAccountantAccessAllowed && (
+                                <button onClick={() => { window.location.href = './stocktake-accountant.html?v=56.12'; }} title="متابعة الجرد"
+                                        className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-infoSoft border border-info/20 text-info hover:bg-info hover:text-white transition-colors animate-flip">
+                                    <Icon.Eye className="w-20 h-20" />
+                                    <span className="hidden md:inline text-[12px] font-bold whitespace-nowrap">متابعة الجرد</span>
+                                </button>
+                            )}
                             {isAdmin && (
                                 <button onClick={() => { window.location.href = './admin-home.html'; }} title="لوحة التحكم الإدارية"
                                         className="flex items-center justify-center gap-7 h-48 px-12 rounded-12 bg-primary border border-primary text-bg hover:opacity-90 transition-opacity animate-flip">
