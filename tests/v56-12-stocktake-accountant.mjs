@@ -23,8 +23,8 @@ has(admin,'data-accountant-member','accountant access must be assignable per emp
 has(admin,'saveAccountantAccess','admin must be able to grant/remove access');
 has(admin,'stocktake-accountant.html?preview=1&v=56.12','root admin must be able to preview accountant perspective');
 
-// Accountant page is a dedicated read-only surface.
-has(accountant,'منظور المحاسب · قراءة فقط','accountant surface must clearly be read-only');
+// Accountant page is a dedicated read-only surface. The visible wording is intentionally "متابعة الجرد".
+has(accountant,'<title>متابعة الجرد | بيت الأواني الطيبة</title>','accountant surface must use the approved follow-up wording');
 has(accountant,'stocktake_accountant_access','accountant page must enforce visibility control');
 has(accountant,"db.collection('stocktake_items').where('campaignId','==',id)",'accountant must read stocktake item details');
 assert.ok(!accountant.includes("db.collection('stocktake_items').doc("),'accountant page must not write item documents');
@@ -42,6 +42,6 @@ has(accountant,'.tablewrap{display:none}','wide table must be hidden by default 
 has(runtime,'useStocktakeAccountantControl','employee runtime must subscribe to accountant access control');
 has(runtime,'currentStocktakeAccountantAccessAllowed','employee runtime must calculate accountant visibility per account');
 has(runtime,"stocktake-accountant.html?v=56.12",'authorized employees must have accountant entry point');
-has(index,"index-v37-source.txt?v=56.16",'runtime cache must be busted for V56.12');
+has(index,"index-v37-source.txt?v=56.26",'runtime cache must include the current V56.26 employee hotfix');
 
-console.log('V56.12 stocktake accountant/full-test regression: OK');
+console.log('V56.12 stocktake accountant/full-test regression: OK on V56.26 runtime');
