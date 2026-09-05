@@ -780,7 +780,7 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
         }
 
         dataMap[searchId] = {
-            uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId,
+            uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId, imageSku: normalizeImageSku(rawId),
             name, searchName: normalizeText(name), qty, unit: unitIdx !== -1 ? (cols[unitIdx] ? cols[unitIdx].trim() : '') : '',
             pack: packStr, price: cartonPrice, approxPrice: approxPiecePrice
         };
@@ -790,24 +790,128 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     
 const reportCleanIdCollisions = (items, warehouseKey) => {};
 
+// V56.25 — هوية الصورة مستقلة عن هوية البحث الرقمية.
+// مثال: BA_209 و AR_M209 قد يشتركان في cleanId=209 للبحث، لكن لا يجوز أن يشتركا في الصورة تلقائياً.
+const normalizeImageSku = raw => toEnglishDigits(String(raw || ''))
+    .trim().toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9_-]/g, '');
+
+const imageStem = raw => {
+    const file = String(raw || '').split('/').pop().split('?')[0];
+    return file.replace(/\.[^.]+$/, '');
+};
+
 const buildImagesMap = (imagesText) => {
     const map = new Map();
+    const exact = new Map();
+    const legacy = new Map();
     String(imagesText || '').split(/\r?\n/).forEach((line) => {
         const raw = line.trim();
         if (!raw || raw.startsWith('#')) return;
         const parts = raw.split(/\t/);
-        let clean = '', fileName = '';
+        let declared = '', fileName = '';
         if (parts.length >= 2) {
-            clean = normalizeCleanId(parts[0]);
+            declared = parts[0].trim();
             fileName = parts.slice(1).join('\t').trim();
         } else {
             fileName = raw;
-            const base = fileName.split('/').pop().split('?')[0];
-            clean = normalizeCleanId(base.replace(/\.[^.]+$/, ''));
+            declared = imageStem(fileName);
         }
-        if (clean && fileName) map.set(clean, fileName);
+        if (!fileName) return;
+        const exactKey = normalizeImageSku(declared);
+        const stemKey = normalizeImageSku(imageStem(fileName));
+        const clean = normalizeCleanId(declared || imageStem(fileName));
+        if (exactKey) exact.set(exactKey, fileName);
+        if (stemKey && !exact.has(stemKey)) exact.set(stemKey, fileName);
+        if (clean) {
+            if (!legacy.has(clean)) legacy.set(clean, []);
+            legacy.get(clean).push({ declared: exactKey, fileName });
+        }
     });
+    map.exact = exact;
+    map.legacy = legacy;
     return map;
+};
+
+const buildImageCollisionIndex = databases => {
+    const byClean = new Map();
+    Object.values(databases || {}).flat().forEach(item => {
+        if (!item?.cleanId) return;
+        const sku = normalizeImageSku(item.id);
+        if (!sku) return;
+        if (!byClean.has(item.cleanId)) byClean.set(item.cleanId, new Set());
+        byClean.get(item.cleanId).add(sku);
+    });
+    return byClean;
+};
+
+const resolveImageForItem = (imagesMap, item, collisionIndex, overrides = {}) => {
+    if (!imagesMap || !item) return '';
+    const sku = normalizeImageSku(item.id);
+    const overrideKey = normalizeImageSku(overrides?.[sku] || '');
+    if (overrideKey) {
+        const explicit = imagesMap.exact?.get(overrideKey);
+        if (explicit) return explicit;
+    }
+    const exact = imagesMap.exact?.get(sku);
+    if (exact) return exact;
+    const candidates = imagesMap.legacy?.get(item.cleanId) || [];
+    if (!candidates.length) return '';
+    const owners = collisionIndex?.get(item.cleanId) || new Set();
+    if (owners.size !== 1) return '';
+    return candidates[0]?.fileName || '';
+};
+
+const buildResolvedImagesMap = (imagesMap, databases, overrides = {}) => {
+    const resolved = new Map();
+    const collisions = buildImageCollisionIndex(databases);
+    Object.values(databases || {}).flat().forEach(item => {
+        const fileName = resolveImageForItem(imagesMap, item, collisions, overrides);
+        if (fileName) resolved.set(item.uid, fileName);
+    });
+    resolved.collisions = collisions;
+    resolved.raw = imagesMap;
+    return resolved;
+};
+
+const imageForItem = (resolvedImages, item) => item?.uid ? (resolvedImages?.get(item.uid) || '') : '';
+const hasImageForItem = (resolvedImages, item) => Boolean(imageForItem(resolvedImages, item));
+
+const IMAGE_BINDING_DOC = 'product_image_bindings';
+const loadImageBindingOverrides = async () => {
+    try {
+        const db = await getDb();
+        const snap = await db.collection('system_controls').doc(IMAGE_BINDING_DOC).get();
+        return snap.exists ? (snap.data()?.bindings || {}) : {};
+    } catch (err) {
+        console.warn('[V56.25 image bindings]', err);
+        return {};
+    }
+};
+
+const saveImageBindingOverride = async ({ sku, imageKey, updatedBy = 'مهند' }) => {
+    const exactSku = normalizeImageSku(sku);
+    const exactImage = normalizeImageSku(imageKey);
+    if (!exactSku || !exactImage) throw new Error('INVALID_IMAGE_BINDING');
+    const db = await getDb();
+    const ref = db.collection('system_controls').doc(IMAGE_BINDING_DOC);
+    await db.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        const current = snap.exists ? (snap.data()?.bindings || {}) : {};
+        tx.set(ref, { bindings: { ...current, [exactSku]: exactImage }, updatedBy, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    });
+};
+
+const removeImageBindingOverride = async ({ sku, updatedBy = 'مهند' }) => {
+    const exactSku = normalizeImageSku(sku);
+    if (!exactSku) return;
+    const db = await getDb();
+    const ref = db.collection('system_controls').doc(IMAGE_BINDING_DOC);
+    await db.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        const current = snap.exists ? { ...(snap.data()?.bindings || {}) } : {};
+        delete current[exactSku];
+        tx.set(ref, { bindings: current, updatedBy, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    });
 };
 
 const parseCategories = (text) => {
@@ -2863,6 +2967,74 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
 
 
 // ============================================================
+// V56.25 مدير ربط صور المنتجات — خاص بمهند
+// ============================================================
+const ProductImageBindingManager = memo(({ catalogItems, imagesList, rawImagesList, imageBindingOverrides, onBindingsChanged }) => {
+    const [search, setSearch] = useState('');
+    const [busySku, setBusySku] = useState('');
+    const [notice, setNotice] = useState('');
+    const collisionIndex = useMemo(() => buildImageCollisionIndex({ catalog: catalogItems }), [catalogItems]);
+    const conflictCleanIds = useMemo(() => new Set([...collisionIndex.entries()].filter(([, owners]) => owners.size > 1).map(([clean]) => clean)), [collisionIndex]);
+    const rows = useMemo(() => {
+        const q = normalizeText(search);
+        return catalogItems.filter(item => {
+            if (!conflictCleanIds.has(item.cleanId) && !imageBindingOverrides?.[normalizeImageSku(item.id)]) return false;
+            if (!q) return true;
+            return normalizeText(`${item.id} ${item.name || ''}`).includes(q);
+        }).sort((a,b) => String(a.cleanId).localeCompare(String(b.cleanId), 'en', { numeric:true }) || String(a.id).localeCompare(String(b.id), 'en'));
+    }, [catalogItems, conflictCleanIds, imageBindingOverrides, search]);
+    const availableImageKeys = useMemo(() => {
+        const keys = new Set();
+        rawImagesList?.exact?.forEach((_, key) => keys.add(key));
+        return [...keys].sort((a,b) => a.localeCompare(b, 'en', { numeric:true }));
+    }, [rawImagesList]);
+    const bind = async item => {
+        if (!item || busySku) return;
+        const sku = normalizeImageSku(item.id);
+        const current = imageBindingOverrides?.[sku] || '';
+        const suggestion = current || (rawImagesList?.legacy?.get(item.cleanId)?.[0]?.declared || item.cleanId || '');
+        const imageKey = window.prompt(`ربط صورة الصنف ${item.id}\nاكتب مفتاح الصورة/اسمها بدون الامتداد (مثال: 209).`, suggestion);
+        if (!imageKey) return;
+        const normalized = normalizeImageSku(imageKey);
+        if (!rawImagesList?.exact?.has(normalized)) {
+            const near = availableImageKeys.filter(k => k.includes(normalized) || normalized.includes(k)).slice(0,6);
+            return alert(`لم أجد صورة بهذا المفتاح في قائمة الصور.${near.length ? `\nاقتراحات: ${near.join('، ')}` : ''}`);
+        }
+        setBusySku(sku);
+        try {
+            await saveImageBindingOverride({ sku, imageKey: normalized });
+            const next = { ...(imageBindingOverrides || {}), [sku]: normalized };
+            onBindingsChanged(next);
+            setNotice(`تم ربط ${item.id} بالصورة ${normalized} ✓`);
+            setTimeout(() => setNotice(''), 2200);
+        } catch (err) { console.error('[V56.25 save image binding]', err); alert('تعذر حفظ ربط الصورة. تحقق من الاتصال وحاول مرة أخرى.'); }
+        finally { setBusySku(''); }
+    };
+    const clear = async item => {
+        const sku = normalizeImageSku(item.id);
+        if (!imageBindingOverrides?.[sku] || busySku) return;
+        if (!window.confirm(`إزالة الربط اليدوي للصنف ${item.id}؟`)) return;
+        setBusySku(sku);
+        try {
+            await removeImageBindingOverride({ sku });
+            const next = { ...(imageBindingOverrides || {}) }; delete next[sku]; onBindingsChanged(next);
+            setNotice('تمت إزالة الربط اليدوي ✓'); setTimeout(() => setNotice(''), 1800);
+        } catch (err) { console.error(err); alert('تعذر إزالة الربط.'); }
+        finally { setBusySku(''); }
+    };
+    return <div className="flex flex-col gap-14">
+        {notice && <div className="bg-success text-white text-[12px] font-bold px-14 py-10 rounded-10 text-center">{notice}</div>}
+        <div className="bg-warnSoft border border-warn/20 rounded-12 p-12 text-[12px] leading-7 text-primary"><b>تعارضات الصور</b><br/>إذا كان اسم الصورة مختصراً مثل 209 ويوجد أكثر من SKU يحمل الرقم نفسه، فلن يختار النظام صنفاً من تلقاء نفسه. الربط اليدوي المعتمد هنا له الأولوية دائماً.</div>
+        <div className="relative"><Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث برقم الصنف أو الاسم..." className="w-full h-42 pr-36 pl-12 rounded-10 border border-border bg-bg text-[13px] outline-none focus:border-accent"/></div>
+        <div className="text-[11px] text-muted">{rows.length} صنف يحتاج مراجعة أو لديه ربط يدوي</div>
+        <div className="flex flex-col gap-10">{rows.map(item => {
+            const sku = normalizeImageSku(item.id); const manual = imageBindingOverrides?.[sku] || ''; const image = imageForItem(imagesList, item); const owners = [...(collisionIndex.get(item.cleanId) || [])];
+            return <div key={sku} className="bg-bg border border-border rounded-14 p-12 flex gap-12 items-center"><div className="w-72 h-72 rounded-10 bg-surface border border-border overflow-hidden flex-shrink-0">{image ? <img src={`${BASE_URL}images/${image}`} alt="" className="w-full h-full object-contain"/> : <div className="h-full grid place-items-center text-muted"><Icon.ImageOff className="w-20 h-20"/></div>}</div><div className="min-w-0 flex-1"><div className="font-bold text-[13px] bidi-isolate">{item.id}</div><div className="text-[11px] text-muted truncate mt-1">{item.name}</div><div className="text-[10px] text-warn mt-2">الرقم المشترك: {item.cleanId} · {owners.join(' / ')}</div>{manual && <div className="text-[10px] text-success mt-1">ربط يدوي: {manual}</div>}</div><div className="flex flex-col gap-6"><button disabled={busySku===sku} onClick={()=>bind(item)} className="h-34 px-10 rounded-8 bg-primary text-white text-[11px] font-bold disabled:opacity-50">{manual?'تعديل':'ربط الصورة'}</button>{manual && <button disabled={busySku===sku} onClick={()=>clear(item)} className="h-30 px-8 rounded-8 border border-border text-[10px] text-secondary">إزالة</button>}</div></div>;
+        })}{!rows.length && <StateBlock icon={<Icon.CheckCircle className="w-20 h-20"/>} title="لا توجد تعارضات" note="جميع روابط الصور الحالية آمنة."/>}</div>
+    </div>;
+});
+
+// ============================================================
 // مدير تصنيف المنتجات — خاص بمهند
 // ============================================================
 const ProductClassificationManager = memo(({ catalogItems, imagesList, categories, currentCategoryById, categoryMeta }) => {
@@ -3091,7 +3263,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
                     </div>
                     <div className="p-16 flex flex-col gap-16">
                         <div className="w-full max-w-[320px] mx-auto aspect-square rounded-12 border border-border bg-surface overflow-hidden flex items-center justify-center">
-                            {imagesList.has(quickItem.cleanId) ? <ProductImage fileName={imagesList.get(quickItem.cleanId)} alt={quickItem.name || quickItem.id} className="w-full h-full object-contain"/> : <div className="text-muted text-center"><Icon.ImageOff className="w-28 h-28 mx-auto mb-6"/><span className="text-[11px]">لا توجد صورة</span></div>}
+                            {hasImageForItem(imagesList, quickItem) ? <ProductImage fileName={imageForItem(imagesList, quickItem)} alt={quickItem.name || quickItem.id} className="w-full h-full object-contain"/> : <div className="text-muted text-center"><Icon.ImageOff className="w-28 h-28 mx-auto mb-6"/><span className="text-[11px]">لا توجد صورة</span></div>}
                         </div>
                         <div>
                             <div className="flex justify-between gap-12 items-start">
@@ -3129,7 +3301,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
                             const checked=selected.has(item.cleanId);
                             return <div key={item.cleanId} className={`bg-bg border rounded-12 p-10 flex gap-10 ${checked?'border-accent ring-1 ring-accent/20':'border-border'}`}>
                                 <button onClick={()=>setSelected(prev=>{const n=new Set(prev);checked?n.delete(item.cleanId):n.add(item.cleanId);return n;})} className={`w-24 h-24 rounded-6 border flex-shrink-0 flex items-center justify-center text-[12px] font-bold ${checked?'bg-accent text-white border-accent':'border-border bg-surface'}`}>{checked?'✓':''}</button>
-                                <div className="w-72 h-72 rounded-10 border border-border bg-surface overflow-hidden flex-shrink-0 flex items-center justify-center">{imagesList.has(item.cleanId)?<ProductImage fileName={imagesList.get(item.cleanId)} alt={item.name||item.id} className="w-full h-full object-contain"/>:<Icon.ImageOff className="w-20 h-20 text-muted"/>}</div>
+                                <div className="w-72 h-72 rounded-10 border border-border bg-surface overflow-hidden flex-shrink-0 flex items-center justify-center">{hasImageForItem(imagesList, item)?<ProductImage fileName={imageForItem(imagesList, item)} alt={item.name||item.id} className="w-full h-full object-contain"/>:<Icon.ImageOff className="w-20 h-20 text-muted"/>}</div>
                                 <div className="min-w-0 flex-1"><p className="font-bold text-[13px] bidi-isolate truncate">{item.id}</p><p className="text-[11px] text-secondary truncate mt-2">{item.name||'---'}</p><p className="text-[10px] text-muted mt-6 mb-6">الحالي: <b className="text-primary">{currentCategoryById[item.cleanId]||'غير مصنف'}</b></p><select disabled={busy} value={currentCategoryById[item.cleanId]||CATEGORY_UNASSIGNED} onChange={e=>chooseCategory(item,e.target.value)} className="w-full h-32 px-8 rounded-8 border border-border bg-surface text-[10px] outline-none focus:border-accent"><option value={CATEGORY_UNASSIGNED}>غير مصنف</option>{categoryNames.map(cat=><option key={cat} value={cat}>{cat}</option>)}</select></div>
                             </div>;
                         })}
@@ -3183,6 +3355,7 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
         { id: 'access_requests', label: 'طلبات الدخول 🔴' },
         { id: 'access_archive', label: 'صور الدخول' },
         { id: 'product_categories', label: 'إدارة الأقسام' },
+                        { id: 'product_images', label: 'ربط الصور', icon: Icon.Camera },
         { id: 'site_sessions', label: 'جلسات العمل' },
         { id: 'orders', label: 'الطلبات المعتمدة' },
         { id: 'drafts', label: 'المسودات المؤقتة' }, 
@@ -3194,7 +3367,7 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
         let isMounted = true;
         let unsubscribe;
 
-        if (activeTab === 'product_categories') {
+        if (['product_categories','product_images'].includes(activeTab)) {
             setLoading(false);
             setSearchTerm('');
             setExpandedOrderId(null);
@@ -3401,7 +3574,7 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
                     ))}
                 </div>
 
-                {activeTab !== 'product_categories' && (
+                {!['product_categories','product_images'].includes(activeTab) && (
                     <div className="p-16 border-b border-border bg-surface flex flex-col sm:flex-row gap-12 items-center justify-between">
                         <div className="relative w-full sm:w-[350px]">
                             <Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted" />
@@ -3419,7 +3592,9 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
                 )}
 
                 <div className="flex-1 overflow-y-auto p-16 bg-surface">
-                    {activeTab === 'product_categories' ? (
+                    {activeTab === 'product_images' ? (
+                        <ProductImageBindingManager catalogItems={imageCatalogItems} imagesList={imagesList} rawImagesList={rawImagesList} imageBindingOverrides={imageBindingOverrides} onBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }} />
+                    ) : activeTab === 'product_categories' ? (
                         <ProductClassificationManager
                             catalogItems={catalogItems}
                             imagesList={imagesList}
@@ -3907,6 +4082,8 @@ const App = () => {
     
     const [databases, setDatabases]   = useState({ jeddah: [], riyadh: [] });
     const [imagesList, setImagesList] = useState(new Map());
+    const [rawImagesList, setRawImagesList] = useState(new Map());
+    const [imageBindingOverrides, setImageBindingOverrides] = useState({});
     const [newArrivalsMeta, setNewArrivalsMeta] = useState({ items: [] });
     const [baseCategories, setBaseCategories] = useState({});
     const [categoryOverrides, setCategoryOverrides] = useState({});
@@ -3943,8 +4120,14 @@ const App = () => {
                 reportCleanIdCollisions(jeddah, WAREHOUSES.jeddah.key);
                 reportCleanIdCollisions(riyadh, WAREHOUSES.riyadh.key);
 
-                setDatabases({ jeddah, riyadh });
-                setImagesList(buildImagesMap(iT));
+                const nextDatabases = { jeddah, riyadh };
+                setDatabases(nextDatabases);
+                const rawImgMap = buildImagesMap(iT);
+                setRawImagesList(rawImgMap);
+                const bindingOverrides = await loadImageBindingOverrides();
+                if (!alive) return;
+                setImageBindingOverrides(bindingOverrides);
+                setImagesList(buildResolvedImagesMap(rawImgMap, nextDatabases, bindingOverrides));
                 setNewArrivalsMeta(nJ && Array.isArray(nJ.items) ? nJ : { items: [] });
                 setBaseCategories(parseCategories(cT));
                 setLastUpdate(vJ && vJ.lastUpdate ? (typeof dayjs !== 'undefined' ? dayjs(vJ.lastUpdate).fromNow() : vJ.lastUpdate) : "غير متوفر");
@@ -3957,6 +4140,21 @@ const App = () => {
         })();
         return () => { alive = false; };
     }, []);
+
+    // V56.25: مزامنة روابط الصور اليدوية فورياً على كل الأجهزة المفتوحة.
+    useEffect(() => {
+        let unsub = null;
+        let alive = true;
+        getDb().then(db => {
+            if (!alive) return;
+            unsub = db.collection('system_controls').doc(IMAGE_BINDING_DOC).onSnapshot(snap => {
+                const next = snap.exists ? (snap.data()?.bindings || {}) : {};
+                setImageBindingOverrides(next);
+                setImagesList(buildResolvedImagesMap(rawImagesList, databases, next));
+            }, err => console.warn('[V56.25 image bindings sync]', err));
+        }).catch(err => console.warn('[V56.25 image bindings sync]', err));
+        return () => { alive = false; if (unsub) unsub(); };
+    }, [rawImagesList, databases]);
 
     // مزامنة التصنيفات اللحظية: أي تعديل من مهند يظهر لكل الأجهزة المفتوحة فوراً.
     useEffect(() => {
@@ -4075,6 +4273,20 @@ const App = () => {
     const newArrivalIds = useMemo(() => new Set((newArrivalsMeta.items || []).map(row => normalizeCleanId(row.sku)).filter(Boolean)), [newArrivalsMeta]);
     const categoryNames = useMemo(() => Object.keys(categories), [categories]);
     const currentCategoryById = useMemo(() => buildCategoryLookup(categories), [categories]);
+    const imageCatalogItems = useMemo(() => {
+        const map = new Map();
+        [WAREHOUSES.jeddah.key, WAREHOUSES.riyadh.key].forEach(wh => {
+            (databases[wh] || []).forEach(item => {
+                const sku = normalizeImageSku(item.id);
+                if (!sku) return;
+                const prev = map.get(sku);
+                if (!prev) map.set(sku, { ...item, warehouseQty:{ [wh]:item.qty || 0 } });
+                else map.set(sku, { ...prev, name:prev.name || item.name, warehouseQty:{ ...(prev.warehouseQty || {}), [wh]:item.qty || 0 } });
+            });
+        });
+        return Array.from(map.values()).sort((a,b) => String(a.id).localeCompare(String(b.id), 'en', { numeric:true }));
+    }, [databases]);
+
     const catalogItems = useMemo(() => {
         const map = new Map();
         [WAREHOUSES.jeddah.key, WAREHOUSES.riyadh.key].forEach(wh => {
@@ -4104,12 +4316,12 @@ const App = () => {
         let pool = databases[warehouse] || [];
         if (VISIBILITY_RULES.hideOutOfStockInGallery) pool = pool.filter(i => i.qty > 0);
 
-        if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(i.cleanId) && imagesList.has(i.cleanId));
-        if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) return pool.filter(i => !imagesList.has(i.cleanId));
-        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => imagesList.has(i.cleanId) && !allCategorizedIds.has(i.cleanId));
+        if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(i.cleanId) && hasImageForItem(imagesList, i));
+        if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) return pool.filter(i => !hasImageForItem(imagesList, i));
+        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => hasImageForItem(imagesList, i) && !allCategorizedIds.has(i.cleanId));
 
         const ids = new Set(categories[activeCategory] || []);
-        return pool.filter(i => ids.has(i.cleanId) && imagesList.has(i.cleanId));
+        return pool.filter(i => ids.has(i.cleanId) && hasImageForItem(imagesList, i));
     }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, newArrivalIds, isAdmin]);
 
     const visibleItems = useMemo(() => galleryResults.slice(0, visibleCount), [galleryResults, visibleCount]);
@@ -4332,15 +4544,15 @@ const App = () => {
                                     ← العودة لنتائج البحث
                                 </button>
                                 <FullResultCard item={selectedSearchItem} warehouseName={activeWarehouseName}
-                                    showImage={showImageInSearch && imagesList.has(selectedSearchItem.cleanId)}
-                                    imageFileName={imagesList.get(selectedSearchItem.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart}
+                                    showImage={showImageInSearch && hasImageForItem(imagesList, selectedSearchItem)}
+                                    imageFileName={imageForItem(imagesList, selectedSearchItem)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart}
                                     isAdmin={isAdmin} currentCategory={currentCategoryById[selectedSearchItem.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                             </React.Fragment>
                         ) : (
                             <React.Fragment>
-                                {search.exact && <FullResultCard item={search.exact} warehouseName={activeWarehouseName} showImage={showImageInSearch && imagesList.has(search.exact.cleanId)} imageFileName={imagesList.get(search.exact.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} isAdmin={isAdmin} currentCategory={currentCategoryById[search.exact.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />}
+                                {search.exact && <FullResultCard item={search.exact} warehouseName={activeWarehouseName} showImage={showImageInSearch && hasImageForItem(imagesList, search.exact)} imageFileName={imageForItem(imagesList, search.exact)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} isAdmin={isAdmin} currentCategory={currentCategoryById[search.exact.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />}
                                 {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
-                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && imagesList.has(item.cleanId)} imageFileName={imagesList.get(item.cleanId)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} onSelect={setSelectedSearchItem} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
+                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} onSelect={setSelectedSearchItem} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                                 ))}
                                 {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — اضغط على أي نتيجة لفتح بطاقتها كاملة</p>}
                             </React.Fragment>
@@ -4416,7 +4628,7 @@ const App = () => {
                                         ) : (
                                             <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16" : "flex flex-col gap-16 max-w-[520px] mx-auto"}>
                                                 {visibleItems.map(item => (
-                                                    <GalleryCard key={item.uid} item={item} imageFileName={imagesList.get(item.cleanId)} showImage={!isMissingImagesView} isGrid={galleryView === 'grid'}
+                                                    <GalleryCard key={item.uid} item={item} imageFileName={imageForItem(imagesList, item)} showImage={!isMissingImagesView} isGrid={galleryView === 'grid'}
                                                         view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} warehouseName={activeWarehouseName} cart={cart} setCart={setCart}
                                                         isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                                                 ))}
@@ -4461,8 +4673,8 @@ const App = () => {
                 currentCategoryById={currentCategoryById}
                 categoryMeta={categoryMeta}
             />}
-            {categoryEditItem && isAdmin && <AdminCategoryPickerModal item={categoryEditItem} imageFileName={imagesList.get(categoryEditItem.cleanId)} currentCategory={currentCategoryById[categoryEditItem.cleanId]} categoryNames={categoryNames} onClose={() => setCategoryEditItem(null)} />}
-            {zoomItem && <Lightbox fileName={imagesList.get(zoomItem.cleanId)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />}
+            {categoryEditItem && isAdmin && <AdminCategoryPickerModal item={categoryEditItem} imageFileName={imageForItem(imagesList, categoryEditItem)} currentCategory={currentCategoryById[categoryEditItem.cleanId]} categoryNames={categoryNames} onClose={() => setCategoryEditItem(null)} />}
+            {zoomItem && <Lightbox fileName={imageForItem(imagesList, zoomItem)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />}
         </div>
     );
 };
