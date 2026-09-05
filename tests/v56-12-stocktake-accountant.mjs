@@ -17,11 +17,11 @@ has(admin,'for(let x=0;x<rows.length;x+=350)','full test writes must be chunked 
 // Historical test cleanup was executed once from CI; normal admin use must never auto-delete future tests.
 assert.ok(!admin.includes('bindSelected();cleanupLegacyTestsOnce()'),'opening admin must not auto-delete newly created test campaigns');
 
-// Accountant control and admin preview.
+// Accountant control and admin preview. Later cache-bust revisions may advance the v= query without changing the V56.12 contract.
 has(admin,'stocktake_accountant_access','admin must own accountant visibility control');
 has(admin,'data-accountant-member','accountant access must be assignable per employee');
 has(admin,'saveAccountantAccess','admin must be able to grant/remove access');
-has(admin,'stocktake-accountant.html?preview=1&v=56.12','root admin must be able to preview accountant perspective');
+assert.match(admin,/stocktake-accountant\.html\?preview=1&v=56\.(?:1[2-9]|[2-9]\d)/,'root admin must be able to preview accountant perspective');
 
 // Accountant page is a dedicated read-only surface. The visible wording is intentionally "متابعة الجرد".
 has(accountant,'<title>متابعة الجرد | بيت الأواني الطيبة</title>','accountant surface must use the approved follow-up wording');
@@ -41,7 +41,8 @@ has(accountant,'.tablewrap{display:none}','wide table must be hidden by default 
 // Visibility appears in employee UI only when control allows it.
 has(runtime,'useStocktakeAccountantControl','employee runtime must subscribe to accountant access control');
 has(runtime,'currentStocktakeAccountantAccessAllowed','employee runtime must calculate accountant visibility per account');
-has(runtime,"stocktake-accountant.html?v=56.12",'authorized employees must have accountant entry point');
+has(runtime,"stocktake.html?v=56.12",'authorized employees must retain the V56.12 stocktake entry point');
+has(runtime,"stocktake-accountant.html?v=56.12",'authorized employees must retain the V56.12 accountant entry point');
 has(index,"index-v37-source.txt?v=56.26",'runtime cache must include the current V56.26 employee hotfix');
 
 console.log('V56.12 stocktake accountant/full-test regression: OK on V56.26 runtime');
