@@ -29,14 +29,22 @@ jobs:
           s=Path('runtime/customer-v37-source.txt').read_text(encoding='utf-8')
           w=Path('customer.html').read_text(encoding='utf-8')
           m=Path('data/images_list.txt').read_text(encoding='utf-8')
-          for x in ["const normalizeSkuKey = s =>","function getImageForItem(images,item)","exact.set(sku,file)","getImageForItem(images,x)"]:
-              assert x in s, x
-          assert "images.has(x.cleanId)" not in s
-          assert "images.get(x.cleanId)" not in s
+          required=[
+            'V56.25 customer image identity — exact SKU first; numeric fallback only when unique.',
+            'const normalizeImageSku = raw =>',
+            'buildCustomerImageCollisionIndex',
+            'loadCustomerImageBindings',
+            "doc('product_image_bindings')",
+            'resolveCustomerImage',
+            'owners.size!==1',
+          ]
+          for x in required: assert x in s, x
+          assert 'images.has(x.cleanId)' not in s
+          assert 'images.get(x.cleanId)' not in s
           assert 'BA_209\t209.webp' in m
           assert not any(line=='209\t209.webp' for line in m.splitlines())
           assert './runtime/customer-v37-source.txt?v=56.25' in w
-          print('V56.25 customer image identity regression PASS')
+          print('V56.25 customer collision-safe image regression PASS')
           PY
       - name: Commit verified customer repair
         run: |
@@ -47,5 +55,7 @@ jobs:
             echo 'No changes'
             exit 0
           fi
-          git commit -m 'V56.25 — customer exact SKU image identity'
+          git commit -m 'V56.25 — customer collision-safe image identity'
           git push origin HEAD:main
+
+# trigger collision-safe v2
