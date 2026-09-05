@@ -400,6 +400,8 @@ function parsePricingMap(rawText){
   return map;
 }
 
+const normalizeImageSku = raw => toEnglishDigits(String(raw||'')).trim().toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9_-]/g,'');
+
 function parseInventory(raw){
   if(!raw) return [];
   const lines=raw.trim().split(/\r?\n/); if(lines.length<2) return [];
@@ -415,41 +417,53 @@ function parseInventory(raw){
     const c=lines[i].split('\t').map(x=>x.trim());
     const id=c[idIdx]||''; const cleanId=normalizeCleanId(id); if(!cleanId) continue;
     const q=parseFloat(toEnglishDigits(qtyIdx>=0?(c[qtyIdx]||'0'):'0').replace(/,/g,''));
-    map.set(cleanId,{cleanId,skuKey:normalizeSkuKey(id),id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});
+    const imageSku=normalizeImageSku(id); if(!imageSku) continue;
+    map.set(imageSku,{cleanId,imageSku,id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});
   }
   return [...map.values()];
 }
 function mergeInventories(a,b){
   const map=new Map();
   [...a,...b].forEach(item=>{
-    const prev=map.get(item.cleanId);
-    if(!prev) map.set(item.cleanId,{...item,mergedQty:Math.max(0,item.qty||0)});
-    else map.set(item.cleanId,{...prev,id:prev.id||item.id,name:prev.name||item.name,unit:prev.unit||item.unit,pack:prev.pack||item.pack,mergedQty:Math.max(0,prev.mergedQty||0)+Math.max(0,item.qty||0)});
+    const skuKey=normalizeImageSku(item.imageSku||item.id)||item.cleanId;
+    const prev=map.get(skuKey);
+    if(!prev) map.set(skuKey,{...item,imageSku:skuKey,mergedQty:Math.max(0,item.qty||0)});
+    else map.set(skuKey,{...prev,id:prev.id||item.id,imageSku:skuKey,name:prev.name||item.name,unit:prev.unit||item.unit,pack:prev.pack||item.pack,mergedQty:Math.max(0,prev.mergedQty||0)+Math.max(0,item.qty||0)});
   });
   return [...map.values()].map(x=>({...x,allowedMax:floorHalf(x.mergedQty),searchName:normalizeText(x.name),searchId:toEnglishDigits(x.id).toLowerCase()}));
 }
+// V56.25 customer image identity — exact SKU first; numeric fallback only when unique.
 function buildImagesMap(text){
-  const exact=new Map(),numeric=new Map();
+  const exact=new Map(),legacy=new Map();
   String(text||'').split(/\r?\n/).forEach(line=>{
     const raw=line.trim();if(!raw||raw.startsWith('#'))return;
-    const parts=raw.split(/\t/);let sourceKey='',file='';
-    if(parts.length>=2){sourceKey=parts[0].trim();file=parts.slice(1).join('\t').trim()}
-    else{file=raw;const base=file.split('/').pop().split('?')[0];sourceKey=base.replace(/\.[^.]+$/,'')}
-    if(!sourceKey||!file)return;
-    const sku=normalizeSkuKey(sourceKey),num=normalizeCleanId(sourceKey);
-    if(/[A-Za-z]/.test(sourceKey)&&sku)exact.set(sku,file);
-    else if(num)numeric.set(num,file);
+    const parts=raw.split(/\t/);let declared='',file='';
+    if(parts.length>=2){declared=parts[0].trim();file=parts.slice(1).join('\t').trim()}
+    else{file=raw;declared=file.split('/').pop().split('?')[0].replace(/\.[^.]+$/,'')}
+    if(!declared||!file)return;
+    const sku=normalizeImageSku(declared),clean=normalizeCleanId(declared);
+    if(sku)exact.set(sku,file);
+    if(clean){if(!legacy.has(clean))legacy.set(clean,[]);legacy.get(clean).push({sku,file})}
   });
-  return {exact,numeric};
+  return {exact,legacy};
 }
-function getImageForItem(images,item){
+function buildCustomerImageCollisionIndex(items){
+  const out=new Map();
+  (items||[]).forEach(item=>{if(!item?.cleanId)return;const sku=normalizeImageSku(item.imageSku||item.id);if(!sku)return;if(!out.has(item.cleanId))out.set(item.cleanId,new Set());out.get(item.cleanId).add(sku)});
+  return out;
+}
+async function loadCustomerImageBindings(){
+  try{const snap=await db.collection('system_controls').doc('product_image_bindings').get();return snap.exists?(snap.data()?.bindings||{}):{}}catch(e){console.warn('[V56.25 customer image bindings]',e);return{}}
+}
+function resolveCustomerImage(images,item,collisions,bindings={}){
   if(!images||!item)return'';
-  const sku=normalizeSkuKey(item.skuKey||item.id||'');
-  if(sku&&images.exact?.has(sku))return images.exact.get(sku)||'';
-  const num=normalizeCleanId(item.cleanId||item.id||'');
-  return num?(images.numeric?.get(num)||''):'';
+  const sku=normalizeImageSku(item.imageSku||item.id),override=normalizeImageSku(bindings?.[sku]||'');
+  if(override&&images.exact.has(override))return images.exact.get(override)||'';
+  if(sku&&images.exact.has(sku))return images.exact.get(sku)||'';
+  const candidates=images.legacy.get(item.cleanId)||[],owners=collisions.get(item.cleanId)||new Set();
+  if(owners.size!==1)return'';
+  return candidates[0]?.file||'';
 }
-
 function parseCategories(text){
   const out={}; if(!text)return out;
   const rows=text.split(/\r?\n/).map(r=>r.split('\t').map(c=>c.trim())); if(!rows.length)return out;
@@ -1003,7 +1017,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   useEffect(()=>{if(!guestMode)logCustomerEvent(user,'page_view',page,{company:safeProfile.company})},[page,guestMode]);
   useEffect(()=>{
     let alive=true,unsubO=null,unsubM=null;
-    Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json')]).then(([j,r,imgs,cats,pricingText,arrivals])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const merged=mergeInventories(parseInventory(j),parseInventory(r)).filter(x=>x.allowedMax>=CART_STEP&&getImageForItem(images,x)).map(x=>{const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile:getImageForItem(images,x),cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}});setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});
+    Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json'),loadCustomerImageBindings()]).then(([j,r,imgs,cats,pricingText,arrivals,bindings])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const inventory=mergeInventories(parseInventory(j),parseInventory(r));const collisions=buildCustomerImageCollisionIndex(inventory);const merged=inventory.filter(x=>x.allowedMax>=CART_STEP).map(x=>{const imageFile=resolveCustomerImage(images,x,collisions,bindings);const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile,cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}}).filter(x=>Boolean(x.imageFile));setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});
     unsubO=db.collection(CATEGORY_OVERRIDES).onSnapshot(s=>{const x={};s.forEach(d=>{const v=d.data();const id=normalizeCleanId(v.cleanId||d.id);if(id)x[id]=v});if(alive)setOverrides(x)},()=>{});
     unsubM=db.collection(CATEGORY_META).onSnapshot(s=>{const x={};s.forEach(d=>x[d.id]=d.data());if(alive)setMeta(x)},()=>{});
     return()=>{alive=false;unsubO?.();unsubM?.()};
