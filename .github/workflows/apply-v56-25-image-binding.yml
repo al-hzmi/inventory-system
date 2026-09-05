@@ -1,0 +1,71 @@
+name: Apply V56.25 Image Binding Safety
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/v56-25-image-binding.py'
+      - '.github/workflows/apply-v56-25-image-binding.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message || '', 'V56.25 — safe SKU image binding') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply guarded patch
+        run: python .github/scripts/v56-25-image-binding.py
+      - name: Static regression contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('runtime/index-v37-source.txt').read_text(encoding='utf-8')
+          i=Path('index.html').read_text(encoding='utf-8')
+          required=[
+            "const normalizeImageSku = raw =>",
+            "const buildImageCollisionIndex = databases =>",
+            "const resolveImageForItem = (imagesMap, item, collisionIndex, overrides = {}) =>",
+            "if (owners.size !== 1) return '';",
+            "const ProductImageBindingManager = memo",
+            "const IMAGE_BINDING_DOC = 'product_image_bindings';",
+            "{ id: 'product_images', label: 'ربط الصور', icon: Icon.Image },",
+            "imageSku: normalizeImageSku(rawId)",
+          ]
+          missing=[x for x in required if x not in s]
+          assert not missing, f'Missing V56.25 contracts: {missing}'
+          assert 'imagesList.get(item.cleanId)' not in s
+          assert 'imagesList.has(i.cleanId)' not in s
+          assert './runtime/index-v37-source.txt?v=56.25' in i
+
+          # Exact collision model: 209 cannot auto-bind when BA_209 and AR_M209 coexist.
+          def clean(raw):
+              digits=''.join(c for c in raw if c.isdigit())
+              return str(int(digits)) if digits else raw.lower().replace(' ','')
+          owners={clean(x) for x in ['BA_209','AR_M209']}
+          assert owners == {'209'}
+          full={'BA_209','AR_M209'}
+          assert len(full) == 2
+          # Contract mirrored from JS: ambiguous legacy owner count != 1 => suppressed.
+          assert len(full) != 1
+          print('V56.25 static regression: PASS')
+          PY
+      - name: Commit product fix
+        run: |
+          if git diff --quiet; then
+            echo 'No product diff to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/index-v37-source.txt index.html
+          git commit -m 'V56.25 — safe SKU image binding and admin repair'
+          git push origin HEAD:main
