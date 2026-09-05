@@ -1,0 +1,51 @@
+name: V56.25 Customer Image Identity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-25-customer-image-identity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply customer image identity patch
+        run: python .github/scripts/v56-25-customer-image-identity.py
+      - name: Verify BA_209 cannot leak to AR_M209
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('runtime/customer-v37-source.txt').read_text(encoding='utf-8')
+          w=Path('customer.html').read_text(encoding='utf-8')
+          m=Path('data/images_list.txt').read_text(encoding='utf-8')
+          for x in ["const normalizeSkuKey = s =>","function getImageForItem(images,item)","exact.set(sku,file)","getImageForItem(images,x)"]:
+              assert x in s, x
+          assert "images.has(x.cleanId)" not in s
+          assert "images.get(x.cleanId)" not in s
+          assert 'BA_209\t209.webp' in m
+          assert not any(line=='209\t209.webp' for line in m.splitlines())
+          assert './runtime/customer-v37-source.txt?v=56.25' in w
+          print('V56.25 customer image identity regression PASS')
+          PY
+      - name: Commit verified customer repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/customer-v37-source.txt customer.html
+          if git diff --cached --quiet; then
+            echo 'No changes'
+            exit 0
+          fi
+          git commit -m 'V56.25 — customer exact SKU image identity'
+          git push origin HEAD:main
