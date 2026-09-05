@@ -1,61 +1,74 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 p=Path('runtime/customer-v37-source.txt')
 s=p.read_text(encoding='utf-8')
 wrapper=Path('customer.html')
 w=wrapper.read_text(encoding='utf-8')
 
-if "const normalizeSkuKey = s =>" in s:
-    print('V56.25 customer image identity already present')
-else:
-    old="const normalizeCleanId = s => toEnglishDigits(s).replace(/\\D/g,'');"
-    new=old+"\nconst normalizeSkuKey = s => toEnglishDigits(String(s??'')).trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'');"
-    if old not in s: raise SystemExit('CUSTOMER_NORMALIZE_ANCHOR_MISSING')
-    s=s.replace(old,new,1)
+if 'V56.25 customer image identity — exact SKU first; numeric fallback only when unique.' not in s:
+    parse_anchor='function parseInventory(raw){\n'
+    if parse_anchor not in s: raise SystemExit('CUSTOMER_PARSE_ANCHOR_MISSING')
+    s=s.replace(parse_anchor,"const normalizeImageSku = raw => toEnglishDigits(String(raw||'')).trim().toUpperCase().replace(/\\s+/g,'').replace(/[^A-Z0-9_-]/g,'');\n\n"+parse_anchor,1)
 
     old_item="map.set(cleanId,{cleanId,id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});"
-    new_item="map.set(cleanId,{cleanId,skuKey:normalizeSkuKey(id),id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});"
+    new_item="const imageSku=normalizeImageSku(id); if(!imageSku) continue;\n    map.set(imageSku,{cleanId,imageSku,id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});"
     if old_item not in s: raise SystemExit('CUSTOMER_ITEM_ANCHOR_MISSING')
     s=s.replace(old_item,new_item,1)
 
+    old_merge="const prev=map.get(item.cleanId);\n    if(!prev) map.set(item.cleanId,{...item,mergedQty:Math.max(0,item.qty||0)});\n    else map.set(item.cleanId,{...prev,id:prev.id||item.id,name:prev.name||item.name,unit:prev.unit||item.unit,pack:prev.pack||item.pack,mergedQty:Math.max(0,prev.mergedQty||0)+Math.max(0,item.qty||0)});"
+    new_merge="const skuKey=normalizeImageSku(item.imageSku||item.id)||item.cleanId;\n    const prev=map.get(skuKey);\n    if(!prev) map.set(skuKey,{...item,imageSku:skuKey,mergedQty:Math.max(0,item.qty||0)});\n    else map.set(skuKey,{...prev,id:prev.id||item.id,imageSku:skuKey,name:prev.name||item.name,unit:prev.unit||item.unit,pack:prev.pack||item.pack,mergedQty:Math.max(0,prev.mergedQty||0)+Math.max(0,item.qty||0)});"
+    if old_merge not in s: raise SystemExit('CUSTOMER_MERGE_ANCHOR_MISSING')
+    s=s.replace(old_merge,new_merge,1)
+
     start=s.find('function buildImagesMap(text){')
-    end=s.find('\nfunction parseCategories',start)
+    end=s.find('function parseCategories(text){',start)
     if start<0 or end<0: raise SystemExit('CUSTOMER_IMAGES_MAP_ANCHOR_MISSING')
-    repl=r'''function buildImagesMap(text){
-  const exact=new Map(),numeric=new Map();
+    image_block=r'''// V56.25 customer image identity — exact SKU first; numeric fallback only when unique.
+function buildImagesMap(text){
+  const exact=new Map(),legacy=new Map();
   String(text||'').split(/\r?\n/).forEach(line=>{
     const raw=line.trim();if(!raw||raw.startsWith('#'))return;
-    const parts=raw.split(/\t/);let sourceKey='',file='';
-    if(parts.length>=2){sourceKey=parts[0].trim();file=parts.slice(1).join('\t').trim()}
-    else{file=raw;const base=file.split('/').pop().split('?')[0];sourceKey=base.replace(/\.[^.]+$/,'')}
-    if(!sourceKey||!file)return;
-    const sku=normalizeSkuKey(sourceKey),num=normalizeCleanId(sourceKey);
-    if(/[A-Za-z]/.test(sourceKey)&&sku)exact.set(sku,file);
-    else if(num)numeric.set(num,file);
+    const parts=raw.split(/\t/);let declared='',file='';
+    if(parts.length>=2){declared=parts[0].trim();file=parts.slice(1).join('\t').trim()}
+    else{file=raw;declared=file.split('/').pop().split('?')[0].replace(/\.[^.]+$/,'')}
+    if(!declared||!file)return;
+    const sku=normalizeImageSku(declared),clean=normalizeCleanId(declared);
+    if(sku)exact.set(sku,file);
+    if(clean){if(!legacy.has(clean))legacy.set(clean,[]);legacy.get(clean).push({sku,file})}
   });
-  return {exact,numeric};
+  return {exact,legacy};
 }
-function getImageForItem(images,item){
+function buildCustomerImageCollisionIndex(items){
+  const out=new Map();
+  (items||[]).forEach(item=>{if(!item?.cleanId)return;const sku=normalizeImageSku(item.imageSku||item.id);if(!sku)return;if(!out.has(item.cleanId))out.set(item.cleanId,new Set());out.get(item.cleanId).add(sku)});
+  return out;
+}
+async function loadCustomerImageBindings(){
+  try{const snap=await db.collection('system_controls').doc('product_image_bindings').get();return snap.exists?(snap.data()?.bindings||{}):{}}catch(e){console.warn('[V56.25 customer image bindings]',e);return{}}
+}
+function resolveCustomerImage(images,item,collisions,bindings={}){
   if(!images||!item)return'';
-  const sku=normalizeSkuKey(item.skuKey||item.id||'');
-  if(sku&&images.exact?.has(sku))return images.exact.get(sku)||'';
-  const num=normalizeCleanId(item.cleanId||item.id||'');
-  return num?(images.numeric?.get(num)||''):'';
+  const sku=normalizeImageSku(item.imageSku||item.id),override=normalizeImageSku(bindings?.[sku]||'');
+  if(override&&images.exact.has(override))return images.exact.get(override)||'';
+  if(sku&&images.exact.has(sku))return images.exact.get(sku)||'';
+  const candidates=images.legacy.get(item.cleanId)||[],owners=collisions.get(item.cleanId)||new Set();
+  if(owners.size!==1)return'';
+  return candidates[0]?.file||'';
 }
 '''
-    s=s[:start]+repl+s[end:]
+    s=s[:start]+image_block+s[end:]
 
-    old_load="const merged=mergeInventories(parseInventory(j),parseInventory(r)).filter(x=>x.allowedMax>=CART_STEP&&images.has(x.cleanId)).map(x=>{const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile:images.get(x.cleanId)||'',cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}});"
-    new_load="const merged=mergeInventories(parseInventory(j),parseInventory(r)).filter(x=>x.allowedMax>=CART_STEP&&getImageForItem(images,x)).map(x=>{const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile:getImageForItem(images,x),cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}});"
+    old_load="Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json')]).then(([j,r,imgs,cats,pricingText,arrivals])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const merged=mergeInventories(parseInventory(j),parseInventory(r)).filter(x=>x.allowedMax>=CART_STEP&&images.has(x.cleanId)).map(x=>{const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile:images.get(x.cleanId)||'',cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}});setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});"
+    new_load="Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json'),loadCustomerImageBindings()]).then(([j,r,imgs,cats,pricingText,arrivals,bindings])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const inventory=mergeInventories(parseInventory(j),parseInventory(r));const collisions=buildCustomerImageCollisionIndex(inventory);const merged=inventory.filter(x=>x.allowedMax>=CART_STEP).map(x=>{const imageFile=resolveCustomerImage(images,x,collisions,bindings);const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile,cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}}).filter(x=>Boolean(x.imageFile));setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});"
     if old_load not in s: raise SystemExit('CUSTOMER_LOAD_ANCHOR_MISSING')
     s=s.replace(old_load,new_load,1)
     p.write_text(s,encoding='utf-8')
 
 if "./runtime/customer-v37-source.txt?v=56.25" not in w:
-    import re
     w,n=re.subn(r"\./runtime/customer-v37-source\.txt\?v=[0-9.]+","./runtime/customer-v37-source.txt?v=56.25",w,count=1)
     if n!=1: raise SystemExit('CUSTOMER_WRAPPER_CACHE_ANCHOR_MISSING')
     wrapper.write_text(w,encoding='utf-8')
 
-print('V56.25 customer exact image identity applied')
+print('V56.25 customer collision-safe image identity applied')
