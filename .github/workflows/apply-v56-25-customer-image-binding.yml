@@ -1,0 +1,95 @@
+name: Apply V56.25 Customer Image Binding Safety
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-v56-25-customer-image-binding.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch customer image identity safely
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('runtime/customer-v37-source.txt')
+          s=p.read_text(encoding='utf-8')
+          if 'V56.25 customer image identity' not in s:
+            old="function parseInventory(raw){\n"
+            if old not in s: raise SystemExit('parseInventory anchor missing')
+            s=s.replace(old,"const normalizeImageSku = raw => toEnglishDigits(String(raw||'')).trim().toUpperCase().replace(/\\s+/g,'').replace(/[^A-Z0-9_-]/g,'');\n\nfunction parseInventory(raw){\n",1)
+            old="map.set(cleanId,{cleanId,id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});"
+            new="const imageSku=normalizeImageSku(id); if(!imageSku) continue;\n    map.set(imageSku,{cleanId,imageSku,id,name:nameIdx>=0?(c[nameIdx]||''):'',qty:Number.isFinite(q)?q:0,unit:unitIdx>=0?(c[unitIdx]||''):'',pack:packIdx>=0?(c[packIdx]||''):''});"
+            if old not in s: raise SystemExit('inventory map anchor missing')
+            s=s.replace(old,new,1)
+            old="const prev=map.get(item.cleanId);\n    if(!prev) map.set(item.cleanId,{...item,mergedQty:Math.max(0,item.qty||0)});\n    else map.set(item.cleanId,{...prev,id:prev.id||item.id,name:prev.name||item.name,unit:prev.unit||item.unit,pack:prev.pack||item.pack,mergedQty:Math.max(0,prev.mergedQty||0)+Math.max(0,item.qty||0)});"
+            new="const skuKey=normalizeImageSku(item.imageSku||item.id)||item.cleanId;\n    const prev=map.get(skuKey);\n    if(!prev) map.set(skuKey,{...item,imageSku:skuKey,mergedQty:Math.max(0,item.qty||0)});\n    else map.set(skuKey,{...prev,id:prev.id||item.id,imageSku:skuKey,name:prev.name||item.name,unit:prev.unit||item.unit,pack:prev.pack||item.pack,mergedQty:Math.max(0,prev.mergedQty||0)+Math.max(0,item.qty||0)});"
+            if old not in s: raise SystemExit('merge anchor missing')
+            s=s.replace(old,new,1)
+            start=s.index('function buildImagesMap(text){')
+            end=s.index('function parseCategories(text){',start)
+            newblock=r'''// V56.25 customer image identity — exact SKU first; numeric fallback only when unique.
+function buildImagesMap(text){
+  const exact=new Map(),legacy=new Map();
+  String(text||'').split(/\r?\n/).forEach(line=>{
+    const raw=line.trim();if(!raw||raw.startsWith('#'))return;
+    const parts=raw.split(/\t/);let declared='',file='';
+    if(parts.length>=2){declared=parts[0].trim();file=parts.slice(1).join('\t').trim()}
+    else{file=raw;declared=file.split('/').pop().split('?')[0].replace(/\.[^.]+$/,'')}
+    if(!declared||!file)return;
+    const sku=normalizeImageSku(declared),clean=normalizeCleanId(declared);
+    if(sku)exact.set(sku,file);
+    if(clean){if(!legacy.has(clean))legacy.set(clean,[]);legacy.get(clean).push({sku,file})}
+  });
+  return {exact,legacy};
+}
+function buildCustomerImageCollisionIndex(items){
+  const out=new Map();
+  (items||[]).forEach(item=>{if(!item?.cleanId)return;const sku=normalizeImageSku(item.imageSku||item.id);if(!sku)return;if(!out.has(item.cleanId))out.set(item.cleanId,new Set());out.get(item.cleanId).add(sku)});
+  return out;
+}
+async function loadCustomerImageBindings(){
+  try{const snap=await db.collection('system_controls').doc('product_image_bindings').get();return snap.exists?(snap.data()?.bindings||{}):{}}catch(e){console.warn('[V56.25 customer image bindings]',e);return{}}
+}
+function resolveCustomerImage(images,item,collisions,bindings={}){
+  if(!images||!item)return'';
+  const sku=normalizeImageSku(item.imageSku||item.id),override=normalizeImageSku(bindings?.[sku]||'');
+  if(override&&images.exact.has(override))return images.exact.get(override)||'';
+  if(sku&&images.exact.has(sku))return images.exact.get(sku)||'';
+  const candidates=images.legacy.get(item.cleanId)||[],owners=collisions.get(item.cleanId)||new Set();
+  if(owners.size!==1)return'';
+  return candidates[0]?.file||'';
+}
+'''
+            s=s[:start]+newblock+s[end:]
+            old="Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json')]).then(([j,r,imgs,cats,pricingText,arrivals])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const merged=mergeInventories(parseInventory(j),parseInventory(r)).filter(x=>x.allowedMax>=CART_STEP&&images.has(x.cleanId)).map(x=>{const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile:images.get(x.cleanId)||'',cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}});setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});"
+            new="Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json'),loadCustomerImageBindings()]).then(([j,r,imgs,cats,pricingText,arrivals,bindings])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const inventory=mergeInventories(parseInventory(j),parseInventory(r));const collisions=buildCustomerImageCollisionIndex(inventory);const merged=inventory.filter(x=>x.allowedMax>=CART_STEP).map(x=>{const imageFile=resolveCustomerImage(images,x,collisions,bindings);const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile,cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}}).filter(x=>Boolean(x.imageFile));setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});"
+            if old not in s: raise SystemExit('catalog load anchor missing')
+            s=s.replace(old,new,1)
+            p.write_text(s,encoding='utf-8')
+          # wrapper cache bust
+          p=Path('customer.html'); w=p.read_text(encoding='utf-8')
+          w=re.sub(r"const CORE='./runtime/customer-v37-source\.txt\?v=[^']+';","const CORE='./runtime/customer-v37-source.txt?v=56.25';",w,count=1)
+          p.write_text(w,encoding='utf-8')
+          # regression assertions
+          s=Path('runtime/customer-v37-source.txt').read_text(encoding='utf-8')
+          for token in ['V56.25 customer image identity','normalizeImageSku','buildCustomerImageCollisionIndex','resolveCustomerImage','product_image_bindings']:
+            if token not in s: raise SystemExit('missing '+token)
+          if 'images.has(x.cleanId)' in s or 'images.get(x.cleanId)' in s: raise SystemExit('unsafe customer image lookup remains')
+      - name: Commit customer fix
+        run: |
+          if git diff --quiet; then echo 'No changes'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/customer-v37-source.txt customer.html
+          git commit -m 'V56.25 — customer exact SKU image binding'
+          git push origin HEAD:main
