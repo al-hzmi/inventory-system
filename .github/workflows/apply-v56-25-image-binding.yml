@@ -54,7 +54,6 @@ jobs:
           assert owners == {'209'}
           full={'BA_209','AR_M209'}
           assert len(full) == 2
-          # Contract mirrored from JS: ambiguous legacy owner count != 1 => suppressed.
           assert len(full) != 1
           print('V56.25 static regression: PASS')
           PY
@@ -69,3 +68,5 @@ jobs:
           git add runtime/index-v37-source.txt index.html
           git commit -m 'V56.25 — safe SKU image binding and admin repair'
           git push origin HEAD:main
+
+# trigger: 2026-09-06 image-collision repair
