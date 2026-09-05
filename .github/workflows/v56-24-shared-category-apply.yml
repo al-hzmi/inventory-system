@@ -40,3 +40,5 @@ jobs:
           node tests/v56-10-critical-ux.mjs
           node tests/v56-17-ops-polish.mjs
           git push origin HEAD:main
+
+# registered; this update triggers the apply job
