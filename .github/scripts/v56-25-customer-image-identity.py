@@ -71,12 +71,12 @@ function resolveCustomerImage(images,item,collisions,bindings={}){
 '''
 s=s[:start]+image_block+s[end:]
 
-# Patch catalogue load from any known V56.25 intermediate form.
-load_re=re.compile(r"Promise\.all\(\[fetchText\(DATA_PATH\+'jeddah\.tsv'\).*?setLoading\(false\)\}\)\}\);",re.S)
-m=load_re.search(s)
-if not m: raise SystemExit('CUSTOMER_LOAD_ANCHOR_MISSING')
+# Patch exactly the catalogue bootstrap statement inside the products effect.
+load_start=s.find("Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt')")
+load_end=s.find("\n    unsubO=db.collection(CATEGORY_OVERRIDES)",load_start)
+if load_start<0 or load_end<0: raise SystemExit('CUSTOMER_LOAD_ANCHOR_MISSING')
 new_load="Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json'),loadCustomerImageBindings()]).then(([j,r,imgs,cats,pricingText,arrivals,bindings])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const inventory=mergeInventories(parseInventory(j),parseInventory(r));const collisions=buildCustomerImageCollisionIndex(inventory);const merged=inventory.filter(x=>x.allowedMax>=CART_STEP).map(x=>{const imageFile=resolveCustomerImage(images,x,collisions,bindings);const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile,cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}}).filter(x=>Boolean(x.imageFile));setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});"
-s=s[:m.start()]+new_load+s[m.end():]
+s=s[:load_start]+new_load+s[load_end:]
 p.write_text(s,encoding='utf-8')
 
 # Wrapper cache bust.
