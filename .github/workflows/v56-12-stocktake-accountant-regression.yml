@@ -47,8 +47,8 @@ jobs:
           npm install --no-save playwright@1.55.0 >/dev/null 2>&1
           npx playwright install chromium >/dev/null
           python3 -m http.server 4174 >/tmp/v5612-http.log 2>&1 &
-          PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
-          cat >/tmp/v5612-smoke.mjs <<'JS'
+          PID=$!; trap 'kill $PID 2>/dev/null || true; rm -f tests/.v5612-smoke.mjs' EXIT
+          cat >tests/.v5612-smoke.mjs <<'JS'
           import { chromium } from 'playwright';
           const browser=await chromium.launch({headless:true});
           let failed=false;
@@ -70,6 +70,6 @@ jobs:
           }
           await browser.close();if(failed)process.exit(1);
           JS
-          node /tmp/v5612-smoke.mjs
+          node tests/.v5612-smoke.mjs
       - name: Diff check
         run: git diff --check
