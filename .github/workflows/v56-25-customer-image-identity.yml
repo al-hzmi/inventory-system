@@ -37,6 +37,8 @@ jobs:
             "doc('product_image_bindings')",
             'resolveCustomerImage',
             'owners.size!==1',
+            'map.set(imageSku,{cleanId,imageSku,id,',
+            'const skuKey=normalizeImageSku(item.imageSku||item.id)||item.cleanId;'
           ]
           for x in required: assert x in s, x
           assert 'images.has(x.cleanId)' not in s
@@ -58,4 +60,4 @@ jobs:
           git commit -m 'V56.25 — customer collision-safe image identity'
           git push origin HEAD:main
 
-# trigger collision-safe v2
+# rerun collision-safe v3
