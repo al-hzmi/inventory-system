@@ -1,0 +1,37 @@
+name: V56.24 Shared Product Categories Regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-dashboard.html'
+      - 'runtime/index-v37-source.txt'
+      - 'runtime/customer-v37-source.txt'
+      - 'tests/v56-24-shared-product-categories.mjs'
+      - '.github/workflows/v56-24-shared-product-categories-regression.yml'
+  pull_request:
+    paths:
+      - 'admin-dashboard.html'
+      - 'runtime/index-v37-source.txt'
+      - 'runtime/customer-v37-source.txt'
+      - 'tests/v56-24-shared-product-categories.mjs'
+      - '.github/workflows/v56-24-shared-product-categories-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Shared category regression
+        run: node tests/v56-24-shared-product-categories.mjs
+      - name: Critical admin UX regressions
+        run: |
+          node tests/v56-10-critical-ux.mjs
+          node tests/v56-17-ops-polish.mjs
