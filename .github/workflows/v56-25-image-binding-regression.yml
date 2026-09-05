@@ -34,19 +34,12 @@ jobs:
           customer=Path('runtime/customer-v37-source.txt').read_text(encoding='utf-8')
           wrapper=Path('customer.html').read_text(encoding='utf-8')
 
-          # Known production collision: 209.webp belongs to BA_209, never generic numeric 209.
           assert 'BA_209\t209.webp' in manifest
           assert not any(line.strip()=='209\t209.webp' for line in manifest.splitlines())
 
-          # Employee runtime contract: exact SKU + ambiguity suppression + admin override source.
-          for token in [
-              'normalizeImageSku',
-              'imageForItem',
-              'product_image_bindings',
-              'admin_mohanad',
-          ]:
+          for token in ['normalizeImageSku','imageForItem','product_image_bindings','admin_mohanad']:
               assert token in employee, f'employee missing {token}'
-          # Customer runtime contract: exact inventory identity survives parse + warehouse merge.
+
           for token in [
               'V56.25 customer image identity — exact SKU first; numeric fallback only when unique.',
               'const normalizeImageSku = raw =>',
@@ -62,23 +55,22 @@ jobs:
           assert 'images.get(x.cleanId)' not in customer
           assert './runtime/customer-v37-source.txt?v=56.25' in wrapper
 
-          # Behavioral model for the exact defect. Ambiguous numeric fallback must return nothing.
-          def norm_sku(v):
-              return re.sub(r'[^A-Z0-9_-]','',str(v).strip().upper())
-          def clean(v):
-              return ''.join(ch for ch in str(v) if ch.isdigit())
-          rows=['BA_209','AR_M209']
+          # Superseded prototypes used separate state and must stay removed.
+          assert not Path('v56-image-repair.js').exists()
+          assert not Path('.github/workflows/apply-v56-25-image-binding-repair.yml').exists()
+          assert not Path('.github/workflows/apply-v56-25-customer-image-binding.yml').exists()
+
+          # Behavioral regression for the exact BA_209 / AR_M209 collision.
+          def norm_sku(v): return re.sub(r'[^A-Z0-9_-]','',str(v).strip().upper())
+          def clean(v): return ''.join(ch for ch in str(v) if ch.isdigit())
           owners={}
-          for sku in rows:
+          for sku in ['BA_209','AR_M209']:
               owners.setdefault(clean(sku),set()).add(norm_sku(sku))
           exact={'BA_209':'209.webp'}
           def resolve(sku,override=None):
               key=norm_sku(sku)
-              if override and norm_sku(override) in exact:
-                  return exact[norm_sku(override)]
-              if key in exact:
-                  return exact[key]
-              # Numeric fallback is forbidden for colliding owners.
+              if override and norm_sku(override) in exact: return exact[norm_sku(override)]
+              if key in exact: return exact[key]
               return '' if len(owners.get(clean(sku),set())) != 1 else None
           assert resolve('BA_209')=='209.webp'
           assert resolve('AR_M209')==''
