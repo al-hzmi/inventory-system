@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 RUNTIME = Path('runtime/index-v37-source.txt')
 INDEX = Path('index.html')
-
 runtime = RUNTIME.read_text(encoding='utf-8')
 index = INDEX.read_text(encoding='utf-8')
+
+
+def replace_once(old, new, label):
+    global runtime
+    if old not in runtime:
+        raise SystemExit(f'V56.25 anchor not found: {label}')
+    runtime = runtime.replace(old, new, 1)
 
 old_build = r'''const buildImagesMap = (imagesText) => {
     const map = new Map();
@@ -27,14 +34,10 @@ old_build = r'''const buildImagesMap = (imagesText) => {
     return map;
 };'''
 
-new_build = r'''// V56.25 — image identity is intentionally stricter than product search identity.
-// Product search may collapse BA_209 / AR_M209 / 209 to the same numeric cleanId,
-// but image ownership must never do that silently.
+new_build = r'''// V56.25 — هوية الصورة مستقلة عن هوية البحث الرقمية.
+// مثال: BA_209 و AR_M209 قد يشتركان في cleanId=209 للبحث، لكن لا يجوز أن يشتركا في الصورة تلقائياً.
 const normalizeImageSku = raw => toEnglishDigits(String(raw || ''))
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '')
-    .replace(/[^A-Z0-9_-]/g, '');
+    .trim().toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9_-]/g, '');
 
 const imageStem = raw => {
     const file = String(raw || '').split('/').pop().split('?')[0];
@@ -98,7 +101,6 @@ const resolveImageForItem = (imagesMap, item, collisionIndex, overrides = {}) =>
     const candidates = imagesMap.legacy?.get(item.cleanId) || [];
     if (!candidates.length) return '';
     const owners = collisionIndex?.get(item.cleanId) || new Set();
-    // Legacy numeric image names are safe only when exactly one full SKU owns that numeric cleanId.
     if (owners.size !== 1) return '';
     return candidates[0]?.fileName || '';
 };
@@ -135,59 +137,74 @@ const saveImageBindingOverride = async ({ sku, imageKey, updatedBy = 'مهند' 
     const exactImage = normalizeImageSku(imageKey);
     if (!exactSku || !exactImage) throw new Error('INVALID_IMAGE_BINDING');
     const db = await getDb();
-    await db.collection('system_controls').doc(IMAGE_BINDING_DOC).set({
-        bindings: { [exactSku]: exactImage },
-        updatedBy,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    const ref = db.collection('system_controls').doc(IMAGE_BINDING_DOC);
+    await db.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        const current = snap.exists ? (snap.data()?.bindings || {}) : {};
+        tx.set(ref, { bindings: { ...current, [exactSku]: exactImage }, updatedBy, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    });
 };
 
 const removeImageBindingOverride = async ({ sku, updatedBy = 'مهند' }) => {
     const exactSku = normalizeImageSku(sku);
     if (!exactSku) return;
     const db = await getDb();
-    await db.collection('system_controls').doc(IMAGE_BINDING_DOC).update({
-        [`bindings.${exactSku}`]: firebase.firestore.FieldValue.delete(),
-        updatedBy,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    const ref = db.collection('system_controls').doc(IMAGE_BINDING_DOC);
+    await db.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        const current = snap.exists ? { ...(snap.data()?.bindings || {}) } : {};
+        delete current[exactSku];
+        tx.set(ref, { bindings: current, updatedBy, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     });
 };'''
+replace_once(old_build, new_build, 'buildImagesMap')
+replace_once("uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId,", "uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId, imageSku: normalizeImageSku(rawId),", 'parsed item exact imageSku')
+replace_once("const [imagesList, setImagesList] = useState(new Map());", "const [imagesList, setImagesList] = useState(new Map());\n    const [rawImagesList, setRawImagesList] = useState(new Map());\n    const [imageBindingOverrides, setImageBindingOverrides] = useState({});", 'image state')
 
-if old_build not in runtime:
-    raise SystemExit('V56.25 anchor buildImagesMap not found')
-runtime = runtime.replace(old_build, new_build, 1)
+old_load = '''                setDatabases({ jeddah, riyadh });
+                setImagesList(buildImagesMap(iT));
+                setNewArrivalsMeta(nJ && Array.isArray(nJ.items) ? nJ : { items: [] });'''
+new_load = '''                const nextDatabases = { jeddah, riyadh };
+                setDatabases(nextDatabases);
+                const rawImgMap = buildImagesMap(iT);
+                setRawImagesList(rawImgMap);
+                const bindingOverrides = await loadImageBindingOverrides();
+                if (!alive) return;
+                setImageBindingOverrides(bindingOverrides);
+                setImagesList(buildResolvedImagesMap(rawImgMap, nextDatabases, bindingOverrides));
+                setNewArrivalsMeta(nJ && Array.isArray(nJ.items) ? nJ : { items: [] });'''
+replace_once(old_load, new_load, 'boot image load')
 
-# Keep exact SKU on each item; cleanId remains unchanged for search/category compatibility.
-old_item = "uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId,"
-new_item = "uid: `${warehouseKey}:${searchId}`, warehouseKey, id: rawId, searchId, cleanId: cleanId, imageSku: normalizeImageSku(rawId),"
-if old_item not in runtime:
-    raise SystemExit('V56.25 item anchor not found')
-runtime = runtime.replace(old_item, new_item, 1)
+sync_anchor = "    // مزامنة التصنيفات اللحظية: أي تعديل من مهند يظهر لكل الأجهزة المفتوحة فوراً.\n"
+if sync_anchor not in runtime:
+    raise SystemExit('V56.25 anchor not found: category sync')
+image_sync = r'''    // V56.25: مزامنة روابط الصور اليدوية فورياً على كل الأجهزة المفتوحة.
+    useEffect(() => {
+        let unsub = null;
+        let alive = true;
+        getDb().then(db => {
+            if (!alive) return;
+            unsub = db.collection('system_controls').doc(IMAGE_BINDING_DOC).onSnapshot(snap => {
+                const next = snap.exists ? (snap.data()?.bindings || {}) : {};
+                setImageBindingOverrides(next);
+                setImagesList(buildResolvedImagesMap(rawImagesList, databases, next));
+            }, err => console.warn('[V56.25 image bindings sync]', err));
+        }).catch(err => console.warn('[V56.25 image bindings sync]', err));
+        return () => { alive = false; if (unsub) unsub(); };
+    }, [rawImagesList, databases]);
 
-# State: preserve raw image manifest separately, resolved images are keyed by item.uid.
-old_state = "const [imagesList, setImagesList] = useState(new Map());"
-new_state = "const [imagesList, setImagesList] = useState(new Map());\n    const [rawImagesList, setRawImagesList] = useState(new Map());\n    const [imageBindingOverrides, setImageBindingOverrides] = useState({});"
-if old_state not in runtime:
-    raise SystemExit('V56.25 images state anchor not found')
-runtime = runtime.replace(old_state, new_state, 1)
+'''
+runtime = runtime.replace(sync_anchor, image_sync + sync_anchor, 1)
 
-# Initial data load: build raw manifest, load admin overrides, resolve only after both warehouse catalogs are known.
-old_load = "const imgMap = buildImagesMap(imagesText);\n                setImagesList(imgMap);"
-new_load = "const rawImgMap = buildImagesMap(imagesText);\n                setRawImagesList(rawImgMap);\n                const bindingOverrides = await loadImageBindingOverrides();\n                setImageBindingOverrides(bindingOverrides);\n                setImagesList(buildResolvedImagesMap(rawImgMap, { jeddah: jeddahData, riyadh: riyadhData }, bindingOverrides));"
-if old_load not in runtime:
-    raise SystemExit('V56.25 image load anchor not found')
-runtime = runtime.replace(old_load, new_load, 1)
-
-# All product image reads must be item-identity based, never cleanId based.
 runtime = runtime.replace('imagesList.has(i.cleanId)', 'hasImageForItem(imagesList, i)')
 runtime = runtime.replace('imagesList.get(item.cleanId)', 'imageForItem(imagesList, item)')
 runtime = runtime.replace('imagesList.get(quickItem.cleanId)', 'imageForItem(imagesList, quickItem)')
 runtime = runtime.replace('imagesList.get(row.cleanId)', 'imageForItem(imagesList, row)')
+runtime = runtime.replace('imagesList.get(zoomItem.cleanId)', 'imageForItem(imagesList, zoomItem)')
 
-# Add an admin image-binding manager alongside the existing product category manager.
 manager_anchor = "// ============================================================\n// مدير تصنيف المنتجات — خاص بمهند\n// ============================================================"
 if manager_anchor not in runtime:
-    raise SystemExit('V56.25 manager anchor not found')
+    raise SystemExit('V56.25 anchor not found: manager')
 manager = r'''// ============================================================
 // V56.25 مدير ربط صور المنتجات — خاص بمهند
 // ============================================================
@@ -203,15 +220,13 @@ const ProductImageBindingManager = memo(({ catalogItems, imagesList, rawImagesLi
             if (!conflictCleanIds.has(item.cleanId) && !imageBindingOverrides?.[normalizeImageSku(item.id)]) return false;
             if (!q) return true;
             return normalizeText(`${item.id} ${item.name || ''}`).includes(q);
-        }).sort((a,b) => String(a.cleanId).localeCompare(String(b.cleanId), 'en', { numeric:true }));
+        }).sort((a,b) => String(a.cleanId).localeCompare(String(b.cleanId), 'en', { numeric:true }) || String(a.id).localeCompare(String(b.id), 'en'));
     }, [catalogItems, conflictCleanIds, imageBindingOverrides, search]);
-
     const availableImageKeys = useMemo(() => {
         const keys = new Set();
         rawImagesList?.exact?.forEach((_, key) => keys.add(key));
         return [...keys].sort((a,b) => a.localeCompare(b, 'en', { numeric:true }));
     }, [rawImagesList]);
-
     const bind = async item => {
         if (!item || busySku) return;
         const sku = normalizeImageSku(item.id);
@@ -222,7 +237,7 @@ const ProductImageBindingManager = memo(({ catalogItems, imagesList, rawImagesLi
         const normalized = normalizeImageSku(imageKey);
         if (!rawImagesList?.exact?.has(normalized)) {
             const near = availableImageKeys.filter(k => k.includes(normalized) || normalized.includes(k)).slice(0,6);
-            return alert(`لم أجد صورة بهذا المفتاح في images_list.${near.length ? `\nاقتراحات: ${near.join('، ')}` : ''}`);
+            return alert(`لم أجد صورة بهذا المفتاح في قائمة الصور.${near.length ? `\nاقتراحات: ${near.join('، ')}` : ''}`);
         }
         setBusySku(sku);
         try {
@@ -231,12 +246,9 @@ const ProductImageBindingManager = memo(({ catalogItems, imagesList, rawImagesLi
             onBindingsChanged(next);
             setNotice(`تم ربط ${item.id} بالصورة ${normalized} ✓`);
             setTimeout(() => setNotice(''), 2200);
-        } catch (err) {
-            console.error('[V56.25 save image binding]', err);
-            alert('تعذر حفظ ربط الصورة. تحقق من الاتصال وحاول مرة أخرى.');
-        } finally { setBusySku(''); }
+        } catch (err) { console.error('[V56.25 save image binding]', err); alert('تعذر حفظ ربط الصورة. تحقق من الاتصال وحاول مرة أخرى.'); }
+        finally { setBusySku(''); }
     };
-
     const clear = async item => {
         const sku = normalizeImageSku(item.id);
         if (!imageBindingOverrides?.[sku] || busySku) return;
@@ -244,66 +256,66 @@ const ProductImageBindingManager = memo(({ catalogItems, imagesList, rawImagesLi
         setBusySku(sku);
         try {
             await removeImageBindingOverride({ sku });
-            const next = { ...(imageBindingOverrides || {}) };
-            delete next[sku];
-            onBindingsChanged(next);
-            setNotice('تمت إزالة الربط اليدوي ✓');
-            setTimeout(() => setNotice(''), 1800);
+            const next = { ...(imageBindingOverrides || {}) }; delete next[sku]; onBindingsChanged(next);
+            setNotice('تمت إزالة الربط اليدوي ✓'); setTimeout(() => setNotice(''), 1800);
         } catch (err) { console.error(err); alert('تعذر إزالة الربط.'); }
         finally { setBusySku(''); }
     };
-
     return <div className="flex flex-col gap-14">
         {notice && <div className="bg-success text-white text-[12px] font-bold px-14 py-10 rounded-10 text-center">{notice}</div>}
-        <div className="bg-warnSoft border border-warn/20 rounded-12 p-12 text-[12px] leading-7 text-primary">
-            <b>تعارضات الصور</b><br/>لن يربط النظام صورة رقمية مختصرة تلقائياً إذا كان الرقم يعود لأكثر من SKU. اختر الصنف الصحيح واربطه يدوياً؛ الربط اليدوي له الأولوية دائماً.
-        </div>
+        <div className="bg-warnSoft border border-warn/20 rounded-12 p-12 text-[12px] leading-7 text-primary"><b>تعارضات الصور</b><br/>إذا كان اسم الصورة مختصراً مثل 209 ويوجد أكثر من SKU يحمل الرقم نفسه، فلن يختار النظام صنفاً من تلقاء نفسه. الربط اليدوي المعتمد هنا له الأولوية دائماً.</div>
         <div className="relative"><Icon.Search className="w-16 h-16 absolute right-12 top-1/2 -translate-y-1/2 text-muted"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث برقم الصنف أو الاسم..." className="w-full h-42 pr-36 pl-12 rounded-10 border border-border bg-bg text-[13px] outline-none focus:border-accent"/></div>
         <div className="text-[11px] text-muted">{rows.length} صنف يحتاج مراجعة أو لديه ربط يدوي</div>
-        <div className="flex flex-col gap-10">
-            {rows.map(item => {
-                const sku = normalizeImageSku(item.id);
-                const manual = imageBindingOverrides?.[sku] || '';
-                const image = imageForItem(imagesList, item);
-                const owners = [...(collisionIndex.get(item.cleanId) || [])];
-                return <div key={item.uid} className="bg-bg border border-border rounded-14 p-12 flex gap-12 items-center">
-                    <div className="w-72 h-72 rounded-10 bg-surface border border-border overflow-hidden flex-shrink-0">{image ? <img src={`${BASE_URL}images/${image}`} className="w-full h-full object-contain"/> : <div className="h-full grid place-items-center text-muted"><Icon.ImageOff className="w-20 h-20"/></div>}</div>
-                    <div className="min-w-0 flex-1"><div className="font-bold text-[13px] bidi-isolate">{item.id}</div><div className="text-[11px] text-muted truncate mt-1">{item.name}</div><div className="text-[10px] text-warn mt-2">الرقم المشترك: {item.cleanId} · {owners.join(' / ')}</div>{manual && <div className="text-[10px] text-success mt-1">ربط يدوي: {manual}</div>}</div>
-                    <div className="flex flex-col gap-6"><button disabled={busySku===sku} onClick={()=>bind(item)} className="h-34 px-10 rounded-8 bg-primary text-white text-[11px] font-bold disabled:opacity-50">{manual?'تعديل':'ربط الصورة'}</button>{manual && <button disabled={busySku===sku} onClick={()=>clear(item)} className="h-30 px-8 rounded-8 border border-border text-[10px] text-secondary">إزالة</button>}</div>
-                </div>;
-            })}
-            {!rows.length && <StateBlock icon={<Icon.CheckCircle className="w-20 h-20"/>} title="لا توجد تعارضات" note="جميع روابط الصور الحالية آمنة."/>}
-        </div>
+        <div className="flex flex-col gap-10">{rows.map(item => {
+            const sku = normalizeImageSku(item.id); const manual = imageBindingOverrides?.[sku] || ''; const image = imageForItem(imagesList, item); const owners = [...(collisionIndex.get(item.cleanId) || [])];
+            return <div key={sku} className="bg-bg border border-border rounded-14 p-12 flex gap-12 items-center"><div className="w-72 h-72 rounded-10 bg-surface border border-border overflow-hidden flex-shrink-0">{image ? <img src={`${BASE_URL}images/${image}`} alt="" className="w-full h-full object-contain"/> : <div className="h-full grid place-items-center text-muted"><Icon.ImageOff className="w-20 h-20"/></div>}</div><div className="min-w-0 flex-1"><div className="font-bold text-[13px] bidi-isolate">{item.id}</div><div className="text-[11px] text-muted truncate mt-1">{item.name}</div><div className="text-[10px] text-warn mt-2">الرقم المشترك: {item.cleanId} · {owners.join(' / ')}</div>{manual && <div className="text-[10px] text-success mt-1">ربط يدوي: {manual}</div>}</div><div className="flex flex-col gap-6"><button disabled={busySku===sku} onClick={()=>bind(item)} className="h-34 px-10 rounded-8 bg-primary text-white text-[11px] font-bold disabled:opacity-50">{manual?'تعديل':'ربط الصورة'}</button>{manual && <button disabled={busySku===sku} onClick={()=>clear(item)} className="h-30 px-8 rounded-8 border border-border text-[10px] text-secondary">إزالة</button>}</div></div>;
+        })}{!rows.length && <StateBlock icon={<Icon.CheckCircle className="w-20 h-20"/>} title="لا توجد تعارضات" note="جميع روابط الصور الحالية آمنة."/>}</div>
     </div>;
 });
 
 '''
 runtime = runtime.replace(manager_anchor, manager + manager_anchor, 1)
 
-# Admin tab and body integration.
+catalog_anchor = '''    const catalogItems = useMemo(() => {
+        const map = new Map();
+        [WAREHOUSES.jeddah.key, WAREHOUSES.riyadh.key].forEach(wh => {'''
+if catalog_anchor not in runtime:
+    raise SystemExit('V56.25 anchor not found: catalogItems')
+image_catalog = r'''    const imageCatalogItems = useMemo(() => {
+        const map = new Map();
+        [WAREHOUSES.jeddah.key, WAREHOUSES.riyadh.key].forEach(wh => {
+            (databases[wh] || []).forEach(item => {
+                const sku = normalizeImageSku(item.id);
+                if (!sku) return;
+                const prev = map.get(sku);
+                if (!prev) map.set(sku, { ...item, warehouseQty:{ [wh]:item.qty || 0 } });
+                else map.set(sku, { ...prev, name:prev.name || item.name, warehouseQty:{ ...(prev.warehouseQty || {}), [wh]:item.qty || 0 } });
+            });
+        });
+        return Array.from(map.values()).sort((a,b) => String(a.id).localeCompare(String(b.id), 'en', { numeric:true }));
+    }, [databases]);
+
+'''
+runtime = runtime.replace(catalog_anchor, image_catalog + catalog_anchor, 1)
+
 tab_anchor = "{ id: 'product_categories', label: 'تصنيف المنتجات', icon: Icon.Grid },"
 if tab_anchor not in runtime:
-    raise SystemExit('V56.25 admin tab anchor not found')
-runtime = runtime.replace(tab_anchor, tab_anchor + "\n                        { id: 'product_images', label: 'ربط الصور', icon: Icon.Image },", 1)
-
+    raise SystemExit('V56.25 anchor not found: admin tab')
+runtime = runtime.replace(tab_anchor, tab_anchor + "\n                        { id: 'product_images', label: 'ربط الصور', icon: Icon.Camera },", 1)
+runtime = runtime.replace("{activeTab !== 'product_categories' && (", "{!['product_categories','product_images'].includes(activeTab) && (", 1)
 body_anchor = "{activeTab === 'product_categories' ? (\n                        <ProductClassificationManager"
 if body_anchor not in runtime:
-    raise SystemExit('V56.25 admin body anchor not found')
-runtime = runtime.replace(body_anchor, "{activeTab === 'product_images' ? (\n                        <ProductImageBindingManager catalogItems={catalogItems} imagesList={imagesList} rawImagesList={rawImagesList} imageBindingOverrides={imageBindingOverrides} onBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }} />\n                    ) : activeTab === 'product_categories' ? (\n                        <ProductClassificationManager", 1)
+    raise SystemExit('V56.25 anchor not found: admin body')
+runtime = runtime.replace(body_anchor, "{activeTab === 'product_images' ? (\n                        <ProductImageBindingManager catalogItems={imageCatalogItems} imagesList={imagesList} rawImagesList={rawImagesList} imageBindingOverrides={imageBindingOverrides} onBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }} />\n                    ) : activeTab === 'product_categories' ? (\n                        <ProductClassificationManager", 1)
 
-# Product manager invocation is inside App and now needs access to new state only for image tab; no other product behavior changes.
+for pat in [r'imagesList\.get\([^\n)]*cleanId', r'imagesList\.has\([^\n)]*cleanId']:
+    hit = re.search(pat, runtime)
+    if hit:
+        raise SystemExit(f'V56.25 unsafe image lookup remains: {hit.group(0)}')
 
-# Guard against any leftover unsafe direct cleanId image read.
-unsafe = ['imagesList.has(i.cleanId)', 'imagesList.get(item.cleanId)', 'imagesList.get(quickItem.cleanId)', 'imagesList.get(row.cleanId)']
-for token in unsafe:
-    if token in runtime:
-        raise SystemExit(f'unsafe image lookup remains: {token}')
-
-# Cache bust only; no unrelated runtime changes.
-if "./runtime/index-v37-source.txt?v=56.17" not in index:
+if './runtime/index-v37-source.txt?v=56.17' not in index:
     raise SystemExit('V56.25 index cache anchor not found')
 index = index.replace('./runtime/index-v37-source.txt?v=56.17', './runtime/index-v37-source.txt?v=56.25', 1)
-
 RUNTIME.write_text(runtime, encoding='utf-8')
 INDEX.write_text(index, encoding='utf-8')
 print('V56.25 image-binding patch applied')
