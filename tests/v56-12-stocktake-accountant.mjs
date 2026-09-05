@@ -6,6 +6,7 @@ const accountant=fs.readFileSync('stocktake-accountant.html','utf8');
 const runtime=fs.readFileSync('runtime/index-v37-source.txt','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const has=(s,x,m)=>assert.ok(s.includes(x),m||`missing ${x}`);
+const v56AtLeast12 = String.raw`56\.(?:1[2-9]|[2-9]\d)`;
 
 // Full training inventory, never a 10/20/30 sample.
 has(admin,"testSource:'current_inventory_full'",'test campaign must be a full current-inventory snapshot');
@@ -21,7 +22,7 @@ assert.ok(!admin.includes('bindSelected();cleanupLegacyTestsOnce()'),'opening ad
 has(admin,'stocktake_accountant_access','admin must own accountant visibility control');
 has(admin,'data-accountant-member','accountant access must be assignable per employee');
 has(admin,'saveAccountantAccess','admin must be able to grant/remove access');
-assert.match(admin,/stocktake-accountant\.html\?preview=1&v=56\.(?:1[2-9]|[2-9]\d)/,'root admin must be able to preview accountant perspective');
+assert.match(admin,new RegExp(`stocktake-accountant\\.html\\?preview=1&v=${v56AtLeast12}`),'root admin must be able to preview accountant perspective');
 
 // Accountant page is a dedicated read-only surface. The visible wording is intentionally "متابعة الجرد".
 has(accountant,'<title>متابعة الجرد | بيت الأواني الطيبة</title>','accountant surface must use the approved follow-up wording');
@@ -38,11 +39,11 @@ has(accountant,'@media(min-width:720px)','accountant page must have a desktop-sp
 has(accountant,'grid-template-columns:repeat(2,minmax(0,1fr))','mobile stats must be two-column and fit narrow screens');
 has(accountant,'.tablewrap{display:none}','wide table must be hidden by default on mobile');
 
-// Visibility appears in employee UI only when control allows it.
+// Visibility appears in employee UI only when control allows it. The original stocktake link remains V56.12; accountant cache-busting has advanced to later V56.x revisions.
 has(runtime,'useStocktakeAccountantControl','employee runtime must subscribe to accountant access control');
 has(runtime,'currentStocktakeAccountantAccessAllowed','employee runtime must calculate accountant visibility per account');
 has(runtime,"stocktake.html?v=56.12",'authorized employees must retain the V56.12 stocktake entry point');
-has(runtime,"stocktake-accountant.html?v=56.12",'authorized employees must retain the V56.12 accountant entry point');
+assert.match(runtime,new RegExp(`stocktake-accountant\\.html\\?v=${v56AtLeast12}`),'authorized employees must retain the V56.12+ accountant entry point');
 has(index,"index-v37-source.txt?v=56.26",'runtime cache must include the current V56.26 employee hotfix');
 
 console.log('V56.12 stocktake accountant/full-test regression: OK on V56.26 runtime');
