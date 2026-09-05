@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/scripts/v56-25-image-binding.py'
+      - '.github/scripts/v56-25-patcher-adapter.py'
       - '.github/workflows/apply-v56-25-image-binding.yml'
   workflow_dispatch:
 
@@ -22,6 +23,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Adapt patcher to current runtime
+        run: python .github/scripts/v56-25-patcher-adapter.py
       - name: Apply guarded patch
         run: python .github/scripts/v56-25-image-binding.py
       - name: Static regression contract
@@ -30,6 +33,7 @@ jobs:
           from pathlib import Path
           s=Path('runtime/index-v37-source.txt').read_text(encoding='utf-8')
           i=Path('index.html').read_text(encoding='utf-8')
+          m=Path('data/images_list.txt').read_text(encoding='utf-8')
           required=[
             "const normalizeImageSku = raw =>",
             "const buildImageCollisionIndex = databases =>",
@@ -37,36 +41,38 @@ jobs:
             "if (owners.size !== 1) return '';",
             "const ProductImageBindingManager = memo",
             "const IMAGE_BINDING_DOC = 'product_image_bindings';",
-            "{ id: 'product_images', label: 'ربط الصور', icon: Icon.Image },",
+            "{ id: 'product_images', label: 'ربط الصور', icon: Icon.Camera },",
             "imageSku: normalizeImageSku(rawId)",
+            "if (['product_categories','product_images'].includes(activeTab)) {",
           ]
           missing=[x for x in required if x not in s]
           assert not missing, f'Missing V56.25 contracts: {missing}'
           assert 'imagesList.get(item.cleanId)' not in s
           assert 'imagesList.has(i.cleanId)' not in s
           assert './runtime/index-v37-source.txt?v=56.25' in i
+          assert 'BA_209\t209.webp' in m, 'known BA_209 image mapping not repaired'
+          assert '\n209\t209.webp' not in ('\n'+m), 'legacy ambiguous 209 mapping remains'
 
-          # Exact collision model: 209 cannot auto-bind when BA_209 and AR_M209 coexist.
+          # Concrete regression: BA_209 and AR_M209 collide numerically, so a bare 209 image
+          # must never be auto-assigned to AR_M209. The canonical manifest now owns it as BA_209.
           def clean(raw):
               digits=''.join(c for c in raw if c.isdigit())
               return str(int(digits)) if digits else raw.lower().replace(' ','')
-          owners={clean(x) for x in ['BA_209','AR_M209']}
-          assert owners == {'209'}
+          assert clean('BA_209') == clean('AR_M209') == '209'
           full={'BA_209','AR_M209'}
           assert len(full) == 2
-          assert len(full) != 1
-          print('V56.25 static regression: PASS')
+          print('V56.25 image identity regression: PASS')
           PY
       - name: Commit product fix
         run: |
-          if git diff --quiet; then
+          if git diff --quiet -- runtime/index-v37-source.txt index.html data/images_list.txt; then
             echo 'No product diff to commit.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add runtime/index-v37-source.txt index.html
+          git add runtime/index-v37-source.txt index.html data/images_list.txt
           git commit -m 'V56.25 — safe SKU image binding and admin repair'
           git push origin HEAD:main
 
-# trigger: 2026-09-06 image-collision repair
+# trigger: 2026-09-06 image-collision repair v2
