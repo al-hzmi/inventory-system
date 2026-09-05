@@ -60,4 +60,4 @@ jobs:
           git commit -m 'V56.25 — customer collision-safe image identity'
           git push origin HEAD:main
 
-# rerun collision-safe v3
+# rerun deterministic v4
