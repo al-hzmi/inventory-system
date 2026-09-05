@@ -1,0 +1,79 @@
+name: Apply V56.26 Image Binding Admin Hotfix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-v56-26-image-binding-admin-hotfix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch image binding admin renderer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime_path = Path('runtime/index-v37-source.txt')
+          index_path = Path('index.html')
+          runtime = runtime_path.read_text(encoding='utf-8')
+          index = index_path.read_text(encoding='utf-8')
+
+          bad = '<img src={`${BASE_URL}images/${image}`} alt="" className="w-full h-full object-contain"/>'
+          good = '<ProductImage fileName={image} alt={item.name || item.id} className="w-full h-full object-contain"/>'
+
+          if bad in runtime:
+              runtime = runtime.replace(bad, good, 1)
+          elif good not in runtime:
+              raise SystemExit('V56.26: expected image-binding renderer anchor not found')
+
+          # Cache-bust only the employee runtime wrapper so iOS cannot keep the crashing V56.25 bundle.
+          if './runtime/index-v37-source.txt?v=56.25' in index:
+              index = index.replace('./runtime/index-v37-source.txt?v=56.25', './runtime/index-v37-source.txt?v=56.26', 1)
+          elif './runtime/index-v37-source.txt?v=56.26' not in index:
+              raise SystemExit('V56.26: index runtime cache anchor not found')
+
+          runtime_path.write_text(runtime, encoding='utf-8')
+          index_path.write_text(index, encoding='utf-8')
+          PY
+
+      - name: V56.26 regression — image binding tab cannot white-screen
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          runtime = Path('runtime/index-v37-source.txt').read_text(encoding='utf-8')
+          index = Path('index.html').read_text(encoding='utf-8')
+
+          manager_start = runtime.index('const ProductImageBindingManager = memo')
+          manager_end = runtime.index('// ============================================================\n// مدير تصنيف المنتجات', manager_start)
+          manager = runtime[manager_start:manager_end]
+
+          assert 'BASE_URL' not in manager, 'Undefined BASE_URL remains inside ProductImageBindingManager'
+          assert '<ProductImage fileName={image}' in manager, 'Safe ProductImage renderer missing'
+          assert "{ id: 'product_images', label: 'ربط الصور', icon: Icon.Camera }," in runtime
+          assert "const IMAGE_BINDING_DOC = 'product_image_bindings';" in runtime
+          assert 'if (owners.size !== 1) return \'\';' in runtime
+          assert './runtime/index-v37-source.txt?v=56.26' in index
+          print('V56.26 image binding admin regression: PASS')
+          PY
+
+      - name: Commit verified hotfix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/index-v37-source.txt index.html
+          if git diff --cached --quiet; then
+            echo 'No product diff to commit.'
+            exit 0
+          fi
+          git commit -m 'V56.26 — fix image binding admin white screen'
+          git push origin HEAD:main
