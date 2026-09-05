@@ -1,0 +1,135 @@
+from pathlib import Path
+
+p = Path('admin-dashboard.html')
+s = p.read_text()
+
+constants = """const PRODUCT_CATEGORY_META='catalog_categories';
+const PRODUCT_CATEGORY_AUDIT='category_audit_logs';
+const PRODUCT_CATEGORY_RESERVED=['جديدنا','بقية الأصناف','نواقص الصور'];
+const productCategoryDocId=name=>'cat_'+toSafeDocId(normalizeText(name).replace(/\\s+/g,'_'));
+"""
+anchor = "const toEnglishDigits=s=>"
+if "const PRODUCT_CATEGORY_META='catalog_categories';" not in s:
+    if anchor not in s:
+        raise SystemExit('V56.24 constants anchor missing')
+    s = s.replace(anchor, constants + '\n' + anchor, 1)
+
+component = r'''
+function ProductCategoryManager({onClose}){
+  useBodyScrollLock();
+  const [baseNames,setBaseNames]=useState([]);
+  const [metaRows,setMetaRows]=useState([]);
+  const [name,setName]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [notice,setNotice]=useState('');
+
+  useEffect(()=>{
+    let alive=true,unsub=null;
+    fetch('./data/categories.tsv',{cache:'no-store'})
+      .then(r=>r.ok?r.text():Promise.reject(new Error(`CATEGORIES_HTTP_${r.status}`)))
+      .then(text=>{if(!alive)return;const first=String(text||'').split(/\r?\n/)[0]||'';setBaseNames(first.split('\t').map(x=>x.trim()).filter(Boolean));})
+      .catch(e=>{console.warn('[Product categories base]',e);if(alive)setBaseNames([])});
+    try{
+      unsub=db.collection(PRODUCT_CATEGORY_META).onSnapshot(snapshot=>{
+        if(!alive)return;
+        setMetaRows(snapshot.docs.map(doc=>({id:doc.id,...doc.data()})));
+        setLoading(false);
+      },e=>{console.warn('[Product categories meta]',e);if(alive){setError('تعذر تحميل الأقسام اللحظية.');setLoading(false)}});
+    }catch(e){console.warn('[Product categories subscribe]',e);setError('تعذر تحميل الأقسام اللحظية.');setLoading(false)}
+    return()=>{alive=false;try{unsub?.()}catch{}};
+  },[]);
+
+  const activeNames=useMemo(()=>{
+    const archived=new Set(metaRows.filter(row=>row?.name&&row.archived).map(row=>normalizeText(row.name)));
+    const byKey=new Map();
+    baseNames.forEach(value=>{const clean=String(value||'').trim(),key=normalizeText(clean);if(clean&&key&&!archived.has(key))byKey.set(key,clean)});
+    metaRows.forEach(row=>{const clean=String(row?.name||'').trim(),key=normalizeText(clean);if(clean&&key&&!row.archived)byKey.set(key,clean)});
+    return [...byKey.values()].sort((a,b)=>a.localeCompare(b,'ar'));
+  },[baseNames,metaRows]);
+
+  const addCategory=async()=>{
+    const clean=name.trim().replace(/\s+/g,' '),key=normalizeText(name);
+    setError('');setNotice('');
+    if(clean.length<2)return setError('اكتب اسم القسم بشكل صحيح.');
+    if(PRODUCT_CATEGORY_RESERVED.some(value=>normalizeText(value)===key))return setError('هذا الاسم محجوز للنظام.');
+    if(activeNames.some(value=>normalizeText(value)===key))return setError('القسم موجود مسبقًا.');
+    setBusy(true);
+    try{
+      const now=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(PRODUCT_CATEGORY_META).doc(productCategoryDocId(clean)).set({name:clean,archived:false,renamedTo:null,createdBy:'مهند',updatedBy:'مهند',createdAt:now,updatedAt:now},{merge:true});
+      await db.collection(PRODUCT_CATEGORY_AUDIT).add({action:'create-category',category:clean,updatedBy:'مهند',source:'admin-dashboard',timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+      await adminAudit('product_category_created',{category:clean});
+      setName('');
+      setNotice(`تمت إضافة قسم «${clean}» وسيظهر للموظفين والعملاء مباشرة.`);
+    }catch(e){console.error('[Product category create]',e);setError('تعذر إضافة القسم. تحقق من الاتصال ثم حاول مرة أخرى.');}
+    finally{setBusy(false)}
+  };
+
+  return <div className="fixed inset-0 z-[185] bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+    <div className="w-full sm:max-w-[680px] max-h-[92dvh] bg-white rounded-t-[24px] sm:rounded-[24px] shadow-lift overflow-hidden flex flex-col" onClick={e=>e.stopPropagation()}>
+      <header className="p-4 border-b border-border flex items-center justify-between gap-3"><div><div className="text-[10px] text-accent font-bold">مشترك بين الواجهتين</div><b className="text-base block mt-1">إدارة أقسام المنتجات</b><div className="text-[10px] text-muted mt-1">أي قسم تضيفه هنا يظهر تلقائيًا للموظفين والعملاء.</div></div><button onClick={onClose} className="w-11 h-11 rounded-xl border border-border flex items-center justify-center bg-white"><Icon name="x" className="w-4 h-4"/></button></header>
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-surface grid gap-4">
+        <section className="bg-white border border-border rounded-2xl p-4 shadow-card"><label className="text-xs font-bold">اسم القسم الجديد<input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!busy)addCategory()}} placeholder="مثال: أدوات المطبخ" className="mt-2 w-full h-12 rounded-xl border border-border px-3 outline-none focus:border-accent bg-white"/></label>{error&&<div className="mt-3 bg-dangerSoft text-danger rounded-xl p-3 text-xs font-bold">{error}</div>}{notice&&<div className="mt-3 bg-successSoft text-success rounded-xl p-3 text-xs font-bold">{notice}</div>}<button disabled={busy||!name.trim()} onClick={addCategory} className="mt-3 w-full h-11 rounded-xl bg-primary text-white text-xs font-bold disabled:opacity-40">{busy?'جاري الإضافة...':'إضافة القسم'}</button></section>
+        <section className="bg-white border border-border rounded-2xl shadow-card overflow-hidden"><div className="p-4 border-b border-border flex items-center justify-between"><div><b className="text-sm">الأقسام الحالية</b><div className="text-[10px] text-muted mt-1">تتضمن الأقسام الأساسية والمضافة من Firebase.</div></div><Pill tone="info">{activeNames.length}</Pill></div><div className="p-4 flex flex-wrap gap-2">{loading?<span className="text-xs text-muted">جاري التحميل...</span>:activeNames.length?activeNames.map(category=><span key={category} className="px-3 py-2 rounded-full border border-border bg-surface text-[11px] font-bold">{category}</span>):<span className="text-xs text-muted">لا توجد أقسام بعد.</span>}</div></section>
+      </div>
+    </div>
+  </div>;
+}
+
+'''
+component_anchor = 'function EmployeeAccountEditor({value,onClose,onSaved}){'
+if 'function ProductCategoryManager({onClose}){' not in s:
+    if component_anchor not in s:
+        raise SystemExit('V56.24 component anchor missing')
+    s = s.replace(component_anchor, component + component_anchor, 1)
+
+state_anchor = '  const [customerManager,setCustomerManager]=useState(null);'
+state_line = "\n  const [categoryManagerOpen,setCategoryManagerOpen]=useState(false);"
+if 'const [categoryManagerOpen,setCategoryManagerOpen]=useState(false);' not in s:
+    if state_anchor not in s:
+        raise SystemExit('V56.24 state anchor missing')
+    s = s.replace(state_anchor, state_anchor + state_line, 1)
+
+card = r'''          <button onClick={()=>setCategoryManagerOpen(true)} className="md:col-span-2 bg-white border border-border rounded-2xl p-5 text-right shadow-card hover:border-[#D6D3D1] press"><div className="flex items-start justify-between"><div className="w-12 h-12 rounded-2xl bg-accentSoft text-accent flex items-center justify-center"><Icon name="grid" className="w-6 h-6"/></div><Pill tone="info">مشترك</Pill></div><h3 className="text-lg font-bold mt-5">إدارة أقسام المنتجات</h3><p className="text-[11px] text-secondary mt-1 leading-5">أضف قسمًا جديدًا من مكان واحد، وسيظهر تلقائيًا في معرض الموظفين وبوابة العملاء دون تعديل الكود.</p><div className="text-[11px] text-accent font-bold mt-5">فتح إدارة الأقسام ←</div></button>
+'''
+card_anchor = "<button onClick={()=>{window.location.href='./admin-stocktake.html?v=56.12'}}"
+if 'فتح إدارة الأقسام ←' not in s:
+    if card_anchor not in s:
+        raise SystemExit('V56.24 home card anchor missing')
+    s = s.replace(card_anchor, card + card_anchor, 1)
+
+modal_anchor = '    {detail&&<DetailDrawer row={detail}'
+modal_line = '    {categoryManagerOpen&&<ProductCategoryManager onClose={()=>setCategoryManagerOpen(false)}/>}\n'
+if 'categoryManagerOpen&&<ProductCategoryManager' not in s:
+    if modal_anchor not in s:
+        raise SystemExit('V56.24 modal render anchor missing')
+    s = s.replace(modal_anchor, modal_line + modal_anchor, 1)
+
+p.write_text(s)
+
+test = Path('tests/v56-24-shared-product-categories.mjs')
+test.write_text(r'''import fs from 'node:fs';
+import assert from 'node:assert/strict';
+
+const admin=fs.readFileSync('admin-dashboard.html','utf8');
+const employee=fs.readFileSync('runtime/index-v37-source.txt','utf8');
+const customer=fs.readFileSync('runtime/customer-v37-source.txt','utf8');
+
+assert.ok(admin.includes("const PRODUCT_CATEGORY_META='catalog_categories'"),'admin category manager must use catalog_categories');
+assert.ok(admin.includes("const PRODUCT_CATEGORY_AUDIT='category_audit_logs'"),'admin category manager must audit category creation');
+assert.ok(admin.includes("const productCategoryDocId=name=>'cat_'+toSafeDocId(normalizeText(name).replace(/\\s+/g,'_'))"),'admin must use the same deterministic category document id as employee UI');
+assert.ok(admin.includes('function ProductCategoryManager({onClose}){'),'admin dashboard must expose category manager');
+assert.ok(admin.includes("db.collection(PRODUCT_CATEGORY_META).doc(productCategoryDocId(clean)).set({name:clean,archived:false"),'new category must be active in shared metadata');
+assert.ok(admin.includes("action:'create-category',category:clean"),'new category must write shared audit log');
+assert.ok(admin.includes('أي قسم تضيفه هنا يظهر تلقائيًا للموظفين والعملاء.'),'admin UI must explain shared propagation');
+assert.ok(admin.includes('فتح إدارة الأقسام ←'),'admin home must expose category manager');
+assert.ok(admin.includes('categoryManagerOpen&&<ProductCategoryManager'),'admin must render category manager');
+assert.ok(employee.includes("META: 'catalog_categories'"),'employee UI must consume shared category metadata');
+assert.ok(employee.includes("if (meta && meta.name && !meta.archived && !result[meta.name]) result[meta.name] = []"),'employee UI must surface active metadata categories even when empty');
+assert.ok(customer.includes("const CATEGORY_META = 'catalog_categories'"),'customer UI must consume shared category metadata');
+assert.ok(customer.includes("else if(m?.name)out[m.name]=out[m.name]||[]"),'customer UI must surface active metadata categories even when empty');
+assert.ok(admin.includes('useBodyScrollLock(Boolean(row));'),'shared category work must not regress the V56.22 page-scroll fix');
+console.log('V56.24 shared product categories regression: OK');
+''')
