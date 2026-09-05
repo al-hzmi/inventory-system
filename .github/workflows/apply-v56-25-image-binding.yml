@@ -72,7 +72,6 @@ jobs:
 
           assert 'BA_209\t209.webp' in manifest
           assert not any(line=='209\t209.webp' for line in manifest.splitlines())
-          # Known regression: the same numeric 209 belongs to two full SKUs, so numeric fallback is forbidden.
           assert ''.join(c for c in 'BA_209' if c.isdigit()) == '209'
           assert ''.join(c for c in 'AR_M209' if c.isdigit()) == '209'
           print('V56.25 unified image identity regression: PASS')
@@ -89,4 +88,4 @@ jobs:
           git commit -m 'V56.25 — unified image identity and admin repair'
           git push origin HEAD:main
 
-# trigger unified rollout v3
+# trigger unified rollout v4 — customer partial-state healed
