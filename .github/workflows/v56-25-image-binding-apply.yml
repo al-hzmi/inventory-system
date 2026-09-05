@@ -1,0 +1,74 @@
+name: V56.25 Image Binding Apply
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/v56-25-image-binding-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Adapt patcher to current runtime
+        run: python .github/scripts/v56-25-patcher-adapter.py
+
+      - name: Apply V56.25 image identity repair
+        run: python .github/scripts/v56-25-image-binding.py
+
+      - name: Verify image collision contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('runtime/index-v37-source.txt').read_text(encoding='utf-8')
+          idx=Path('index.html').read_text(encoding='utf-8')
+          manifest=Path('data/images_list.txt').read_text(encoding='utf-8')
+          required=(
+              "const normalizeImageSku = raw =>",
+              "const buildImageCollisionIndex = databases =>",
+              "const resolveImageForItem = (imagesMap, item, collisionIndex, overrides = {}) =>",
+              "if (owners.size !== 1) return '';",
+              "const ProductImageBindingManager = memo",
+              "const IMAGE_BINDING_DOC = 'product_image_bindings';",
+              "{ id: 'product_images', label: 'ربط الصور', icon: Icon.Camera },",
+              "if (['product_categories','product_images'].includes(activeTab)) {",
+          )
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('MISSING:'+repr(missing))
+          if 'imagesList.get(item.cleanId)' in s or 'imagesList.has(i.cleanId)' in s:
+              raise SystemExit('LEGACY_CLEAN_ID_IMAGE_LOOKUP_REMAINS')
+          if './runtime/index-v37-source.txt?v=56.25' not in idx:
+              raise SystemExit('INDEX_CACHE_NOT_BUMPED')
+          if 'BA_209\t209.webp' not in manifest:
+              raise SystemExit('BA_209_CANONICAL_BINDING_MISSING')
+          if any(line == '209\t209.webp' for line in manifest.splitlines()):
+              raise SystemExit('AMBIGUOUS_209_BINDING_REMAINS')
+          print('V56.25 collision regression PASS')
+          PY
+
+      - name: Commit verified product repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime/index-v37-source.txt index.html data/images_list.txt
+          if git diff --cached --quiet; then
+            echo 'No product changes to commit.'
+            exit 0
+          fi
+          git commit -m 'V56.25 — safe image identity and admin binding repair'
+          git push origin HEAD:main
