@@ -22,5 +22,13 @@ if write_anchor not in s:
 manifest_block = '''IMAGES = Path('data/images_list.txt')\nimages_manifest = IMAGES.read_text(encoding='utf-8')\nlegacy_line = '209\\t209.webp'\ncanonical_line = 'BA_209\\t209.webp'\nif canonical_line not in images_manifest:\n    if legacy_line not in images_manifest:\n        raise SystemExit('V56.25 manifest anchor 209.webp not found')\n    images_manifest = images_manifest.replace(legacy_line, canonical_line, 1)\nIMAGES.write_text(images_manifest, encoding='utf-8')\n\n'''
 s = s.replace(write_anchor, manifest_block + write_anchor, 1)
 
+# The product patch may already have landed from a previous guarded attempt.
+# Make the patcher idempotent so re-runs validate instead of trying to replace removed legacy anchors.
+preflight_anchor = "index = INDEX.read_text(encoding='utf-8')\n"
+if preflight_anchor not in s:
+    raise SystemExit('V56.25 adapter: preflight anchor missing')
+preflight = '''index = INDEX.read_text(encoding='utf-8')\n\nif "const normalizeImageSku = raw =>" in runtime and "const ProductImageBindingManager = memo" in runtime:\n    images_path = Path('data/images_list.txt')\n    images_manifest = images_path.read_text(encoding='utf-8')\n    if 'BA_209\\t209.webp' not in images_manifest and '209\\t209.webp' in images_manifest:\n        images_manifest = images_manifest.replace('209\\t209.webp', 'BA_209\\t209.webp', 1)\n        images_path.write_text(images_manifest, encoding='utf-8')\n    if './runtime/index-v37-source.txt?v=56.25' not in index:\n        index = index.replace('./runtime/index-v37-source.txt?v=56.17', './runtime/index-v37-source.txt?v=56.25', 1)\n        INDEX.write_text(index, encoding='utf-8')\n    print('V56.25 image-binding patch already present; idempotent validation path')\n    raise SystemExit(0)\n'''
+s = s.replace(preflight_anchor, preflight, 1)
+
 p.write_text(s, encoding='utf-8')
 print('V56.25 patcher adapted to current admin runtime')
