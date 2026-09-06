@@ -5,7 +5,9 @@ on:
     paths:
       - 'admin-stocktake.html'
       - 'stocktake-accountant.html'
+      - 'stocktake.html'
       - 'runtime/index-v37-source.txt'
+      - 'runtime/v56-12-production-probe.txt'
       - 'index.html'
       - 'tests/v56-3-stocktake-test-mode.mjs'
       - 'tests/v56-12-stocktake-accountant.mjs'
@@ -15,6 +17,7 @@ on:
     paths:
       - 'admin-stocktake.html'
       - 'stocktake-accountant.html'
+      - 'stocktake.html'
       - 'runtime/index-v37-source.txt'
       - 'index.html'
       - 'tests/v56-3-stocktake-test-mode.mjs'
@@ -72,5 +75,40 @@ jobs:
           await browser.close();if(failed)process.exit(1);
           JS
           node tests/.v5612-smoke.mjs
+      - name: Live production provenance and V56.12 assets
+        if: github.event_name == 'push' && hashFiles('runtime/v56-12-production-probe.txt') != ''
+        env:
+          PROD: https://inventory-system-coral-nu.vercel.app
+        run: |
+          set -euo pipefail
+          expected="$(cat runtime/v56-12-production-probe.txt)"
+          matched=0
+          for attempt in $(seq 1 48); do
+            body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-12-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
+            if [[ "$body" == "$expected" ]]; then matched=1; break; fi
+            echo "Production not on current probe yet (attempt $attempt)"
+            sleep 10
+          done
+          if [[ "$matched" != "1" ]]; then
+            echo "::error::Production alias did not reach the current main probe."
+            exit 1
+          fi
+          nonce="${GITHUB_SHA}-$(date +%s)"
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/?verify=$nonce" -o /tmp/prod-index.html
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/runtime/index-v37-source.txt?verify=$nonce" -o /tmp/prod-runtime.txt
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake.html?v=56.12&verify=$nonce" -o /tmp/prod-stocktake.html
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake-accountant.html?v=56.12&verify=$nonce" -o /tmp/prod-accountant.html
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/admin-stocktake.html?verify=$nonce" -o /tmp/prod-admin.html
+          cmp -s index.html /tmp/prod-index.html || { echo "::error::Production index differs from main"; exit 1; }
+          cmp -s runtime/index-v37-source.txt /tmp/prod-runtime.txt || { echo "::error::Production runtime differs from main"; exit 1; }
+          cmp -s stocktake.html /tmp/prod-stocktake.html || { echo "::error::Production stocktake differs from main"; exit 1; }
+          cmp -s stocktake-accountant.html /tmp/prod-accountant.html || { echo "::error::Production accountant differs from main"; exit 1; }
+          cmp -s admin-stocktake.html /tmp/prod-admin.html || { echo "::error::Production admin stocktake differs from main"; exit 1; }
+          grep -Fq 'stocktake.html?v=56.12' /tmp/prod-runtime.txt
+          grep -Fq 'stocktake-accountant.html?v=56.12' /tmp/prod-runtime.txt
+          grep -Fq 'stocktake_accountant_access' /tmp/prod-accountant.html
+          grep -Fq 'stocktake_accountant_access' /tmp/prod-admin.html
+          grep -Fq 'preview' /tmp/prod-accountant.html
+          echo "Live production is serving the current V56.12 tree and accountant assets."
       - name: Diff check
         run: git diff --check
