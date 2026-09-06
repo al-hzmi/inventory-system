@@ -1,0 +1,29 @@
+name: V56.27 Exact-SKU Image Binding Regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'data/images_list.txt'
+      - 'data/jeddah.tsv'
+      - 'data/riyadh.tsv'
+      - 'tests/v56-27-image-binding-wiring.mjs'
+      - '.github/workflows/v56-27-image-binding-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify exact-SKU image identity and admin correction wiring
+        run: node tests/v56-27-image-binding-wiring.mjs
+      - name: Verify JavaScript syntax
+        run: |
+          node --check tests/v56-27-image-binding-wiring.mjs
+          git diff --check
