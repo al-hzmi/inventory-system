@@ -1,0 +1,21 @@
+name: V56.33 New Arrivals Admin Regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify V56.33 contracts
+        run: |
+          node --check api/new-arrivals-admin.js
+          node tests/v56-33-new-arrivals-admin.mjs
+          git diff --check
