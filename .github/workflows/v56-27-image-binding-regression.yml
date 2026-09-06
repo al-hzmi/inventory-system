@@ -27,3 +27,32 @@ jobs:
         run: |
           node --check tests/v56-27-image-binding-wiring.mjs
           git diff --check
+      - name: Verify V56.27 on live production
+        env:
+          BASE: https://inventory-system-coral-nu.vercel.app
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 30); do
+            if curl -fsSL --retry 2 --retry-delay 1 "$BASE/index.html?cert=$GITHUB_SHA-$attempt" -o /tmp/live-index.html \
+              && grep -Fq 'index-v37-source.txt?v=56.16&rev=56.27' /tmp/live-index.html; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = 1
+
+          curl -fsSL --retry 3 --retry-delay 1 "$BASE/runtime/index-v37-source.txt?v=56.16&rev=56.27&cert=$GITHUB_SHA" -o /tmp/live-runtime.txt
+          curl -fsSL --retry 3 --retry-delay 1 "$BASE/data/images_list.txt?cert=$GITHUB_SHA" -o /tmp/live-images.txt
+
+          grep -Fq 'imageCatalogItems, imagesList, rawImagesList, imageBindingOverrides, onImageBindingsChanged' /tmp/live-runtime.txt
+          grep -Fq 'onBindingsChanged={onImageBindingsChanged}' /tmp/live-runtime.txt
+          grep -Fq 'onImageBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }}' /tmp/live-runtime.txt
+          grep -Fxq $'BA_209\t209.webp' /tmp/live-images.txt
+          if grep -Fxq $'AR_M209\t209.webp' /tmp/live-images.txt; then
+            echo 'Production still binds 209.webp to AR_M209' >&2
+            exit 1
+          fi
+
+          echo 'V56.27 live production exact-SKU image binding: PASS'
