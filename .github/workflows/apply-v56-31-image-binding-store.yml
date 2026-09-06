@@ -41,16 +41,20 @@ jobs:
           print('V56.31 structural checks: PASS')
           PY
 
-      - name: Commit patch
+      - name: Commit functional patch
         shell: bash
         run: |
           set -euo pipefail
+          # The patch script also strengthens the production-smoke workflow, but a
+          # GITHUB_TOKEN cannot push workflow-file changes. Revert that one file
+          # here; the functional image-binding fix is committed independently.
+          git checkout -- .github/workflows/v56-12-production-smoke.yml
           if git diff --quiet; then
             echo 'V56.31 already applied.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add image-distribution.html runtime/index-v37-source.txt .github/workflows/v56-12-production-smoke.yml tests/v56-31-image-binding-store.mjs
-          git commit -m 'V56.31 — fix image binding persistence and production verification'
+          git add image-distribution.html runtime/index-v37-source.txt tests/v56-31-image-binding-store.mjs
+          git commit -m 'V56.31 — fix image binding persistence'
           git push origin HEAD:main
