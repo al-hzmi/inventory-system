@@ -1,128 +1,58 @@
-/* V54.1 — desktop canvas box-model correction + V54.3 mobile employee-modal scroll fix */
+/* V56.34 — executive desktop canvas + unified people/security integration */
 @media (min-width:901px){
-  html{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+  html{width:100%!important;max-width:100%!important;overflow-x:hidden!important;background:var(--admin-bg,#f5f7f6)!important}
   .v52-sidebar{box-sizing:border-box!important}
   body.v52-admin-layout{
-    width:100vw!important;
-    max-width:100vw!important;
-    min-width:0!important;
-    box-sizing:border-box!important;
-    margin:0!important;
-    padding-right:var(--admin-sidebar)!important;
-    padding-left:0!important;
-    overflow-x:hidden!important;
+    width:100vw!important;max-width:100vw!important;min-width:0!important;box-sizing:border-box!important;
+    margin:0!important;padding-right:var(--admin-sidebar)!important;padding-left:0!important;overflow-x:hidden!important;
+    background:var(--admin-bg,#f5f7f6)!important;
   }
-  body.v52-admin-layout>.app,
-  body.v52-admin-layout>main,
-  body.v52-admin-layout>#home,
-  body.v52-admin-layout>#sales,
-  body.v52-admin-layout #root,
-  body.v52-admin-layout .v52-page,
-  body.v51-control-center .app,
-  body.v51-inventory-analytics .app{
-    box-sizing:border-box!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
+  body.v52-admin-layout>.app,body.v52-admin-layout>main,body.v52-admin-layout>#home,body.v52-admin-layout>#sales,
+  body.v52-admin-layout #root,body.v52-admin-layout .v52-page,body.v51-control-center .app,body.v51-inventory-analytics .app{
+    box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;
   }
-  .v52-page{
-    box-sizing:border-box!important;
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
+  /* The legacy employee dashboard is born as a modal/backdrop. On desktop it is the page canvas,
+     so no backdrop colour or constrained modal may remain visible beside the executive sidebar. */
+  body.v51-admin-dashboard #root{display:block;min-height:100dvh!important;background:var(--admin-bg,#f5f7f6)!important}
+  body.v51-admin-dashboard:not(.v56-security-embedded) #root>div.fixed.inset-0{
+    position:relative!important;inset:auto!important;display:block!important;width:100%!important;max-width:100%!important;
+    min-height:100dvh!important;margin:0!important;padding:0!important;background:var(--admin-bg,#f5f7f6)!important;
   }
-  .v52-page-head,
-  .v52-grid,
-  .v52-kpis,
-  .v52-split,
-  .v52-half,
-  .v52-card,
-  .v52-card-head,
-  .v52-card-body,
-  .v54-quick,
-  .v54-metrics,
-  .v54-donut-wrap{
-    box-sizing:border-box!important;
-    max-width:100%!important;
-    min-width:0!important;
+  body.v51-admin-dashboard:not(.v56-security-embedded) #root>div.fixed.inset-0>div{
+    width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;box-sizing:border-box!important;
   }
-  .v52-page-head{flex-wrap:wrap!important}
-  .v52-page-head>div:first-child{min-width:280px!important}
-  .v52-head-actions{max-width:100%!important;min-width:0!important;flex-wrap:wrap!important}
-  .v52-head-actions>*{max-width:100%!important}
-  .v52-chart,.sales-chart{max-width:100%!important;min-width:0!important;overflow:hidden!important}
-  .v52-chart svg,.sales-chart svg{max-width:100%!important}
+  body.v51-admin-dashboard:not(.v56-security-embedded) #root>div.fixed.inset-0>div:first-child{
+    height:auto!important;min-height:100dvh!important;border-radius:0!important;box-shadow:none!important;background:var(--admin-bg,#f5f7f6)!important;
+  }
+  .v52-page{box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important}
+  .v52-page-head,.v52-grid,.v52-kpis,.v52-split,.v52-half,.v52-card,.v52-card-head,.v52-card-body,.v54-quick,.v54-metrics,.v54-donut-wrap{
+    box-sizing:border-box!important;max-width:100%!important;min-width:0!important;
+  }
+  .v52-page-head{flex-wrap:wrap!important}.v52-page-head>div:first-child{min-width:280px!important}
+  .v52-head-actions{max-width:100%!important;min-width:0!important;flex-wrap:wrap!important}.v52-head-actions>*{max-width:100%!important}
+  .v52-chart,.sales-chart{max-width:100%!important;min-width:0!important;overflow:hidden!important}.v52-chart svg,.sales-chart svg{max-width:100%!important}
 }
-@media (min-width:901px) and (max-width:1450px){
-  .v52-page{padding-left:22px!important;padding-right:22px!important}
-  .v52-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-}
-@media (min-width:901px) and (max-width:1180px){
-  .v52-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .v52-split,.v52-half{grid-template-columns:1fr!important}
-}
+@media (min-width:901px) and (max-width:1450px){.v52-page{padding-left:22px!important;padding-right:22px!important}.v52-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media (min-width:901px) and (max-width:1180px){.v52-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}.v52-split,.v52-half{grid-template-columns:1fr!important}}
+
+/* Integrated Security Center lives inside the executive canvas, not behind a standalone shield launcher. */
+.v56-security-page{min-height:100dvh!important;background:var(--admin-bg,#f5f7f6)!important}
+.v56-security-frame-wrap{width:100%;min-width:0;border:1px solid var(--admin-line,#e4e9e6);border-radius:18px;overflow:hidden;background:#fff;box-shadow:var(--admin-shadow,0 8px 30px rgba(16,24,20,.055))}
+.v56-security-frame{display:block;width:100%;height:calc(100dvh - 150px);min-height:720px;border:0;background:#fafaf9}
+body.v56-security-embedded #root{display:none!important}
+#v52-mobile-nav[data-v56-unified-people="true"]{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+
 @media (max-width:900px){
   body.v52-admin-layout{width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin:0!important}
   .v52-page{box-sizing:border-box!important;width:100%!important;max-width:100%!important}
+  .v56-security-page{padding:14px 12px 24px!important}.v56-security-frame-wrap{border-radius:14px}.v56-security-frame{height:calc(100dvh - 170px);min-height:620px}
 
-  /* V54.3 — Employee account modal must own the gesture on iPhone.
-     Background stays locked, form body scrolls, and save footer remains reachable. */
-  body.v51-admin-dashboard:has(#root .fixed.inset-0[class*="z-[140]"]){
-    overflow:hidden!important;
-    overscroll-behavior:none!important;
-  }
-  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"]{
-    position:fixed!important;
-    z-index:100700!important;
-    width:100vw!important;
-    height:100dvh!important;
-    max-height:100dvh!important;
-    inset:0!important;
-    padding:0!important;
-    overflow:hidden!important;
-    overscroll-behavior:none!important;
-    align-items:flex-end!important;
-  }
-  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full{
-    display:flex!important;
-    flex-direction:column!important;
-    width:100%!important;
-    max-width:100%!important;
-    height:min(100dvh,920px)!important;
-    max-height:100dvh!important;
-    min-height:0!important;
-    margin:0!important;
-    overflow:hidden!important;
-    border-radius:1.8rem 1.8rem 0 0!important;
-    overscroll-behavior:none!important;
-  }
-  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full > div:first-child{
-    flex:0 0 auto!important;
-  }
-  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full > div:nth-child(2){
-    flex:1 1 auto!important;
-    min-height:0!important;
-    max-height:none!important;
-    overflow-y:auto!important;
-    overflow-x:hidden!important;
-    overscroll-behavior-y:contain!important;
-    -webkit-overflow-scrolling:touch!important;
-    touch-action:pan-y!important;
-    padding-bottom:24px!important;
-    scroll-padding-bottom:24px!important;
-  }
-  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full > div:last-child{
-    position:relative!important;
-    z-index:2!important;
-    flex:0 0 auto!important;
-    margin:0!important;
-    padding-bottom:max(1rem,env(safe-area-inset-bottom))!important;
-    background:#fafaf9!important;
-    box-shadow:0 -8px 24px rgba(28,25,23,.06)!important;
-  }
-  body.v51-admin-dashboard:has(#root .fixed.inset-0[class*="z-[140]"]) #v52-mobile-nav,
-  body.v51-admin-dashboard:has(#root .fixed.inset-0[class*="z-[140]"]) #v52-mobile-header{
-    visibility:hidden!important;
-    pointer-events:none!important;
-  }
+  /* Employee account modal owns the gesture on iPhone. */
+  body.v51-admin-dashboard:has(#root .fixed.inset-0[class*="z-[140]"]){overflow:hidden!important;overscroll-behavior:none!important}
+  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"]{position:fixed!important;z-index:100700!important;width:100vw!important;height:100dvh!important;max-height:100dvh!important;inset:0!important;padding:0!important;overflow:hidden!important;overscroll-behavior:none!important;align-items:flex-end!important}
+  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full{display:flex!important;flex-direction:column!important;width:100%!important;max-width:100%!important;height:min(100dvh,920px)!important;max-height:100dvh!important;min-height:0!important;margin:0!important;overflow:hidden!important;border-radius:1.8rem 1.8rem 0 0!important;overscroll-behavior:none!important}
+  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full > div:first-child{flex:0 0 auto!important}
+  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full > div:nth-child(2){flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;padding-bottom:24px!important;scroll-padding-bottom:24px!important}
+  body.v51-admin-dashboard #root .fixed.inset-0[class*="z-[140]"] > .w-full > div:last-child{position:relative!important;z-index:2!important;flex:0 0 auto!important;margin:0!important;padding-bottom:max(1rem,env(safe-area-inset-bottom))!important;background:#fafaf9!important;box-shadow:0 -8px 24px rgba(28,25,23,.06)!important}
+  body.v51-admin-dashboard:has(#root .fixed.inset-0[class*="z-[140]"]) #v52-mobile-nav,body.v51-admin-dashboard:has(#root .fixed.inset-0[class*="z-[140]"]) #v52-mobile-header{visibility:hidden!important;pointer-events:none!important}
 }
