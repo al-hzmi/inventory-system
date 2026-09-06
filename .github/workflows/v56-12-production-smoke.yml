@@ -52,7 +52,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify production assets and V56.32 image contracts
+      - name: Verify production assets and V56.33 contracts
         if: steps.probe.outputs.enabled == 'true'
         shell: bash
         env:
@@ -90,6 +90,17 @@ jobs:
           grep -Fq "15000" /tmp/runtime.txt
           grep -Fq "./api/image-admin?action=bindings" /tmp/customer-runtime.txt
 
+          grep -Fq "NEW_ARRIVALS_ADMIN_BACKEND = './api/new-arrivals-admin'" /tmp/runtime.txt
+          grep -Fq "NewArrivalsAdminPanel" /tmp/runtime.txt
+          grep -Fq "./api/new-arrivals-admin?action=overrides" /tmp/customer-runtime.txt
+
+          arrival_status="$(curl -fsSL --retry 3 --retry-delay 2 "$PROD/api/new-arrivals-admin?action=status")"
+          echo "$arrival_status"
+          echo "$arrival_status" | grep -Fq '"configured":true'
+          curl -fsSL --retry 3 --retry-delay 2 "$PROD/api/new-arrivals-admin?action=overrides" -o /tmp/new-arrivals-overrides.json
+          grep -Fq '"include"' /tmp/new-arrivals-overrides.json
+          grep -Fq '"exclude"' /tmp/new-arrivals-overrides.json
+
           status="$(curl -fsSL --retry 3 --retry-delay 2 "$PROD/api/image-admin?action=status")"
           echo "$status"
           echo "$status" | grep -Fq '"configured":true'
@@ -101,7 +112,7 @@ jobs:
             exit 1
           fi
 
-          echo "Production serves exact V56.32 files and the image-binding backend is configured and readable."
+          echo "Production serves exact V56.33 files; image binding and new-arrivals admin backends are configured and readable."
 
       - name: Report disabled probe
         if: steps.probe.outputs.enabled != 'true'
