@@ -34,7 +34,7 @@ function labels(){document.querySelectorAll('.v52-brand-copy b,.v52-mobile-copy 
 
 function removeLegacySecurityLaunchers(){
  ['v51-security','v52-mobile-security','v52-sheet-security','v48-security-btn','v49-security-tab','v49-security-fallback'].forEach(id=>document.getElementById(id)?.remove());
- document.querySelectorAll('.v52-security,[data-v56-security-center]').forEach(el=>el.remove());
+ document.querySelectorAll('.v52-security,[data-v56-security-center],[data-security-launcher],a[href*="security-center.html"],a[href*="section=security"],button[data-section="security"],button[data-admin-area="security"],[onclick*="security-center.html"],[onclick*="section=security"]').forEach(el=>el.remove());
 }
 function unifiedPeopleNavigation(){
  const dashboard=path==='admin-dashboard.html';
@@ -57,14 +57,30 @@ function ensureExecutiveSecurityStyle(){
  @media(max-width:700px){#v56-security-command-center{border-radius:14px}#v56-security-command-center .v56-sec-head{padding:14px;flex-direction:column}#v56-security-command-center iframe{height:920px}}
  `;document.head.appendChild(s)
 }
+function integrateSecurityFrame(frame){
+ if(!frame||frame.dataset.v56Integrated==='true')return;frame.dataset.v56Integrated='true';
+ frame.addEventListener('load',()=>{
+  try{
+   const doc=frame.contentDocument;if(!doc)return;
+   doc.querySelector('header')?.remove();
+   doc.documentElement.classList.add('v56-security-embedded');doc.body.classList.add('v56-security-embedded');
+   const main=doc.querySelector('main');if(main){main.style.paddingTop='16px';main.style.paddingBottom='20px'}
+   const style=doc.createElement('style');style.id='v56-security-embedded-style';style.textContent='html.v56-security-embedded,body.v56-security-embedded{background:transparent!important}body.v56-security-embedded{min-height:auto!important}.v56-security-embedded main{max-width:none!important}';doc.head.appendChild(style);
+  }catch(e){console.warn('[V56.35 embedded security]',e)}
+ });
+}
 function renderExecutiveSecurityCenter(){
  if(path!=='admin-home.html')return;
- const home=document.getElementById('home');if(!home||document.getElementById('v56-security-command-center'))return;
- if(!home.querySelector('.v52-page-head')&&!home.querySelector('.v52-grid'))return;
- ensureExecutiveSecurityStyle();
- const section=document.createElement('section');section.id='v56-security-command-center';section.innerHTML=`<div class="v56-sec-head"><div><div class="v56-sec-eye">الأمن والرقابة · داخل الإدارة التنفيذية</div><div class="v56-sec-title">مركز القيادة والتحكم الأمني</div><div class="v56-sec-sub">المراقبة الأمنية والجلسات والنشاط وبوابة العملاء والسجل الإداري أصبحت جزءًا من لوحة الإدارة التنفيذية نفسها، بدون صفحة تشغيل مستقلة.</div></div><span class="v56-sec-badge">مضمّن بالكامل</span></div><div class="v56-sec-frame-wrap"><iframe title="مركز القيادة والتحكم الأمني" loading="lazy" src="./security-center.html?embed=executive&v=56.35"></iframe></div>`;
- home.appendChild(section);
- if(location.hash==='#security-command-center')setTimeout(()=>section.scrollIntoView({block:'start',behavior:'smooth'}),80);
+ const home=document.getElementById('home');if(!home)return;
+ let section=document.getElementById('v56-security-command-center');
+ if(!section){
+  if(!home.querySelector('.v52-page-head')&&!home.querySelector('.v52-grid'))return;
+  ensureExecutiveSecurityStyle();
+  section=document.createElement('section');section.id='v56-security-command-center';section.innerHTML=`<div class="v56-sec-head"><div><div class="v56-sec-eye">الأمن والرقابة · داخل الإدارة التنفيذية</div><div class="v56-sec-title">مركز القيادة والتحكم الأمني</div><div class="v56-sec-sub">المراقبة الأمنية والجلسات والنشاط وبوابة العملاء والسجل الإداري أصبحت جزءًا من لوحة الإدارة التنفيذية نفسها، بدون صفحة تشغيل مستقلة.</div></div><span class="v56-sec-badge">مضمّن بالكامل</span></div><div class="v56-sec-frame-wrap"><iframe title="مركز القيادة والتحكم الأمني" loading="lazy" src="./security-center.html?embed=executive&v=56.35"></iframe></div>`;
+  home.appendChild(section);
+ }
+ integrateSecurityFrame(section.querySelector('iframe'));
+ if(location.hash==='#security-command-center'&&!section.dataset.v56HashFocused){section.dataset.v56HashFocused='true';setTimeout(()=>section.scrollIntoView({block:'start',behavior:'smooth'}),80)}
 }
 let lastActiveModule='';
 function keepActiveModuleVisible(){
@@ -76,8 +92,7 @@ function keepActiveModuleVisible(){
   let scroller=active.parentElement;
   while(scroller&&scroller!==document.body&&scroller.scrollWidth<=scroller.clientWidth+2)scroller=scroller.parentElement;
   if(!scroller||scroller===document.body)return;
-  const a=active.getBoundingClientRect(),s=scroller.getBoundingClientRect();
-  if(a.left<s.left+8||a.right>s.right-8)active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+  active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
  }));
 }
 function retireLegacySecurityRoute(){if(path!=='admin-dashboard.html')return;const q=new URLSearchParams(location.search);if(q.get('section')==='security')location.replace('./admin-home.html#security-command-center')}
