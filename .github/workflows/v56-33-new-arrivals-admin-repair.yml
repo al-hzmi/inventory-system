@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Apply V56.33
-        run: python3 .github/scripts/v56-33-new-arrivals-admin.py
+        run: python3 .github/scripts/v56-33-new-arrivals-admin-fixed.py
       - name: Verify
         run: |
           node --check api/new-arrivals-admin.js
