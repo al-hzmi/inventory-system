@@ -52,7 +52,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify V56.12 production assets and contracts
+      - name: Verify production assets and contracts
         if: steps.probe.outputs.enabled == 'true'
         shell: bash
         env:
@@ -65,6 +65,7 @@ jobs:
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake.html?v=56.12&verify=$nonce" -o /tmp/stocktake.html
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake-accountant.html?v=56.12&verify=$nonce" -o /tmp/accountant.html
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/admin-stocktake.html?verify=$nonce" -o /tmp/admin.html
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/image-distribution.html?verify=$nonce" -o /tmp/image-distribution.html
 
           cmp -s index.html /tmp/index.html || {
             echo "::error::Production index.html differs from current main."; exit 1;
@@ -81,19 +82,37 @@ jobs:
           cmp -s admin-stocktake.html /tmp/admin.html || {
             echo "::error::Production admin-stocktake.html differs from current main."; exit 1;
           }
+          cmp -s image-distribution.html /tmp/image-distribution.html || {
+            echo "::error::Production image-distribution.html differs from current main."; exit 1;
+          }
 
           grep -Fq "stocktake.html?v=56.12" /tmp/runtime.txt
           grep -Fq "stocktake-accountant.html?v=56.12" /tmp/runtime.txt
           grep -Fq "stocktake_accountant_access" /tmp/accountant.html
           grep -Fq "preview" /tmp/accountant.html
           grep -Fq "stocktake_accountant_access" /tmp/admin.html
+          grep -Fq "IMAGE_BINDING_STORE_DOC='permissions_v44'" /tmp/image-distribution.html
+          grep -Fq "IMAGE_BINDING_STORE_FIELD='productImageBindings'" /tmp/image-distribution.html
+          grep -Fq "persistImageBinding" /tmp/image-distribution.html
+          grep -Fq "const IMAGE_BINDING_STORE_DOC = 'permissions_v44';" /tmp/runtime.txt
+          grep -Fq "writeImageBindingLeaf" /tmp/runtime.txt
 
           if grep -Eq "saveActual|updateActual|setActual|اعتماد الكمية|حفظ الكمية" /tmp/accountant.html; then
             echo "::error::Accountant production page appears to expose stocktake write controls."
             exit 1
           fi
 
-          echo "Production alias serves the exact current main files and V56.12 accountant assets."
+          echo "Production alias serves exact current main files, including the V56.31 image-binding persistence fix."
+
+      - name: Report image-admin backend availability
+        if: steps.probe.outputs.enabled == 'true'
+        continue-on-error: true
+        shell: bash
+        env:
+          PROD: https://inventory-system-coral-nu.vercel.app
+        run: |
+          curl -fsSL --max-time 15 "$PROD/api/image-admin?action=status" || true
+          echo
 
       - name: Report disabled probe
         if: steps.probe.outputs.enabled != 'true'
