@@ -17,6 +17,7 @@ jobs:
       - name: Verify V56.34 contracts
         run: |
           node --check api/new-arrivals-admin.js
+          node --check v46-admin-nav.js
           node --check v54-admin-enhancements.js
           node tests/v56-33-new-arrivals-admin.mjs
           node tests/v56-34-executive-integration.mjs
