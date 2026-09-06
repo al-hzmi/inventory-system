@@ -52,7 +52,7 @@ jobs:
             exit 1
           fi
 
-      - name: Verify production assets and contracts
+      - name: Verify production assets and V56.32 image contracts
         if: steps.probe.outputs.enabled == 'true'
         shell: bash
         env:
@@ -62,57 +62,46 @@ jobs:
           nonce="${GITHUB_SHA}-$(date +%s)"
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/?verify=$nonce" -o /tmp/index.html
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/runtime/index-v37-source.txt?verify=$nonce" -o /tmp/runtime.txt
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/runtime/customer-v37-source.txt?verify=$nonce" -o /tmp/customer-runtime.txt
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake.html?v=56.12&verify=$nonce" -o /tmp/stocktake.html
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake-accountant.html?v=56.12&verify=$nonce" -o /tmp/accountant.html
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/admin-stocktake.html?verify=$nonce" -o /tmp/admin.html
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/image-distribution.html?verify=$nonce" -o /tmp/image-distribution.html
 
-          cmp -s index.html /tmp/index.html || {
-            echo "::error::Production index.html differs from current main."; exit 1;
-          }
-          cmp -s runtime/index-v37-source.txt /tmp/runtime.txt || {
-            echo "::error::Production runtime/index-v37-source.txt differs from current main."; exit 1;
-          }
-          cmp -s stocktake.html /tmp/stocktake.html || {
-            echo "::error::Production stocktake.html differs from current main."; exit 1;
-          }
-          cmp -s stocktake-accountant.html /tmp/accountant.html || {
-            echo "::error::Production stocktake-accountant.html differs from current main."; exit 1;
-          }
-          cmp -s admin-stocktake.html /tmp/admin.html || {
-            echo "::error::Production admin-stocktake.html differs from current main."; exit 1;
-          }
-          cmp -s image-distribution.html /tmp/image-distribution.html || {
-            echo "::error::Production image-distribution.html differs from current main."; exit 1;
-          }
+          cmp -s index.html /tmp/index.html || { echo "::error::Production index.html differs from current main."; exit 1; }
+          cmp -s runtime/index-v37-source.txt /tmp/runtime.txt || { echo "::error::Production employee runtime differs from current main."; exit 1; }
+          cmp -s runtime/customer-v37-source.txt /tmp/customer-runtime.txt || { echo "::error::Production customer runtime differs from current main."; exit 1; }
+          cmp -s stocktake.html /tmp/stocktake.html || { echo "::error::Production stocktake.html differs from current main."; exit 1; }
+          cmp -s stocktake-accountant.html /tmp/accountant.html || { echo "::error::Production stocktake-accountant.html differs from current main."; exit 1; }
+          cmp -s admin-stocktake.html /tmp/admin.html || { echo "::error::Production admin-stocktake.html differs from current main."; exit 1; }
+          cmp -s image-distribution.html /tmp/image-distribution.html || { echo "::error::Production image-distribution.html differs from current main."; exit 1; }
 
           grep -Fq "stocktake.html?v=56.12" /tmp/runtime.txt
           grep -Fq "stocktake-accountant.html?v=56.12" /tmp/runtime.txt
           grep -Fq "stocktake_accountant_access" /tmp/accountant.html
           grep -Fq "preview" /tmp/accountant.html
           grep -Fq "stocktake_accountant_access" /tmp/admin.html
-          grep -Fq "IMAGE_BINDING_STORE_DOC='permissions_v44'" /tmp/image-distribution.html
-          grep -Fq "IMAGE_BINDING_STORE_FIELD='productImageBindings'" /tmp/image-distribution.html
+
+          grep -Fq "IMAGE_BINDING_BACKEND='api/image-admin'" /tmp/image-distribution.html
+          grep -Fq "./api/image-admin?action=bindings" /tmp/image-distribution.html
           grep -Fq "persistImageBinding" /tmp/image-distribution.html
-          grep -Fq "const IMAGE_BINDING_STORE_DOC = 'permissions_v44';" /tmp/runtime.txt
-          grep -Fq "writeImageBindingLeaf" /tmp/runtime.txt
+          grep -Fq "const IMAGE_BINDING_BACKEND = './api/image-admin';" /tmp/runtime.txt
+          grep -Fq "imageBindingMutation" /tmp/runtime.txt
+          grep -Fq "15000" /tmp/runtime.txt
+          grep -Fq "./api/image-admin?action=bindings" /tmp/customer-runtime.txt
+
+          status="$(curl -fsSL --retry 3 --retry-delay 2 "$PROD/api/image-admin?action=status")"
+          echo "$status"
+          echo "$status" | grep -Fq '"configured":true'
+          curl -fsSL --retry 3 --retry-delay 2 "$PROD/api/image-admin?action=bindings" -o /tmp/image-bindings.json
+          grep -Fq '"bindings"' /tmp/image-bindings.json
 
           if grep -Eq "saveActual|updateActual|setActual|اعتماد الكمية|حفظ الكمية" /tmp/accountant.html; then
             echo "::error::Accountant production page appears to expose stocktake write controls."
             exit 1
           fi
 
-          echo "Production alias serves exact current main files, including the V56.31 image-binding persistence fix."
-
-      - name: Report image-admin backend availability
-        if: steps.probe.outputs.enabled == 'true'
-        continue-on-error: true
-        shell: bash
-        env:
-          PROD: https://inventory-system-coral-nu.vercel.app
-        run: |
-          curl -fsSL --max-time 15 "$PROD/api/image-admin?action=status" || true
-          echo
+          echo "Production serves exact V56.32 files and the image-binding backend is configured and readable."
 
       - name: Report disabled probe
         if: steps.probe.outputs.enabled != 'true'
