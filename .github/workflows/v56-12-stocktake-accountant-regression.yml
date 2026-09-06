@@ -33,13 +33,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
       - name: Full test stocktake regression
         run: node tests/v56-3-stocktake-test-mode.mjs
-
       - name: Accountant and full-inventory regression
         run: node tests/v56-12-stocktake-accountant.mjs
-
       - name: JavaScript syntax
         run: |
           python3 - <<'PY'
@@ -51,7 +48,6 @@ jobs:
           PY
           node --check /tmp/accountant.js
           node --check /tmp/admin-stocktake.js
-
       - name: Verify live production provenance and V56.12 assets
         if: github.event_name == 'push'
         env:
@@ -62,22 +58,25 @@ jobs:
           matched=0
           for attempt in $(seq 1 48); do
             body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-12-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
-            if [[ "$body" == "$expected" ]]; then
-              echo "Production probe matched current main."
-              matched=1
-              break
-            fi
+            if [[ "$body" == "$expected" ]]; then matched=1; echo "Production probe matched current main."; break; fi
             echo "Production has not reached the current probe yet (attempt $attempt)."
             sleep 10
           done
           test "$matched" = "1" || { echo '::error::Production alias did not reach current main.'; exit 1; }
 
           nonce="${GITHUB_SHA}-$(date +%s)"
-          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/?verify=$nonce" -o /tmp/prod-index.html
-          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/runtime/index-v37-source.txt?verify=$nonce" -o /tmp/prod-runtime.txt
-          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake.html?v=56.12&verify=$nonce" -o /tmp/prod-stocktake.html
-          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake-accountant.html?v=56.12&verify=$nonce" -o /tmp/prod-accountant.html
-          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/admin-stocktake.html?verify=$nonce" -o /tmp/prod-admin.html
+          fetch_asset() {
+            label="$1"; url="$2"; out="$3"
+            code="$(curl -sSL --retry 2 --retry-delay 2 --connect-timeout 10 --max-time 30 -H 'Cache-Control: no-cache' -o "$out" -w '%{http_code}' "$url" || true)"
+            bytes="$(wc -c < "$out" 2>/dev/null || echo 0)"
+            echo "$label: HTTP=$code bytes=$bytes"
+            if [[ "$code" != "200" ]]; then echo "::error::$label returned HTTP $code"; exit 1; fi
+          }
+          fetch_asset index "$PROD/?verify=$nonce" /tmp/prod-index.html
+          fetch_asset runtime "$PROD/runtime/index-v37-source.txt?verify=$nonce" /tmp/prod-runtime.txt
+          fetch_asset stocktake "$PROD/stocktake.html?v=56.12&verify=$nonce" /tmp/prod-stocktake.html
+          fetch_asset accountant "$PROD/stocktake-accountant.html?v=56.12&verify=$nonce" /tmp/prod-accountant.html
+          fetch_asset admin-stocktake "$PROD/admin-stocktake.html?verify=$nonce" /tmp/prod-admin.html
 
           cmp -s index.html /tmp/prod-index.html || { echo '::error::Production index differs from main.'; exit 1; }
           cmp -s runtime/index-v37-source.txt /tmp/prod-runtime.txt || { echo '::error::Production runtime differs from main.'; exit 1; }
@@ -85,12 +84,11 @@ jobs:
           cmp -s stocktake-accountant.html /tmp/prod-accountant.html || { echo '::error::Production accountant differs from main.'; exit 1; }
           cmp -s admin-stocktake.html /tmp/prod-admin.html || { echo '::error::Production admin stocktake differs from main.'; exit 1; }
 
-          grep -Fq 'stocktake.html?v=56.12' /tmp/prod-runtime.txt
-          grep -Fq 'stocktake-accountant.html?v=56.12' /tmp/prod-runtime.txt
-          grep -Fq 'stocktake_accountant_access' /tmp/prod-accountant.html
-          grep -Fq 'stocktake_accountant_access' /tmp/prod-admin.html
-          grep -Fq 'preview' /tmp/prod-accountant.html
+          grep -Fq 'stocktake.html?v=56.12' /tmp/prod-runtime.txt || { echo '::error::Production runtime missing stocktake V56.12 link.'; exit 1; }
+          grep -Fq 'stocktake-accountant.html?v=56.12' /tmp/prod-runtime.txt || { echo '::error::Production runtime missing accountant V56.12 link.'; exit 1; }
+          grep -Fq 'stocktake_accountant_access' /tmp/prod-accountant.html || { echo '::error::Production accountant missing permission control.'; exit 1; }
+          grep -Fq 'stocktake_accountant_access' /tmp/prod-admin.html || { echo '::error::Production admin missing accountant permission control.'; exit 1; }
+          grep -Fq 'preview' /tmp/prod-accountant.html || { echo '::error::Production accountant missing root preview contract.'; exit 1; }
           echo 'Production serves the exact current main V56.12 assets.'
-
       - name: Diff check
         run: git diff --check
