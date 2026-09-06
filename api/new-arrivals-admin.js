@@ -3,6 +3,7 @@ const API_VERSION = '2026-03-10';
 const STATE_REF = 'new-arrivals-state';
 const STATE_PATH = 'data/new_arrivals_overrides.json';
 const ADMIN_TOKEN_SHA256 = 'f03cbd5064d744450fd61c889dabc2874a8acbb0005d06561db00159bfd3c0c7';
+const RELEASE_VERSION = '56.34';
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -42,6 +43,7 @@ async function gh(config, path, options = {}) {
 }
 
 const norm = value => String(value || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+const digits = value => String(value || '').replace(/\D/g, '');
 const base = config => `/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}`;
 const decode = row => row?.content ? Buffer.from(String(row.content).replace(/\s/g, ''), 'base64').toString('utf8') : '';
 
@@ -104,23 +106,44 @@ function adminOK(req) {
   return sameOrigin(req) && digest === ADMIN_TOKEN_SHA256 && proof?.role === 'admin' && Boolean(proof?.photoId);
 }
 
-async function validateSku(config, mainBranch, sku) {
+function parseSkus(raw) {
+  const lines = String(raw || '').split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return [];
+  const headers = lines[0].split('\t');
+  let idx = headers.findIndex(x => /رقم|كود|sku|item/i.test(x));
+  if (idx < 0) idx = 0;
+  return lines.slice(1).map(line => norm(line.split('\t')[idx] || '')).filter(Boolean);
+}
+
+async function resolveCanonicalSku(config, mainBranch, suppliedSku) {
+  const requested = norm(suppliedSku);
+  if (!requested) { const err = new Error('رقم الصنف غير صالح.'); err.status = 400; throw err; }
   const [j, r] = await Promise.all([readText(config, 'data/jeddah.tsv', mainBranch), readText(config, 'data/riyadh.tsv', mainBranch)]);
-  const found = [j.text, r.text].some(raw => {
-    const lines = String(raw || '').split(/\r?\n/).filter(Boolean);
-    if (!lines.length) return false;
-    const headers = lines[0].split('\t');
-    let idx = headers.findIndex(x => /رقم|كود|sku|item/i.test(x));
-    if (idx < 0) idx = 0;
-    return lines.slice(1).some(line => norm(line.split('\t')[idx] || '') === sku);
-  });
-  if (!found) { const err = new Error('الصنف المطلوب غير موجود في المخزون الحالي.'); err.status = 400; throw err; }
+  const inventory = [...new Set([...parseSkus(j.text), ...parseSkus(r.text)])];
+  if (inventory.includes(requested)) return requested;
+
+  // V56.34 compatibility: the gallery historically reduced SKUs such as ARM_10005
+  // to their digits (10005). Resolve that legacy shorthand only when unambiguous,
+  // then persist the real canonical inventory SKU.
+  const shorthand = digits(requested);
+  if (shorthand) {
+    const matches = inventory.filter(id => digits(id) === shorthand);
+    if (matches.length === 1) return matches[0];
+    if (matches.length > 1) {
+      const err = new Error('رقم الصنف المختصر يطابق أكثر من صنف. ابحث بالرقم الكامل للصنف.');
+      err.status = 409;
+      throw err;
+    }
+  }
+  const err = new Error('الصنف المطلوب غير موجود في المخزون الحالي.');
+  err.status = 400;
+  throw err;
 }
 
 async function persist(config, state, updatedBy, message, existingSha) {
   const body = {
     message,
-    content:Buffer.from(JSON.stringify({ ...sanitize(state), updatedAt:new Date().toISOString(), updatedBy:String(updatedBy || 'مهند'), version:'56.33' }, null, 2) + '\n', 'utf8').toString('base64'),
+    content:Buffer.from(JSON.stringify({ ...sanitize(state), updatedAt:new Date().toISOString(), updatedBy:String(updatedBy || 'مهند'), version:RELEASE_VERSION }, null, 2) + '\n', 'utf8').toString('base64'),
     branch:STATE_REF
   };
   if (existingSha) body.sha = existingSha;
@@ -133,10 +156,10 @@ module.exports = async function handler(req, res) {
   const config = cfg();
   const action = req.method === 'GET' ? String(req.query?.action || 'status') : String(req.body?.action || '');
 
-  if (req.method === 'GET' && action === 'status') return json(res, 200, { configured:Boolean(config.token && config.owner && config.repo), owner:config.owner || null, repo:config.repo || null, version:'56.33' });
+  if (req.method === 'GET' && action === 'status') return json(res, 200, { configured:Boolean(config.token && config.owner && config.repo), owner:config.owner || null, repo:config.repo || null, version:RELEASE_VERSION });
   if (req.method === 'GET' && action === 'overrides') {
     if (!config.token || !config.owner || !config.repo) return json(res, 503, { error:'خدمة إدارة جديدنا غير مهيأة على الخادم.' });
-    try { const { state } = await readState(config); return json(res, 200, { ...state, version:'56.33' }); }
+    try { const { state } = await readState(config); return json(res, 200, { ...state, version:RELEASE_VERSION }); }
     catch (err) { console.error('[new-arrivals-admin read]', err); return json(res, 500, { error:'تعذر تحميل تعديلات جديدنا.' }); }
   }
 
@@ -146,10 +169,8 @@ module.exports = async function handler(req, res) {
   if (!['add','remove','auto'].includes(action)) return json(res, 400, { error:'عملية غير معروفة.' });
 
   try {
-    const sku = norm(req.body?.sku || '');
-    if (!sku) return json(res, 400, { error:'رقم الصنف غير صالح.' });
     const mainBranch = await repoBranch(config);
-    await validateSku(config, mainBranch, sku);
+    const sku = await resolveCanonicalSku(config, mainBranch, req.body?.sku || '');
     await ensureStateBranch(config, mainBranch);
     const { state, sha } = await readState(config);
     let include = state.include.filter(id => id !== sku);
@@ -158,10 +179,10 @@ module.exports = async function handler(req, res) {
     if (action === 'remove') exclude = [sku, ...exclude];
     const next = sanitize({ include, exclude });
     const commitSha = await persist(config, next, req.body?.updatedBy, `state(new-arrivals): ${action} ${sku}`, sha);
-    return json(res, 200, { ok:true, ...next, saved:sku, action, commitSha, version:'56.33' });
+    return json(res, 200, { ok:true, ...next, saved:sku, action, commitSha, version:RELEASE_VERSION });
   } catch (err) {
     console.error('[new-arrivals-admin]', err);
     const status = [400,401,409].includes(err.status) ? err.status : 500;
-    return json(res, status, { error:status === 409 ? 'حدث تعديل متزامن في جديدنا. أعد المحاولة.' : (err.message || 'تعذر تحديث جديدنا.') });
+    return json(res, status, { error:err.message || 'تعذر تحديث جديدنا.' });
   }
 };
