@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/scripts/v56-31-image-binding-backend.py'
+      - '.github/scripts/v56-31-image-binding-backend-final.py'
       - '.github/workflows/v56-31-image-binding-frontend.yml'
   workflow_dispatch:
 
@@ -24,12 +24,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply V56.31 server-backed image binding wiring
-        run: python3 .github/scripts/v56-31-image-binding-backend.py
-
-      - name: Correct regression marker
-        shell: bash
-        run: sed -i "s/'writeBinding'/'persistBindings'/" tests/v56-31-image-binding-backend.mjs
+      - name: Apply V56.31 final server-backed image binding migration
+        run: python3 .github/scripts/v56-31-image-binding-backend-final.py
 
       - name: Verify
         shell: bash
