@@ -82,17 +82,21 @@ function renderExecutiveSecurityCenter(){
  integrateSecurityFrame(section.querySelector('iframe'));
  if(location.hash==='#security-command-center'&&!section.dataset.v56HashFocused){section.dataset.v56HashFocused='true';setTimeout(()=>section.scrollIntoView({block:'start',behavior:'smooth'}),80)}
 }
-let lastActiveModule='';
+let lastActiveModule='',lastActiveNode=null;
 function keepActiveModuleVisible(){
  if(path!=='admin-dashboard.html')return;
  const active=document.querySelector('#root [data-admin-module][data-active="true"]');if(!active)return;
- const key=active.getAttribute('data-admin-module')||active.textContent||'';if(key===lastActiveModule)return;lastActiveModule=key;
+ const key=active.getAttribute('data-admin-module')||active.textContent||'';
+ let scroller=active.parentElement;
+ while(scroller&&scroller!==document.body&&scroller.scrollWidth<=scroller.clientWidth+2)scroller=scroller.parentElement;
+ if(!scroller||scroller===document.body){lastActiveModule=key;lastActiveNode=active;return}
+ const a=active.getBoundingClientRect(),s=scroller.getBoundingClientRect();
+ const nodeChanged=active!==lastActiveNode,moduleChanged=key!==lastActiveModule,clipped=a.left<s.left+6||a.right>s.right-6;
+ lastActiveModule=key;lastActiveNode=active;
+ if(!nodeChanged&&!moduleChanged&&!clipped)return;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
   if(!document.contains(active))return;
-  let scroller=active.parentElement;
-  while(scroller&&scroller!==document.body&&scroller.scrollWidth<=scroller.clientWidth+2)scroller=scroller.parentElement;
-  if(!scroller||scroller===document.body)return;
-  active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+  active.scrollIntoView({block:'nearest',inline:'center',behavior:moduleChanged?'smooth':'auto'});
  }));
 }
 function retireLegacySecurityRoute(){if(path!=='admin-dashboard.html')return;const q=new URLSearchParams(location.search);if(q.get('section')==='security')location.replace('./admin-home.html#security-command-center')}
