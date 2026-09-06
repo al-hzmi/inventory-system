@@ -1,0 +1,56 @@
+name: Apply V56.31 Image Binding Store
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/v56-31-image-binding-store.py'
+      - '.github/workflows/apply-v56-31-image-binding-store.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-v56-31-image-binding-store-main
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply V56.31 canonical image binding store
+        run: python3 .github/scripts/v56-31-image-binding-store.py
+
+      - name: Regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/v56-31-image-binding-store.mjs
+          if [[ -f tests/v56-30-image-album.mjs ]]; then node tests/v56-30-image-album.mjs; fi
+          python3 - <<'PY'
+          from pathlib import Path
+          for f in ['image-distribution.html','runtime/index-v37-source.txt','.github/workflows/v56-12-production-smoke.yml']:
+              s=Path(f).read_text(errors='replace')
+              assert '<<<<<<<' not in s and '>>>>>>>' not in s and '... (truncated)' not in s, f
+          print('V56.31 structural checks: PASS')
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'V56.31 already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add image-distribution.html runtime/index-v37-source.txt .github/workflows/v56-12-production-smoke.yml tests/v56-31-image-binding-store.mjs
+          git commit -m 'V56.31 — fix image binding persistence and production verification'
+          git push origin HEAD:main
