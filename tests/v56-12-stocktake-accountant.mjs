@@ -43,7 +43,7 @@ has(accountant,'.tablewrap{display:none}','wide table must be hidden by default 
 has(runtime,'useStocktakeAccountantControl','employee runtime must subscribe to accountant access control');
 has(runtime,'currentStocktakeAccountantAccessAllowed','employee runtime must calculate accountant visibility per account');
 has(runtime,"stocktake.html?v=56.12",'authorized employees must retain the V56.12 stocktake entry point');
-assert.match(runtime,new RegExp(`stocktake-accountant\\.html\\?v=${v56AtLeast12}`),'authorized employees must retain the V56.12+ accountant entry point');
-has(index,"index-v37-source.txt?v=56.26",'runtime cache must include the current V56.26 employee hotfix');
+has(runtime,"stocktake-accountant.html?v=56.12",'authorized employees must retain the V56.12 accountant entry point');
+has(index,"index-v37-source.txt?v=56.16&rev=56.26",'runtime cache must retain V56.16 base contract while preserving current V56.26 hotfix revision');
 
-console.log('V56.12 stocktake accountant/full-test regression: OK on V56.26 runtime');
+console.log('V56.12 stocktake accountant/full-test regression: OK with V56.16 base cache and V56.26 revision');
