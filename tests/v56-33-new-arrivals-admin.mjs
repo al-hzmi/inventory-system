@@ -7,7 +7,7 @@ const customer=read('runtime/customer-v37-source.txt');
 const index=read('index.html');
 const customerHtml=read('customer.html');
 assert.match(api,/STATE_REF = 'new-arrivals-state'/);
-assert.match(api,/action === 'overrides'/);
+assert.match(api,/action\s*===\s*'overrides'/);
 assert.match(api,/\['add','remove','auto'\]/);
 assert.match(api,/adminOK\(req\)/);
 assert.match(api,/validateSku/);
