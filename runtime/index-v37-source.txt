@@ -908,6 +908,35 @@ const removeImageBindingOverride = async ({ sku }) => {
     return imageBindingMutation({action:'unbind',sku:exactSku});
 };
 
+// V56.33 — تحكم إداري دائم في قسم «جديدنا» بدون تعديل ملف التوليد التلقائي.
+const NEW_ARRIVALS_ADMIN_BACKEND = './api/new-arrivals-admin';
+const sanitizeNewArrivalOverrides = raw => ({
+    include: [...new Set((Array.isArray(raw?.include) ? raw.include : []).map(normalizeCleanId).filter(Boolean))],
+    exclude: [...new Set((Array.isArray(raw?.exclude) ? raw.exclude : []).map(normalizeCleanId).filter(Boolean))]
+});
+const loadNewArrivalOverrides = async () => {
+    try {
+        const r = await fetch(`${NEW_ARRIVALS_ADMIN_BACKEND}?action=overrides`, { cache:'no-store', headers:{'Cache-Control':'no-cache'} });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || 'NEW_ARRIVALS_OVERRIDES_LOAD_FAILED');
+        return sanitizeNewArrivalOverrides(data);
+    } catch (err) {
+        console.warn('[V56.33 new arrivals overrides]', err);
+        return { include:[], exclude:[] };
+    }
+};
+const newArrivalMutation = async ({ action, sku }) => {
+    const cleanSku = normalizeCleanId(sku);
+    if (!cleanSku || !['add','remove','auto'].includes(action)) throw new Error('INVALID_NEW_ARRIVAL_ACTION');
+    const r = await fetch(NEW_ARRIVALS_ADMIN_BACKEND, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ action, sku:cleanSku, updatedBy:'مهند', adminToken:imageAdminToken(), adminProof:imageAdminProof() })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data?.error || 'NEW_ARRIVALS_SAVE_FAILED');
+    return sanitizeNewArrivalOverrides(data);
+};
+
 const parseCategories = (text) => {
     const obj = {};
     if (!text) return obj;
@@ -1837,6 +1866,74 @@ const AdminCategoryPickerModal = memo(({ item, imageFileName, currentCategory, c
                     <p className="text-[9px] text-muted text-center">الاختيار يحفظ مباشرة ويظهر عند جميع المستخدمين.</p>
                 </div>
             </div>
+        </div>
+    );
+});
+
+const NewArrivalsAdminPanel = memo(({ catalogItems, newArrivalIds, onChange }) => {
+    const [query, setQuery] = useState('');
+    const [busySku, setBusySku] = useState('');
+    const [notice, setNotice] = useState('');
+    const results = useMemo(() => {
+        const raw = query.trim();
+        if (!raw) return [];
+        const qClean = normalizeCleanId(raw);
+        const qText = normalizeText(raw);
+        return (catalogItems || []).filter(item => {
+            const id = normalizeCleanId(item.cleanId || item.id);
+            return (qClean && id.includes(qClean)) || (qText && normalizeText(item.name || '').includes(qText)) || normalizeText(item.id || '').includes(qText);
+        }).slice(0, 8);
+    }, [query, catalogItems]);
+
+    const change = async item => {
+        const sku = normalizeCleanId(item?.cleanId || item?.id);
+        if (!sku || busySku) return;
+        const included = newArrivalIds.has(sku);
+        if (included && !window.confirm(`إزالة الصنف ${item.id || sku} من قسم جديدنا؟`)) return;
+        setBusySku(sku); setNotice('');
+        try {
+            await onChange(item, !included);
+            setNotice(included ? 'تمت الإزالة من جديدنا ✓' : 'تمت الإضافة إلى جديدنا ✓');
+            if (!included) setQuery('');
+            setTimeout(() => setNotice(''), 2200);
+        } catch (err) {
+            console.error('[V56.33 new arrivals admin]', err);
+            alert(err?.message || 'تعذر تحديث قسم جديدنا.');
+        } finally { setBusySku(''); }
+    };
+
+    return (
+        <div className="mb-16 rounded-16 border border-accent/20 bg-accentSoft/30 p-14 sm:p-16 shadow-card">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-8 mb-12">
+                <div>
+                    <div className="text-[11px] font-bold text-accent">إدارة القسم</div>
+                    <h3 className="text-[16px] font-bold text-primary mt-2">إضافة أو حذف منتج من «جديدنا»</h3>
+                    <p className="text-[11px] text-secondary mt-3">التعديل يدوي ودائم، ولا يلغيه التحديث التلقائي للمخزون.</p>
+                </div>
+                <div className="text-[11px] text-secondary bg-white border border-border rounded-full px-10 h-30 inline-flex items-center self-start">{newArrivalIds.size} صنف</div>
+            </div>
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="ابحث برقم الصنف أو اسم المنتج..."
+                className="w-full h-44 px-12 rounded-12 border border-border bg-white text-[13px] outline-none focus:border-accent" />
+            {notice && <div className="mt-8 text-[11px] font-bold text-success">{notice}</div>}
+            {query.trim() && (
+                <div className="mt-10 flex flex-col gap-6 max-h-[330px] overflow-y-auto overscroll-contain">
+                    {results.length ? results.map(item => {
+                        const sku = normalizeCleanId(item.cleanId || item.id);
+                        const included = newArrivalIds.has(sku);
+                        return <div key={sku} className="bg-white border border-border rounded-12 p-10 flex items-center gap-10">
+                            <div className="min-w-0 flex-1">
+                                <div className="text-[12px] font-bold text-primary bidi-isolate">{item.id}</div>
+                                <div className="text-[11px] text-secondary truncate mt-2">{item.name || '—'}</div>
+                            </div>
+                            <span className={`hidden sm:inline-flex px-8 h-26 items-center rounded-full text-[9px] font-bold ${included ? 'bg-successSoft text-success' : 'bg-surface text-muted'}`}>{included ? 'ضمن جديدنا' : 'غير مضاف'}</span>
+                            <button disabled={Boolean(busySku)} onClick={() => change(item)}
+                                className={`h-34 px-12 rounded-10 border text-[11px] font-bold disabled:opacity-50 ${included ? 'bg-dangerSoft text-danger border-danger/15' : 'bg-accent text-white border-accent'}`}>
+                                {busySku === sku ? 'جاري...' : included ? 'حذف' : 'إضافة'}
+                            </button>
+                        </div>;
+                    }) : <div className="bg-white border border-border rounded-12 p-14 text-center text-[11px] text-muted">لا يوجد صنف مطابق.</div>}
+                </div>
+            )}
         </div>
     );
 });
@@ -4079,6 +4176,7 @@ const App = () => {
     const [rawImagesList, setRawImagesList] = useState(new Map());
     const [imageBindingOverrides, setImageBindingOverrides] = useState({});
     const [newArrivalsMeta, setNewArrivalsMeta] = useState({ items: [] });
+    const [newArrivalOverrides, setNewArrivalOverrides] = useState({ include:[], exclude:[] });
     const [baseCategories, setBaseCategories] = useState({});
     const [categoryOverrides, setCategoryOverrides] = useState({});
     const [categoryMeta, setCategoryMeta] = useState({});
@@ -4118,11 +4216,12 @@ const App = () => {
                 setDatabases(nextDatabases);
                 const rawImgMap = buildImagesMap(iT);
                 setRawImagesList(rawImgMap);
-                const bindingOverrides = await loadImageBindingOverrides();
+                const [bindingOverrides, arrivalOverrides] = await Promise.all([loadImageBindingOverrides(), loadNewArrivalOverrides()]);
                 if (!alive) return;
                 setImageBindingOverrides(bindingOverrides);
                 setImagesList(buildResolvedImagesMap(rawImgMap, nextDatabases, bindingOverrides));
                 setNewArrivalsMeta(nJ && Array.isArray(nJ.items) ? nJ : { items: [] });
+                setNewArrivalOverrides(arrivalOverrides);
                 setBaseCategories(parseCategories(cT));
                 setLastUpdate(vJ && vJ.lastUpdate ? (typeof dayjs !== 'undefined' ? dayjs(vJ.lastUpdate).fromNow() : vJ.lastUpdate) : "غير متوفر");
             } catch (err) {
@@ -4265,9 +4364,29 @@ const App = () => {
     }, [search, warehouse, query, sessionName]);
 
     const allCategorizedIds = useMemo(() => new Set(Object.values(categories).flat()), [categories]);
-    const newArrivalIds = useMemo(() => new Set((newArrivalsMeta.items || []).map(row => normalizeCleanId(row.sku)).filter(Boolean)), [newArrivalsMeta]);
+    const newArrivalIds = useMemo(() => {
+        const next = new Set((newArrivalsMeta.items || []).map(row => normalizeCleanId(row.sku)).filter(Boolean));
+        (newArrivalOverrides.include || []).forEach(id => { const clean = normalizeCleanId(id); if (clean) next.add(clean); });
+        (newArrivalOverrides.exclude || []).forEach(id => { const clean = normalizeCleanId(id); if (clean) next.delete(clean); });
+        return next;
+    }, [newArrivalsMeta, newArrivalOverrides]);
     const categoryNames = useMemo(() => Object.keys(categories), [categories]);
     const currentCategoryById = useMemo(() => buildCategoryLookup(categories), [categories]);
+    const setNewArrivalManual = useCallback(async (item, shouldInclude) => {
+        const sku = normalizeCleanId(item?.cleanId || item?.id || item);
+        if (!sku) throw new Error('INVALID_SKU');
+        const next = await newArrivalMutation({ action: shouldInclude ? 'add' : 'remove', sku });
+        setNewArrivalOverrides(next);
+        return next;
+    }, []);
+    useEffect(() => {
+        let alive = true;
+        const timer = setInterval(() => {
+            if (document.visibilityState !== 'visible') return;
+            loadNewArrivalOverrides().then(next => { if (alive) setNewArrivalOverrides(next); });
+        }, 15000);
+        return () => { alive = false; clearInterval(timer); };
+    }, []);
     const imageCatalogItems = useMemo(() => {
         const map = new Map();
         [WAREHOUSES.jeddah.key, WAREHOUSES.riyadh.key].forEach(wh => {
@@ -4617,6 +4736,10 @@ const App = () => {
                                             </p>
                                             <p className="text-[11px] text-muted">نقرتان: الكمية · ثلاث: بطاقة المنتج</p>
                                         </div>
+
+                                        {isAdmin && activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS && (
+                                            <NewArrivalsAdminPanel catalogItems={imageCatalogItems} newArrivalIds={newArrivalIds} onChange={setNewArrivalManual} />
+                                        )}
 
                                         {galleryResults.length === 0 ? (
                                             <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.ImageOff className="w-20 h-20" />} title="لا توجد أصناف" note="لا توجد أصناف متوفرة في هذا القسم داخل المستودع المحدد." /></div>

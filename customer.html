@@ -35,7 +35,7 @@
     try{localStorage.setItem('batco_employee_onboarding_target_v1',routeVisitorId)}catch{}return true;
   }catch(error){console.warn('[V56.18] central employee route unavailable',error);return false}};
   if(await centralEmployeeRoute()){redirectHarounToEmployee();return;}
-  const CORE='./runtime/customer-v37-source.txt?v=56.25';
+  const CORE='./runtime/customer-v37-source.txt?v=56.33';
   const replaceBetween=(src,start,end,replacement,label)=>{const a=src.indexOf(start);if(a<0)throw new Error(label+'_START');const b=src.indexOf(end,a+start.length);if(b<0)throw new Error(label+'_END');return src.slice(0,a)+replacement+src.slice(b)};
   const loadCore=async()=>{try{const r=await fetch(CORE,{cache:'no-store'});if(!r.ok)throw new Error('CORE_HTTP_'+r.status);const text=await r.text();try{const c=await caches.open('batco-v37-core');await c.put(CORE,new Response(text,{headers:{'Content-Type':'text/plain;charset=utf-8'}}))}catch{}return text}catch(e){try{const hit=await caches.match(CORE);if(hit)return await hit.text()}catch{}throw e}};
   try{
