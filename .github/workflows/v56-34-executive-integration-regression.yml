@@ -1,0 +1,23 @@
+name: V56.34 Executive Integration Regression
+
+on:
+  push:
+    branches: [main, v56-34-executive-integration]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify V56.34 contracts
+        run: |
+          node --check api/new-arrivals-admin.js
+          node --check v54-admin-enhancements.js
+          node tests/v56-33-new-arrivals-admin.mjs
+          node tests/v56-34-executive-integration.mjs
+          git diff --check
