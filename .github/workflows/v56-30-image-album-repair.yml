@@ -1,0 +1,137 @@
+name: V56.30 Image Album Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-30-image-album-repair.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore admin shell and apply minimal image album integration
+        run: |
+          set -euo pipefail
+          GOOD=01b00a930c1f5b6cc758d6f58b42377580cf1409
+          git checkout "$GOOD" -- admin-home.html v46-admin-nav.js
+          python - <<'PY'
+          from pathlib import Path
+
+          home = Path('admin-home.html')
+          nav = Path('v46-admin-nav.js')
+          album = Path('image-distribution.html')
+
+          h = home.read_text(encoding='utf-8')
+          n = nav.read_text(encoding='utf-8')
+          a = album.read_text(encoding='utf-8')
+
+          # Admin home: keep the full executive dashboard intact and add one quick-access tile.
+          anchor = '<a href="./admin-stocktake-shell.html"><b>الجرد</b><span>إدارة حملات الجرد والنتائج</span></a></div>'
+          replacement = '<a href="./admin-stocktake-shell.html"><b>الجرد</b><span>إدارة حملات الجرد والنتائج</span></a><a href="./image-distribution.html"><b>ألبوم توزيع الصور</b><span>راجع الصور غير الموزعة واربطها بالصنف الصحيح</span></a></div>'
+          if anchor in h:
+              h = h.replace(anchor, replacement, 1)
+          elif './image-distribution.html' not in h:
+              raise SystemExit('admin-home quick access anchor not found')
+
+          # Unified admin navigation: add album as a first-class admin destination without replacing any existing navigation.
+          n = n.replace("const VERSION='55.4'", "const VERSION='55.5'", 1)
+          old_pages = "const PAGES=new Set(['admin-home.html','admin-dashboard.html','control-center.html','inventory-analytics.html','admin-stocktake-shell.html','health-center.html','command-center.html']);"
+          new_pages = "const PAGES=new Set(['admin-home.html','admin-dashboard.html','control-center.html','inventory-analytics.html','admin-stocktake-shell.html','health-center.html','command-center.html','image-distribution.html']);"
+          if old_pages in n:
+              n = n.replace(old_pages, new_pages, 1)
+
+          old_icon_tail = "health:'<path d=\"M3 12h4l2-6 4 12 2-6h6\"/>'};"
+          new_icon_tail = "health:'<path d=\"M3 12h4l2-6 4 12 2-6h6\"/>',images:'<><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><circle cx=\"8.5\" cy=\"9\" r=\"1.5\"/><path d=\"m21 15-5-5L5 20\"/></>'};"
+          if old_icon_tail in n:
+              n = n.replace(old_icon_tail, new_icon_tail, 1)
+          elif "images:" not in n:
+              raise SystemExit('admin nav icon anchor not found')
+
+          old_links = "['stocktake','الجرد','./admin-stocktake-shell.html'],['permissions','الصلاحيات','./control-center.html'],['health','صحة النظام','./health-center.html']];"
+          new_links = "['stocktake','الجرد','./admin-stocktake-shell.html'],['images','ألبوم الصور','./image-distribution.html'],['permissions','الصلاحيات','./control-center.html'],['health','صحة النظام','./health-center.html']];"
+          if old_links in n:
+              n = n.replace(old_links, new_links, 1)
+          elif "['images','ألبوم الصور','./image-distribution.html']" not in n:
+              raise SystemExit('admin nav links anchor not found')
+
+          old_active = "if(path==='health-center.html')return'health';if(path==='admin-dashboard.html')"
+          new_active = "if(path==='health-center.html')return'health';if(path==='image-distribution.html')return'images';if(path==='admin-dashboard.html')"
+          if old_active in n:
+              n = n.replace(old_active, new_active, 1)
+
+          n = n.replace("['orders','stocktake','permissions','health'].includes(active())", "['orders','stocktake','images','permissions','health'].includes(active())")
+          n = n.replace("['orders','stocktake','permissions','health'].includes(x[0])", "['orders','stocktake','images','permissions','health'].includes(x[0])")
+
+          # Standalone album: robust write UX + post-write verification + visible route back to admin.
+          required = [
+              "db.collection('system_controls').doc('product_image_bindings')",
+              "Promise.race",
+              "SAVE_TIMEOUT",
+              "VERIFY_FAILED",
+              "جاري الحفظ",
+              "./admin-home.html",
+          ]
+          missing = [x for x in required if x not in a]
+          if missing:
+              raise SystemExit('image-distribution missing required repair markers: ' + ', '.join(missing))
+
+          home.write_text(h, encoding='utf-8')
+          nav.write_text(n, encoding='utf-8')
+
+          test = r'''import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+
+          const home = fs.readFileSync('admin-home.html','utf8');
+          const nav = fs.readFileSync('v46-admin-nav.js','utf8');
+          const album = fs.readFileSync('image-distribution.html','utf8');
+
+          // Guard against accidentally replacing the executive admin home again.
+          assert.match(home,/اتجاه المبيعات · 30 يوم/);
+          assert.match(home,/أداء الفروع/);
+          assert.match(home,/ألبوم توزيع الصور/);
+          assert.match(home,/\.\/image-distribution\.html/);
+
+          // Existing admin shell must stay intact, with album added as one more destination.
+          for (const marker of ['الرئيسية','المبيعات','الموظفون','العملاء','الطلبات','الجرد','الصلاحيات','صحة النظام','أمان الدخول']) assert.ok(nav.includes(marker), `missing existing admin nav marker: ${marker}`);
+          assert.ok(nav.includes("['images','ألبوم الصور','./image-distribution.html']"));
+          assert.ok(nav.includes("const VERSION='55.5'"));
+
+          // Binding must never fail silently: visible busy state, bounded wait, error path, and read-after-write verification.
+          for (const marker of ["product_image_bindings",'Promise.race','SAVE_TIMEOUT','VERIFY_FAILED','جاري الحفظ','تعذر حفظ الربط']) assert.ok(album.includes(marker), `missing album save marker: ${marker}`);
+          assert.ok(album.includes("location.replace('./index.html?employee=1')"));
+          assert.ok(album.includes("location.href='./admin-home.html'"));
+          console.log('V56.30 image album integration regression: PASS');
+          '''
+          Path('tests/v56-30-image-album.mjs').write_text(test.strip()+'\n', encoding='utf-8')
+          PY
+
+      - name: Run image album regression and core dependent checks
+        run: |
+          set -euo pipefail
+          node tests/v56-30-image-album.mjs
+          node tests/v56-27-image-binding-wiring.mjs
+          node tests/v56-4-messaging.mjs
+          node tests/v56-12-stocktake-accountant.mjs
+          git diff --check
+
+      - name: Commit verified repair
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898271+github-actions[bot]@users.noreply.github.com'
+          git add admin-home.html v46-admin-nav.js image-distribution.html tests/v56-30-image-album.mjs
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'V56.30 — repair image album save flow and admin integration'
+          git push origin HEAD:main
