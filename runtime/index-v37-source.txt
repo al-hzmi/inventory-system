@@ -3341,7 +3341,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
 // ============================================================
 // لوحة تحكم الإدارة (خاصة بالمدير فقط - مهند) ✨ التجميع الذكي للجلسات وطلبات الدخول
 // ============================================================
-const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categories, currentCategoryById, categoryMeta, initialTab = 'access_requests' }) => {
+const AdminDashboardModal = memo(({ onClose, catalogItems, imageCatalogItems, imagesList, rawImagesList, imageBindingOverrides, onImageBindingsChanged, categories, currentCategoryById, categoryMeta, initialTab = 'access_requests' }) => {
     const [activeTab, setActiveTab] = useState(initialTab); 
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -3593,7 +3593,7 @@ const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categorie
 
                 <div className="flex-1 overflow-y-auto p-16 bg-surface">
                     {activeTab === 'product_images' ? (
-                        <ProductImageBindingManager catalogItems={imageCatalogItems} imagesList={imagesList} rawImagesList={rawImagesList} imageBindingOverrides={imageBindingOverrides} onBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }} />
+                        <ProductImageBindingManager catalogItems={imageCatalogItems} imagesList={imagesList} rawImagesList={rawImagesList} imageBindingOverrides={imageBindingOverrides} onBindingsChanged={onImageBindingsChanged} />
                     ) : activeTab === 'product_categories' ? (
                         <ProductClassificationManager
                             catalogItems={catalogItems}
@@ -4668,7 +4668,11 @@ const App = () => {
                 initialTab={showAdmin}
                 onClose={() => setShowAdmin(null)}
                 catalogItems={catalogItems}
+                imageCatalogItems={imageCatalogItems}
                 imagesList={imagesList}
+                rawImagesList={rawImagesList}
+                imageBindingOverrides={imageBindingOverrides}
+                onImageBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }}
                 categories={categories}
                 currentCategoryById={currentCategoryById}
                 categoryMeta={categoryMeta}
