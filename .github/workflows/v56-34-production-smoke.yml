@@ -1,4 +1,4 @@
-name: V56.34 Production Smoke
+name: V56.35 Production Smoke
 
 on:
   push:
@@ -15,32 +15,34 @@ jobs:
       PROD: https://inventory-system-coral-nu.vercel.app
     steps:
       - uses: actions/checkout@v4
-      - name: Wait for production to serve V56.34 tree
+      - name: Wait for production to serve V56.35 tree
         shell: bash
         run: |
           set -euo pipefail
-          expected="$(cat runtime/v56-34-production-probe.txt)"
+          expected="$(cat runtime/v56-35-production-probe.txt)"
           ok=0
-          for attempt in $(seq 1 42); do
-            body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-34-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
+          for attempt in $(seq 1 48); do
+            body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-35-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
             if [[ "$body" == "$expected" ]]; then
-              echo "V56.34 production probe matched on attempt $attempt"
+              echo "V56.35 production probe matched on attempt $attempt"
               ok=1
               break
             fi
-            echo "Attempt $attempt: production has not reached V56.34 yet"
+            echo "Attempt $attempt: production has not reached V56.35 yet"
             sleep 10
           done
           if [[ "$ok" != "1" ]]; then
-            echo "::error::Production alias did not serve the V56.34 probe within the verification window."
+            echo "::error::Production alias did not serve the V56.35 probe within the verification window."
             exit 1
           fi
-      - name: Verify exact executive assets and New Arrivals API
+
+      - name: Verify exact V56.35 executive and New Arrivals assets
         shell: bash
         run: |
           set -euo pipefail
           nonce="${GITHUB_SHA}-$(date +%s)"
-          for file in v46-admin-nav.js v54-admin-enhancements.js v54-1-desktop-canvas-fix.css security-center.html; do
+          for file in v46-admin-nav.js v54-admin-enhancements.js v54-1-desktop-canvas-fix.css security-center.html v56-35-new-arrivals-quick-delete.js runtime/index-v37-source.txt; do
+            mkdir -p "/tmp/$(dirname "$file")"
             curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
@@ -49,23 +51,31 @@ jobs:
           ! grep -Fq 'id="v51-security"' /tmp/v46-admin-nav.js
           ! grep -Fq 'id="v52-mobile-security"' /tmp/v46-admin-nav.js
           grep -Fq 'data-v56-unified-people="true"' /tmp/v46-admin-nav.js
-          grep -Fq 'admin-dashboard.html?section=security' /tmp/v46-admin-nav.js
+          grep -Fq 'admin-home.html#security-command-center' /tmp/v46-admin-nav.js
 
-          grep -Fq "VERSION='56.34'" /tmp/v54-admin-enhancements.js
+          grep -Fq "VERSION='56.35'" /tmp/v54-admin-enhancements.js
           grep -Fq 'مركز القيادة والتحكم الأمني' /tmp/v54-admin-enhancements.js
-          grep -Fq 'security-center.html?embed=executive&v=56.34' /tmp/v54-admin-enhancements.js
+          grep -Fq 'security-center.html?embed=executive&v=56.35' /tmp/v54-admin-enhancements.js
+          grep -Fq "active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'})" /tmp/v54-admin-enhancements.js
+          grep -Fq "attributeFilter:['data-active']" /tmp/v54-admin-enhancements.js
           grep -Fq 'customerLinks.forEach(a=>a.remove())' /tmp/v54-admin-enhancements.js
 
-          grep -Fq 'repeat(4,minmax(0,1fr))' /tmp/v54-1-desktop-canvas-fix.css
-          grep -Fq 'body.v51-admin-dashboard:not(.v56-security-embedded)' /tmp/v54-1-desktop-canvas-fix.css
-          grep -Fq '.v56-security-frame' /tmp/v54-1-desktop-canvas-fix.css
+          grep -Fq "e.target.closest('.tap-card')" /tmp/v56-35-new-arrivals-quick-delete.js
+          grep -Fq 'حذف من جديدنا' /tmp/v56-35-new-arrivals-quick-delete.js
+          grep -Fq "action:'remove'" /tmp/v56-35-new-arrivals-quick-delete.js
 
+          grep -Fq '.map(normalizeImageSku).filter(Boolean)' /tmp/runtime/index-v37-source.txt
+          grep -Fq 'newArrivalIds.has(normalizeImageSku(i.id))' /tmp/runtime/index-v37-source.txt
+          grep -Fq './v56-35-new-arrivals-quick-delete.js?v=56.35' /tmp/runtime/index-v37-source.txt
+
+          curl -fsSL --retry 3 --retry-delay 2 "$PROD/admin-home.html?verify=$nonce" -o /tmp/admin-home.html
           curl -fsSL --retry 3 --retry-delay 2 "$PROD/admin-dashboard.html?section=security&verify=$nonce" -o /tmp/security-route.html
+          test -s /tmp/admin-home.html
           test -s /tmp/security-route.html
           grep -Fq 'DashboardRoot' /tmp/security-center.html
 
           status="$(curl -fsSL --retry 3 --retry-delay 2 "$PROD/api/new-arrivals-admin?action=status&verify=$nonce")"
           echo "$status"
           echo "$status" | grep -Fq '"configured":true'
-          echo "$status" | grep -Fq '"version":"56.34"'
-          echo "Production serves exact V56.34 executive assets and configured New Arrivals API."
+          echo "$status" | grep -Fq '"version":"56.35"'
+          echo "Production serves exact V56.35 executive assets and configured New Arrivals API."
