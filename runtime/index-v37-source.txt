@@ -876,58 +876,36 @@ const buildResolvedImagesMap = (imagesMap, databases, overrides = {}) => {
 const imageForItem = (resolvedImages, item) => item?.uid ? (resolvedImages?.get(item.uid) || '') : '';
 const hasImageForItem = (resolvedImages, item) => Boolean(imageForItem(resolvedImages, item));
 
-const IMAGE_BINDING_DOC = 'product_image_bindings'; // legacy read-only store
-const IMAGE_BINDING_STORE_DOC = 'permissions_v44';
-const IMAGE_BINDING_STORE_FIELD = 'productImageBindings';
-const readImageBindingStores = async db => {
-    const [legacySnap, primarySnap] = await Promise.all([
-        db.collection('system_controls').doc(IMAGE_BINDING_DOC).get().catch(() => null),
-        db.collection('system_controls').doc(IMAGE_BINDING_STORE_DOC).get().catch(() => null)
-    ]);
-    const legacy = legacySnap?.exists ? (legacySnap.data()?.bindings || {}) : {};
-    const primary = primarySnap?.exists ? (primarySnap.data()?.[IMAGE_BINDING_STORE_FIELD] || {}) : {};
-    return { legacy, primary, merged: { ...legacy, ...primary } };
-};
+const IMAGE_BINDING_BACKEND = './api/image-admin';
 const loadImageBindingOverrides = async () => {
     try {
-        const db = await getDb();
-        return (await readImageBindingStores(db)).merged;
+        const r = await fetch(IMAGE_BINDING_BACKEND + '?action=bindings', { cache:'no-store', headers:{'Cache-Control':'no-cache'} });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || 'IMAGE_BINDINGS_LOAD_FAILED');
+        return data?.bindings || {};
     } catch (err) {
-        console.warn('[V56.31 image bindings]', err);
+        console.warn('[V56.32 image bindings]', err);
         return {};
     }
 };
-
-const writeImageBindingLeaf = async ({ exactSku, value, updatedBy }) => {
-    const db = await getDb();
-    const ref = db.collection('system_controls').doc(IMAGE_BINDING_STORE_DOC);
-    const leaf = new firebase.firestore.FieldPath(IMAGE_BINDING_STORE_FIELD, exactSku);
-    const payload = {
-        [IMAGE_BINDING_STORE_FIELD]: { [exactSku]: value },
-        imageBindingsUpdatedBy: updatedBy,
-        imageBindingsUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        imageBindingsVersion: '56.31'
-    };
-    await ref.set(payload, { mergeFields: [leaf, 'imageBindingsUpdatedBy', 'imageBindingsUpdatedAt', 'imageBindingsVersion'] });
-    const verify = await ref.get();
-    const primary = verify.exists ? (verify.data()?.[IMAGE_BINDING_STORE_FIELD] || {}) : {};
-    return primary;
+const imageAdminProof = () => { try { return JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2') || 'null') || {}; } catch { return {}; } };
+const imageAdminToken = () => { try { return String(localStorage.getItem('inventory_admin_token_v2') || ''); } catch { return ''; } };
+const imageBindingMutation = async payload => {
+    const r = await fetch(IMAGE_BINDING_BACKEND, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...payload,updatedBy:'مهند',adminToken:imageAdminToken(),adminProof:imageAdminProof()}) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data?.error || 'IMAGE_BINDING_SAVE_FAILED');
+    return data;
 };
-
-const saveImageBindingOverride = async ({ sku, imageKey, updatedBy = 'مهند' }) => {
-    const exactSku = normalizeImageSku(sku);
-    const exactImage = normalizeImageSku(imageKey);
-    if (!exactSku || !exactImage) throw new Error('INVALID_IMAGE_BINDING');
-    const primary = await writeImageBindingLeaf({ exactSku, value: exactImage, updatedBy });
-    if (normalizeImageSku(primary?.[exactSku] || '') !== exactImage) throw new Error('VERIFY_FAILED');
+const saveImageBindingOverride = async ({ sku, imageKey }) => {
+    const exactSku=normalizeImageSku(sku),exactImage=normalizeImageSku(imageKey);
+    if(!exactSku||!exactImage)throw new Error('INVALID_IMAGE_BINDING');
+    const data=await imageBindingMutation({action:'bind',sku:exactSku,imageKey:exactImage});
+    if(normalizeImageSku(data?.saved||data?.bindings?.[exactSku]||'')!==exactImage)throw new Error('VERIFY_FAILED');
+    return data;
 };
-
-const removeImageBindingOverride = async ({ sku, updatedBy = 'مهند' }) => {
-    const exactSku = normalizeImageSku(sku);
-    if (!exactSku) return;
-    // Null is an intentional tombstone: it prevents a stale legacy binding from resurfacing.
-    const primary = await writeImageBindingLeaf({ exactSku, value: null, updatedBy });
-    if (!Object.prototype.hasOwnProperty.call(primary, exactSku) || primary[exactSku] !== null) throw new Error('VERIFY_FAILED');
+const removeImageBindingOverride = async ({ sku }) => {
+    const exactSku=normalizeImageSku(sku);if(!exactSku)return;
+    return imageBindingMutation({action:'unbind',sku:exactSku});
 };
 
 const parseCategories = (text) => {
@@ -4157,30 +4135,20 @@ const App = () => {
         return () => { alive = false; };
     }, []);
 
-    // V56.31: مزامنة المصدر الجديد مع قراءة توافقية للمصدر القديم.
+    // V56.32: روابط الصور تأتي من المخزن الخادمي الموحّد وتُحدّث دورياً.
     useEffect(() => {
-        let unsubs = [];
         let alive = true;
-        let legacy = {}, primary = {};
-        const emit = () => {
+        const refreshBindings = async () => {
+            const next = await loadImageBindingOverrides();
             if (!alive) return;
-            const next = { ...legacy, ...primary };
             setImageBindingOverrides(next);
             setImagesList(buildResolvedImagesMap(rawImagesList, databases, next));
         };
-        getDb().then(db => {
-            if (!alive) return;
-            const legacyUnsub = db.collection('system_controls').doc(IMAGE_BINDING_DOC).onSnapshot(snap => {
-                legacy = snap.exists ? (snap.data()?.bindings || {}) : {};
-                emit();
-            }, err => console.warn('[V56.31 legacy image bindings sync]', err));
-            const primaryUnsub = db.collection('system_controls').doc(IMAGE_BINDING_STORE_DOC).onSnapshot(snap => {
-                primary = snap.exists ? (snap.data()?.[IMAGE_BINDING_STORE_FIELD] || {}) : {};
-                emit();
-            }, err => console.warn('[V56.31 image bindings sync]', err));
-            unsubs = [legacyUnsub, primaryUnsub];
-        }).catch(err => console.warn('[V56.31 image bindings sync]', err));
-        return () => { alive = false; unsubs.forEach(unsub => { try { unsub?.(); } catch {} }); };
+        refreshBindings().catch(err => console.warn('[V56.32 image bindings poll]', err));
+        const timer = setInterval(() => {
+            if (document.visibilityState === 'visible') refreshBindings().catch(err => console.warn('[V56.32 image bindings poll]', err));
+        }, 15000);
+        return () => { alive = false; clearInterval(timer); };
     }, [rawImagesList, databases]);
 
     // مزامنة التصنيفات اللحظية: أي تعديل من مهند يظهر لكل الأجهزة المفتوحة فوراً.

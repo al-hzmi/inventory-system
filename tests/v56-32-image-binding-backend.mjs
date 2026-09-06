@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const album=fs.readFileSync('image-distribution.html','utf8');
+const emp=fs.readFileSync('runtime/index-v37-source.txt','utf8');
+const cust=fs.readFileSync('runtime/customer-v37-source.txt','utf8');
+const api=fs.readFileSync('api/image-admin.js','utf8');
+for(const m of ["IMAGE_BINDING_BACKEND='api/image-admin'","./api/image-admin?action=bindings","action:'bind'",'adminProof','adminToken','VERIFY_FAILED'])assert.ok(album.includes(m),`album ${m}`);
+assert.ok(!album.includes("db.collection('system_controls').doc(IMAGE_BINDING_STORE_DOC)"),'album must not persist image bindings through Firestore');
+for(const m of ["const IMAGE_BINDING_BACKEND = './api/image-admin';","action:'bind'","action:'unbind'",'loadImageBindingOverrides','15000'])assert.ok(emp.includes(m),`employee ${m}`);
+assert.ok(!emp.includes("const IMAGE_BINDING_STORE_DOC = 'permissions_v44';"),'employee binding store must be backend canonical');
+assert.ok(cust.includes("./api/image-admin?action=bindings"),'customer must read backend bindings');
+for(const m of ["STATE_REF = 'image-bindings-state'",'bindingAdminOK','bindImage','unbindImage',"action === 'bindings'"])assert.ok(api.includes(m),`api ${m}`);
+console.log('V56.32 server-backed image binding regression: PASS');

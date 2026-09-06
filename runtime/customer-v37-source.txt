@@ -453,7 +453,7 @@ function buildCustomerImageCollisionIndex(items){
   return out;
 }
 async function loadCustomerImageBindings(){
-  try{const snap=await db.collection('system_controls').doc('product_image_bindings').get();return snap.exists?(snap.data()?.bindings||{}):{}}catch(e){console.warn('[V56.25 customer image bindings]',e);return{}}
+  try{const r=await fetch('./api/image-admin?action=bindings',{cache:'no-store',headers:{'Cache-Control':'no-cache'}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data?.error||'IMAGE_BINDINGS_LOAD_FAILED');return data?.bindings||{}}catch(e){console.warn('[V56.32 customer image bindings]',e);return{}}
 }
 function resolveCustomerImage(images,item,collisions,bindings={}){
   if(!images||!item)return'';
