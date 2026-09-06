@@ -1,0 +1,71 @@
+name: V56.34 Production Smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PROD: https://inventory-system-coral-nu.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for production to serve V56.34 tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(cat runtime/v56-34-production-probe.txt)"
+          ok=0
+          for attempt in $(seq 1 42); do
+            body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-34-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
+            if [[ "$body" == "$expected" ]]; then
+              echo "V56.34 production probe matched on attempt $attempt"
+              ok=1
+              break
+            fi
+            echo "Attempt $attempt: production has not reached V56.34 yet"
+            sleep 10
+          done
+          if [[ "$ok" != "1" ]]; then
+            echo "::error::Production alias did not serve the V56.34 probe within the verification window."
+            exit 1
+          fi
+      - name: Verify exact executive assets and New Arrivals API
+        shell: bash
+        run: |
+          set -euo pipefail
+          nonce="${GITHUB_SHA}-$(date +%s)"
+          for file in v46-admin-nav.js v54-admin-enhancements.js v54-1-desktop-canvas-fix.css security-center.html; do
+            curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
+            cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
+          done
+
+          grep -Fq "الموظفون والعملاء" /tmp/v46-admin-nav.js
+          ! grep -Fq 'id="v51-security"' /tmp/v46-admin-nav.js
+          ! grep -Fq 'id="v52-mobile-security"' /tmp/v46-admin-nav.js
+          grep -Fq 'data-v56-unified-people="true"' /tmp/v46-admin-nav.js
+          grep -Fq 'admin-dashboard.html?section=security' /tmp/v46-admin-nav.js
+
+          grep -Fq "VERSION='56.34'" /tmp/v54-admin-enhancements.js
+          grep -Fq 'مركز القيادة والتحكم الأمني' /tmp/v54-admin-enhancements.js
+          grep -Fq 'security-center.html?embed=executive&v=56.34' /tmp/v54-admin-enhancements.js
+          grep -Fq 'customerLinks.forEach(a=>a.remove())' /tmp/v54-admin-enhancements.js
+
+          grep -Fq 'repeat(4,minmax(0,1fr))' /tmp/v54-1-desktop-canvas-fix.css
+          grep -Fq 'body.v51-admin-dashboard:not(.v56-security-embedded)' /tmp/v54-1-desktop-canvas-fix.css
+          grep -Fq '.v56-security-frame' /tmp/v54-1-desktop-canvas-fix.css
+
+          curl -fsSL --retry 3 --retry-delay 2 "$PROD/admin-dashboard.html?section=security&verify=$nonce" -o /tmp/security-route.html
+          test -s /tmp/security-route.html
+          grep -Fq 'DashboardRoot' /tmp/security-center.html
+
+          status="$(curl -fsSL --retry 3 --retry-delay 2 "$PROD/api/new-arrivals-admin?action=status&verify=$nonce")"
+          echo "$status"
+          echo "$status" | grep -Fq '"configured":true'
+          echo "$status" | grep -Fq '"version":"56.34"'
+          echo "Production serves exact V56.34 executive assets and configured New Arrivals API."
