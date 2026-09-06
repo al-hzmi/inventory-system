@@ -1,0 +1,100 @@
+name: V56.12 Production Smoke
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v56-12-production-smoke-main
+  cancel-in-progress: true
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip until production probe exists
+        id: probe
+        shell: bash
+        run: |
+          if [[ -f runtime/v56-12-production-probe.txt ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wait for production to serve current probe
+        if: steps.probe.outputs.enabled == 'true'
+        shell: bash
+        env:
+          PROD: https://inventory-system-coral-nu.vercel.app
+        run: |
+          set -euo pipefail
+          expected="$(cat runtime/v56-12-production-probe.txt)"
+          ok=0
+          for attempt in $(seq 1 36); do
+            body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-12-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
+            if [[ "$body" == "$expected" ]]; then
+              echo "Production probe matched on attempt $attempt"
+              ok=1
+              break
+            fi
+            echo "Attempt $attempt: production has not reached this tree yet"
+            sleep 10
+          done
+          if [[ "$ok" != "1" ]]; then
+            echo "::error::Production alias did not serve the current main probe within the verification window."
+            exit 1
+          fi
+
+      - name: Verify V56.12 production assets and contracts
+        if: steps.probe.outputs.enabled == 'true'
+        shell: bash
+        env:
+          PROD: https://inventory-system-coral-nu.vercel.app
+        run: |
+          set -euo pipefail
+          nonce="${GITHUB_SHA}-$(date +%s)"
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/?verify=$nonce" -o /tmp/index.html
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/runtime/index-v37-source.txt?verify=$nonce" -o /tmp/runtime.txt
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake.html?v=56.12&verify=$nonce" -o /tmp/stocktake.html
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/stocktake-accountant.html?v=56.12&verify=$nonce" -o /tmp/accountant.html
+          curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/admin-stocktake.html?verify=$nonce" -o /tmp/admin.html
+
+          cmp -s index.html /tmp/index.html || {
+            echo "::error::Production index.html differs from current main."; exit 1;
+          }
+          cmp -s runtime/index-v37-source.txt /tmp/runtime.txt || {
+            echo "::error::Production runtime/index-v37-source.txt differs from current main."; exit 1;
+          }
+          cmp -s stocktake.html /tmp/stocktake.html || {
+            echo "::error::Production stocktake.html differs from current main."; exit 1;
+          }
+          cmp -s stocktake-accountant.html /tmp/accountant.html || {
+            echo "::error::Production stocktake-accountant.html differs from current main."; exit 1;
+          }
+          cmp -s admin-stocktake.html /tmp/admin.html || {
+            echo "::error::Production admin-stocktake.html differs from current main."; exit 1;
+          }
+
+          grep -Fq "stocktake.html?v=56.12" /tmp/runtime.txt
+          grep -Fq "stocktake-accountant.html?v=56.12" /tmp/runtime.txt
+          grep -Fq "stocktake_accountant_access" /tmp/accountant.html
+          grep -Fq "preview" /tmp/accountant.html
+          grep -Fq "stocktake_accountant_access" /tmp/admin.html
+
+          if grep -Eq "saveActual|updateActual|setActual|اعتماد الكمية|حفظ الكمية" /tmp/accountant.html; then
+            echo "::error::Accountant production page appears to expose stocktake write controls."
+            exit 1
+          fi
+
+          echo "Production alias serves the exact current main files and V56.12 accountant assets."
+
+      - name: Report disabled probe
+        if: steps.probe.outputs.enabled != 'true'
+        run: echo "Production smoke gate installed; it activates when runtime/v56-12-production-probe.txt is committed."
