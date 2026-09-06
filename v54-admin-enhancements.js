@@ -96,7 +96,7 @@ function keepActiveModuleVisible(){
  if(!nodeChanged&&!moduleChanged&&!clipped)return;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
   if(!document.contains(active))return;
-  active.scrollIntoView({block:'nearest',inline:'center',behavior:moduleChanged?'smooth':'auto'});
+  active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
  }));
 }
 function retireLegacySecurityRoute(){if(path!=='admin-dashboard.html')return;const q=new URLSearchParams(location.search);if(q.get('section')==='security')location.replace('./admin-home.html#security-command-center')}
