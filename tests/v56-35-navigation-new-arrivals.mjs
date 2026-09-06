@@ -34,6 +34,10 @@ assert.ok(quick.includes("e.target.closest('.tap-card')"), 'quick delete must op
 assert.ok(quick.includes('حذف من جديدنا'), 'quick delete must expose an explicit delete button');
 assert.ok(quick.includes("action:'remove'"), 'quick delete must call remove API');
 assert.ok(quick.includes("const candidates=text.match"), 'quick delete must extract the visible canonical SKU');
+assert.ok(!quick.includes('location.reload'), 'quick delete must never reload the page');
+assert.ok(quick.includes('captureScroll(card)'), 'quick delete must preserve the current scroll position');
+assert.ok(quick.includes('card.remove()'), 'quick delete must remove the deleted card in place');
+assert.ok(quick.includes("batco:new-arrivals-updated"), 'quick delete must emit an in-page update event');
 
 assert.match(api, /RELEASE_VERSION = '56\.35'/, 'API must be V56.35');
 assert.ok(api.includes('inventory.includes(requested)'), 'exact SKU must win before shorthand matching');
