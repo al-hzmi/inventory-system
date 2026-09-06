@@ -1,0 +1,54 @@
+name: V56.35 Runtime Patch
+
+on:
+  push:
+    branches: [v56-35-navigation-new-arrivals]
+    paths: [.github/workflows/v56-35-runtime-patch.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v56-35-navigation-new-arrivals
+          fetch-depth: 0
+      - name: Patch New Arrivals identity and quick delete loader
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='runtime/index-v37-source.txt';
+          let s=fs.readFileSync(file,'utf8');
+          const reps=[
+            ["include: [...new Set((Array.isArray(raw?.include) ? raw.include : []).map(normalizeCleanId).filter(Boolean))],\n    exclude: [...new Set((Array.isArray(raw?.exclude) ? raw.exclude : []).map(normalizeCleanId).filter(Boolean))]","include: [...new Set((Array.isArray(raw?.include) ? raw.include : []).map(normalizeImageSku).filter(Boolean))],\n    exclude: [...new Set((Array.isArray(raw?.exclude) ? raw.exclude : []).map(normalizeImageSku).filter(Boolean))]"],
+            ["const cleanSku = normalizeCleanId(sku);\n    if (!cleanSku || !['add','remove','auto'].includes(action))","const cleanSku = normalizeImageSku(sku);\n    if (!cleanSku || !['add','remove','auto'].includes(action))"],
+            ["const sku = normalizeCleanId(item?.cleanId || item?.id);\n        if (!sku || busySku) return;","const sku = normalizeImageSku(item?.id || item?.cleanId);\n        if (!sku || busySku) return;"],
+            ["const sku = normalizeCleanId(item.cleanId || item.id);\n                        const included = newArrivalIds.has(sku);","const sku = normalizeImageSku(item.id || item.cleanId);\n                        const included = newArrivalIds.has(sku);"],
+            ["const next = new Set((newArrivalsMeta.items || []).map(row => normalizeCleanId(row.sku)).filter(Boolean));\n        (newArrivalOverrides.include || []).forEach(id => { const clean = normalizeCleanId(id); if (clean) next.add(clean); });\n        (newArrivalOverrides.exclude || []).forEach(id => { const clean = normalizeCleanId(id); if (clean) next.delete(clean); });","const next = new Set((newArrivalsMeta.items || []).map(row => normalizeImageSku(row.sku)).filter(Boolean));\n        (newArrivalOverrides.include || []).forEach(id => { const exact = normalizeImageSku(id); if (exact) next.add(exact); });\n        (newArrivalOverrides.exclude || []).forEach(id => { const exact = normalizeImageSku(id); if (exact) next.delete(exact); });"],
+            ["const sku = normalizeCleanId(item?.cleanId || item?.id || item);\n        if (!sku) throw new Error('INVALID_SKU');","const sku = normalizeImageSku(item?.id || item?.cleanId || item);\n        if (!sku) throw new Error('INVALID_SKU');"],
+            ["if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(i.cleanId) && hasImageForItem(imagesList, i));","if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(normalizeImageSku(i.id)) && hasImageForItem(imagesList, i));"]
+          ];
+          for(const [from,to] of reps){
+            const n=s.split(from).length-1;
+            if(n!==1)throw new Error(`Expected exactly one runtime match, found ${n}: ${from.slice(0,90)}`);
+            s=s.replace(from,to);
+          }
+          const loader='<script src="./v56-35-new-arrivals-quick-delete.js?v=56.35"></script>';
+          if(!s.includes(loader)){
+            const at=s.lastIndexOf('</body>');
+            if(at<0)throw new Error('runtime </body> not found');
+            s=s.slice(0,at)+loader+'\n'+s.slice(at);
+          }
+          fs.writeFileSync(file,s);
+          NODE
+          node --check v56-35-new-arrivals-quick-delete.js
+          git diff --check
+          git diff --exit-code --quiet && { echo 'No runtime patch produced'; exit 1; } || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add runtime/index-v37-source.txt
+          git commit -m "fix(v56.35): preserve canonical New Arrivals SKU identity"
+          git push origin HEAD:v56-35-navigation-new-arrivals
