@@ -911,8 +911,8 @@ const removeImageBindingOverride = async ({ sku }) => {
 // V56.33 — تحكم إداري دائم في قسم «جديدنا» بدون تعديل ملف التوليد التلقائي.
 const NEW_ARRIVALS_ADMIN_BACKEND = './api/new-arrivals-admin';
 const sanitizeNewArrivalOverrides = raw => ({
-    include: [...new Set((Array.isArray(raw?.include) ? raw.include : []).map(normalizeCleanId).filter(Boolean))],
-    exclude: [...new Set((Array.isArray(raw?.exclude) ? raw.exclude : []).map(normalizeCleanId).filter(Boolean))]
+    include: [...new Set((Array.isArray(raw?.include) ? raw.include : []).map(normalizeImageSku).filter(Boolean))],
+    exclude: [...new Set((Array.isArray(raw?.exclude) ? raw.exclude : []).map(normalizeImageSku).filter(Boolean))]
 });
 const loadNewArrivalOverrides = async () => {
     try {
@@ -926,7 +926,7 @@ const loadNewArrivalOverrides = async () => {
     }
 };
 const newArrivalMutation = async ({ action, sku }) => {
-    const cleanSku = normalizeCleanId(sku);
+    const cleanSku = normalizeImageSku(sku);
     if (!cleanSku || !['add','remove','auto'].includes(action)) throw new Error('INVALID_NEW_ARRIVAL_ACTION');
     const r = await fetch(NEW_ARRIVALS_ADMIN_BACKEND, {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -1886,7 +1886,7 @@ const NewArrivalsAdminPanel = memo(({ catalogItems, newArrivalIds, onChange }) =
     }, [query, catalogItems]);
 
     const change = async item => {
-        const sku = normalizeCleanId(item?.cleanId || item?.id);
+        const sku = normalizeImageSku(item?.id || item?.cleanId);
         if (!sku || busySku) return;
         const included = newArrivalIds.has(sku);
         if (included && !window.confirm(`إزالة الصنف ${item.id || sku} من قسم جديدنا؟`)) return;
@@ -1918,7 +1918,7 @@ const NewArrivalsAdminPanel = memo(({ catalogItems, newArrivalIds, onChange }) =
             {query.trim() && (
                 <div className="mt-10 flex flex-col gap-6 max-h-[330px] overflow-y-auto overscroll-contain">
                     {results.length ? results.map(item => {
-                        const sku = normalizeCleanId(item.cleanId || item.id);
+                        const sku = normalizeImageSku(item.id || item.cleanId);
                         const included = newArrivalIds.has(sku);
                         return <div key={sku} className="bg-white border border-border rounded-12 p-10 flex items-center gap-10">
                             <div className="min-w-0 flex-1">
@@ -4365,15 +4365,15 @@ const App = () => {
 
     const allCategorizedIds = useMemo(() => new Set(Object.values(categories).flat()), [categories]);
     const newArrivalIds = useMemo(() => {
-        const next = new Set((newArrivalsMeta.items || []).map(row => normalizeCleanId(row.sku)).filter(Boolean));
-        (newArrivalOverrides.include || []).forEach(id => { const clean = normalizeCleanId(id); if (clean) next.add(clean); });
-        (newArrivalOverrides.exclude || []).forEach(id => { const clean = normalizeCleanId(id); if (clean) next.delete(clean); });
+        const next = new Set((newArrivalsMeta.items || []).map(row => normalizeImageSku(row.sku)).filter(Boolean));
+        (newArrivalOverrides.include || []).forEach(id => { const exact = normalizeImageSku(id); if (exact) next.add(exact); });
+        (newArrivalOverrides.exclude || []).forEach(id => { const exact = normalizeImageSku(id); if (exact) next.delete(exact); });
         return next;
     }, [newArrivalsMeta, newArrivalOverrides]);
     const categoryNames = useMemo(() => Object.keys(categories), [categories]);
     const currentCategoryById = useMemo(() => buildCategoryLookup(categories), [categories]);
     const setNewArrivalManual = useCallback(async (item, shouldInclude) => {
-        const sku = normalizeCleanId(item?.cleanId || item?.id || item);
+        const sku = normalizeImageSku(item?.id || item?.cleanId || item);
         if (!sku) throw new Error('INVALID_SKU');
         const next = await newArrivalMutation({ action: shouldInclude ? 'add' : 'remove', sku });
         setNewArrivalOverrides(next);
@@ -4430,7 +4430,7 @@ const App = () => {
         let pool = databases[warehouse] || [];
         if (VISIBILITY_RULES.hideOutOfStockInGallery) pool = pool.filter(i => i.qty > 0);
 
-        if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(i.cleanId) && hasImageForItem(imagesList, i));
+        if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(normalizeImageSku(i.id)) && hasImageForItem(imagesList, i));
         if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) return pool.filter(i => !hasImageForItem(imagesList, i));
         if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => hasImageForItem(imagesList, i) && !allCategorizedIds.has(i.cleanId));
 
@@ -4828,5 +4828,6 @@ const __employeeMode = __entryParams.get('employee') === '1' || (__entryParams.g
 ReactDOM.createRoot(document.getElementById('root')).render(__employeeMode ? <EmployeeBootstrap /> : <EntryChooser />);
 setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden'),320);
 </script>
+<script src="./v56-35-new-arrivals-quick-delete.js?v=56.35"></script>
 </body>
     </html> 
