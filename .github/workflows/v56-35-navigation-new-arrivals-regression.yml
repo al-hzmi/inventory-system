@@ -1,0 +1,24 @@
+name: V56.35 Navigation + New Arrivals Regression
+
+on:
+  push:
+    branches: [main, v56-35-navigation-new-arrivals]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify V56.35 contracts
+        run: |
+          node --check v46-admin-nav.js
+          node --check v54-admin-enhancements.js
+          node --check api/new-arrivals-admin.js
+          node --check v56-35-new-arrivals-quick-delete.js
+          node tests/v56-35-navigation-new-arrivals.mjs
+          git diff --check
