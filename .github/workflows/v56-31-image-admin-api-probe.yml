@@ -1,0 +1,29 @@
+name: V56.31 Image Admin API Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-31-image-admin-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe production image-admin API (GET only)
+        shell: bash
+        run: |
+          set -u
+          BASE='https://inventory-system-coral-nu.vercel.app/api/image-admin'
+          for ACTION in status bindings; do
+            echo "--- ${ACTION} ---"
+            code=$(curl -sS -L --retry 2 --retry-delay 1 -o "/tmp/${ACTION}.json" -w '%{http_code}' "${BASE}?action=${ACTION}")
+            echo "HTTP ${code}"
+            cat "/tmp/${ACTION}.json" || true
+            echo
+          done
