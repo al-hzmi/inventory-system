@@ -876,42 +876,58 @@ const buildResolvedImagesMap = (imagesMap, databases, overrides = {}) => {
 const imageForItem = (resolvedImages, item) => item?.uid ? (resolvedImages?.get(item.uid) || '') : '';
 const hasImageForItem = (resolvedImages, item) => Boolean(imageForItem(resolvedImages, item));
 
-const IMAGE_BINDING_DOC = 'product_image_bindings';
+const IMAGE_BINDING_DOC = 'product_image_bindings'; // legacy read-only store
+const IMAGE_BINDING_STORE_DOC = 'permissions_v44';
+const IMAGE_BINDING_STORE_FIELD = 'productImageBindings';
+const readImageBindingStores = async db => {
+    const [legacySnap, primarySnap] = await Promise.all([
+        db.collection('system_controls').doc(IMAGE_BINDING_DOC).get().catch(() => null),
+        db.collection('system_controls').doc(IMAGE_BINDING_STORE_DOC).get().catch(() => null)
+    ]);
+    const legacy = legacySnap?.exists ? (legacySnap.data()?.bindings || {}) : {};
+    const primary = primarySnap?.exists ? (primarySnap.data()?.[IMAGE_BINDING_STORE_FIELD] || {}) : {};
+    return { legacy, primary, merged: { ...legacy, ...primary } };
+};
 const loadImageBindingOverrides = async () => {
     try {
         const db = await getDb();
-        const snap = await db.collection('system_controls').doc(IMAGE_BINDING_DOC).get();
-        return snap.exists ? (snap.data()?.bindings || {}) : {};
+        return (await readImageBindingStores(db)).merged;
     } catch (err) {
-        console.warn('[V56.25 image bindings]', err);
+        console.warn('[V56.31 image bindings]', err);
         return {};
     }
+};
+
+const writeImageBindingLeaf = async ({ exactSku, value, updatedBy }) => {
+    const db = await getDb();
+    const ref = db.collection('system_controls').doc(IMAGE_BINDING_STORE_DOC);
+    const leaf = new firebase.firestore.FieldPath(IMAGE_BINDING_STORE_FIELD, exactSku);
+    const payload = {
+        [IMAGE_BINDING_STORE_FIELD]: { [exactSku]: value },
+        imageBindingsUpdatedBy: updatedBy,
+        imageBindingsUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        imageBindingsVersion: '56.31'
+    };
+    await ref.set(payload, { mergeFields: [leaf, 'imageBindingsUpdatedBy', 'imageBindingsUpdatedAt', 'imageBindingsVersion'] });
+    const verify = await ref.get();
+    const primary = verify.exists ? (verify.data()?.[IMAGE_BINDING_STORE_FIELD] || {}) : {};
+    return primary;
 };
 
 const saveImageBindingOverride = async ({ sku, imageKey, updatedBy = 'مهند' }) => {
     const exactSku = normalizeImageSku(sku);
     const exactImage = normalizeImageSku(imageKey);
     if (!exactSku || !exactImage) throw new Error('INVALID_IMAGE_BINDING');
-    const db = await getDb();
-    const ref = db.collection('system_controls').doc(IMAGE_BINDING_DOC);
-    await db.runTransaction(async tx => {
-        const snap = await tx.get(ref);
-        const current = snap.exists ? (snap.data()?.bindings || {}) : {};
-        tx.set(ref, { bindings: { ...current, [exactSku]: exactImage }, updatedBy, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-    });
+    const primary = await writeImageBindingLeaf({ exactSku, value: exactImage, updatedBy });
+    if (normalizeImageSku(primary?.[exactSku] || '') !== exactImage) throw new Error('VERIFY_FAILED');
 };
 
 const removeImageBindingOverride = async ({ sku, updatedBy = 'مهند' }) => {
     const exactSku = normalizeImageSku(sku);
     if (!exactSku) return;
-    const db = await getDb();
-    const ref = db.collection('system_controls').doc(IMAGE_BINDING_DOC);
-    await db.runTransaction(async tx => {
-        const snap = await tx.get(ref);
-        const current = snap.exists ? { ...(snap.data()?.bindings || {}) } : {};
-        delete current[exactSku];
-        tx.set(ref, { bindings: current, updatedBy, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-    });
+    // Null is an intentional tombstone: it prevents a stale legacy binding from resurfacing.
+    const primary = await writeImageBindingLeaf({ exactSku, value: null, updatedBy });
+    if (!Object.prototype.hasOwnProperty.call(primary, exactSku) || primary[exactSku] !== null) throw new Error('VERIFY_FAILED');
 };
 
 const parseCategories = (text) => {
@@ -4141,19 +4157,30 @@ const App = () => {
         return () => { alive = false; };
     }, []);
 
-    // V56.25: مزامنة روابط الصور اليدوية فورياً على كل الأجهزة المفتوحة.
+    // V56.31: مزامنة المصدر الجديد مع قراءة توافقية للمصدر القديم.
     useEffect(() => {
-        let unsub = null;
+        let unsubs = [];
         let alive = true;
+        let legacy = {}, primary = {};
+        const emit = () => {
+            if (!alive) return;
+            const next = { ...legacy, ...primary };
+            setImageBindingOverrides(next);
+            setImagesList(buildResolvedImagesMap(rawImagesList, databases, next));
+        };
         getDb().then(db => {
             if (!alive) return;
-            unsub = db.collection('system_controls').doc(IMAGE_BINDING_DOC).onSnapshot(snap => {
-                const next = snap.exists ? (snap.data()?.bindings || {}) : {};
-                setImageBindingOverrides(next);
-                setImagesList(buildResolvedImagesMap(rawImagesList, databases, next));
-            }, err => console.warn('[V56.25 image bindings sync]', err));
-        }).catch(err => console.warn('[V56.25 image bindings sync]', err));
-        return () => { alive = false; if (unsub) unsub(); };
+            const legacyUnsub = db.collection('system_controls').doc(IMAGE_BINDING_DOC).onSnapshot(snap => {
+                legacy = snap.exists ? (snap.data()?.bindings || {}) : {};
+                emit();
+            }, err => console.warn('[V56.31 legacy image bindings sync]', err));
+            const primaryUnsub = db.collection('system_controls').doc(IMAGE_BINDING_STORE_DOC).onSnapshot(snap => {
+                primary = snap.exists ? (snap.data()?.[IMAGE_BINDING_STORE_FIELD] || {}) : {};
+                emit();
+            }, err => console.warn('[V56.31 image bindings sync]', err));
+            unsubs = [legacyUnsub, primaryUnsub];
+        }).catch(err => console.warn('[V56.31 image bindings sync]', err));
+        return () => { alive = false; unsubs.forEach(unsub => { try { unsub?.(); } catch {} }); };
     }, [rawImagesList, databases]);
 
     // مزامنة التصنيفات اللحظية: أي تعديل من مهند يظهر لكل الأجهزة المفتوحة فوراً.
