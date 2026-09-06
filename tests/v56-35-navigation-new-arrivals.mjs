@@ -20,7 +20,10 @@ assert.ok(enhancements.includes('a[href*="security-center.html"]'), 'legacy dire
 assert.ok(enhancements.includes('a[href*="section=security"]'), 'legacy security dashboard links must be removed');
 assert.ok(enhancements.includes("q.get('section')==='security'"), 'legacy security route guard must exist');
 assert.ok(enhancements.includes("active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'})"), 'active employee module must remain centered/visible');
-assert.ok(!enhancements.includes('if(a.left<s.left+8||a.right>s.right-8)active.scrollIntoView'), 'active tab must not depend on an unreliable edge test');
+assert.ok(!enhancements.includes('if(a.left<s.left+8||a.right>s.right-8)active.scrollIntoView'), 'active tab must not depend on the old unreliable edge test');
+assert.ok(enhancements.includes('lastActiveNode'), 'active-tab guard must track the rendered tab node, not only the module id');
+assert.ok(enhancements.includes('nodeChanged=active!==lastActiveNode'), 'same module must be recentered when React recreates the tab bar');
+assert.ok(enhancements.includes('clipped=a.left<s.left+6||a.right>s.right-6'), 'active tab must recover if the horizontal strip resets to its beginning');
 assert.ok(enhancements.includes("attributeFilter:['data-active']"), 'active module changes must be observed');
 
 assert.ok(runtime.includes('.map(normalizeImageSku).filter(Boolean)'), 'New Arrivals overrides must preserve canonical SKU');
@@ -38,6 +41,7 @@ assert.ok(!quick.includes('location.reload'), 'quick delete must never reload th
 assert.ok(quick.includes('captureScroll(card)'), 'quick delete must preserve the current scroll position');
 assert.ok(quick.includes('card.remove()'), 'quick delete must remove the deleted card in place');
 assert.ok(quick.includes("batco:new-arrivals-updated"), 'quick delete must emit an in-page update event');
+assert.ok(quick.includes('removedSkus.add(sku)'), 'deleted items must remain suppressed during later in-page rerenders');
 
 assert.match(api, /RELEASE_VERSION = '56\.35'/, 'API must be V56.35');
 assert.ok(api.includes('inventory.includes(requested)'), 'exact SKU must win before shorthand matching');
