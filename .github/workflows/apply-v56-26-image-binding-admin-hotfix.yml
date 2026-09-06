@@ -1,4 +1,4 @@
-name: Apply V56.26 Image Binding Admin Hotfix
+name: Apply V56.27 Image Binding Wiring Fix
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Patch image binding admin renderer
+      - name: Wire image binding manager to App state
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -28,52 +28,102 @@ jobs:
           runtime = runtime_path.read_text(encoding='utf-8')
           index = index_path.read_text(encoding='utf-8')
 
-          bad = '<img src={`${BASE_URL}images/${image}`} alt="" className="w-full h-full object-contain"/>'
-          good = '<ProductImage fileName={image} alt={item.name || item.id} className="w-full h-full object-contain"/>'
+          old_sig = "const AdminDashboardModal = memo(({ onClose, catalogItems, imagesList, categories, currentCategoryById, categoryMeta, initialTab = 'access_requests' }) => {"
+          new_sig = "const AdminDashboardModal = memo(({ onClose, catalogItems, imageCatalogItems, imagesList, rawImagesList, imageBindingOverrides, onImageBindingsChanged, categories, currentCategoryById, categoryMeta, initialTab = 'access_requests' }) => {"
+          if old_sig in runtime:
+              runtime = runtime.replace(old_sig, new_sig, 1)
+          elif new_sig not in runtime:
+              raise SystemExit('V56.27: AdminDashboardModal signature anchor not found')
 
-          if bad in runtime:
-              runtime = runtime.replace(bad, good, 1)
-          elif good not in runtime:
-              raise SystemExit('V56.26: expected image-binding renderer anchor not found')
+          old_manager = '<ProductImageBindingManager catalogItems={imageCatalogItems} imagesList={imagesList} rawImagesList={rawImagesList} imageBindingOverrides={imageBindingOverrides} onBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }} />'
+          new_manager = '<ProductImageBindingManager catalogItems={imageCatalogItems} imagesList={imagesList} rawImagesList={rawImagesList} imageBindingOverrides={imageBindingOverrides} onBindingsChanged={onImageBindingsChanged} />'
+          if old_manager in runtime:
+              runtime = runtime.replace(old_manager, new_manager, 1)
+          elif new_manager not in runtime:
+              raise SystemExit('V56.27: ProductImageBindingManager wiring anchor not found')
 
-          # Cache-bust only the employee runtime wrapper so iOS cannot keep the crashing V56.25 bundle.
-          if './runtime/index-v37-source.txt?v=56.25' in index:
-              index = index.replace('./runtime/index-v37-source.txt?v=56.25', './runtime/index-v37-source.txt?v=56.26', 1)
-          elif './runtime/index-v37-source.txt?v=56.26' not in index:
-              raise SystemExit('V56.26: index runtime cache anchor not found')
+          old_call = '''                catalogItems={catalogItems}\n                imagesList={imagesList}\n                categories={categories}'''
+          new_call = '''                catalogItems={catalogItems}\n                imageCatalogItems={imageCatalogItems}\n                imagesList={imagesList}\n                rawImagesList={rawImagesList}\n                imageBindingOverrides={imageBindingOverrides}\n                onImageBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }}\n                categories={categories}'''
+          if old_call in runtime:
+              runtime = runtime.replace(old_call, new_call, 1)
+          elif new_call not in runtime:
+              raise SystemExit('V56.27: AdminDashboardModal App call anchor not found')
+
+          # Force every existing client to fetch the fixed employee runtime while retaining the V56.16 base contract.
+          if './runtime/index-v37-source.txt?v=56.16&rev=56.26' in index:
+              index = index.replace('./runtime/index-v37-source.txt?v=56.16&rev=56.26', './runtime/index-v37-source.txt?v=56.16&rev=56.27', 1)
+          elif './runtime/index-v37-source.txt?v=56.16&rev=56.27' not in index:
+              raise SystemExit('V56.27: index runtime revision anchor not found')
 
           runtime_path.write_text(runtime, encoding='utf-8')
           index_path.write_text(index, encoding='utf-8')
+
+          for test_name in ['tests/v56-4-messaging.mjs', 'tests/v56-12-stocktake-accountant.mjs']:
+              p = Path(test_name)
+              s = p.read_text(encoding='utf-8')
+              s = s.replace('index-v37-source.txt?v=56.16&rev=56.26', 'index-v37-source.txt?v=56.16&rev=56.27')
+              s = s.replace('V56.26 hotfix revision', 'V56.27 hotfix revision')
+              s = s.replace('V56.26 revision', 'V56.27 revision')
+              s = s.replace('V56.26 employee hotfix', 'V56.27 employee hotfix')
+              p.write_text(s, encoding='utf-8')
+
+          regression = r'''import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+
+          const runtime = fs.readFileSync('runtime/index-v37-source.txt','utf8');
+          const index = fs.readFileSync('index.html','utf8');
+          const images = fs.readFileSync('data/images_list.txt','utf8');
+          const jeddah = fs.readFileSync('data/jeddah.tsv','utf8');
+          const riyadh = fs.readFileSync('data/riyadh.tsv','utf8');
+          const inventory = jeddah + '\n' + riyadh;
+
+          assert.match(inventory, /^BA_209\t/m, 'fixture must contain BA_209');
+          assert.match(inventory, /^AR_M209\t/m, 'fixture must contain AR_M209');
+          assert.match(images, /^BA_209\t209\.webp$/m, '209 image must be declared for BA_209 by exact SKU');
+          assert.doesNotMatch(images, /^AR_M209\t209\.webp$/m, '209 image must not be declared for AR_M209');
+
+          assert.ok(runtime.includes("const normalizeImageSku = raw =>"), 'exact SKU image identity missing');
+          assert.ok(runtime.includes("if (owners.size !== 1) return '';"), 'ambiguous numeric fallback guard missing');
+          assert.ok(runtime.includes("const exact = imagesMap.exact?.get(sku);\n    if (exact) return exact;"), 'exact SKU match must win before legacy numeric fallback');
+
+          const modalSig = "const AdminDashboardModal = memo(({ onClose, catalogItems, imageCatalogItems, imagesList, rawImagesList, imageBindingOverrides, onImageBindingsChanged, categories";
+          assert.ok(runtime.includes(modalSig), 'AdminDashboardModal must receive all image-binding state as props');
+          assert.ok(runtime.includes('onBindingsChanged={onImageBindingsChanged}'), 'image manager must call the App-owned binding callback');
+          assert.ok(runtime.includes('imageCatalogItems={imageCatalogItems}'), 'App must pass the full-SKU catalog into image manager');
+          assert.ok(runtime.includes('rawImagesList={rawImagesList}'), 'App must pass raw image keys into image manager');
+          assert.ok(runtime.includes('imageBindingOverrides={imageBindingOverrides}'), 'App must pass current exact-SKU bindings into image manager');
+          assert.ok(runtime.includes('onImageBindingsChanged={(next)=>{ setImageBindingOverrides(next); setImagesList(buildResolvedImagesMap(rawImagesList, databases, next)); }}'), 'App must rebuild resolved images after a manual correction');
+
+          const modalStart = runtime.indexOf('const AdminDashboardModal = memo');
+          const modalEnd = runtime.indexOf('const App = () =>', modalStart);
+          const modal = runtime.slice(modalStart, modalEnd);
+          assert.ok(!modal.includes('setImageBindingOverrides(next)'), 'AdminDashboardModal must not reach into App setters directly');
+          assert.ok(!modal.includes('buildResolvedImagesMap(rawImagesList, databases, next)'), 'AdminDashboardModal must not depend on undefined App databases');
+
+          assert.ok(index.includes('index-v37-source.txt?v=56.16&rev=56.27'), 'V56.27 cache bust missing');
+          console.log('V56.27 exact-SKU image binding + admin wiring regression: PASS');
+          '''
+          # Dedent the embedded test without relying on external packages.
+          lines = regression.splitlines()
+          normalized = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines).strip() + '\n'
+          Path('tests/v56-27-image-binding-wiring.mjs').write_text(normalized, encoding='utf-8')
           PY
 
-      - name: V56.26 regression — image binding tab cannot white-screen
+      - name: Run image binding and dependent regressions
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          runtime = Path('runtime/index-v37-source.txt').read_text(encoding='utf-8')
-          index = Path('index.html').read_text(encoding='utf-8')
+          node tests/v56-27-image-binding-wiring.mjs
+          node tests/v56-4-messaging.mjs
+          node tests/v56-12-stocktake-accountant.mjs
+          git diff --check
 
-          manager_start = runtime.index('const ProductImageBindingManager = memo')
-          manager_end = runtime.index('// ============================================================\n// مدير تصنيف المنتجات', manager_start)
-          manager = runtime[manager_start:manager_end]
-
-          assert 'BASE_URL' not in manager, 'Undefined BASE_URL remains inside ProductImageBindingManager'
-          assert '<ProductImage fileName={image}' in manager, 'Safe ProductImage renderer missing'
-          assert "{ id: 'product_images', label: 'ربط الصور', icon: Icon.Camera }," in runtime
-          assert "const IMAGE_BINDING_DOC = 'product_image_bindings';" in runtime
-          assert 'if (owners.size !== 1) return \'\';' in runtime
-          assert './runtime/index-v37-source.txt?v=56.26' in index
-          print('V56.26 image binding admin regression: PASS')
-          PY
-
-      - name: Commit verified hotfix
+      - name: Commit verified V56.27 fix
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add runtime/index-v37-source.txt index.html
+          git add runtime/index-v37-source.txt index.html tests/v56-4-messaging.mjs tests/v56-12-stocktake-accountant.mjs tests/v56-27-image-binding-wiring.mjs
           if git diff --cached --quiet; then
             echo 'No product diff to commit.'
             exit 0
           fi
-          git commit -m 'V56.26 — fix image binding admin white screen'
+          git commit -m 'V56.27 — fix exact-SKU image binding admin wiring'
           git push origin HEAD:main
