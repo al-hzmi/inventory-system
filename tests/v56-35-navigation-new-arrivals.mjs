@@ -33,8 +33,9 @@ assert.ok(quick.includes("const candidates=text.match"), 'quick delete must extr
 
 assert.match(api, /RELEASE_VERSION = '56\.35'/, 'API must be V56.35');
 assert.ok(api.includes('inventory.includes(requested)'), 'exact SKU must win before shorthand matching');
+assert.ok(api.includes('if(matches.length===1)return matches[0]'), 'a genuinely unique shorthand may resolve directly');
 assert.ok(api.includes("options.action==='remove'"), 'ambiguous shorthand resolution must be restricted to removal');
 assert.ok(api.includes('active.length===1'), 'ambiguous shorthand may resolve only when exactly one active New Arrivals SKU matches');
-assert.ok(!api.includes('return matches[0]'), 'API must never blindly pick the first ambiguous SKU');
+assert.ok(!/matches\.length>1[\s\S]{0,420}return matches\[0\]/.test(api), 'ambiguous SKU branch must never blindly pick its first match');
 
 console.log('V56.35 navigation + New Arrivals regression: PASS');
