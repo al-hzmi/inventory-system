@@ -1,7 +1,8 @@
 (()=>{
 'use strict';
-const VERSION='56.35',API='./api/new-arrivals-admin',WINDOW_MS=300;
+const VERSION='56.35.1',API='./api/new-arrivals-admin',WINDOW_MS=420;
 let lastCard=null,lastAt=0,armedCard=null,busy=false;
+const removedSkus=new Set();
 const canonical=value=>String(value||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'');
 const adminReady=()=>{
  try{
@@ -20,16 +21,41 @@ function toast(text,tone='ok'){
  el.style.background=tone==='bad'?'#FEF2F2':'#F0FDF4';el.style.color=tone==='bad'?'#B91C1C':'#15803D';el.textContent=text;el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0'},2200)
 }
 function disarm(){if(!armedCard)return;armedCard.querySelector('.v56-35-quick-delete')?.remove();armedCard=null}
+function captureScroll(card){
+ const roots=[];let el=card?.parentElement;
+ while(el&&el!==document.body&&el!==document.documentElement){
+  if(el.scrollHeight>el.clientHeight+2||el.scrollWidth>el.clientWidth+2)roots.push({el,top:el.scrollTop,left:el.scrollLeft});
+  el=el.parentElement;
+ }
+ return {x:window.scrollX||0,y:window.scrollY||0,roots};
+}
+function restoreScroll(snapshot){
+ if(!snapshot)return;
+ snapshot.roots.forEach(x=>{if(document.contains(x.el)){x.el.scrollTop=x.top;x.el.scrollLeft=x.left}});
+ window.scrollTo(snapshot.x,snapshot.y);
+ requestAnimationFrame(()=>{
+  snapshot.roots.forEach(x=>{if(document.contains(x.el)){x.el.scrollTop=x.top;x.el.scrollLeft=x.left}});
+  window.scrollTo(snapshot.x,snapshot.y);
+ });
+}
+function pruneRemovedCards(){
+ if(!removedSkus.size||!inNewArrivals())return;
+ document.querySelectorAll('.tap-card').forEach(card=>{const sku=extractSku(card);if(sku&&removedSkus.has(sku))card.remove()});
+}
 async function removeSku(card,sku,button){
  if(busy)return;busy=true;button.disabled=true;button.textContent='جاري الحذف...';
+ const scroll=captureScroll(card);
  try{
   const proof=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null')||{};
   const adminToken=String(localStorage.getItem('inventory_admin_token_v2')||'');
-  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove',sku,updatedBy:'مهند',adminToken,adminProof:proof})});
+  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','Cache-Control':'no-cache'},cache:'no-store',body:JSON.stringify({action:'remove',sku,updatedBy:'مهند',adminToken,adminProof:proof})});
   const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data?.error||'تعذر حذف الصنف.');
-  card.style.transition='opacity .2s,transform .2s';card.style.opacity='.28';card.style.transform='scale(.985)';toast(`تم حذف ${sku} من «جديدنا» ✓`);
-  setTimeout(()=>location.reload(),520);
- }catch(err){button.disabled=false;button.textContent='حذف من جديدنا';toast(err?.message||'تعذر حذف الصنف.','bad');busy=false}
+  removedSkus.add(sku);armedCard=null;
+  card.style.transition='opacity .18s,transform .18s';card.style.opacity='.2';card.style.transform='scale(.985)';
+  setTimeout(()=>{card.remove();pruneRemovedCards();restoreScroll(scroll)},180);
+  window.dispatchEvent(new CustomEvent('batco:new-arrivals-updated',{detail:{action:'remove',sku,data}}));
+  toast(`تم حذف ${sku} من «جديدنا» ✓`);busy=false;
+ }catch(err){button.disabled=false;button.textContent='حذف من جديدنا';toast(err?.message||'تعذر حذف الصنف.','bad');busy=false;restoreScroll(scroll)}
 }
 function arm(card){
  if(!card||armedCard===card)return;if(armedCard)disarm();const sku=extractSku(card);if(!sku)return;
@@ -46,5 +72,6 @@ function onClick(e){
 document.addEventListener('click',onClick,true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')disarm()});
 document.addEventListener('click',e=>{if(armedCard&&!armedCard.contains(e.target)&&!e.target.closest('.tap-card'))disarm()},false);
-window.__V56_35_NEW_ARRIVALS_QUICK_DELETE={version:VERSION,disarm};
+const observer=new MutationObserver(()=>{clearTimeout(observer._t);observer._t=setTimeout(pruneRemovedCards,40)});observer.observe(document.documentElement,{childList:true,subtree:true});
+window.__V56_35_NEW_ARRIVALS_QUICK_DELETE={version:VERSION,disarm,pruneRemovedCards};
 })();
