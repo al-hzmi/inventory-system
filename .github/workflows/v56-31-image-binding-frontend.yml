@@ -1,0 +1,62 @@
+name: V56.31 Image Binding Frontend Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/v56-31-image-binding-backend.py'
+      - '.github/workflows/v56-31-image-binding-frontend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v56-31-image-binding-frontend-main
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply V56.31 server-backed image binding wiring
+        run: python3 .github/scripts/v56-31-image-binding-backend.py
+
+      - name: Correct regression marker
+        shell: bash
+        run: sed -i "s/'writeBinding'/'persistBindings'/" tests/v56-31-image-binding-backend.mjs
+
+      - name: Verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check api/image-admin.js
+          node tests/v56-31-image-binding-backend.mjs
+          node tests/v56-27-image-binding-wiring.mjs
+          git diff --check
+          python3 - <<'PY'
+          from pathlib import Path
+          for f in ['image-distribution.html','runtime/index-v37-source.txt','runtime/customer-v37-source.txt','index.html','customer.html']:
+              s=Path(f).read_text(errors='replace')
+              assert '<<<<<<<' not in s and '>>>>>>>' not in s and '... (truncated)' not in s, f
+          print('V56.31 structural checks: PASS')
+          PY
+
+      - name: Commit verified repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'V56.31 already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add image-distribution.html runtime/index-v37-source.txt runtime/customer-v37-source.txt index.html customer.html tests/v56-27-image-binding-wiring.mjs tests/v56-31-image-binding-backend.mjs
+          git commit -m 'V56.31 — wire image bindings to backend persistence'
+          git push origin HEAD:main
