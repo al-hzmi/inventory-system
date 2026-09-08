@@ -7,6 +7,7 @@ const CONTROL_COLLECTION='system_controls';
 const CONTROL_DOC='site_identity';
 const DEFAULT_IDENTITY='default';
 const NATIONAL_IDENTITY='national96';
+const IDENTITY_APP_NAME='batco-identity-v56-39';
 const DEFAULT_STATE={activeIdentity:DEFAULT_IDENTITY,enabled:false,revision:1};
 const FIREBASE_CONFIG={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};
 let liveState={...DEFAULT_STATE},unsubscribe=null;
@@ -63,8 +64,9 @@ const loadScript=(id,src)=>new Promise((resolve,reject)=>{
 const firestore=async()=>{
   if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}
   if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');
-  if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
-  return firebase.firestore();
+  let app=(firebase.apps||[]).find(candidate=>candidate?.name===IDENTITY_APP_NAME);
+  if(!app)app=firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME);
+  return app.firestore();
 };
 const subscribe=async()=>{
   try{
