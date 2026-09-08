@@ -42,7 +42,7 @@ function unifiedPeopleNavigation(){
  const dashboard=path==='admin-dashboard.html';
  const employeeLinks=[...document.querySelectorAll('[data-v52="employees"],[data-v52-mobile="employees"]')];
  const customerLinks=[...document.querySelectorAll('[data-v52="customers"],[data-v52-mobile="customers"]')];
- employeeLinks.forEach(a=>{a.href='./admin-dashboard.html?section=employees&module=live';a.dataset.v56People='true';const span=a.querySelector('span');if(span)span.textContent='الموظفون والعملاء';a.classList.toggle('on',dashboard&&!['categories','images','new_arrivals','orders'].includes(new URLSearchParams(location.search).get('module')))});
+ employeeLinks.forEach(a=>{a.href='./admin-dashboard.html?section=employees&module=live';a.dataset.v56People='true';const span=a.querySelector('span');if(span)span.textContent='الموظفون والعملاء';a.classList.toggle('on',dashboard&&!['product_management','categories','images','new_arrivals','orders'].includes(new URLSearchParams(location.search).get('module')))});
  customerLinks.forEach(a=>a.remove());
  const mobile=document.getElementById('v52-mobile-nav');if(mobile)mobile.dataset.v56UnifiedPeople='true';
 }

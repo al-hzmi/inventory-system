@@ -12,6 +12,7 @@ function adminOK(){try{const n=String(localStorage.getItem('inventory_user_name_
 const text=async p=>{const r=await fetch(p,{cache:'no-store'});if(!r.ok)throw Error(p);return r.text()};
 const adminProof=()=>{try{return JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null')||{}}catch{return{}}};
 const adminToken=()=>String(localStorage.getItem('inventory_admin_token_v2')||'');
+const IMAGE_BINDING_BACKEND='api/image-admin';
 async function imageBindingJson(response){const data=await response.json().catch(()=>({}));if(!response.ok){const err=Error(data?.error||'تعذر الاتصال بخادم ربط الصور.');err.status=response.status;throw err}return data}
 async function loadImageBindings(){const r=await fetch('./api/image-admin?action=bindings',{cache:'no-store',headers:{'Cache-Control':'no-cache'}});const d=await imageBindingJson(r);return d.bindings||{}}
 async function persistImageBinding(sku,imageKey){const request=fetch('./api/image-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'bind',sku,imageKey,updatedBy:'مهند',adminToken:adminToken(),adminProof:adminProof()})});const r=await Promise.race([request,new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(Error('SAVE_TIMEOUT'),{code:'SAVE_TIMEOUT'})),15000))]);const d=await imageBindingJson(r);const saved=norm(d.saved||d.bindings?.[sku]||'');if(saved!==imageKey)throw Error('VERIFY_FAILED');return d.bindings||{...state.bindings,[sku]:imageKey}}
