@@ -23,8 +23,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Apply V56.38 admin IA
-        run: python3 .github/scripts/v56-38-admin-ia.py
+      - name: Apply V56.38 admin IA when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Fq "const VERSION='56.38'" v46-admin-nav.js && grep -Fq "const productTabs=[" admin-dashboard.html; then
+            echo 'V56.38 product-domain migration is already present; skipping structural patch.'
+          else
+            python3 .github/scripts/v56-38-admin-ia.py
+          fi
       - name: Refresh legacy regression compatibility
         shell: bash
         run: |
