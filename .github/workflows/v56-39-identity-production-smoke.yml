@@ -56,34 +56,36 @@ jobs:
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
 
-          grep -Fq "CONTROL_DOC='site_identity'" /tmp/v56-39-site-identity.js
-          grep -Fq "DEFAULT_IDENTITY='default'" /tmp/v56-39-site-identity.js
-          grep -Fq "NATIONAL_IDENTITY='national96'" /tmp/v56-39-site-identity.js
-          grep -Fq "enabled:false" /tmp/v56-39-site-identity.js
-          grep -Fq "onSnapshot" /tmp/v56-39-site-identity.js
-          grep -Fq "batco-identity-national96" /tmp/v56-39-site-identity.js
-          grep -Fq "waitForDefaultFirebase" /tmp/v56-39-site-identity.js
+          assert_text(){ local needle="$1" file="$2"; grep -Fq "$needle" "$file" || { echo "::error::$file missing expected contract: $needle"; exit 1; }; }
 
-          grep -Fq "الهويات" /tmp/identities.html
-          grep -Fq "اليوم الوطني السعودي 96" /tmp/identities.html
-          grep -Fq "مقفلة افتراضيًا" /tmp/identities.html
-          grep -Fq "system_controls" /tmp/identities.html
-          grep -Fq "site_identity" /tmp/identities.html
-          grep -Fq "national96" /tmp/identities.html
+          assert_text "CONTROL_DOC='site_identity'" /tmp/v56-39-site-identity.js
+          assert_text "DEFAULT_IDENTITY='default'" /tmp/v56-39-site-identity.js
+          assert_text "NATIONAL_IDENTITY='national96'" /tmp/v56-39-site-identity.js
+          assert_text "enabled:false" /tmp/v56-39-site-identity.js
+          assert_text "onSnapshot" /tmp/v56-39-site-identity.js
+          assert_text "batco-identity-national96" /tmp/v56-39-site-identity.js
+          assert_text "waitForDefaultFirebase" /tmp/v56-39-site-identity.js
 
-          grep -Fq "['identity','الهويات','./identities.html']" /tmp/v46-admin-nav.js
-          grep -Fq "v56-39-site-identity.js?v=56.39" /tmp/runtime/index-v37-source.txt
+          assert_text "الهويات" /tmp/identities.html
+          assert_text "اليوم الوطني السعودي 96" /tmp/identities.html
+          assert_text "مقفلة حتى تفعّلها" /tmp/identities.html
+          assert_text "system_controls" /tmp/identities.html
+          assert_text "site_identity" /tmp/identities.html
+          assert_text "national96" /tmp/identities.html
 
-          grep -Fq "#008B4C" /tmp/v56-39-national-day.css
-          grep -Fq "#0F2C31" /tmp/v56-39-national-day.css
-          grep -Fq "repeating-conic-gradient" /tmp/v56-39-national-day.css
-          grep -Fq "prefers-reduced-motion" /tmp/v56-39-national-day.css
-          grep -Fq "national-day-96-mark.svg" /tmp/v56-39-national-day.css
+          assert_text "['identity','الهويات','./identities.html']" /tmp/v46-admin-nav.js
+          assert_text "v56-39-site-identity.js?v=56.39" /tmp/runtime/index-v37-source.txt
 
-          grep -Fq "هوية اليوم الوطني السعودي 96" /tmp/national-day-96-mark.svg
-          grep -Fq "SAUDI NATIONAL DAY 96" /tmp/national-day-96-mark.svg
+          assert_text "#008B4C" /tmp/v56-39-national-day.css
+          assert_text "#0F2C31" /tmp/v56-39-national-day.css
+          assert_text "repeating-conic-gradient" /tmp/v56-39-national-day.css
+          assert_text "prefers-reduced-motion" /tmp/v56-39-national-day.css
+          assert_text "national-day-96-mark.svg" /tmp/v56-39-national-day.css
+
+          assert_text "هوية اليوم الوطني السعودي 96" /tmp/national-day-96-mark.svg
+          assert_text "SAUDI NATIONAL DAY 96" /tmp/national-day-96-mark.svg
 
           curl -fsSL --retry 3 --retry-delay 2 "$PROD/identities.html?route=$nonce" -o /tmp/identity-route.html
           test -s /tmp/identity-route.html
-          grep -Fq "الهويات" /tmp/identity-route.html
+          assert_text "الهويات" /tmp/identity-route.html
           echo "Production serves the exact V56.39 identity manager and National Day 96 assets from current main."
