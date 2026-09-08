@@ -1,0 +1,51 @@
+name: V56.39 Identity Apply Retry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-39-identity-apply-retry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reuse verified V56.39 build recipe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          lines=Path('.github/workflows/v56-39-identity-apply.yml').read_text().splitlines()
+          start=next(i for i,line in enumerate(lines) if line.strip()=='- name: Build occasion identity system')
+          run_line=next(i for i in range(start+1,len(lines)) if lines[i].strip()=='run: |')
+          end=next(i for i in range(run_line+1,len(lines)) if lines[i].strip()=='- name: Commit V56.39 identity system')
+          body=[]
+          for line in lines[run_line+1:end]:
+              body.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/v56-39-build.sh').write_text('\n'.join(body)+'\n')
+          PY
+          bash /tmp/v56-39-build.sh
+
+      - name: Commit product identity assets only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add national-day-96-mark.svg v56-39-national-day.css v56-39-site-identity.js identities.html v46-admin-nav.js index.html customer.html stocktake.html stocktake-accountant.html admin-stocktake.html tests/v56-39-identities.mjs
+          if git diff --cached --quiet; then
+            echo 'V56.39 product assets already applied.'
+            exit 0
+          fi
+          git commit -m 'V56.39 — add centrally controlled occasion identities'
+          git push origin HEAD:main
