@@ -17,15 +17,16 @@ assert.ok(dashboard.includes("area==='products'?'مركز إدارة المنت�
 assert.ok(dashboard.includes("{area!=='products'&&<div className=\"px-4 py-3"),'people switch must not render inside product workspace');
 assert.ok(dashboard.includes("area==='products'?productTabs:area==='employees'?employeeTabs:customerTabs"),'tabs must be domain-scoped');
 assert.ok(dashboard.includes("if(area==='products'){switch(module)"),'product content must have a first-class domain branch');
-assert.ok(dashboard.includes('./v46-admin-nav.js?v=56.38'),'dashboard must bust admin nav cache');
+assert.ok(dashboard.includes('./v46-admin-nav.js?v=56.39'),'dashboard must use the current admin nav cache bust');
 
-assert.ok(nav.includes("const VERSION='56.38'"),'nav version must be 56.38');
+// V56.38 IA remains the contract; V56.39 only adds the occasion-identity destination/runtime.
+assert.ok(nav.includes("const VERSION='56.39'"),'nav version must carry the current V56.39 shell');
 assert.ok(nav.includes("['products','المنتجات والأقسام','./admin-dashboard.html?section=products&module=product_management']"),'product nav must use section=products');
 assert.ok(nav.includes("['home','sales','employees','products']"),'mobile bottom nav must expose products beside people');
 assert.ok(!nav.includes("links.filter(x=>['products','orders'"),'products must not be duplicated inside More');
 assert.ok(nav.includes("raw==='products'?'products':'employees'"),'route activation must understand products');
 
-assert.ok(enh.includes("const VERSION='56.38'"),'enhancements must be 56.38');
+assert.ok(enh.includes("const VERSION='56.38'"),'enhancements must retain the V56.38 IA implementation');
 assert.ok(enh.includes("section!=='products'"),'people active marker must not leak into products');
 assert.ok(enh.includes('v54-1-desktop-canvas-fix.css?v=56.38'),'responsive CSS must be cache-busted');
 assert.ok(css.includes('repeat(5,minmax(0,1fr))'),'mobile executive nav must use five columns');
