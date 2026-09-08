@@ -43,6 +43,7 @@ jobs:
           set -euo pipefail
           nonce="${GITHUB_SHA}-$(date +%s)"
           files=(
+            index.html
             identities.html
             v56-39-site-identity.js
             v56-39-national-day.css
@@ -74,7 +75,7 @@ jobs:
           assert_text "national96" /tmp/identities.html
 
           assert_text "['identity','الهويات','./identities.html']" /tmp/v46-admin-nav.js
-          assert_text "v56-39-site-identity.js?v=56.39" /tmp/runtime/index-v37-source.txt
+          assert_text "v56-39-site-identity.js?v=56.39" /tmp/index.html
 
           assert_text "#008B4C" /tmp/v56-39-national-day.css
           assert_text "#0F2C31" /tmp/v56-39-national-day.css
