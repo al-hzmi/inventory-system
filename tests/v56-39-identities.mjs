@@ -7,6 +7,9 @@ must(runtime.includes("const DEFAULT_IDENTITY='default'"),'default identity must
 must(runtime.includes("enabled:false"),'occasion identity must default off');
 must(runtime.includes("onSnapshot"),'identity must update in realtime');
 must(runtime.includes("PREVIEW_KEY='batco_identity_preview_v1'"),'local preview contract missing');
+must(runtime.includes("const IDENTITY_APP_NAME='batco-identity-v56-39'"),'identity Firestore client must use an isolated named Firebase app');
+must(runtime.includes("candidate?.name===IDENTITY_APP_NAME")&&runtime.includes("firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME)"),'identity runtime must not start the default Firebase app/Firestore instance');
+must(runtime.includes('return app.firestore()'),'identity runtime must subscribe through its isolated app');
 must(css.includes('#008B4C')&&css.includes('#0F2C31')&&css.includes('#3D8943'),'reference palette missing');
 must(css.includes('repeating-conic-gradient')&&css.includes('#batco-nd96-frame'),'geometric motif system missing');
 must(css.includes('#batco-nd96-badge'),'occasion badge missing');
