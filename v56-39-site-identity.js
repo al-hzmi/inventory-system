@@ -61,9 +61,22 @@ const loadScript=(id,src)=>new Promise((resolve,reject)=>{
   const existing=document.getElementById(id);if(existing){if(existing.dataset.ready==='1'||window.firebase)return resolve();existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}
   const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.ready='1';resolve()};s.onerror=reject;document.head.appendChild(s);
 });
+const defaultFirebaseReady=()=>{try{return Boolean(firebase.app())}catch{return false}};
+const waitForDefaultFirebase=async(timeoutMs=12000)=>{
+  if(defaultFirebaseReady())return true;
+  const started=Date.now();
+  while(Date.now()-started<timeoutMs){await new Promise(resolve=>setTimeout(resolve,80));if(defaultFirebaseReady())return true}
+  return false;
+};
 const firestore=async()=>{
   if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}
   if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');
+  // Do not create any Firebase app while a host page is still bootstrapping its
+  // default app. Several legacy runtimes use `if(!firebase.apps.length)` before
+  // creating [DEFAULT]; creating our named app first would make that guard skip
+  // and break the page with "No Firebase App [DEFAULT]". Once [DEFAULT] exists,
+  // the identity listener remains isolated in its own named app.
+  if(!await waitForDefaultFirebase())throw new Error('DEFAULT_FIREBASE_BOOTSTRAP_TIMEOUT');
   let app=(firebase.apps||[]).find(candidate=>candidate?.name===IDENTITY_APP_NAME);
   if(!app)app=firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME);
   return app.firestore();
