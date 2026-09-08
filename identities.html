@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>الهويات والمناسبات | بيت الأواني الطيبة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="./v56-39-site-identity.js?v=56.39"></script>
+  <style>
+    :root{--ink:#17211c;--muted:#66716b;--line:#e4e9e6;--surface:#f6f8f7;--green:#008B4C;--deep:#0F2C31;--leaf:#3D8943}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;background:var(--surface);color:var(--ink)}button{font:inherit;cursor:pointer}.page{max-width:1100px;margin:auto;padding:28px 22px 110px}.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:stretch}.heroCopy,.heroArt,.card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 38px rgba(23,33,28,.055)}.heroCopy{padding:28px}.eyebrow{font-size:11px;font-weight:800;color:var(--green)}h1{font-size:30px;line-height:1.4;margin:5px 0 8px}.lead{font-size:13px;line-height:2;color:var(--muted);max-width:640px}.heroArt{padding:20px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#f7fbf8,#eef7f1)}.heroArt img{width:100%;max-width:520px}.statusRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.pill{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid var(--line);background:#fff}.dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}.pill.on{color:#006B3B;background:#eaf7ee;border-color:#cdebd7}.pill.on .dot{background:#008B4C}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.card{padding:22px;position:relative;overflow:hidden}.card.featured:before{content:"";position:absolute;inset-inline:0;top:0;height:6px;background:repeating-conic-gradient(from 45deg,#0F2C31 0 25%,#008B4C 0 50%) 0/16px 16px}.cardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;background:#f1f5f3;color:var(--deep)}.featured .icon{background:#e4f4e9;color:var(--green)}h2{font-size:18px;margin:14px 0 5px}.note{font-size:12px;color:var(--muted);line-height:1.8}.palette{display:flex;gap:8px;margin:16px 0}.swatch{width:38px;height:38px;border-radius:12px;border:1px solid rgba(0,0,0,.06)}.features{display:grid;gap:7px;margin:16px 0}.feature{font-size:11px;color:#365b50;display:flex;gap:8px;align-items:center}.feature:before{content:"✓";width:19px;height:19px;border-radius:7px;background:#e4f4e9;color:#008B4C;display:inline-flex;align-items:center;justify-content:center;font-weight:800}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.btn{min-height:44px;padding:0 16px;border-radius:13px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:800}.btn.primary{background:var(--deep);color:#fff;border-color:var(--deep)}.btn.green{background:var(--green);color:#fff;border-color:var(--green)}.btn:disabled{opacity:.48;cursor:not-allowed}.lock{font-size:10px;font-weight:800;padding:6px 9px;border-radius:999px;background:#f3f4f6;color:#6b7280}.lock.ready{background:#eaf7ee;color:#006B3B}.system{margin-top:18px;padding:18px 20px;border-radius:20px;background:#0F2C31;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px}.system b{font-size:13px}.system span{font-size:10px;color:#c7d6d0;display:block;margin-top:3px}.system strong{font-size:11px;color:#bde8cb}.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,18px);opacity:0;pointer-events:none;padding:12px 16px;border-radius:13px;background:#0F2C31;color:#fff;font-size:12px;font-weight:700;box-shadow:0 14px 40px rgba(0,0,0,.2);transition:.2s;z-index:300}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:800px){.page{padding:20px 14px 110px}.hero{grid-template-columns:1fr}.heroCopy{padding:22px}.heroArt{padding:14px}.grid{grid-template-columns:1fr}h1{font-size:25px}.system{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="page" data-testid="identity-console">
+    <section class="hero">
+      <div class="heroCopy">
+        <div class="eyebrow">إدارة الهوية الموسمية</div>
+        <h1>الهويات والمناسبات</h1>
+        <p class="lead">غيّر مظهر النظام كله من مكان واحد. الهوية الأساسية تبقى الافتراضية دائمًا، وأي هوية موسمية لا تظهر للموظفين أو العملاء إلا بعد تفعيلها يدويًا من حساب الإدارة الرئيسي.</p>
+        <div class="statusRow"><span id="livePill" class="pill"><i class="dot"></i><span id="liveLabel">جاري قراءة الهوية الحالية...</span></span><span class="pill">تحديث لحظي عبر Firebase</span><span class="pill">يشمل الموظفين والعملاء والجرد</span></div>
+      </div>
+      <div class="heroArt"><img src="./national-day-96-mark.svg?v=56.39" alt="هوية اليوم الوطني السعودي 96"></div>
+    </section>
+
+    <section class="grid">
+      <article class="card" data-identity-card="default">
+        <div class="cardHead"><div class="icon">ب</div><span id="defaultBadge" class="lock ready">الهوية الأساسية</span></div>
+        <h2>بيت الأواني الطيبة</h2>
+        <p class="note">الهوية التشغيلية المعتادة للنظام. العودة إليها توقف أي هوية مناسبة فورًا على جميع الأجهزة.</p>
+        <div class="features"><div class="feature">لا تغيير على البيانات أو الصلاحيات</div><div class="feature">عودة فورية للألوان الأساسية</div><div class="feature">لا تحتاج إعادة نشر عند التبديل</div></div>
+        <div class="actions"><button id="activateDefault" class="btn primary">استخدام الهوية الأساسية</button></div>
+      </article>
+
+      <article class="card featured" data-identity-card="national96">
+        <div class="cardHead"><div class="icon">96</div><span id="nationalBadge" class="lock">مقفلة حتى تفعّلها</span></div>
+        <h2>اليوم الوطني السعودي 96</h2>
+        <p class="note">هوية كاملة مستوحاة من النسيج والنقوش الهندسية في المراجع المرفقة: أخضر وطني، أخضر نجدي، وتيل داكن، مع شعار المناسبة وإطارات وزخارف محسوبة بدون التأثير على قابلية القراءة.</p>
+        <div class="palette"><i class="swatch" style="background:#008B4C"></i><i class="swatch" style="background:#0F2C31"></i><i class="swatch" style="background:#3D8943"></i><i class="swatch" style="background:#FFFFFF"></i></div>
+        <div class="features"><div class="feature">الشعار ظاهر داخل الموظفين والعملاء</div><div class="feature">نقوش نسيجية وهندسية في الإطارات والأزرار</div><div class="feature">ثيم موحد للويب والجوال</div><div class="feature">تبديل مركزي لحظي من هذه الصفحة فقط</div></div>
+        <div class="actions"><button id="previewNational" class="btn">معاينة على جهازي فقط</button><button id="clearPreview" class="btn" hidden>إنهاء المعاينة</button><button id="activateNational" class="btn green">تفعيل على الموقع</button></div>
+      </article>
+    </section>
+
+    <section class="system"><div><b>حماية التفعيل</b><span>لا يوجد تشغيل تلقائي حسب التاريخ. التفعيل والإيقاف بيد الإدارة الرئيسية فقط.</span></div><strong id="syncState">مزامنة...</strong></section>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  const ADMIN_HASH='1jh297-spgf2z';
+  const STORAGE_KEYS={NAME:'inventory_user_name_v2',TOKEN:'inventory_admin_token_v2',PHOTO_PROOF:'inventory_login_photo_proof_v2'};
+  const isAdmin=()=>{try{const proof=JSON.parse(localStorage.getItem(STORAGE_KEYS.PHOTO_PROOF)||'null'),localQa=['localhost','127.0.0.1'].includes(location.hostname);return String(localStorage.getItem(STORAGE_KEYS.NAME)||'').trim()==='مهند'&&String(localStorage.getItem(STORAGE_KEYS.TOKEN)||'')===ADMIN_HASH&&(localQa||(proof?.role==='admin'&&Boolean(proof?.photoId)))}catch{return false}};
+  if(!isAdmin())location.replace('./index.html?employee=1');
+  const firebaseConfig={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};
+  if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+  const db=firebase.firestore(),ref=db.collection('system_controls').doc('site_identity');
+  const $=id=>document.getElementById(id),toast=msg=>{const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)};
+  let current={activeIdentity:'default',enabled:false},busy=false;
+  const render=()=>{
+    const active=current.enabled===true&&current.activeIdentity==='national96'?'national96':'default';
+    $('liveLabel').textContent=active==='national96'?'اليوم الوطني 96 مفعلة على الموقع':'الهوية الأساسية مفعلة';$('livePill').classList.toggle('on',active==='national96');
+    $('nationalBadge').textContent=active==='national96'?'مفعلة الآن':'مقفلة حتى تفعّلها';$('nationalBadge').classList.toggle('ready',active==='national96');
+    $('activateNational').disabled=busy||active==='national96';$('activateDefault').disabled=busy||active==='default';
+    const preview=(()=>{try{return sessionStorage.getItem('batco_identity_preview_v1')==='national96'}catch{return false}})();$('previewNational').hidden=preview;$('clearPreview').hidden=!preview;
+  };
+  ref.onSnapshot(snap=>{current=snap.exists?{...snap.data()}:{activeIdentity:'default',enabled:false};$('syncState').textContent='متصل · آخر حالة محفوظة';render()},error=>{$('syncState').textContent='تعذر الاتصال';console.error(error);toast('تعذر قراءة إعداد الهوية')});
+  const saveIdentity=async identity=>{
+    if(busy)return;const national=identity==='national96';
+    const question=national?'تفعيل هوية اليوم الوطني السعودي 96 الآن على جميع واجهات الموظفين والعملاء؟':'إيقاف الهوية الموسمية والعودة للهوية الأساسية على جميع الواجهات؟';
+    if(!window.confirm(question))return;
+    busy=true;render();$('syncState').textContent='جاري الحفظ...';
+    try{
+      await ref.set({activeIdentity:national?'national96':'default',enabled:national,revision:1,updatedBy:'مهند',updatedAt:firebase.firestore.FieldValue.serverTimestamp(),source:'identities-console'},{merge:true});
+      await db.collection('security_admin_logs').add({action:'site_identity_changed',identity:national?'national96':'default',enabled:national,actor:'مهند',source:'identities-console',timestamp:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+      toast(national?'تم تفعيل هوية اليوم الوطني 96':'تمت العودة للهوية الأساسية');
+    }catch(error){console.error(error);toast('تعذر حفظ الهوية. حاول مرة أخرى.')}finally{busy=false;render()}
+  };
+  $('activateNational').onclick=()=>saveIdentity('national96');$('activateDefault').onclick=()=>saveIdentity('default');
+  $('previewNational').onclick=()=>{window.__BATCO_SITE_IDENTITY?.setPreview('national96');render();toast('المعاينة على هذا الجهاز فقط — لم يتم التفعيل العام')};
+  $('clearPreview').onclick=()=>{window.__BATCO_SITE_IDENTITY?.clearPreview();render();toast('انتهت المعاينة المحلية')};
+  render();
+  </script>
+  <script src="./v46-admin-nav.js?v=56.39"></script>
+</body>
+</html>

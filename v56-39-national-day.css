@@ -1,0 +1,98 @@
+/* V56.39 — Saudi National Day 96 occasion identity. Opt-in only. */
+html.batco-identity-national96{
+  --nd96-green:#008B4C;
+  --nd96-green-dark:#006B3B;
+  --nd96-deep:#0F2C31;
+  --nd96-deep-2:#14393B;
+  --nd96-leaf:#3D8943;
+  --nd96-mist:#F2F8F4;
+  --nd96-line:#CFE3D7;
+  --nd96-white:#FFFFFF;
+  --primary:#0F2C31;--secondary:#365B50;--muted:#71847C;--border:#CFE3D7;--surface:#F2F8F4;
+  --accent:#008B4C;--accentSoft:#E4F4E9;--success:#008B4C;--successSoft:#E5F7EA;
+  --p:#0F2C31;--s:#365B50;--m:#71847C;--b:#CFE3D7;--sf:#F2F8F4;--a:#008B4C;--as:#E4F4E9;--ok:#008B4C;--oks:#E5F7EA;
+  --admin-ink:#0F2C31;--admin-muted:#64776F;--admin-line:#CFE3D7;--admin-green:#008B4C;
+  color-scheme:light;
+}
+html.batco-identity-national96 body{
+  background-color:var(--nd96-mist)!important;
+  background-image:
+    radial-gradient(circle at 12% 10%,rgba(0,139,76,.07),transparent 28%),
+    radial-gradient(circle at 88% 18%,rgba(61,137,67,.08),transparent 25%)!important;
+}
+html.batco-identity-national96 body,
+html.batco-identity-national96 #root{color:var(--nd96-deep)}
+html.batco-identity-national96 .bg-surface{background-color:var(--nd96-mist)!important}
+html.batco-identity-national96 .bg-primary,
+html.batco-identity-national96 button.bg-primary,
+html.batco-identity-national96 a.bg-primary,
+html.batco-identity-national96 .primary,
+html.batco-identity-national96 .btn.entry,
+html.batco-identity-national96 .save,
+html.batco-identity-national96 .chip.active,
+html.batco-identity-national96 .scan{
+  background-color:var(--nd96-deep)!important;
+  background-image:
+    linear-gradient(135deg,rgba(255,255,255,.045) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.045) 50%,rgba(255,255,255,.045) 75%,transparent 75%)!important;
+  background-size:18px 18px!important;
+  border-color:var(--nd96-deep)!important;
+  color:#fff!important;
+}
+html.batco-identity-national96 .bg-accentSoft{background-color:#E4F4E9!important}
+html.batco-identity-national96 .text-accent{color:var(--nd96-green)!important}
+html.batco-identity-national96 .border-border{border-color:var(--nd96-line)!important}
+html.batco-identity-national96 .bg-successSoft{background-color:#E5F7EA!important}
+html.batco-identity-national96 .text-success{color:var(--nd96-green-dark)!important}
+html.batco-identity-national96 input:focus,
+html.batco-identity-national96 textarea:focus,
+html.batco-identity-national96 select:focus{border-color:var(--nd96-green)!important;box-shadow:0 0 0 3px rgba(0,139,76,.09)!important}
+html.batco-identity-national96 .top{border-color:var(--nd96-line)!important;background:rgba(242,248,244,.95)!important}
+html.batco-identity-national96 .panel,
+html.batco-identity-national96 .card{border-color:var(--nd96-line)!important}
+html.batco-identity-national96 .mission{background:linear-gradient(145deg,var(--nd96-deep),#103C38 58%,var(--nd96-green-dark))!important}
+html.batco-identity-national96 .mission:after{background:radial-gradient(circle,rgba(0,139,76,.34),rgba(0,139,76,0) 68%)!important}
+html.batco-identity-national96 .missionEyebrow{color:#BDE8CB!important}
+html.batco-identity-national96 .mission .progress>i{background:linear-gradient(90deg,#008B4C,#54AE63)!important}
+
+/* Executive/admin shell */
+html.batco-identity-national96 .v52-sidebar{
+  background:var(--nd96-deep)!important;color:#fff!important;
+  background-image:linear-gradient(180deg,rgba(0,139,76,.08),transparent 32%),repeating-linear-gradient(45deg,rgba(255,255,255,.018) 0 8px,transparent 8px 16px)!important;
+  border-inline-start-color:rgba(255,255,255,.10)!important;
+}
+html.batco-identity-national96 .v52-sidebar .v52-brand-copy b,
+html.batco-identity-national96 .v52-sidebar .v52-brand-copy span,
+html.batco-identity-national96 .v52-sidebar .v52-side-label{color:#fff!important}
+html.batco-identity-national96 .v52-sidebar .v52-side-label{opacity:.54}
+html.batco-identity-national96 .v52-sidebar .v52-item{color:rgba(255,255,255,.78)!important}
+html.batco-identity-national96 .v52-sidebar .v52-item.on{
+  background:rgba(0,139,76,.24)!important;color:#fff!important;border-color:rgba(255,255,255,.10)!important;
+}
+html.batco-identity-national96 .v52-brand-mark{background:var(--nd96-green)!important;color:#fff!important;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 12px 30px rgba(0,0,0,.18)!important}
+html.batco-identity-national96 #v52-mobile-header{background:rgba(15,44,49,.97)!important;border-bottom-color:rgba(255,255,255,.10)!important}
+html.batco-identity-national96 #v52-mobile-header .v52-mobile-copy b,
+html.batco-identity-national96 #v52-mobile-header .v52-mobile-copy span{color:#fff!important}
+html.batco-identity-national96 #v52-mobile-nav{border-top-color:var(--nd96-line)!important}
+html.batco-identity-national96 #v52-mobile-nav:before{
+  content:"";position:absolute;inset-inline:0;top:0;height:4px;pointer-events:none;
+  background:repeating-conic-gradient(from 45deg,var(--nd96-green) 0 25%,var(--nd96-deep) 0 50%) 0/12px 12px;
+}
+html.batco-identity-national96 .v52-mobile-nav-item.on{color:var(--nd96-green)!important}
+
+/* Decorative frame: inspired by the supplied woven/diamond references. */
+#batco-nd96-frame{position:fixed;inset:0;z-index:34;pointer-events:none;overflow:hidden}
+#batco-nd96-frame:before,#batco-nd96-frame:after{content:"";position:absolute;left:0;right:0;height:8px;background:repeating-conic-gradient(from 45deg,var(--nd96-deep) 0 25%,var(--nd96-green) 0 50%) 0/16px 16px;opacity:.96}
+#batco-nd96-frame:before{top:0}#batco-nd96-frame:after{bottom:0}
+#batco-nd96-frame .nd96-corner{position:absolute;width:84px;height:84px;opacity:.13;background:
+  linear-gradient(45deg,transparent 38%,var(--nd96-green) 38% 62%,transparent 62%),
+  linear-gradient(-45deg,transparent 38%,var(--nd96-leaf) 38% 62%,transparent 62%);background-size:28px 28px}
+#batco-nd96-frame .a{top:18px;right:14px}#batco-nd96-frame .b{bottom:18px;left:14px;transform:rotate(180deg)}
+#batco-nd96-badge{position:fixed;z-index:35;top:14px;left:14px;width:210px;pointer-events:none;border-radius:16px;background:rgba(255,255,255,.94);border:1px solid rgba(0,139,76,.24);box-shadow:0 14px 38px rgba(15,44,49,.15);padding:8px 10px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#batco-nd96-badge img{display:block;width:100%;height:auto}
+@media(max-width:760px){
+  #batco-nd96-badge{top:auto;bottom:78px;left:10px;width:136px;padding:5px 7px;border-radius:12px;opacity:.94}
+  #batco-nd96-frame .nd96-corner{width:58px;height:58px;background-size:20px 20px}
+}
+@media(prefers-reduced-motion:no-preference){
+  #batco-nd96-badge{animation:nd96In .38s cubic-bezier(.16,1,.3,1) both}@keyframes nd96In{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+}

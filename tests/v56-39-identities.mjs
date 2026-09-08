@@ -1,0 +1,22 @@
+import fs from 'node:fs';
+const read=p=>fs.readFileSync(p,'utf8');
+const must=(ok,msg)=>{if(!ok)throw new Error(msg)};
+const runtime=read('v56-39-site-identity.js'),css=read('v56-39-national-day.css'),page=read('identities.html'),nav=read('v46-admin-nav.js'),index=read('index.html'),customer=read('customer.html');
+must(runtime.includes("const CONTROL_DOC='site_identity'"),'central identity control missing');
+must(runtime.includes("const DEFAULT_IDENTITY='default'"),'default identity must remain explicit');
+must(runtime.includes("enabled:false"),'occasion identity must default off');
+must(runtime.includes("onSnapshot"),'identity must update in realtime');
+must(runtime.includes("PREVIEW_KEY='batco_identity_preview_v1'"),'local preview contract missing');
+must(css.includes('#008B4C')&&css.includes('#0F2C31')&&css.includes('#3D8943'),'reference palette missing');
+must(css.includes('repeating-conic-gradient')&&css.includes('#batco-nd96-frame'),'geometric motif system missing');
+must(css.includes('#batco-nd96-badge'),'occasion badge missing');
+must(page.includes('الهويات والمناسبات')&&page.includes("activeIdentity:national?'national96':'default'"),'identity console activation missing');
+must(page.includes("window.confirm(question)"),'activation safety confirmation missing');
+must(page.includes('مقفلة حتى تفعّلها'),'national identity must be visibly locked by default');
+must(nav.includes("['identity','الهويات','./identities.html']"),'admin identities button missing');
+must(nav.includes("'identities.html'")&&nav.includes("if(path==='identities.html')return'identity'"),'identity route missing');
+must(index.includes('v56-39-site-identity.js?v=56.39'),'employee runtime identity injection missing');
+must(customer.includes('v56-39-site-identity.js?v=56.39'),'customer runtime identity injection missing');
+for(const file of ['stocktake.html','stocktake-accountant.html','admin-stocktake.html']){if(fs.existsSync(file))must(read(file).includes('v56-39-site-identity.js?v=56.39'),`${file} identity injection missing`)}
+must(fs.existsSync('national-day-96-mark.svg'),'national day mark missing');
+console.log('V56.39 occasion identity regression: PASS');
