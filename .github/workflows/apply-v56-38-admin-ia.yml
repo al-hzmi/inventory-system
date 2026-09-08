@@ -46,7 +46,7 @@ jobs:
               p.write_text(s,encoding='utf-8')
               if s!=original: print('updated',path)
 
-          # Old regressions must protect their behavioral contract, not freeze a cache-bust revision.
+          # Old regressions protect behavior; they must not freeze old cache/release labels.
           edit('tests/v56-4-messaging.mjs', [
             ("assert.ok(boot.includes(\"index-v37-source.txt?v=56.16&rev=56.33\"),'employee V56.16 base cache with current V56.33 revision missing');",
              "assert.match(boot,/index-v37-source\\.txt\\?v=56\\.16&rev=56\\.(?:33|3[4-9]|[4-9]\\d)/,'employee V56.16 base cache with a compatible revision missing');")
@@ -70,6 +70,8 @@ jobs:
              "assert.match(canvas,/grid-template-columns:repeat\\((?:4|5),minmax\\(0,1fr\\)\\)!important/);")
           ])
           edit('tests/v56-36-admin-unification-image-album.mjs', [
+            ("assert.match(canvas,/V56\\.36/);",
+             "assert.match(canvas,/V56\\.(?:36|3[7-9]|[4-9]\\d)/);"),
             ("assert.ok(enhancements.includes('./security-center.html?embed=executive&v=56.35'));",
              "assert.match(enhancements,/\\.\\/security-center\\.html\\?embed=executive&v=56\\.(?:35|3[6-9]|[4-9]\\d)/);")
           ])
