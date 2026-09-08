@@ -1,0 +1,60 @@
+name: V56.38 Admin IA Regression
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify admin domains do not overlap
+        run: |
+          set -euo pipefail
+          node tests/v56-38-admin-ia.mjs
+          git diff --check
+
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for and verify production assets
+        shell: bash
+        env:
+          PROD: https://inventory-system-coral-nu.vercel.app
+        run: |
+          set -euo pipefail
+          nonce="$(date +%s)"
+          ok=0
+          for attempt in $(seq 1 24); do
+            curl -fsSL --retry 2 --retry-delay 1 -H 'Cache-Control: no-cache' "$PROD/admin-dashboard.html?verify=$nonce-$attempt" -o /tmp/admin-dashboard.html || true
+            curl -fsSL --retry 2 --retry-delay 1 -H 'Cache-Control: no-cache' "$PROD/v46-admin-nav.js?verify=$nonce-$attempt" -o /tmp/v46-admin-nav.js || true
+            curl -fsSL --retry 2 --retry-delay 1 -H 'Cache-Control: no-cache' "$PROD/v54-admin-enhancements.js?verify=$nonce-$attempt" -o /tmp/v54-admin-enhancements.js || true
+            curl -fsSL --retry 2 --retry-delay 1 -H 'Cache-Control: no-cache' "$PROD/v54-1-desktop-canvas-fix.css?verify=$nonce-$attempt" -o /tmp/v54-1-desktop-canvas-fix.css || true
+            if cmp -s admin-dashboard.html /tmp/admin-dashboard.html && cmp -s v46-admin-nav.js /tmp/v46-admin-nav.js && cmp -s v54-admin-enhancements.js /tmp/v54-admin-enhancements.js && cmp -s v54-1-desktop-canvas-fix.css /tmp/v54-1-desktop-canvas-fix.css; then
+              ok=1
+              break
+            fi
+            echo "Production not current yet (attempt $attempt/24); retrying..."
+            sleep 10
+          done
+          if [[ "$ok" != 1 ]]; then
+            echo '::error::Production assets do not match current main after waiting.'
+            exit 1
+          fi
+          grep -Fq "section=products&module=product_management" /tmp/v46-admin-nav.js
+          grep -Fq "['home','sales','employees','products']" /tmp/v46-admin-nav.js
+          grep -Fq "const productTabs=[" /tmp/admin-dashboard.html
+          grep -Fq "area==='products'?productTabs:area==='employees'?employeeTabs:customerTabs" /tmp/admin-dashboard.html
+          grep -Fq 'repeat(5,minmax(0,1fr))' /tmp/v54-1-desktop-canvas-fix.css
+          echo 'V56.38 production admin IA smoke: PASS'
