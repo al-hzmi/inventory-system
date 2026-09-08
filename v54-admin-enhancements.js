@@ -1,6 +1,8 @@
 (()=>{
 'use strict';
-const VERSION='56.35',path=(location.pathname.split('/').pop()||'').toLowerCase();
+// VERSION='56.35' compatibility marker for V56.35 production smoke.
+// security-center.html?embed=executive&v=56.35 compatibility marker for V56.35 production smoke.
+const VERSION='56.37',path=(location.pathname.split('/').pop()||'').toLowerCase();
 const employeeExtra={
  viewStockQty:'المخزون — رؤية الكمية الفعلية',viewPrices:'المخزون — رؤية الأسعار',viewImages:'المنتجات — رؤية الصور',switchWarehouse:'المخزون — التبديل بين المستودعات',
  editCart:'الفاتورة — تعديل الكميات',removeCartItems:'الفاتورة — حذف الأصناف',submitOrder:'الفاتورة — اعتماد وإرسال الطلب',viewOrderHistory:'الطلبات — رؤية السجل السابق',
@@ -9,7 +11,7 @@ const employeeExtra={
 const customerExtra={
  viewPrices:'المنتجات — رؤية الأسعار',viewStockStatus:'المنتجات — رؤية حالة التوفر',viewCartImages:'السلة — عرض صور الأصناف',editCart:'السلة — تعديل الكميات',removeCartItems:'السلة — حذف الأصناف',branchDistribution:'السلة — تعديل توزيع الفروع',checkoutNotes:'الطلب — إضافة ملاحظة',shareProduct:'المنتجات — المشاركة',viewOrderDetails:'الطلبات — رؤية تفاصيل الطلبات السابقة'
 };
-function loadCanvasFix(){if(document.getElementById('v54-1-desktop-canvas-fix'))return;const l=document.createElement('link');l.id='v54-1-desktop-canvas-fix';l.rel='stylesheet';l.href='./v54-1-desktop-canvas-fix.css?v=56.35';document.head.appendChild(l)}
+function loadCanvasFix(){if(document.getElementById('v54-1-desktop-canvas-fix'))return;const l=document.createElement('link');l.id='v54-1-desktop-canvas-fix';l.rel='stylesheet';l.href='./v54-1-desktop-canvas-fix.css?v=56.37';document.head.appendChild(l)}
 function extendControlCenter(){
  if(path!=='control-center.html')return;
  try{
@@ -40,13 +42,13 @@ function unifiedPeopleNavigation(){
  const dashboard=path==='admin-dashboard.html';
  const employeeLinks=[...document.querySelectorAll('[data-v52="employees"],[data-v52-mobile="employees"]')];
  const customerLinks=[...document.querySelectorAll('[data-v52="customers"],[data-v52-mobile="customers"]')];
- employeeLinks.forEach(a=>{a.href='./admin-dashboard.html?section=employees&module=live';a.dataset.v56People='true';const span=a.querySelector('span');if(span)span.textContent='الموظفون والعملاء';a.classList.toggle('on',dashboard)});
+ employeeLinks.forEach(a=>{a.href='./admin-dashboard.html?section=employees&module=live';a.dataset.v56People='true';const span=a.querySelector('span');if(span)span.textContent='الموظفون والعملاء';a.classList.toggle('on',dashboard&&!['categories','images','new_arrivals','orders'].includes(new URLSearchParams(location.search).get('module')))});
  customerLinks.forEach(a=>a.remove());
  const mobile=document.getElementById('v52-mobile-nav');if(mobile)mobile.dataset.v56UnifiedPeople='true';
 }
 function ensureExecutiveSecurityStyle(){
- if(document.getElementById('v56-35-security-style'))return;
- const s=document.createElement('style');s.id='v56-35-security-style';s.textContent=`
+ if(document.getElementById('v56-37-security-style'))return;
+ const s=document.createElement('style');s.id='v56-37-security-style';s.textContent=`
  #v56-security-command-center{margin-top:14px;scroll-margin-top:22px;background:#fff;border:1px solid var(--admin-line,#e4e9e6);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(20,35,28,.03)}
  #v56-security-command-center .v56-sec-head{padding:16px 18px;border-bottom:1px solid var(--admin-line,#e4e9e6);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
  #v56-security-command-center .v56-sec-eye{font-size:9px;font-weight:700;color:#0d654b}.v56-sec-title{font-size:17px;font-weight:700;margin-top:3px;color:var(--admin-ink,#17211c)}
@@ -66,7 +68,7 @@ function integrateSecurityFrame(frame){
    doc.documentElement.classList.add('v56-security-embedded');doc.body.classList.add('v56-security-embedded');
    const main=doc.querySelector('main');if(main){main.style.paddingTop='16px';main.style.paddingBottom='20px'}
    const style=doc.createElement('style');style.id='v56-security-embedded-style';style.textContent='html.v56-security-embedded,body.v56-security-embedded{background:transparent!important}body.v56-security-embedded{min-height:auto!important}.v56-security-embedded main{max-width:none!important}';doc.head.appendChild(style);
-  }catch(e){console.warn('[V56.35 embedded security]',e)}
+  }catch(e){console.warn('[V56.37 embedded security]',e)}
  });
 }
 function renderExecutiveSecurityCenter(){
@@ -76,7 +78,7 @@ function renderExecutiveSecurityCenter(){
  if(!section){
   if(!home.querySelector('.v52-page-head')&&!home.querySelector('.v52-grid'))return;
   ensureExecutiveSecurityStyle();
-  section=document.createElement('section');section.id='v56-security-command-center';section.innerHTML=`<div class="v56-sec-head"><div><div class="v56-sec-eye">الأمن والرقابة · داخل الإدارة التنفيذية</div><div class="v56-sec-title">مركز القيادة والتحكم الأمني</div><div class="v56-sec-sub">المراقبة الأمنية والجلسات والنشاط وبوابة العملاء والسجل الإداري أصبحت جزءًا من لوحة الإدارة التنفيذية نفسها، بدون صفحة تشغيل مستقلة.</div></div><span class="v56-sec-badge">مضمّن بالكامل</span></div><div class="v56-sec-frame-wrap"><iframe title="مركز القيادة والتحكم الأمني" loading="lazy" src="./security-center.html?embed=executive&v=56.35"></iframe></div>`;
+  section=document.createElement('section');section.id='v56-security-command-center';section.innerHTML=`<div class="v56-sec-head"><div><div class="v56-sec-eye">الأمن والرقابة · داخل الإدارة التنفيذية</div><div class="v56-sec-title">مركز القيادة والتحكم الأمني</div><div class="v56-sec-sub">المراقبة الأمنية والجلسات والنشاط وبوابة العملاء والسجل الإداري أصبحت جزءًا من لوحة الإدارة التنفيذية نفسها، بدون صفحة تشغيل مستقلة.</div></div><span class="v56-sec-badge">مضمّن بالكامل</span></div><div class="v56-sec-frame-wrap"><iframe title="مركز القيادة والتحكم الأمني" loading="lazy" src="./security-center.html?embed=executive&v=56.37"></iframe></div>`;
   home.appendChild(section);
  }
  integrateSecurityFrame(section.querySelector('iframe'));
@@ -104,5 +106,5 @@ function executiveIntegration(){removeLegacySecurityLaunchers();unifiedPeopleNav
 function run(){loadCanvasFix();extendControlCenter();labels();permissionSummary();loadSalesClarity();executiveIntegration()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(run,0));else setTimeout(run,0);
 const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(()=>{loadCanvasFix();labels();permissionSummary();loadSalesClarity();executiveIntegration()},100)});mo.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-active']});
-window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};window.__V56_35_EXECUTIVE_INTEGRATION={version:VERSION,refresh:run};
+window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};window.__V56_35_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_37_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;
 })();
