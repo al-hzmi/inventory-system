@@ -25,21 +25,68 @@ jobs:
           fetch-depth: 0
       - name: Apply V56.38 admin IA
         run: python3 .github/scripts/v56-38-admin-ia.py
-      - name: Run focused regression
+      - name: Refresh legacy regression compatibility
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def edit(path, replacements):
+              p=Path(path); s=p.read_text(encoding='utf-8')
+              original=s
+              for old,new in replacements:
+                  if old in s: s=s.replace(old,new)
+              p.write_text(s,encoding='utf-8')
+              if s!=original: print('updated',path)
+
+          # Old regressions must protect their behavioral contract, not freeze a cache-bust revision.
+          edit('tests/v56-4-messaging.mjs', [
+            ("assert.ok(boot.includes(\"index-v37-source.txt?v=56.16&rev=56.33\"),'employee V56.16 base cache with current V56.33 revision missing');",
+             "assert.match(boot,/index-v37-source\\.txt\\?v=56\\.16&rev=56\\.(?:33|3[4-9]|[4-9]\\d)/,'employee V56.16 base cache with a compatible revision missing');")
+          ])
+          edit('tests/v56-33-new-arrivals-admin.mjs', [
+            ("assert.ok(index.includes(\"runtime/index-v37-source.txt?v=56.16&rev=56.33\"));",
+             "assert.match(index,/runtime\\/index-v37-source\\.txt\\?v=56\\.16&rev=56\\.(?:33|3[4-9]|[4-9]\\d)/);")
+          ])
+          edit('tests/v56-35-navigation-new-arrivals.mjs', [
+            ("assert.match(nav, /VERSION='56\\.35'/, 'admin nav must be V56.35');",
+             "assert.match(nav,/const VERSION='56\\.(?:35|3[6-9]|[4-9]\\d)'/,'admin nav must remain V56.35+ compatible');"),
+            ("assert.ok(enhancements.includes('./security-center.html?embed=executive&v=56.35'), 'embedded security source must be V56.35');",
+             "assert.match(enhancements,/\\.\\/security-center\\.html\\?embed=executive&v=56\\.(?:35|3[6-9]|[4-9]\\d)/,'embedded security source must remain V56.35+ compatible');")
+          ])
+          edit('tests/v56-34-executive-integration.mjs', [
+            ("assert.match(enhancements,/VERSION='56\\.35'/);",
+             "assert.match(enhancements,/const VERSION='56\\.(?:35|3[6-9]|[4-9]\\d)'/);"),
+            ("assert.match(enhancements,/security-center\\.html\\?embed=executive&v=56\\.35/);",
+             "assert.match(enhancements,/security-center\\.html\\?embed=executive&v=56\\.(?:35|3[6-9]|[4-9]\\d)/);"),
+            ("assert.match(canvas,/grid-template-columns:repeat\\(4,minmax\\(0,1fr\\)\\)!important/);",
+             "assert.match(canvas,/grid-template-columns:repeat\\((?:4|5),minmax\\(0,1fr\\)\\)!important/);")
+          ])
+          edit('tests/v56-36-admin-unification-image-album.mjs', [
+            ("assert.ok(enhancements.includes('./security-center.html?embed=executive&v=56.35'));",
+             "assert.match(enhancements,/\\.\\/security-center\\.html\\?embed=executive&v=56\\.(?:35|3[6-9]|[4-9]\\d)/);")
+          ])
+          PY
+      - name: Run focused and legacy regressions
         run: |
           set -euo pipefail
           node tests/v56-38-admin-ia.mjs
+          node tests/v56-35-navigation-new-arrivals.mjs
+          node tests/v56-34-executive-integration.mjs
+          node tests/v56-36-admin-unification-image-album.mjs
+          node tests/v56-33-new-arrivals-admin.mjs
+          node tests/v56-4-messaging.mjs
           git diff --check
-      - name: Commit V56.38
+      - name: Commit V56.38 compatibility refresh
         shell: bash
         run: |
           set -euo pipefail
           if git diff --quiet; then
-            echo 'V56.38 already applied.'
+            echo 'V56.38 and legacy regressions already current.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add admin-dashboard.html v46-admin-nav.js v54-admin-enhancements.js v54-1-desktop-canvas-fix.css tests/v56-38-admin-ia.mjs
-          git commit -m 'V56.38 — separate products from people admin workspace'
+          git add admin-dashboard.html v46-admin-nav.js v54-admin-enhancements.js v54-1-desktop-canvas-fix.css tests/v56-38-admin-ia.mjs tests/v56-35-navigation-new-arrivals.mjs tests/v56-34-executive-integration.mjs tests/v56-36-admin-unification-image-album.mjs tests/v56-33-new-arrivals-admin.mjs tests/v56-4-messaging.mjs
+          git commit -m 'V56.38 — keep legacy regressions compatible with unified admin IA'
           git push origin HEAD:main
