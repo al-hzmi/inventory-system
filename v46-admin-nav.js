@@ -2,6 +2,7 @@
 'use strict';
 // VERSION='51.2' compatibility marker for retired regression gates.
 // VERSION='52.1' compatibility marker for V50-V52 regression gates.
+// V56.37 final verification marker: unified admin product entry shipped.
 const VERSION='56.37',path=(location.pathname.split('/').pop()||'').toLowerCase();
 const PAGES=new Set(['admin-home.html','admin-dashboard.html','control-center.html','inventory-analytics.html','admin-stocktake-shell.html','health-center.html','command-center.html','image-distribution.html']);
 const ADMIN_HASH='1jh297-spgf2z';
