@@ -1,0 +1,57 @@
+name: V56.39 Occasion Identity Regression
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify identity architecture and default-off safety
+        run: |
+          set -euo pipefail
+          node --check v56-39-site-identity.js
+          node tests/v56-39-identities.mjs
+          git diff --check
+
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for exact production identity assets
+        shell: bash
+        env:
+          PROD: https://inventory-system-coral-nu.vercel.app
+        run: |
+          set -euo pipefail
+          files=(v56-39-site-identity.js v56-39-national-day.css national-day-96-mark.svg identities.html v46-admin-nav.js index.html customer.html stocktake.html)
+          nonce="$(date +%s)"
+          ok=0
+          for attempt in $(seq 1 24); do
+            all=1
+            for file in "${files[@]}"; do
+              curl -fsSL --retry 2 --retry-delay 1 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce-$attempt" -o "/tmp/$file" || { all=0; break; }
+              cmp -s "$file" "/tmp/$file" || { all=0; break; }
+            done
+            if [[ "$all" == 1 ]]; then ok=1; break; fi
+            echo "Production identity assets not current yet (attempt $attempt/24); retrying..."
+            sleep 10
+          done
+          if [[ "$ok" != 1 ]]; then echo '::error::Production identity assets do not match current main.'; exit 1; fi
+          grep -Fq "const DEFAULT_IDENTITY='default'" /tmp/v56-39-site-identity.js
+          grep -Fq "enabled:false" /tmp/v56-39-site-identity.js
+          grep -Fq "الهويات والمناسبات" /tmp/identities.html
+          grep -Fq "v56-39-site-identity.js?v=56.39" /tmp/index.html
+          grep -Fq "v56-39-site-identity.js?v=56.39" /tmp/customer.html
+          echo 'V56.39 production occasion identity smoke: PASS'
