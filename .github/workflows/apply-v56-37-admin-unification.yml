@@ -1,4 +1,4 @@
-name: Apply V56.37 Admin Unification
+name: Finalize V56.37 Admin Unification
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  patch:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,103 +17,39 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Consolidate product administration into executive control panel
+      - name: Remove migration artifacts and validate final source
         run: |
           node <<'NODE'
           const fs=require('fs');
-          const one=(text,from,to,label)=>{
-            const n=text.split(from).length-1;
-            if(n!==1)throw new Error(`${label}: expected exactly one match, found ${n}`);
-            return text.replace(from,to);
-          };
+          const file='admin-dashboard.html';
+          let s=fs.readFileSync(file,'utf8');
+          const from="tile('history','سجل التصنيفات'";
+          const to="tile('clock','سجل التصنيفات'";
+          const count=s.split(from).length-1;
+          if(count!==1)throw new Error(`expected one history tile, found ${count}`);
+          s=s.replace(from,to);
+          fs.writeFileSync(file,s);
 
-          // 1) Employee inventory: retire the duplicate orange product-admin launcher.
-          {
-            const file='runtime/index-v37-source.txt';
-            let s=fs.readFileSync(file,'utf8');
-            const re=/\n\s*\{isAdmin && \(\s*<button onClick=\{\(\) => setShowAdmin\('product_categories'\)\} title="إدارة المنتجات والأقسام"[\s\S]*?<span className="hidden lg:inline text-\[12px\] font-bold whitespace-nowrap">إدارة المنتجات<\/span>\s*<\/button>\s*\)\}/;
-            const matches=s.match(re);
-            if(!matches)throw new Error('runtime: duplicate إدارة المنتجات button not found');
-            s=s.replace(re,'');
-            if(/title="إدارة المنتجات والأقسام"/.test(s))throw new Error('runtime: legacy product launcher still present');
-            fs.writeFileSync(file,s);
-          }
-
-          // 2) Keep the historically locked v=56.16 contract, but advance only the revision cache key.
-          {
-            const file='index.html';
-            let s=fs.readFileSync(file,'utf8');
-            s=one(s,"const CORE='./runtime/index-v37-source.txt?v=56.16&rev=56.33';","const CORE='./runtime/index-v37-source.txt?v=56.16&rev=56.37';",'index runtime revision');
-            fs.writeFileSync(file,s);
-          }
-
-          // 3) Executive dashboard: create a real product-management hub inside the one admin panel.
-          {
-            const file='admin-dashboard.html';
-            let s=fs.readFileSync(file,'utf8');
-            const employeeTabAnchor="  const employeeTabs=[\n    ['live','activity','الآن',employeeOnline.size],\n    ['overview','grid','الأرقام',null],";
-            const employeeTabReplacement="  const employeeTabs=[\n    ['live','activity','الآن',employeeOnline.size],\n    ['overview','grid','الأرقام',null],\n    ['product_management','box','المنتجات',null],";
-            s=one(s,employeeTabAnchor,employeeTabReplacement,'admin employee product tab');
-            s=one(s,"if(['live','overview','portal','site_access','images'].includes(module))return null;","if(['live','overview','product_management','portal','site_access','images'].includes(module))return null;",'admin product toolbar');
-
-            const marker='  function RawCollections({side})';
-            if(s.includes('function ProductManagementHub()'))throw new Error('admin: ProductManagementHub already exists unexpectedly');
-            if(!s.includes(marker))throw new Error('admin: RawCollections insertion marker not found');
-            const hub=`  function ProductManagementHub(){\n    const tile=(icon,title,note,onClick,badge)=> <button onClick={onClick} className="bg-white border border-border rounded-2xl p-5 text-right shadow-card hover:border-[#D6D3D1] press"><div className="flex items-start justify-between gap-3"><div className="w-11 h-11 rounded-2xl bg-accentSoft text-accent flex items-center justify-center"><Icon name={icon} className="w-5 h-5"/></div><Pill tone="info">{badge}</Pill></div><h3 className="text-base font-bold mt-4">{title}</h3><p className="text-[11px] text-secondary mt-1 leading-5">{note}</p><div className="text-[11px] text-accent font-bold mt-4">فتح ←</div></button>;\n    return <div className="grid gap-4"><section className="bg-white border border-border rounded-2xl p-5 shadow-card"><div className="text-[10px] text-accent font-bold">إدارة موحدة</div><h2 className="text-lg font-bold mt-1">المنتجات والأقسام</h2><p className="text-[11px] text-secondary mt-2 leading-5">كل أدوات إدارة المنتجات أصبحت داخل لوحة التحكم التنفيذية. لا توجد لوحة منتجات مستقلة في واجهة المخزون.</p></section><div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{tile('grid','إدارة أقسام المنتجات','إنشاء الأقسام وتعديل توزيع الأصناف من نفس المصدر المشترك للموظفين والعملاء.',()=>setCategoryManagerOpen(true),'الأقسام')}{tile('image','مكتبة صور المنتجات','رفع الصور واعتمادها من داخل الإدارة التنفيذية.',()=>setTab('images'),'الصور')}{tile('box','إدارة «جديدنا»','مراجعة الأصناف الجديدة وجاهزية الصورة والسعر والقسم.',()=>setTab('new_arrivals'),'جديدنا')}{tile('history','سجل التصنيفات','مراجعة تعديلات الأقسام السابقة وسجل النقل بين التصنيفات.',()=>setTab('categories'),'السجل')}<button onClick={()=>{window.location.href='./image-distribution.html'}} className="bg-white border border-border rounded-2xl p-5 text-right shadow-card hover:border-[#D6D3D1] press"><div className="flex items-start justify-between gap-3"><div className="w-11 h-11 rounded-2xl bg-infoSoft text-info flex items-center justify-center"><Icon name="image" className="w-5 h-5"/></div><Pill tone="info">الربط</Pill></div><h3 className="text-base font-bold mt-4">ألبوم الصور وربط الأصناف</h3><p className="text-[11px] text-secondary mt-1 leading-5">عرض الصور الموزعة وغير الموزعة وإعادة ربط الصورة بالصنف الصحيح.</p><div className="text-[11px] text-accent font-bold mt-4">فتح الألبوم ←</div></button></div></div>;\n  }\n\n`;
-            s=s.replace(marker,hub+marker);
-            s=one(s,"case'overview':return <EmployeeOverview/>;case'accounts':","case'overview':return <EmployeeOverview/>;case'product_management':return <ProductManagementHub/>;case'accounts':",'admin product route');
-            fs.writeFileSync(file,s);
-          }
-
-          // 4) Sidebar route and active state point to the new product hub, not the category audit screen.
-          {
-            const file='v46-admin-nav.js';
-            let s=fs.readFileSync(file,'utf8');
-            s=one(s,"['products','المنتجات والأقسام','./admin-dashboard.html?section=employees&module=categories']","['products','المنتجات والأقسام','./admin-dashboard.html?section=employees&module=product_management']",'sidebar product route');
-            s=one(s,"if(m==='categories'||m==='images'||m==='new_arrivals')return'products';","if(m==='product_management'||m==='categories'||m==='images'||m==='new_arrivals')return'products';",'sidebar product active state');
-            fs.writeFileSync(file,s);
-          }
-
-          // 5) Employee navigation should not also appear active while the product hub is active.
-          {
-            const file='v54-admin-enhancements.js';
-            let s=fs.readFileSync(file,'utf8');
-            s=one(s,"!['categories','images','new_arrivals','orders'].includes(new URLSearchParams(location.search).get('module'))","!['product_management','categories','images','new_arrivals','orders'].includes(new URLSearchParams(location.search).get('module'))",'enhancement active state');
-            fs.writeFileSync(file,s);
-          }
-
-          // 6) Preserve the V56.36 sold-out image ownership fix and restore the established backend compatibility marker.
-          {
-            const file='image-distribution.html';
-            let s=fs.readFileSync(file,'utf8');
-            const marker="const adminToken=()=>String(localStorage.getItem('inventory_admin_token_v2')||'');";
-            if(!s.includes("IMAGE_BINDING_BACKEND='api/image-admin'")){
-              s=one(s,marker,marker+"\nconst IMAGE_BINDING_BACKEND='api/image-admin';",'image backend marker');
-            }
-            if(!s.includes("text('./data/pricing.tsv')")||!s.includes("text('./data/categories.tsv')"))throw new Error('image album: persistent sold-out catalog sources missing');
-            fs.writeFileSync(file,s);
-          }
-
-          // Static invariants before committing.
           const runtime=fs.readFileSync('runtime/index-v37-source.txt','utf8');
           const index=fs.readFileSync('index.html','utf8');
-          const admin=fs.readFileSync('admin-dashboard.html','utf8');
           const nav=fs.readFileSync('v46-admin-nav.js','utf8');
           const enhance=fs.readFileSync('v54-admin-enhancements.js','utf8');
           const album=fs.readFileSync('image-distribution.html','utf8');
-          if(runtime.includes('title="إدارة المنتجات والأقسام"'))throw new Error('duplicate product button survived');
-          if(!index.includes("v=56.16&rev=56.37"))throw new Error('runtime cache contract/revision wrong');
-          for(const x of ['ProductManagementHub','product_management','إدارة أقسام المنتجات','ألبوم الصور وربط الأصناف'])if(!admin.includes(x))throw new Error('admin hub missing '+x);
-          if(!nav.includes('module=product_management'))throw new Error('sidebar does not open product hub');
-          if(!enhance.includes("v54-1-desktop-canvas-fix.css?v=56.37"))throw new Error('desktop CSS cache bust is stale');
+          if(runtime.includes('title="إدارة المنتجات والأقسام"'))throw new Error('duplicate product launcher survived');
+          if(!runtime.includes('title="لوحة التحكم الإدارية"'))throw new Error('unified admin launcher missing');
+          if(!index.includes("v=56.16&rev=56.37"))throw new Error('runtime cache contract wrong');
+          for(const x of ['ProductManagementHub','product_management','إدارة أقسام المنتجات','مكتبة صور المنتجات','إدارة «جديدنا»','سجل التصنيفات','ألبوم الصور وربط الأصناف'])if(!s.includes(x))throw new Error('product hub missing '+x);
+          if(!nav.includes('module=product_management'))throw new Error('sidebar product route missing');
+          if(!enhance.includes("v54-1-desktop-canvas-fix.css?v=56.37"))throw new Error('desktop canvas cache bust stale');
           if(!album.includes("IMAGE_BINDING_BACKEND='api/image-admin'"))throw new Error('image backend compatibility marker missing');
-          if(!album.includes('parsePricingCatalog')||!album.includes('parseCategoryCatalog'))throw new Error('sold-out image ownership repair missing');
+          if(!album.includes("text('./data/pricing.tsv')")||!album.includes("text('./data/categories.tsv')"))throw new Error('sold-out persistent catalog sources missing');
           NODE
 
+          rm -f v56-37-admin-entry-unification.js
+          rm -f .github/workflows/apply-v56-37-admin-unification.yml
           git diff --check
-          git diff --exit-code --quiet && { echo 'No V56.37 changes produced'; exit 1; } || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add runtime/index-v37-source.txt index.html admin-dashboard.html v46-admin-nav.js v54-admin-enhancements.js image-distribution.html
-          git commit -m "feat(v56.37): consolidate product administration"
+          git add -A
+          git commit -m "chore(v56.37): finalize unified admin cleanup"
           git push origin HEAD:main
