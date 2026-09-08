@@ -1,0 +1,89 @@
+name: V56.39 Identity Production Smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity-production-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PROD: https://inventory-system-coral-nu.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for production to serve V56.39 identity tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(cat runtime/v56-39-identity-production-probe.txt)"
+          ok=0
+          for attempt in $(seq 1 48); do
+            body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
+            if [[ "$body" == "$expected" ]]; then
+              echo "V56.39 identity production probe matched on attempt $attempt"
+              ok=1
+              break
+            fi
+            echo "Attempt $attempt: production has not reached V56.39 identity tree yet"
+            sleep 10
+          done
+          if [[ "$ok" != "1" ]]; then
+            echo "::error::Production alias did not serve the V56.39 identity probe within the verification window."
+            exit 1
+          fi
+
+      - name: Verify exact identity control page and shared assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          nonce="${GITHUB_SHA}-$(date +%s)"
+          files=(
+            identities.html
+            v56-39-site-identity.js
+            v56-39-national-day.css
+            national-day-96-mark.svg
+            v46-admin-nav.js
+            runtime/index-v37-source.txt
+          )
+          for file in "${files[@]}"; do
+            mkdir -p "/tmp/$(dirname "$file")"
+            curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
+            cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
+          done
+
+          grep -Fq "CONTROL_DOC='site_identity'" /tmp/v56-39-site-identity.js
+          grep -Fq "DEFAULT_IDENTITY='default'" /tmp/v56-39-site-identity.js
+          grep -Fq "NATIONAL_IDENTITY='national96'" /tmp/v56-39-site-identity.js
+          grep -Fq "enabled:false" /tmp/v56-39-site-identity.js
+          grep -Fq "onSnapshot" /tmp/v56-39-site-identity.js
+          grep -Fq "batco-identity-national96" /tmp/v56-39-site-identity.js
+          grep -Fq "waitForDefaultFirebase" /tmp/v56-39-site-identity.js
+
+          grep -Fq "الهويات" /tmp/identities.html
+          grep -Fq "اليوم الوطني السعودي 96" /tmp/identities.html
+          grep -Fq "مقفلة افتراضيًا" /tmp/identities.html
+          grep -Fq "system_controls" /tmp/identities.html
+          grep -Fq "site_identity" /tmp/identities.html
+          grep -Fq "national96" /tmp/identities.html
+
+          grep -Fq "['identity','الهويات','./identities.html']" /tmp/v46-admin-nav.js
+          grep -Fq "v56-39-site-identity.js?v=56.39" /tmp/runtime/index-v37-source.txt
+
+          grep -Fq "#008B4C" /tmp/v56-39-national-day.css
+          grep -Fq "#0F2C31" /tmp/v56-39-national-day.css
+          grep -Fq "repeating-conic-gradient" /tmp/v56-39-national-day.css
+          grep -Fq "prefers-reduced-motion" /tmp/v56-39-national-day.css
+          grep -Fq "national-day-96-mark.svg" /tmp/v56-39-national-day.css
+
+          grep -Fq "هوية اليوم الوطني السعودي 96" /tmp/national-day-96-mark.svg
+          grep -Fq "SAUDI NATIONAL DAY 96" /tmp/national-day-96-mark.svg
+
+          curl -fsSL --retry 3 --retry-delay 2 "$PROD/identities.html?route=$nonce" -o /tmp/identity-route.html
+          test -s /tmp/identity-route.html
+          grep -Fq "الهويات" /tmp/identity-route.html
+          echo "Production serves the exact V56.39 identity manager and National Day 96 assets from current main."
