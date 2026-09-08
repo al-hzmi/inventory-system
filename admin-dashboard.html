@@ -474,7 +474,7 @@ const eventName=t=>customerEventNames[t]||t||'نشاط';
 const loginName=t=>({account_created:'إنشاء حساب',login_success:'دخول ناجح',session_restore:'استعادة جلسة'})[t]||t||'تسجيل دخول';
 
 function AdminApp(){
-  const initialRoute=useMemo(()=>{const params=new URLSearchParams(location.search),area=params.get('section')==='customers'?'customers':'employees';return {area,module:params.get('module')||'live'}},[]);
+  const initialRoute=useMemo(()=>{const params=new URLSearchParams(location.search),requestedSection=params.get('section'),requestedModule=params.get('module')||'live',productModules=new Set(['product_management','images','new_arrivals','categories']);const area=requestedSection==='products'||productModules.has(requestedModule)?'products':requestedSection==='customers'?'customers':'employees';const module=area==='products'?(productModules.has(requestedModule)?requestedModule:'product_management'):requestedModule;return {area,module}},[]);
   const [area,setArea]=useState(initialRoute.area);
   const [module,setModule]=useState(initialRoute.module);
   const [search,setSearch]=useState('');
@@ -626,18 +626,14 @@ function AdminApp(){
   const employeeTabs=[
     ['live','activity','الآن',employeeOnline.size],
     ['overview','grid','الأرقام',null],
-    ['product_management','box','المنتجات',null],
     ['accounts','lock','حسابات الموظفين',eAccounts.length],
     ['site_access','power','صلاحيات الموقع',employeeSiteControl.mode==='open'?null:'!'],
-    ['images','image','إدارة الصور',null],
-    ['new_arrivals','box','جديدنا',(newArrivalCatalog.meta.items||[]).length],
     ['security_photos','camera','صور التحقق',eSecurityPhotos.length],
     ['staff','users','الموظفون',eUsers.length],
     ['sessions','clock','جلسات العمل',employeeOnline.size],
     ['orders','cart','الطلبات',eOrders.length],
     ['drafts','file','المسودات',eDrafts.length],
     ['searches','search','سجل البحث',searches.length],
-    ['categories','history','التصنيفات',categoryAudit.length],
     ['raw','database','البيانات',null]
   ];
   const customerTabs=[
@@ -645,7 +641,6 @@ function AdminApp(){
     ['overview','grid','الأرقام',null],
     ['companies','building','الشركات',companies.length],
     ['accounts','users','العملاء',customers.filter(c=>c.status!=='deleted').length],
-    ['images','image','إدارة الصور',null],
     ['security_photos','camera','صور التحقق',cSecurityPhotos.length],
     ['activity','activity','النشاط',cActivity.length],
     ['orders','cart','الطلبات',cOrders.length],
@@ -654,13 +649,20 @@ function AdminApp(){
     ['portal','settings','تشغيل البوابة',control.enabled?null:'!'],
     ['raw','database','البيانات',null]
   ];
+  const productTabs=[
+    ['product_management','box','الرئيسية',null],
+    ['images','image','مكتبة الصور',null],
+    ['new_arrivals','box','جديدنا',(newArrivalCatalog.meta.items||[]).length],
+    ['categories','history','سجل التصنيفات',categoryAudit.length]
+  ];
 
   function CommandHeader(){
-    const title=area==='employees'?'مركز قيادة الموظفين':'مركز قيادة العملاء';
+    const title=area==='products'?'مركز إدارة المنتجات والأقسام':area==='employees'?'مركز قيادة الموظفين':'مركز قيادة العملاء';
+    const headerIcon=area==='products'?'box':area==='employees'?'users':'building';
     return <>
       <div className="h-16 px-4 sm:px-5 flex items-center justify-between border-b border-border bg-surface shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-accentSoft text-accent flex items-center justify-center shrink-0"><Icon name={area==='employees'?'users':'building'} className="w-5 h-5"/></div>
+          <div className="w-10 h-10 rounded-xl bg-accentSoft text-accent flex items-center justify-center shrink-0"><Icon name={headerIcon} className="w-5 h-5"/></div>
           <div className="min-w-0"><h1 className="font-bold text-[15px] sm:text-[16px] truncate">{title}</h1><div className="text-[10px] text-muted mt-0.5 truncate">بيت الأواني الطيبة · <a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link font-bold text-secondary hover:text-accent">تطوير مهند الحزمي</a> · <span className="font-bold text-[#047857]">Korvi</span></div></div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -669,10 +671,10 @@ function AdminApp(){
           <button onClick={()=>location.href='./index.html'} title="إغلاق" className="w-9 h-9 rounded-lg bg-white border border-border flex items-center justify-center hover:bg-dangerSoft hover:text-danger"><Icon name="x" className="w-4 h-4"/></button>
         </div>
       </div>
-      <div className="px-4 py-3 border-b border-border bg-white shrink-0"><div className="grid grid-cols-2 gap-2 max-w-[520px] mx-auto">
+      {area!=='products'&&<div className="px-4 py-3 border-b border-border bg-white shrink-0"><div className="grid grid-cols-2 gap-2 max-w-[520px] mx-auto">
         <button data-admin-area="employees" data-active={area==='employees'} onClick={()=>openArea('employees','live')} className={`h-11 rounded-xl border text-[13px] font-bold flex items-center justify-center gap-2 ${area==='employees'?'bg-primary text-white border-primary':'bg-white border-border text-secondary hover:bg-surface'}`}><Icon name="users" className="w-4 h-4"/>الموظفون{employeesWithoutPassword>0&&<span className={`min-w-5 h-5 px-1.5 rounded-full text-[9px] flex items-center justify-center ${area==='employees'?'bg-white text-danger':'bg-danger text-white'}`}>{employeesWithoutPassword}</span>}</button>
         <button data-admin-area="customers" data-active={area==='customers'} onClick={()=>openArea('customers','live')} className={`h-11 rounded-xl border text-[13px] font-bold flex items-center justify-center gap-2 ${area==='customers'?'bg-primary text-white border-primary':'bg-white border-border text-secondary hover:bg-surface'}`}><Icon name="building" className="w-4 h-4"/>العملاء<span className={`text-[9px] px-2 py-0.5 rounded-full ${control.enabled?(area==='customers'?'bg-white/15 text-white':'bg-successSoft text-success'):(area==='customers'?'bg-white text-danger':'bg-dangerSoft text-danger')}`}>{control.enabled?'مفعلة':'متوقفة'}</span></button>
-      </div></div>
+      </div></div>}
     </>;
   }
 
@@ -693,7 +695,7 @@ function AdminApp(){
     </div>;
   }
 
-  function TabsBar(){const tabs=area==='employees'?employeeTabs:customerTabs;return <div className="flex overflow-x-auto no-scrollbar border-b border-border bg-surface shrink-0">{tabs.map(([id,icon,label,badge])=><button data-admin-module={id} data-active={module===id} key={id} onClick={()=>setTab(id)} className={`min-w-[118px] sm:min-w-[128px] h-12 px-3 whitespace-nowrap text-[11px] sm:text-[12px] font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors ${module===id?'border-accent text-accent bg-white':'border-transparent text-secondary hover:text-primary'}`}><Icon name={icon} className="w-3.5 h-3.5"/>{label}{badge!==null&&badge!==undefined&&badge!==0&&<span className={`min-w-5 h-5 px-1 rounded-full text-[9px] flex items-center justify-center ${id==='access_pending'&&Number(badge)>0?'bg-danger text-white':'bg-white border border-border text-secondary'}`}>{badge}</span>}</button>)}</div>}
+  function TabsBar(){const tabs=area==='products'?productTabs:area==='employees'?employeeTabs:customerTabs;return <div className="flex overflow-x-auto no-scrollbar border-b border-border bg-surface shrink-0">{tabs.map(([id,icon,label,badge])=><button data-admin-module={id} data-active={module===id} key={id} onClick={()=>setTab(id)} className={`min-w-[118px] sm:min-w-[128px] h-12 px-3 whitespace-nowrap text-[11px] sm:text-[12px] font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors ${module===id?'border-accent text-accent bg-white':'border-transparent text-secondary hover:text-primary'}`}><Icon name={icon} className="w-3.5 h-3.5"/>{label}{badge!==null&&badge!==undefined&&badge!==0&&<span className={`min-w-5 h-5 px-1 rounded-full text-[9px] flex items-center justify-center ${id==='access_pending'&&Number(badge)>0?'bg-danger text-white':'bg-white border border-border text-secondary'}`}>{badge}</span>}</button>)}</div>}
 
   function ToolBar(){if(['live','overview','product_management','portal','site_access','images'].includes(module))return null;return <div className="p-3 sm:p-4 border-b border-border bg-surface flex flex-col sm:flex-row gap-2 sm:items-center shrink-0"><div className="relative flex-1"><Icon name="search" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث ذكي عن أي شيء..." className="w-full h-10 pr-10 pl-3 rounded-lg border border-border bg-white outline-none focus:border-accent text-[13px]"/></div><select value={sortOrder} onChange={e=>setSortOrder(e.target.value)} className="h-10 px-3 rounded-lg border border-border bg-white text-[12px] outline-none focus:border-accent"><option value="desc">الأحدث أولاً</option><option value="asc">الأقدم أولاً</option></select></div>}
 
@@ -871,7 +873,7 @@ function AdminApp(){
 
   function RawCollections({side}){const defs=side==='customers'?[['customers',customers],['customer_devices',cDevices],['customer_security_photos',cSecurityPhotos],['customer_sessions',cSessions],['customer_login_logs',cLogins],['customer_activity_logs',cActivity],['customer_orders',cOrdersAll],['customer_drafts',cDrafts],['security_admin_logs',adminLogs]]:[['users',eUsers],['employee_accounts',eAccounts.map(redactSensitive)],['employee_aliases',eAliases],['employee_security_photos',eSecurityPhotos],['employee_login_attempts',eLoginAttempts],['site_sessions',eSessions],['login_logs',eLogins],['access_requests',access],['search_logs',searches],['orders',eOrdersAll],['drafts',eDrafts],['category_audit_logs',categoryAudit],['new_arrival_reviews',newArrivalReviews],['security_admin_logs',adminLogs]];return <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">{defs.map(([name,rows])=><button key={name} onClick={()=>setDetail({collection:name,count:rows.length,latest:rows.slice(0,50),__collection:'collection_summary'})} className="bg-white border border-border rounded-xl p-4 shadow-card text-right"><div className="flex justify-between gap-2"><div className="w-9 h-9 rounded-lg bg-surface text-secondary flex items-center justify-center"><Icon name="database" className="w-4 h-4"/></div><Pill>{rows.length} سجل</Pill></div><div className="text-[10px] text-muted ltr text-right mt-4">{name}</div><b className="text-[13px] block mt-1">فتح البيانات</b></button>)}</div>}
 
-  function ActiveContent(){if(area==='employees'){switch(module){case'live':return <EmployeeLive/>;case'overview':return <EmployeeOverview/>;case'product_management':return <ProductManagementHub/>;case'accounts':return <EmployeeAccounts/>;case'site_access':return <EmployeeSiteAccessControl/>;case'images':return <ImageLibraryManager/>;case'new_arrivals':return <NewArrivalsManager/>;case'security_photos':return <EmployeeSecurityPhotos/>;case'staff':return <EmployeeStaff/>;case'sessions':return <EmployeeSessions/>;case'orders':return <EmployeeOrders/>;case'drafts':return <EmployeeDrafts/>;case'searches':return <EmployeeSearches/>;case'categories':return <EmployeeCategories/>;case'raw':return <RawCollections side="employees"/>;default:return <EmployeeOverview/>}}switch(module){case'live':return <CustomerLive/>;case'overview':return <CustomerOverview/>;case'companies':return <CustomerCompanies/>;case'accounts':return <CustomerAccounts/>;case'images':return <ImageLibraryManager/>;case'new_arrivals':return <NewArrivalsManager/>;case'security_photos':return <CustomerSecurityPhotos/>;case'activity':return <CustomerActivity/>;case'orders':return <CustomerOrders/>;case'drafts':return <CustomerDrafts/>;case'sessions':return <CustomerSessions/>;case'portal':return <CustomerPortal/>;case'raw':return <RawCollections side="customers"/>;default:return <CustomerOverview/>}}
+  function ActiveContent(){if(area==='products'){switch(module){case'product_management':return <ProductManagementHub/>;case'images':return <ImageLibraryManager/>;case'new_arrivals':return <NewArrivalsManager/>;case'categories':return <EmployeeCategories/>;default:return <ProductManagementHub/>}}if(area==='employees'){switch(module){case'live':return <EmployeeLive/>;case'overview':return <EmployeeOverview/>;case'accounts':return <EmployeeAccounts/>;case'site_access':return <EmployeeSiteAccessControl/>;case'security_photos':return <EmployeeSecurityPhotos/>;case'staff':return <EmployeeStaff/>;case'sessions':return <EmployeeSessions/>;case'orders':return <EmployeeOrders/>;case'drafts':return <EmployeeDrafts/>;case'searches':return <EmployeeSearches/>;case'raw':return <RawCollections side="employees"/>;default:return <EmployeeOverview/>}}switch(module){case'live':return <CustomerLive/>;case'overview':return <CustomerOverview/>;case'companies':return <CustomerCompanies/>;case'accounts':return <CustomerAccounts/>;case'security_photos':return <CustomerSecurityPhotos/>;case'activity':return <CustomerActivity/>;case'orders':return <CustomerOrders/>;case'drafts':return <CustomerDrafts/>;case'sessions':return <CustomerSessions/>;case'portal':return <CustomerPortal/>;case'raw':return <RawCollections side="customers"/>;default:return <CustomerOverview/>}}
 
   if(false&&loading)return <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-0 sm:p-4"><div className="w-full max-w-[1080px] h-[100dvh] sm:h-[94vh] bg-white sm:rounded-2xl overflow-hidden shadow-lift flex flex-col"><CommandHeader/><div className="flex-1 p-4 bg-surface"><div className="h-12 rounded-xl skeleton"></div><div className="grid grid-cols-2 gap-3 mt-3"><div className="h-28 rounded-xl skeleton"></div><div className="h-28 rounded-xl skeleton"></div></div><div className="h-72 rounded-xl skeleton mt-3"></div></div></div></div>;
 
@@ -898,7 +900,7 @@ setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden')
 
 
 <script src="./v45-admin-ux.js?v=45.0"></script>
-<script src="./v46-admin-nav.js?v=55.4"></script>
+<script src="./v46-admin-nav.js?v=56.38"></script>
 <script src="./v48-admin-security.js?v=48.0"></script>
 </body>
 </html>

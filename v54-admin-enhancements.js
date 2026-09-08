@@ -2,7 +2,7 @@
 'use strict';
 // VERSION='56.35' compatibility marker for V56.35 production smoke.
 // security-center.html?embed=executive&v=56.35 compatibility marker for V56.35 production smoke.
-const VERSION='56.37',path=(location.pathname.split('/').pop()||'').toLowerCase();
+const VERSION='56.38',path=(location.pathname.split('/').pop()||'').toLowerCase();
 const employeeExtra={
  viewStockQty:'المخزون — رؤية الكمية الفعلية',viewPrices:'المخزون — رؤية الأسعار',viewImages:'المنتجات — رؤية الصور',switchWarehouse:'المخزون — التبديل بين المستودعات',
  editCart:'الفاتورة — تعديل الكميات',removeCartItems:'الفاتورة — حذف الأصناف',submitOrder:'الفاتورة — اعتماد وإرسال الطلب',viewOrderHistory:'الطلبات — رؤية السجل السابق',
@@ -11,7 +11,7 @@ const employeeExtra={
 const customerExtra={
  viewPrices:'المنتجات — رؤية الأسعار',viewStockStatus:'المنتجات — رؤية حالة التوفر',viewCartImages:'السلة — عرض صور الأصناف',editCart:'السلة — تعديل الكميات',removeCartItems:'السلة — حذف الأصناف',branchDistribution:'السلة — تعديل توزيع الفروع',checkoutNotes:'الطلب — إضافة ملاحظة',shareProduct:'المنتجات — المشاركة',viewOrderDetails:'الطلبات — رؤية تفاصيل الطلبات السابقة'
 };
-function loadCanvasFix(){if(document.getElementById('v54-1-desktop-canvas-fix'))return;const l=document.createElement('link');l.id='v54-1-desktop-canvas-fix';l.rel='stylesheet';l.href='./v54-1-desktop-canvas-fix.css?v=56.37';document.head.appendChild(l)}
+function loadCanvasFix(){if(document.getElementById('v54-1-desktop-canvas-fix'))return;const l=document.createElement('link');l.id='v54-1-desktop-canvas-fix';l.rel='stylesheet';l.href='./v54-1-desktop-canvas-fix.css?v=56.38';document.head.appendChild(l)}
 function extendControlCenter(){
  if(path!=='control-center.html')return;
  try{
@@ -39,10 +39,10 @@ function removeLegacySecurityLaunchers(){
  document.querySelectorAll('.v52-security,[data-v56-security-center],[data-security-launcher],a[href*="security-center.html"],a[href*="section=security"],button[data-section="security"],button[data-admin-area="security"],[onclick*="security-center.html"],[onclick*="section=security"]').forEach(el=>el.remove());
 }
 function unifiedPeopleNavigation(){
- const dashboard=path==='admin-dashboard.html';
+ const dashboard=path==='admin-dashboard.html',section=new URLSearchParams(location.search).get('section');
  const employeeLinks=[...document.querySelectorAll('[data-v52="employees"],[data-v52-mobile="employees"]')];
  const customerLinks=[...document.querySelectorAll('[data-v52="customers"],[data-v52-mobile="customers"]')];
- employeeLinks.forEach(a=>{a.href='./admin-dashboard.html?section=employees&module=live';a.dataset.v56People='true';const span=a.querySelector('span');if(span)span.textContent='الموظفون والعملاء';a.classList.toggle('on',dashboard&&!['product_management','categories','images','new_arrivals','orders'].includes(new URLSearchParams(location.search).get('module')))});
+ employeeLinks.forEach(a=>{a.href='./admin-dashboard.html?section=employees&module=live';a.dataset.v56People='true';const span=a.querySelector('span');if(span)span.textContent='الموظفون والعملاء';a.classList.toggle('on',dashboard&&section!=='products'&&!['orders'].includes(new URLSearchParams(location.search).get('module')))});
  customerLinks.forEach(a=>a.remove());
  const mobile=document.getElementById('v52-mobile-nav');if(mobile)mobile.dataset.v56UnifiedPeople='true';
 }
@@ -106,5 +106,5 @@ function executiveIntegration(){removeLegacySecurityLaunchers();unifiedPeopleNav
 function run(){loadCanvasFix();extendControlCenter();labels();permissionSummary();loadSalesClarity();executiveIntegration()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(run,0));else setTimeout(run,0);
 const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(()=>{loadCanvasFix();labels();permissionSummary();loadSalesClarity();executiveIntegration()},100)});mo.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-active']});
-window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};window.__V56_35_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_37_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;
+window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};window.__V56_35_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_37_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_38_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;
 })();

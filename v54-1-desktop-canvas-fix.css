@@ -1,4 +1,4 @@
-/* V56.36 — desktop canvas now follows the CURRENT React root, while preserving V56.34 compatibility. */
+/* V56.38 — responsive executive canvas; Products is a dedicated mobile destination. */
 @media (min-width:901px){
   html{width:100%!important;max-width:100%!important;overflow-x:hidden!important;background:var(--admin-bg,#f5f7f6)!important}
   .v52-sidebar{box-sizing:border-box!important}
@@ -29,7 +29,7 @@
 .v56-security-frame-wrap{width:100%;min-width:0;border:1px solid var(--admin-line,#e4e9e6);border-radius:18px;overflow:hidden;background:#fff;box-shadow:var(--admin-shadow,0 8px 30px rgba(16,24,20,.055))}
 .v56-security-frame{display:block;width:100%;height:calc(100dvh - 150px);min-height:720px;border:0;background:#fafaf9}
 body.v56-security-embedded #root{display:none!important}
-#v52-mobile-nav[data-v56-unified-people="true"]{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+#v52-mobile-nav[data-v56-unified-people="true"]{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 
 @media (max-width:900px){
   body.v52-admin-layout{width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin:0!important}
