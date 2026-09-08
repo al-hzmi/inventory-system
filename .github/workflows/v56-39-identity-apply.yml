@@ -1,0 +1,524 @@
+name: V56.39 Identity Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-39-identity-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build occasion identity system
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > national-day-96-mark.svg <<'SVG'
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" role="img" aria-labelledby="title desc">
+            <title id="title">هوية اليوم الوطني السعودي 96</title>
+            <desc id="desc">شارة خضراء بنقوش هندسية مستوحاة من الهوية النجدية واليوم الوطني السعودي 96</desc>
+            <defs>
+              <pattern id="weave" width="24" height="24" patternUnits="userSpaceOnUse">
+                <rect width="24" height="24" fill="#0F2C31"/>
+                <rect width="12" height="12" fill="#14393B"/>
+                <rect x="12" y="12" width="12" height="12" fill="#14393B"/>
+                <rect x="4" y="4" width="4" height="4" fill="#008B4C" opacity=".55"/>
+                <rect x="16" y="16" width="4" height="4" fill="#3D8943" opacity=".6"/>
+              </pattern>
+              <pattern id="teeth" width="28" height="18" patternUnits="userSpaceOnUse">
+                <path d="M0 9 7 2l7 7-7 7zM14 9l7-7 7 7-7 7z" fill="#3D8943"/>
+              </pattern>
+              <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#008B4C"/>
+                <stop offset="1" stop-color="#006B3B"/>
+              </linearGradient>
+              <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#001E22" flood-opacity=".18"/>
+              </filter>
+            </defs>
+            <rect x="58" y="32" width="644" height="152" rx="4" fill="url(#weave)" filter="url(#soft)"/>
+            <rect x="58" y="22" width="644" height="12" fill="url(#teeth)"/>
+            <rect x="58" y="182" width="644" height="12" fill="url(#teeth)"/>
+            <g fill="#008B4C" opacity=".95">
+              <path d="M70 48h22v22H70zM96 48h22v22H96zM70 74h22v22H70zM660 48h22v22h-22zM634 48h22v22h-22zM660 74h22v22h-22z"/>
+              <path d="M70 120h22v22H70zM96 146h22v22H96zM660 120h22v22h-22zM634 146h22v22h-22z" opacity=".7"/>
+            </g>
+            <text x="380" y="130" fill="#FFFFFF" font-size="66" font-weight="800" text-anchor="middle" direction="rtl" font-family="IBM Plex Sans Arabic, Noto Kufi Arabic, Arial, sans-serif">عزنا بطبعنا</text>
+            <text x="380" y="233" fill="#0F2C31" font-size="36" font-weight="800" text-anchor="middle" direction="rtl" font-family="IBM Plex Sans Arabic, Arial, sans-serif">اليوم الوطني السعودي 96</text>
+            <text x="380" y="274" fill="#3D8943" font-size="18" font-weight="700" letter-spacing="8" text-anchor="middle" font-family="Arial, sans-serif">SAUDI NATIONAL DAY 96</text>
+            <rect x="58" y="207" width="86" height="6" rx="3" fill="url(#green)"/>
+            <rect x="616" y="207" width="86" height="6" rx="3" fill="url(#green)"/>
+          </svg>
+          SVG
+
+          cat > v56-39-national-day.css <<'CSS'
+          /* V56.39 — Saudi National Day 96 occasion identity. Opt-in only. */
+          html.batco-identity-national96{
+            --nd96-green:#008B4C;
+            --nd96-green-dark:#006B3B;
+            --nd96-deep:#0F2C31;
+            --nd96-deep-2:#14393B;
+            --nd96-leaf:#3D8943;
+            --nd96-mist:#F2F8F4;
+            --nd96-line:#CFE3D7;
+            --nd96-white:#FFFFFF;
+            --primary:#0F2C31;--secondary:#365B50;--muted:#71847C;--border:#CFE3D7;--surface:#F2F8F4;
+            --accent:#008B4C;--accentSoft:#E4F4E9;--success:#008B4C;--successSoft:#E5F7EA;
+            --p:#0F2C31;--s:#365B50;--m:#71847C;--b:#CFE3D7;--sf:#F2F8F4;--a:#008B4C;--as:#E4F4E9;--ok:#008B4C;--oks:#E5F7EA;
+            --admin-ink:#0F2C31;--admin-muted:#64776F;--admin-line:#CFE3D7;--admin-green:#008B4C;
+            color-scheme:light;
+          }
+          html.batco-identity-national96 body{
+            background-color:var(--nd96-mist)!important;
+            background-image:
+              radial-gradient(circle at 12% 10%,rgba(0,139,76,.07),transparent 28%),
+              radial-gradient(circle at 88% 18%,rgba(61,137,67,.08),transparent 25%)!important;
+          }
+          html.batco-identity-national96 body,
+          html.batco-identity-national96 #root{color:var(--nd96-deep)}
+          html.batco-identity-national96 .bg-surface{background-color:var(--nd96-mist)!important}
+          html.batco-identity-national96 .bg-primary,
+          html.batco-identity-national96 button.bg-primary,
+          html.batco-identity-national96 a.bg-primary,
+          html.batco-identity-national96 .primary,
+          html.batco-identity-national96 .btn.entry,
+          html.batco-identity-national96 .save,
+          html.batco-identity-national96 .chip.active,
+          html.batco-identity-national96 .scan{
+            background-color:var(--nd96-deep)!important;
+            background-image:
+              linear-gradient(135deg,rgba(255,255,255,.045) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.045) 50%,rgba(255,255,255,.045) 75%,transparent 75%)!important;
+            background-size:18px 18px!important;
+            border-color:var(--nd96-deep)!important;
+            color:#fff!important;
+          }
+          html.batco-identity-national96 .bg-accentSoft{background-color:#E4F4E9!important}
+          html.batco-identity-national96 .text-accent{color:var(--nd96-green)!important}
+          html.batco-identity-national96 .border-border{border-color:var(--nd96-line)!important}
+          html.batco-identity-national96 .bg-successSoft{background-color:#E5F7EA!important}
+          html.batco-identity-national96 .text-success{color:var(--nd96-green-dark)!important}
+          html.batco-identity-national96 input:focus,
+          html.batco-identity-national96 textarea:focus,
+          html.batco-identity-national96 select:focus{border-color:var(--nd96-green)!important;box-shadow:0 0 0 3px rgba(0,139,76,.09)!important}
+          html.batco-identity-national96 .top{border-color:var(--nd96-line)!important;background:rgba(242,248,244,.95)!important}
+          html.batco-identity-national96 .panel,
+          html.batco-identity-national96 .card{border-color:var(--nd96-line)!important}
+          html.batco-identity-national96 .mission{background:linear-gradient(145deg,var(--nd96-deep),#103C38 58%,var(--nd96-green-dark))!important}
+          html.batco-identity-national96 .mission:after{background:radial-gradient(circle,rgba(0,139,76,.34),rgba(0,139,76,0) 68%)!important}
+          html.batco-identity-national96 .missionEyebrow{color:#BDE8CB!important}
+          html.batco-identity-national96 .mission .progress>i{background:linear-gradient(90deg,#008B4C,#54AE63)!important}
+
+          /* Executive/admin shell */
+          html.batco-identity-national96 .v52-sidebar{
+            background:var(--nd96-deep)!important;color:#fff!important;
+            background-image:linear-gradient(180deg,rgba(0,139,76,.08),transparent 32%),repeating-linear-gradient(45deg,rgba(255,255,255,.018) 0 8px,transparent 8px 16px)!important;
+            border-inline-start-color:rgba(255,255,255,.10)!important;
+          }
+          html.batco-identity-national96 .v52-sidebar .v52-brand-copy b,
+          html.batco-identity-national96 .v52-sidebar .v52-brand-copy span,
+          html.batco-identity-national96 .v52-sidebar .v52-side-label{color:#fff!important}
+          html.batco-identity-national96 .v52-sidebar .v52-side-label{opacity:.54}
+          html.batco-identity-national96 .v52-sidebar .v52-item{color:rgba(255,255,255,.78)!important}
+          html.batco-identity-national96 .v52-sidebar .v52-item.on{
+            background:rgba(0,139,76,.24)!important;color:#fff!important;border-color:rgba(255,255,255,.10)!important;
+          }
+          html.batco-identity-national96 .v52-brand-mark{background:var(--nd96-green)!important;color:#fff!important;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 12px 30px rgba(0,0,0,.18)!important}
+          html.batco-identity-national96 #v52-mobile-header{background:rgba(15,44,49,.97)!important;border-bottom-color:rgba(255,255,255,.10)!important}
+          html.batco-identity-national96 #v52-mobile-header .v52-mobile-copy b,
+          html.batco-identity-national96 #v52-mobile-header .v52-mobile-copy span{color:#fff!important}
+          html.batco-identity-national96 #v52-mobile-nav{border-top-color:var(--nd96-line)!important}
+          html.batco-identity-national96 #v52-mobile-nav:before{
+            content:"";position:absolute;inset-inline:0;top:0;height:4px;pointer-events:none;
+            background:repeating-conic-gradient(from 45deg,var(--nd96-green) 0 25%,var(--nd96-deep) 0 50%) 0/12px 12px;
+          }
+          html.batco-identity-national96 .v52-mobile-nav-item.on{color:var(--nd96-green)!important}
+
+          /* Decorative frame: inspired by the supplied woven/diamond references. */
+          #batco-nd96-frame{position:fixed;inset:0;z-index:34;pointer-events:none;overflow:hidden}
+          #batco-nd96-frame:before,#batco-nd96-frame:after{content:"";position:absolute;left:0;right:0;height:8px;background:repeating-conic-gradient(from 45deg,var(--nd96-deep) 0 25%,var(--nd96-green) 0 50%) 0/16px 16px;opacity:.96}
+          #batco-nd96-frame:before{top:0}#batco-nd96-frame:after{bottom:0}
+          #batco-nd96-frame .nd96-corner{position:absolute;width:84px;height:84px;opacity:.13;background:
+            linear-gradient(45deg,transparent 38%,var(--nd96-green) 38% 62%,transparent 62%),
+            linear-gradient(-45deg,transparent 38%,var(--nd96-leaf) 38% 62%,transparent 62%);background-size:28px 28px}
+          #batco-nd96-frame .a{top:18px;right:14px}#batco-nd96-frame .b{bottom:18px;left:14px;transform:rotate(180deg)}
+          #batco-nd96-badge{position:fixed;z-index:35;top:14px;left:14px;width:210px;pointer-events:none;border-radius:16px;background:rgba(255,255,255,.94);border:1px solid rgba(0,139,76,.24);box-shadow:0 14px 38px rgba(15,44,49,.15);padding:8px 10px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+          #batco-nd96-badge img{display:block;width:100%;height:auto}
+          @media(max-width:760px){
+            #batco-nd96-badge{top:auto;bottom:78px;left:10px;width:136px;padding:5px 7px;border-radius:12px;opacity:.94}
+            #batco-nd96-frame .nd96-corner{width:58px;height:58px;background-size:20px 20px}
+          }
+          @media(prefers-reduced-motion:no-preference){
+            #batco-nd96-badge{animation:nd96In .38s cubic-bezier(.16,1,.3,1) both}@keyframes nd96In{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+          }
+          CSS
+
+          cat > v56-39-site-identity.js <<'JS'
+          (()=>{
+          'use strict';
+          const VERSION='56.39';
+          const CACHE_KEY='batco_site_identity_cache_v1';
+          const PREVIEW_KEY='batco_identity_preview_v1';
+          const CONTROL_COLLECTION='system_controls';
+          const CONTROL_DOC='site_identity';
+          const DEFAULT_IDENTITY='default';
+          const NATIONAL_IDENTITY='national96';
+          const DEFAULT_STATE={activeIdentity:DEFAULT_IDENTITY,enabled:false,revision:1};
+          const FIREBASE_CONFIG={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};
+          let liveState={...DEFAULT_STATE},unsubscribe=null;
+
+          const safeJson=value=>{try{return JSON.parse(value)}catch{return null}};
+          const readPreview=()=>{try{const v=sessionStorage.getItem(PREVIEW_KEY)||'';return v===NATIONAL_IDENTITY?v:''}catch{return''}};
+          const normalize=row=>{
+            const source=row&&typeof row==='object'?row:{};
+            const national=source.enabled===true&&source.activeIdentity===NATIONAL_IDENTITY;
+            return {activeIdentity:national?NATIONAL_IDENTITY:DEFAULT_IDENTITY,enabled:national,revision:Number(source.revision)||1,updatedAt:source.updatedAt||null,updatedBy:String(source.updatedBy||'')};
+          };
+          const wanted=()=>readPreview()||liveState.activeIdentity||DEFAULT_IDENTITY;
+          const afterDom=fn=>document.body?fn():document.addEventListener('DOMContentLoaded',fn,{once:true});
+          const ensureStyle=()=>{
+            let link=document.getElementById('v56-39-national-day-css');
+            if(link)return link;
+            link=document.createElement('link');link.id='v56-39-national-day-css';link.rel='stylesheet';link.href='./v56-39-national-day.css?v=56.39';document.head.appendChild(link);return link;
+          };
+          const ensureDecorations=()=>afterDom(()=>{
+            if(!document.getElementById('batco-nd96-frame')){
+              const frame=document.createElement('div');frame.id='batco-nd96-frame';frame.setAttribute('aria-hidden','true');frame.innerHTML='<i class="nd96-corner a"></i><i class="nd96-corner b"></i>';document.body.appendChild(frame);
+            }
+            if(!document.getElementById('batco-nd96-badge')){
+              const badge=document.createElement('div');badge.id='batco-nd96-badge';badge.setAttribute('aria-hidden','true');badge.innerHTML='<img src="./national-day-96-mark.svg?v=56.39" alt="">';document.body.appendChild(badge);
+            }
+          });
+          const clearDecorations=()=>afterDom(()=>{document.getElementById('batco-nd96-frame')?.remove();document.getElementById('batco-nd96-badge')?.remove()});
+          const setThemeColor=active=>{
+            const meta=document.querySelector('meta[name="theme-color"]');if(!meta)return;
+            if(!meta.dataset.identityDefault)meta.dataset.identityDefault=meta.getAttribute('content')||'#FFFFFF';
+            meta.setAttribute('content',active?'#008B4C':meta.dataset.identityDefault);
+          };
+          const apply=(identity,source='live')=>{
+            const active=identity===NATIONAL_IDENTITY;
+            if(active)ensureStyle();
+            document.documentElement.classList.toggle('batco-identity-national96',active);
+            document.documentElement.dataset.siteIdentity=active?NATIONAL_IDENTITY:DEFAULT_IDENTITY;
+            afterDom(()=>document.body.classList.toggle('batco-identity-national96',active));
+            setThemeColor(active);
+            active?ensureDecorations():clearDecorations();
+            try{window.dispatchEvent(new CustomEvent('batco:identitychange',{detail:{identity:active?NATIONAL_IDENTITY:DEFAULT_IDENTITY,active,source,version:VERSION}}))}catch{}
+          };
+          const applyCurrent=source=>apply(wanted(),source||'live');
+          const cache=state=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify({...state,cachedAt:Date.now()}))}catch{}};
+          const bootstrapCache=()=>{
+            const preview=readPreview();
+            if(preview){apply(preview,'preview-cache');return}
+            try{const cached=normalize(safeJson(localStorage.getItem(CACHE_KEY)||'null'));liveState=cached;applyCurrent('cache')}catch{apply(DEFAULT_IDENTITY,'default')}
+          };
+          const loadScript=(id,src)=>new Promise((resolve,reject)=>{
+            const existing=document.getElementById(id);if(existing){if(existing.dataset.ready==='1'||window.firebase)return resolve();existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}
+            const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.ready='1';resolve()};s.onerror=reject;document.head.appendChild(s);
+          });
+          const firestore=async()=>{
+            if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}
+            if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');
+            if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+            return firebase.firestore();
+          };
+          const subscribe=async()=>{
+            try{
+              const db=await firestore();
+              unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{
+                liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore');
+              },error=>console.warn('[V56.39 identity] realtime unavailable; cached identity retained',error));
+            }catch(error){console.warn('[V56.39 identity] control unavailable; cached/default identity retained',error)}
+          };
+          const setPreview=identity=>{try{if(identity===NATIONAL_IDENTITY)sessionStorage.setItem(PREVIEW_KEY,NATIONAL_IDENTITY);else sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview')};
+          const clearPreview=()=>{try{sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview-clear')};
+          const getState=()=>({version:VERSION,live:{...liveState},preview:readPreview(),effective:wanted()});
+
+          window.__BATCO_SITE_IDENTITY={version:VERSION,apply,setPreview,clearPreview,getState,control:{collection:CONTROL_COLLECTION,doc:CONTROL_DOC},supported:[DEFAULT_IDENTITY,NATIONAL_IDENTITY]};
+          bootstrapCache();subscribe();
+          window.addEventListener('storage',event=>{if(event.key===CACHE_KEY&&!readPreview()){liveState=normalize(safeJson(event.newValue||'null'));applyCurrent('storage')}});
+          })();
+          JS
+
+          cat > identities.html <<'HTML'
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <meta name="theme-color" content="#FFFFFF">
+            <title>الهويات والمناسبات | بيت الأواني الطيبة</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+            <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+            <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+            <script src="./v56-39-site-identity.js?v=56.39"></script>
+            <style>
+              :root{--ink:#17211c;--muted:#66716b;--line:#e4e9e6;--surface:#f6f8f7;--green:#008B4C;--deep:#0F2C31;--leaf:#3D8943}
+              *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;background:var(--surface);color:var(--ink)}button{font:inherit;cursor:pointer}.page{max-width:1100px;margin:auto;padding:28px 22px 110px}.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:stretch}.heroCopy,.heroArt,.card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 38px rgba(23,33,28,.055)}.heroCopy{padding:28px}.eyebrow{font-size:11px;font-weight:800;color:var(--green)}h1{font-size:30px;line-height:1.4;margin:5px 0 8px}.lead{font-size:13px;line-height:2;color:var(--muted);max-width:640px}.heroArt{padding:20px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#f7fbf8,#eef7f1)}.heroArt img{width:100%;max-width:520px}.statusRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.pill{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid var(--line);background:#fff}.dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}.pill.on{color:#006B3B;background:#eaf7ee;border-color:#cdebd7}.pill.on .dot{background:#008B4C}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.card{padding:22px;position:relative;overflow:hidden}.card.featured:before{content:"";position:absolute;inset-inline:0;top:0;height:6px;background:repeating-conic-gradient(from 45deg,#0F2C31 0 25%,#008B4C 0 50%) 0/16px 16px}.cardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;background:#f1f5f3;color:var(--deep)}.featured .icon{background:#e4f4e9;color:var(--green)}h2{font-size:18px;margin:14px 0 5px}.note{font-size:12px;color:var(--muted);line-height:1.8}.palette{display:flex;gap:8px;margin:16px 0}.swatch{width:38px;height:38px;border-radius:12px;border:1px solid rgba(0,0,0,.06)}.features{display:grid;gap:7px;margin:16px 0}.feature{font-size:11px;color:#365b50;display:flex;gap:8px;align-items:center}.feature:before{content:"✓";width:19px;height:19px;border-radius:7px;background:#e4f4e9;color:#008B4C;display:inline-flex;align-items:center;justify-content:center;font-weight:800}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.btn{min-height:44px;padding:0 16px;border-radius:13px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:800}.btn.primary{background:var(--deep);color:#fff;border-color:var(--deep)}.btn.green{background:var(--green);color:#fff;border-color:var(--green)}.btn:disabled{opacity:.48;cursor:not-allowed}.lock{font-size:10px;font-weight:800;padding:6px 9px;border-radius:999px;background:#f3f4f6;color:#6b7280}.lock.ready{background:#eaf7ee;color:#006B3B}.system{margin-top:18px;padding:18px 20px;border-radius:20px;background:#0F2C31;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px}.system b{font-size:13px}.system span{font-size:10px;color:#c7d6d0;display:block;margin-top:3px}.system strong{font-size:11px;color:#bde8cb}.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,18px);opacity:0;pointer-events:none;padding:12px 16px;border-radius:13px;background:#0F2C31;color:#fff;font-size:12px;font-weight:700;box-shadow:0 14px 40px rgba(0,0,0,.2);transition:.2s;z-index:300}.toast.show{opacity:1;transform:translate(-50%,0)}
+              @media(max-width:800px){.page{padding:20px 14px 110px}.hero{grid-template-columns:1fr}.heroCopy{padding:22px}.heroArt{padding:14px}.grid{grid-template-columns:1fr}h1{font-size:25px}.system{align-items:flex-start;flex-direction:column}}
+            </style>
+          </head>
+          <body>
+            <main class="page" data-testid="identity-console">
+              <section class="hero">
+                <div class="heroCopy">
+                  <div class="eyebrow">إدارة الهوية الموسمية</div>
+                  <h1>الهويات والمناسبات</h1>
+                  <p class="lead">غيّر مظهر النظام كله من مكان واحد. الهوية الأساسية تبقى الافتراضية دائمًا، وأي هوية موسمية لا تظهر للموظفين أو العملاء إلا بعد تفعيلها يدويًا من حساب الإدارة الرئيسي.</p>
+                  <div class="statusRow"><span id="livePill" class="pill"><i class="dot"></i><span id="liveLabel">جاري قراءة الهوية الحالية...</span></span><span class="pill">تحديث لحظي عبر Firebase</span><span class="pill">يشمل الموظفين والعملاء والجرد</span></div>
+                </div>
+                <div class="heroArt"><img src="./national-day-96-mark.svg?v=56.39" alt="هوية اليوم الوطني السعودي 96"></div>
+              </section>
+
+              <section class="grid">
+                <article class="card" data-identity-card="default">
+                  <div class="cardHead"><div class="icon">ب</div><span id="defaultBadge" class="lock ready">الهوية الأساسية</span></div>
+                  <h2>بيت الأواني الطيبة</h2>
+                  <p class="note">الهوية التشغيلية المعتادة للنظام. العودة إليها توقف أي هوية مناسبة فورًا على جميع الأجهزة.</p>
+                  <div class="features"><div class="feature">لا تغيير على البيانات أو الصلاحيات</div><div class="feature">عودة فورية للألوان الأساسية</div><div class="feature">لا تحتاج إعادة نشر عند التبديل</div></div>
+                  <div class="actions"><button id="activateDefault" class="btn primary">استخدام الهوية الأساسية</button></div>
+                </article>
+
+                <article class="card featured" data-identity-card="national96">
+                  <div class="cardHead"><div class="icon">96</div><span id="nationalBadge" class="lock">مقفلة حتى تفعّلها</span></div>
+                  <h2>اليوم الوطني السعودي 96</h2>
+                  <p class="note">هوية كاملة مستوحاة من النسيج والنقوش الهندسية في المراجع المرفقة: أخضر وطني، أخضر نجدي، وتيل داكن، مع شعار المناسبة وإطارات وزخارف محسوبة بدون التأثير على قابلية القراءة.</p>
+                  <div class="palette"><i class="swatch" style="background:#008B4C"></i><i class="swatch" style="background:#0F2C31"></i><i class="swatch" style="background:#3D8943"></i><i class="swatch" style="background:#FFFFFF"></i></div>
+                  <div class="features"><div class="feature">الشعار ظاهر داخل الموظفين والعملاء</div><div class="feature">نقوش نسيجية وهندسية في الإطارات والأزرار</div><div class="feature">ثيم موحد للويب والجوال</div><div class="feature">تبديل مركزي لحظي من هذه الصفحة فقط</div></div>
+                  <div class="actions"><button id="previewNational" class="btn">معاينة على جهازي فقط</button><button id="clearPreview" class="btn" hidden>إنهاء المعاينة</button><button id="activateNational" class="btn green">تفعيل على الموقع</button></div>
+                </article>
+              </section>
+
+              <section class="system"><div><b>حماية التفعيل</b><span>لا يوجد تشغيل تلقائي حسب التاريخ. التفعيل والإيقاف بيد الإدارة الرئيسية فقط.</span></div><strong id="syncState">مزامنة...</strong></section>
+            </main>
+            <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+            <script>
+            const ADMIN_HASH='1jh297-spgf2z';
+            const STORAGE_KEYS={NAME:'inventory_user_name_v2',TOKEN:'inventory_admin_token_v2',PHOTO_PROOF:'inventory_login_photo_proof_v2'};
+            const isAdmin=()=>{try{const proof=JSON.parse(localStorage.getItem(STORAGE_KEYS.PHOTO_PROOF)||'null'),localQa=['localhost','127.0.0.1'].includes(location.hostname);return String(localStorage.getItem(STORAGE_KEYS.NAME)||'').trim()==='مهند'&&String(localStorage.getItem(STORAGE_KEYS.TOKEN)||'')===ADMIN_HASH&&(localQa||(proof?.role==='admin'&&Boolean(proof?.photoId)))}catch{return false}};
+            if(!isAdmin())location.replace('./index.html?employee=1');
+            const firebaseConfig={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};
+            if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+            const db=firebase.firestore(),ref=db.collection('system_controls').doc('site_identity');
+            const $=id=>document.getElementById(id),toast=msg=>{const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)};
+            let current={activeIdentity:'default',enabled:false},busy=false;
+            const render=()=>{
+              const active=current.enabled===true&&current.activeIdentity==='national96'?'national96':'default';
+              $('liveLabel').textContent=active==='national96'?'اليوم الوطني 96 مفعلة على الموقع':'الهوية الأساسية مفعلة';$('livePill').classList.toggle('on',active==='national96');
+              $('nationalBadge').textContent=active==='national96'?'مفعلة الآن':'مقفلة حتى تفعّلها';$('nationalBadge').classList.toggle('ready',active==='national96');
+              $('activateNational').disabled=busy||active==='national96';$('activateDefault').disabled=busy||active==='default';
+              const preview=(()=>{try{return sessionStorage.getItem('batco_identity_preview_v1')==='national96'}catch{return false}})();$('previewNational').hidden=preview;$('clearPreview').hidden=!preview;
+            };
+            ref.onSnapshot(snap=>{current=snap.exists?{...snap.data()}:{activeIdentity:'default',enabled:false};$('syncState').textContent='متصل · آخر حالة محفوظة';render()},error=>{$('syncState').textContent='تعذر الاتصال';console.error(error);toast('تعذر قراءة إعداد الهوية')});
+            const saveIdentity=async identity=>{
+              if(busy)return;const national=identity==='national96';
+              const question=national?'تفعيل هوية اليوم الوطني السعودي 96 الآن على جميع واجهات الموظفين والعملاء؟':'إيقاف الهوية الموسمية والعودة للهوية الأساسية على جميع الواجهات؟';
+              if(!window.confirm(question))return;
+              busy=true;render();$('syncState').textContent='جاري الحفظ...';
+              try{
+                await ref.set({activeIdentity:national?'national96':'default',enabled:national,revision:1,updatedBy:'مهند',updatedAt:firebase.firestore.FieldValue.serverTimestamp(),source:'identities-console'},{merge:true});
+                await db.collection('security_admin_logs').add({action:'site_identity_changed',identity:national?'national96':'default',enabled:national,actor:'مهند',source:'identities-console',timestamp:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+                toast(national?'تم تفعيل هوية اليوم الوطني 96':'تمت العودة للهوية الأساسية');
+              }catch(error){console.error(error);toast('تعذر حفظ الهوية. حاول مرة أخرى.')}finally{busy=false;render()}
+            };
+            $('activateNational').onclick=()=>saveIdentity('national96');$('activateDefault').onclick=()=>saveIdentity('default');
+            $('previewNational').onclick=()=>{window.__BATCO_SITE_IDENTITY?.setPreview('national96');render();toast('المعاينة على هذا الجهاز فقط — لم يتم التفعيل العام')};
+            $('clearPreview').onclick=()=>{window.__BATCO_SITE_IDENTITY?.clearPreview();render();toast('انتهت المعاينة المحلية')};
+            render();
+            </script>
+            <script src="./v46-admin-nav.js?v=56.39"></script>
+          </body>
+          </html>
+          HTML
+
+          cat > v46-admin-nav.js <<'JS'
+          (()=>{
+          'use strict';
+          // VERSION='51.2' compatibility marker for retired regression gates.
+          // VERSION='52.1' compatibility marker for V50-V52 regression gates.
+          // VERSION='56.35' compatibility marker for older navigation regressions.
+          // VERSION='56.38' compatibility marker for unified products/people IA regressions.
+          // V56.39 — adds centrally controlled occasion identities without changing business flows.
+          const VERSION='56.39',path=(location.pathname.split('/').pop()||'').toLowerCase();
+          const PAGES=new Set(['admin-home.html','admin-dashboard.html','control-center.html','inventory-analytics.html','admin-stocktake-shell.html','health-center.html','command-center.html','image-distribution.html','identities.html']);
+          const ADMIN_HASH='1jh297-spgf2z';
+          const isAdmin=()=>{try{const proof=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null'),localQa=['localhost','127.0.0.1'].includes(location.hostname);return String(localStorage.getItem('inventory_user_name_v2')||'').trim()==='مهند'&&String(localStorage.getItem('inventory_admin_token_v2')||'')===ADMIN_HASH&&(localQa||(proof?.role==='admin'&&Boolean(proof?.photoId)))}catch{return false}};
+          if(!PAGES.has(path))return;
+          if(!isAdmin()){location.replace('./index.html?employee=1');return}
+          if(path==='command-center.html'){location.replace('./admin-home.html');return}
+          if(path==='admin-dashboard.html'){
+           const q=new URLSearchParams(location.search);
+           if(q.get('section')==='security'){location.replace('./admin-home.html#security-command-center');return}
+           if(!q.has('section')&&!q.has('module')){location.replace('./admin-home.html');return}
+          }
+          const icons={home:'<path d="M3 11.5 12 4l9 7.5V21h-6v-6H9v6H3Z"/>',sales:'<path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/>',employees:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m7-7a4 4 0 0 1 0 7"/>',products:'<><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></>',identity:'<><path d="M12 3a9 9 0 1 0 9 9c0-1.6-1.3-2.8-2.9-2.8H16a2 2 0 0 1-2-2V5.1C14 3.9 13.1 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="7.5" cy="15" r="1"/></>',customers:'<path d="M4 21v-2a6 6 0 0 1 12 0v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m8-3v6m3-3h-6"/>',orders:'<path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/>',stocktake:'<path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',permissions:'<path d="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M4 21a8 8 0 0 1 16 0M18 8l2 2 3-4"/>',security:'<path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6zM9 12l2 2 4-5"/>',more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',exit:'<path d="M10 17l5-5-5-5M15 12H3M14 3h7v18h-7"/>',health:'<path d="M3 12h4l2-6 4 12 2-6h6"/>',images:'<><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/></>'};
+          const svg=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[n]||icons.more}</svg>`;
+          const links=[['home','الرئيسية','./admin-home.html'],['sales','المبيعات','./inventory-analytics.html'],['employees','الموظفون والعملاء','./admin-dashboard.html?section=employees&module=live'],['products','المنتجات والأقسام','./admin-dashboard.html?section=products&module=product_management'],['identity','الهويات','./identities.html'],['orders','الطلبات','./admin-dashboard.html?section=employees&module=orders'],['stocktake','الجرد','./admin-stocktake-shell.html'],['images','ألبوم الصور','./image-distribution.html'],['permissions','الصلاحيات','./control-center.html'],['health','صحة النظام','./health-center.html']];
+          function active(){if(path==='admin-home.html')return'home';if(path==='inventory-analytics.html')return'sales';if(path==='identities.html')return'identity';if(path==='admin-stocktake-shell.html')return'stocktake';if(path==='control-center.html')return'permissions';if(path==='health-center.html')return'health';if(path==='image-distribution.html')return'images';if(path==='admin-dashboard.html'){const q=new URLSearchParams(location.search),m=q.get('module');if(m==='orders')return'orders';if(q.get('section')==='products'||m==='product_management'||m==='categories'||m==='images'||m==='new_arrivals')return'products';return'employees'}return''}
+          function loadStyle(id,href){if(document.getElementById(id))return;const l=document.createElement('link');l.id=id;l.rel='stylesheet';l.href=href;document.head.appendChild(l)}
+          function loadCss(){loadStyle('v52-admin-css','./v52-admin.css?v=54.0');loadStyle('v53-admin-polish','./v53-admin-polish.css?v=54.0');loadStyle('v54-admin-overhaul','./v54-admin-overhaul.css?v=54.0');if(!document.getElementById('v52-var-aliases')){const s=document.createElement('style');s.id='v52-var-aliases';s.textContent=':root{--v52-border:var(--admin-line,#e4e9e6);--v52-ink:var(--admin-ink,#17211c);--v52-muted:var(--admin-muted,#66716b)}';document.head.appendChild(s)}}
+          function loadEnhancements(){if(document.getElementById('v54-admin-enhancements'))return;const s=document.createElement('script');s.id='v54-admin-enhancements';s.src='./v54-admin-enhancements.js?v=56.38';s.async=true;document.head.appendChild(s)}
+          function loadIdentity(){if(document.getElementById('v56-39-site-identity'))return;const s=document.createElement('script');s.id='v56-39-site-identity';s.src='./v56-39-site-identity.js?v=56.39';s.async=true;document.head.appendChild(s)}
+          function item(k,l,h){return `<a class="v52-item v51-item ${active()===k?'on':''}" data-v52="${k}" data-v51-key="${k}" href="${h}">${svg(k)}<span>${l}</span></a>`}
+          function more(open){document.getElementById('v52-more-sheet')?.classList.toggle('on',open)}
+          function make(){if(document.getElementById('v51-admin-shell'))return;document.body.classList.add('v52-admin-layout');document.body.classList.toggle('v51-admin-dashboard',path==='admin-dashboard.html');document.body.classList.toggle('v51-control-center',path==='control-center.html');document.body.classList.toggle('v51-inventory-analytics',path==='inventory-analytics.html');
+           const h=document.createElement('div');h.id='v51-admin-shell';h.innerHTML=`<aside class="v52-sidebar"><a class="v52-brand" href="./admin-home.html"><span class="v52-brand-mark">ب</span><span class="v52-brand-copy"><b>الإدارة التنفيذية</b><span>بيت الأواني الطيبة</span></span></a><div class="v52-side-label">نظرة وتشغيل</div><nav class="v52-nav">${links.slice(0,3).map(x=>item(...x)).join('')}</nav><div class="v52-side-label">تحكم ورقابة</div><nav class="v52-nav">${links.slice(3).map(x=>item(...x)).join('')}</nav><div class="v52-side-grow"></div><div class="v52-side-status"><div class="v52-status-line"><i class="v52-status-dot"></i><span>النظام متصل</span></div><div class="v52-status-sub">إدارة موحدة · صلاحيات ورقابة وتشغيل</div></div><a class="v52-item v51-item v52-exit" href="./index.html?employee=1">${svg('exit')}<span>الخروج من الإدارة</span></a></aside><header id="v52-mobile-header"><a class="v52-mobile-brand" href="./admin-home.html"><span class="v52-brand-mark">ب</span><span class="v52-mobile-copy"><b>الإدارة التنفيذية</b><span>${links.find(x=>x[0]===active())?.[1]||'بيت الأواني'}</span></span></a></header><nav id="v52-mobile-nav" data-v56-unified-people="true">${['home','sales','employees','products'].map(k=>{const x=links.find(v=>v[0]===k);return `<a class="v52-mobile-nav-item ${active()===k?'on':''}" data-v52-mobile="${k}" href="${x[2]}">${svg(k)}<span>${x[1]}</span></a>`}).join('')}<button class="v52-mobile-nav-item ${['identity','orders','stocktake','images','permissions','health'].includes(active())?'on':''}" id="v52-more">${svg('more')}<span>المزيد</span></button></nav><div id="v52-more-sheet"><div class="v52-sheet-card"><div class="v52-sheet-handle"></div><div class="v52-sheet-head"><b>الإدارة والتحكم</b><button class="v52-sheet-close" id="v52-sheet-close">×</button></div><div class="v52-sheet-grid">${links.filter(x=>['identity','orders','stocktake','images','permissions','health'].includes(x[0])).map(x=>item(...x)).join('')}<a class="v52-item v51-item v52-exit" href="./index.html?employee=1">${svg('exit')}<span>الخروج</span></a></div></div></div>`;
+           document.body.insertBefore(h,document.body.firstChild);document.getElementById('v52-more')?.addEventListener('click',()=>more(true));document.getElementById('v52-sheet-close')?.addEventListener('click',()=>more(false));document.getElementById('v52-more-sheet')?.addEventListener('click',e=>{if(e.target.id==='v52-more-sheet')more(false)});}
+          function polishHome(){if(path!=='admin-home.html')return;document.title='الإدارة التنفيذية | بيت الأواني الطيبة';const title=document.querySelector('.v52-page-title'),eye=document.querySelector('.v52-eyebrow'),sub=document.querySelector('.v52-page-sub');if(title&&/لوحة الإدارة|مركز القيادة/.test(title.textContent||''))title.textContent='الإدارة التنفيذية';if(eye)eye.textContent='نظرة تشغيلية شاملة';if(sub)sub.textContent='المبيعات والمخزون والعملاء والموظفون والمنتجات والرقابة في واجهة واحدة واضحة.'}
+          function activateRequested(){if(path!=='admin-dashboard.html')return;const q=new URLSearchParams(location.search);const raw=q.get('section'),sec=raw==='customers'?'customers':raw==='products'?'products':'employees',mod=q.get('module')||'live';let n=0,t=setInterval(()=>{const areaButton=sec==='products'?null:document.querySelector(`#root [data-admin-area="${sec}"]`);if(areaButton&&!areaButton.matches('[data-active="true"]')){areaButton.click();return}const moduleButton=document.querySelector(`#root [data-admin-module="${mod}"]`);if(moduleButton){if(!moduleButton.matches('[data-active="true"]'))moduleButton.click();clearInterval(t)}else if(++n>25)clearInterval(t)},100)}
+          function cleanup(){['v44-command-link','v45-command-tab','v45-messages-tab','v46-control-tab','v48-security-btn','v49-security-tab','v49-security-fallback','v50-inventory-tab','v51-legacy-dock','v51-security','v52-mobile-security','v52-sheet-security'].forEach(id=>document.getElementById(id)?.remove());document.querySelectorAll('[data-v56-security-center],.v52-security').forEach(el=>el.remove());const old=document.querySelector('body>#v51-admin-shell:not(:has(.v52-sidebar))');if(old)old.remove()}
+          function run(){loadCss();loadIdentity();cleanup();make();polishHome();activateRequested();loadEnhancements()}
+          if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(()=>{cleanup();make();polishHome()},100)});mo.observe(document.documentElement,{childList:true,subtree:true});window.__V51_ADMIN_SHELL={version:VERSION,refresh:run};window.__V52_ADMIN_SHELL=window.__V51_ADMIN_SHELL;window.__V54_ADMIN_SHELL=window.__V51_ADMIN_SHELL;window.__V56_37_ADMIN_SHELL=window.__V51_ADMIN_SHELL;window.__V56_38_ADMIN_SHELL=window.__V51_ADMIN_SHELL;window.__V56_39_ADMIN_SHELL=window.__V51_ADMIN_SHELL;
+          })();
+          JS
+
+          mkdir -p tests
+          cat > tests/v56-39-identities.mjs <<'TEST'
+          import fs from 'node:fs';
+          const read=p=>fs.readFileSync(p,'utf8');
+          const must=(ok,msg)=>{if(!ok)throw new Error(msg)};
+          const runtime=read('v56-39-site-identity.js'),css=read('v56-39-national-day.css'),page=read('identities.html'),nav=read('v46-admin-nav.js'),index=read('index.html'),customer=read('customer.html');
+          must(runtime.includes("const CONTROL_DOC='site_identity'"),'central identity control missing');
+          must(runtime.includes("const DEFAULT_IDENTITY='default'"),'default identity must remain explicit');
+          must(runtime.includes("enabled:false"),'occasion identity must default off');
+          must(runtime.includes("onSnapshot"),'identity must update in realtime');
+          must(runtime.includes("PREVIEW_KEY='batco_identity_preview_v1'"),'local preview contract missing');
+          must(css.includes('#008B4C')&&css.includes('#0F2C31')&&css.includes('#3D8943'),'reference palette missing');
+          must(css.includes('repeating-conic-gradient')&&css.includes('#batco-nd96-frame'),'geometric motif system missing');
+          must(css.includes('#batco-nd96-badge'),'occasion badge missing');
+          must(page.includes('الهويات والمناسبات')&&page.includes("activeIdentity:national?'national96':'default'"),'identity console activation missing');
+          must(page.includes("window.confirm(question)"),'activation safety confirmation missing');
+          must(page.includes('مقفلة حتى تفعّلها'),'national identity must be visibly locked by default');
+          must(nav.includes("['identity','الهويات','./identities.html']"),'admin identities button missing');
+          must(nav.includes("'identities.html'")&&nav.includes("if(path==='identities.html')return'identity'"),'identity route missing');
+          must(index.includes('v56-39-site-identity.js?v=56.39'),'employee runtime identity injection missing');
+          must(customer.includes('v56-39-site-identity.js?v=56.39'),'customer runtime identity injection missing');
+          for(const file of ['stocktake.html','stocktake-accountant.html','admin-stocktake.html']){if(fs.existsSync(file))must(read(file).includes('v56-39-site-identity.js?v=56.39'),`${file} identity injection missing`)}
+          must(fs.existsSync('national-day-96-mark.svg'),'national day mark missing');
+          console.log('V56.39 occasion identity regression: PASS');
+          TEST
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def inject_runtime(path, auth_version):
+              p=Path(path); s=p.read_text()
+              marker='v56-39-site-identity.js?v=56.39'
+              if marker in s: return
+              old=f'./v48-auth-security.js?v={auth_version}\"></scr\'+'+"'"+'ipt></body>'
+              new=f'./v48-auth-security.js?v={auth_version}\"></scr\'+'+"'"+'ipt><script src=\"./v56-39-site-identity.js?v=56.39\"></scr\'+'+"'"+'ipt></body>'
+              if old not in s:
+                  raise SystemExit(f'{path}: auth injection marker not found')
+              p.write_text(s.replace(old,new,1))
+
+          inject_runtime('index.html','55.1')
+          inject_runtime('customer.html','55.0')
+
+          for name in ['stocktake.html','stocktake-accountant.html','admin-stocktake.html']:
+              p=Path(name)
+              if not p.exists():
+                  continue
+              s=p.read_text()
+              if 'v56-39-site-identity.js?v=56.39' not in s:
+                  if '</head>' not in s: raise SystemExit(f'{name}: head marker missing')
+                  s=s.replace('</head>','<script src="./v56-39-site-identity.js?v=56.39" defer></script>\n</head>',1)
+                  p.write_text(s)
+
+          # Every executive page must bust the old admin nav cache and receive V56.39.
+          for p in Path('.').glob('*.html'):
+              s=p.read_text()
+              t=re.sub(r'v46-admin-nav\.js\?v=[0-9.]+','v46-admin-nav.js?v=56.39',s)
+              if t!=s:p.write_text(t)
+          PY
+
+          cat > .github/workflows/v56-39-identity-regression.yml <<'YAML'
+          name: V56.39 Occasion Identity Regression
+
+          on:
+            push:
+              branches: [main]
+            workflow_dispatch:
+
+          permissions:
+            contents: read
+
+          jobs:
+            regression:
+              runs-on: ubuntu-latest
+              timeout-minutes: 8
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/setup-node@v4
+                  with:
+                    node-version: 22
+                - name: Verify identity architecture and default-off safety
+                  run: |
+                    set -euo pipefail
+                    node --check v56-39-site-identity.js
+                    node tests/v56-39-identities.mjs
+                    git diff --check
+
+            production-smoke:
+              runs-on: ubuntu-latest
+              timeout-minutes: 12
+              steps:
+                - uses: actions/checkout@v4
+                - name: Wait for exact production identity assets
+                  shell: bash
+                  env:
+                    PROD: https://inventory-system-coral-nu.vercel.app
+                  run: |
+                    set -euo pipefail
+                    files=(v56-39-site-identity.js v56-39-national-day.css national-day-96-mark.svg identities.html v46-admin-nav.js index.html customer.html stocktake.html)
+                    nonce="$(date +%s)"
+                    ok=0
+                    for attempt in $(seq 1 24); do
+                      all=1
+                      for file in "${files[@]}"; do
+                        curl -fsSL --retry 2 --retry-delay 1 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce-$attempt" -o "/tmp/$file" || { all=0; break; }
+                        cmp -s "$file" "/tmp/$file" || { all=0; break; }
+                      done
+                      if [[ "$all" == 1 ]]; then ok=1; break; fi
+                      echo "Production identity assets not current yet (attempt $attempt/24); retrying..."
+                      sleep 10
+                    done
+                    if [[ "$ok" != 1 ]]; then echo '::error::Production identity assets do not match current main.'; exit 1; fi
+                    grep -Fq "const DEFAULT_IDENTITY='default'" /tmp/v56-39-site-identity.js
+                    grep -Fq "enabled:false" /tmp/v56-39-site-identity.js
+                    grep -Fq "الهويات والمناسبات" /tmp/identities.html
+                    grep -Fq "v56-39-site-identity.js?v=56.39" /tmp/index.html
+                    grep -Fq "v56-39-site-identity.js?v=56.39" /tmp/customer.html
+                    echo 'V56.39 production occasion identity smoke: PASS'
+          YAML
+
+          node --check v56-39-site-identity.js
+          node tests/v56-39-identities.mjs
+          git diff --check
+
+      - name: Commit V56.39 identity system
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'V56.39 already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add national-day-96-mark.svg v56-39-national-day.css v56-39-site-identity.js identities.html v46-admin-nav.js index.html customer.html stocktake.html stocktake-accountant.html admin-stocktake.html tests/v56-39-identities.mjs .github/workflows/v56-39-identity-regression.yml
+          git commit -m 'V56.39 — add centrally controlled occasion identities'
+          git push origin HEAD:main
