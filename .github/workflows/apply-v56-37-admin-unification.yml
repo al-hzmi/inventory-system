@@ -51,7 +51,9 @@ jobs:
           {
             const file='admin-dashboard.html';
             let s=fs.readFileSync(file,'utf8');
-            s=one(s,"    ['overview','grid','الأرقام',null],","    ['overview','grid','الأرقام',null],\n    ['product_management','box','المنتجات',null],",'admin product tab');
+            const employeeTabAnchor="  const employeeTabs=[\n    ['live','activity','الآن',employeeOnline.size],\n    ['overview','grid','الأرقام',null],";
+            const employeeTabReplacement="  const employeeTabs=[\n    ['live','activity','الآن',employeeOnline.size],\n    ['overview','grid','الأرقام',null],\n    ['product_management','box','المنتجات',null],";
+            s=one(s,employeeTabAnchor,employeeTabReplacement,'admin employee product tab');
             s=one(s,"if(['live','overview','portal','site_access','images'].includes(module))return null;","if(['live','overview','product_management','portal','site_access','images'].includes(module))return null;",'admin product toolbar');
 
             const marker='  function RawCollections({side})';
