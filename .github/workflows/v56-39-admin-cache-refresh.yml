@@ -1,0 +1,69 @@
+name: V56.39 Admin Identity Cache Refresh
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v56-39-admin-cache-refresh.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh admin identity runtime cache-busts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          pages=['admin-home.html','admin-dashboard.html','control-center.html','inventory-analytics.html','admin-stocktake-shell.html','health-center.html','command-center.html','image-distribution.html','identities.html']
+          for name in pages:
+              p=Path(name)
+              if not p.exists():
+                  continue
+              s=p.read_text()
+              t=re.sub(r'v46-admin-nav\.js\?v=[0-9.]+','v46-admin-nav.js?v=56.39',s)
+              if t!=s:
+                  p.write_text(t)
+
+          p=Path('tests/v56-39-identities.mjs')
+          s=p.read_text()
+          old="const runtime=read('v56-39-site-identity.js'),css=read('v56-39-national-day.css'),page=read('identities.html'),nav=read('v46-admin-nav.js'),index=read('index.html'),customer=read('customer.html');"
+          new="const runtime=read('v56-39-site-identity.js'),css=read('v56-39-national-day.css'),page=read('identities.html'),nav=read('v46-admin-nav.js'),index=read('index.html'),customer=read('customer.html'),adminDashboard=read('admin-dashboard.html');"
+          if old in s:
+              s=s.replace(old,new,1)
+          guard="must(adminDashboard.includes('v46-admin-nav.js?v=56.39'),'admin dashboard must cache-bust the V56.39 identity-aware nav');"
+          anchor="must(nav.includes(\"'identities.html'\")&&nav.includes(\"if(path==='identities.html')return'identity'\"),'identity route missing');"
+          if guard not in s:
+              if anchor not in s: raise SystemExit('V56.39 regression anchor missing')
+              s=s.replace(anchor,anchor+'\n'+guard,1)
+          p.write_text(s)
+          PY
+          node tests/v56-39-identities.mjs
+          node tests/v56-38-admin-ia.mjs
+          git diff --check
+
+      - name: Commit cache wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Admin identity cache wiring already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-home.html admin-dashboard.html control-center.html inventory-analytics.html admin-stocktake-shell.html health-center.html command-center.html image-distribution.html identities.html tests/v56-39-identities.mjs
+          git commit -m 'V56.39 — wire identity-aware admin nav cache busts'
+          git push origin HEAD:main
