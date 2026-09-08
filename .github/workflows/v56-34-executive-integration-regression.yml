@@ -14,11 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify V56.34 contracts
+      - name: Verify V56.34-V56.36 contracts
         run: |
           node --check api/new-arrivals-admin.js
           node --check v46-admin-nav.js
           node --check v54-admin-enhancements.js
           node tests/v56-33-new-arrivals-admin.mjs
           node tests/v56-34-executive-integration.mjs
+          node tests/v56-36-admin-unification-image-album.mjs
           git diff --check
