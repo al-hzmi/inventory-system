@@ -66,6 +66,7 @@ jobs:
           assert_text "onSnapshot" /tmp/v56-39-site-identity.js
           assert_text "batco-identity-national96" /tmp/v56-39-site-identity.js
           assert_text "waitForDefaultFirebase" /tmp/v56-39-site-identity.js
+          assert_text "national-day-96-mark.svg" /tmp/v56-39-site-identity.js
 
           assert_text "الهويات" /tmp/identities.html
           assert_text "اليوم الوطني السعودي 96" /tmp/identities.html
@@ -81,7 +82,6 @@ jobs:
           assert_text "#0F2C31" /tmp/v56-39-national-day.css
           assert_text "repeating-conic-gradient" /tmp/v56-39-national-day.css
           assert_text "prefers-reduced-motion" /tmp/v56-39-national-day.css
-          assert_text "national-day-96-mark.svg" /tmp/v56-39-national-day.css
 
           assert_text "هوية اليوم الوطني السعودي 96" /tmp/national-day-96-mark.svg
           assert_text "SAUDI NATIONAL DAY 96" /tmp/national-day-96-mark.svg
