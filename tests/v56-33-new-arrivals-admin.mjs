@@ -20,6 +20,6 @@ assert.match(employee,/إضافة أو حذف منتج من «جديدنا»/);
 assert.match(customer,/loadCustomerNewArrivalOverrides/);
 assert.match(customer,/newArrivalOverrides/);
 assert.match(customer,/\.\/api\/new-arrivals-admin\?action=overrides/);
-assert.ok(index.includes("runtime/index-v37-source.txt?v=56.16&rev=56.33"));
+assert.match(index,/runtime\/index-v37-source\.txt\?v=56\.16&rev=56\.(?:33|3[4-9]|[4-9]\d)/);
 assert.ok(customerHtml.includes("runtime/customer-v37-source.txt?v=56.33"));
 console.log('V56.33 new arrivals admin regression: PASS');

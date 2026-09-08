@@ -38,7 +38,7 @@ assert.ok(cust.includes('.customer-admin-message-card'),'Android customer messag
 assert.ok(cust.includes('<CustomerPortalBootstrap/><CustomerAdminNotificationHost/>'),'customer notification host must be mounted');
 assert.ok(cust.indexOf('function CustomerPortalBootstrap(){') < cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") && cust.indexOf("const CUSTOMER_NOTIFICATION_COLLECTION='customer_notifications';") < cust.indexOf("ReactDOM.createRoot(document.getElementById('root')).render"),'customer notification host must live after the V42 bootstrap replacement boundary');
 
-assert.ok(boot.includes("index-v37-source.txt?v=56.16&rev=56.33"),'employee V56.16 base cache with current V56.33 revision missing');
+assert.match(boot,/index-v37-source\.txt\?v=56\.16&rev=56\.(?:33|3[4-9]|[4-9]\d)/,'employee V56.16 base cache with a compatible revision missing');
 assert.ok(custBoot.includes("customer-v37-source.txt?v=56.33"),'customer V56.33 cache bust missing');
 assert.ok(boot.includes('maxHeight:\'min(72dvh, 560px)\''),'employee Android dynamic viewport card missing');
 

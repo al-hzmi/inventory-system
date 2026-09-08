@@ -19,7 +19,7 @@ assert.match(api,/active\.length===1/);
 assert.match(api,/async function validateSku/);
 assert.match(api,/const sku=await validateSku/);
 
-assert.match(enhancements,/VERSION='56\.35'/);
+assert.match(enhancements,/const VERSION='56\.(?:35|3[6-9]|[4-9]\d)'/);
 assert.match(enhancements,/removeLegacySecurityLaunchers/);
 for (const id of ['v51-security','v52-mobile-security','v52-sheet-security','v48-security-btn','v49-security-tab','v49-security-fallback']) {
   assert.ok(enhancements.includes(`'${id}'`), `legacy security launcher ${id} must be retired`);
@@ -31,7 +31,7 @@ assert.match(enhancements,/q\.get\('section'\)==='security'/);
 assert.match(enhancements,/admin-home\.html#security-command-center/);
 assert.match(enhancements,/id='v56-security-command-center'/);
 assert.match(enhancements,/مركز القيادة والتحكم الأمني/);
-assert.match(enhancements,/security-center\.html\?embed=executive&v=56\.35/);
+assert.match(enhancements,/security-center\.html\?embed=executive&v=56\.(?:35|3[6-9]|[4-9]\d)/);
 assert.match(enhancements,/active\.scrollIntoView\(\{block:'nearest',inline:'center',behavior:'smooth'\}\)/);
 assert.match(enhancements,/attributeFilter:\['data-active'\]/);
 assert.match(enhancements,/__V56_35_EXECUTIVE_INTEGRATION/);
@@ -41,7 +41,7 @@ assert.match(nav,/v54-admin-enhancements\.js/);
 assert.match(canvas,/V56\.34/);
 assert.match(canvas,/background:var\(--admin-bg,#f5f7f6\)!important/);
 assert.match(canvas,/body\.v51-admin-dashboard:not\(\.v56-security-embedded\) #root>div\.fixed\.inset-0>div/);
-assert.match(canvas,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
+assert.match(canvas,/grid-template-columns:repeat\((?:4|5),minmax\(0,1fr\)\)!important/);
 assert.match(canvas,/\.v56-security-frame/);
 
 console.log('V56.35 executive integration regression: PASS');

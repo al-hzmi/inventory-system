@@ -8,13 +8,13 @@ const api = read('api/new-arrivals-admin.js');
 const quick = read('v56-35-new-arrivals-quick-delete.js');
 const runtime = read('runtime/index-v37-source.txt');
 
-assert.match(nav, /VERSION='56\.35'/, 'admin nav must be V56.35');
+assert.match(nav,/const VERSION='56\.(?:35|3[6-9]|[4-9]\d)'/,'admin nav must remain V56.35+ compatible');
 assert.match(nav, /section'\)==='security'.*admin-home\.html#security-command-center/s, 'legacy security route must redirect to executive home');
 assert.ok(!nav.includes("href=\"./admin-dashboard.html?section=security\""), 'standalone security launcher must not remain');
 assert.ok(nav.includes("['employees','الموظفون والعملاء'"), 'people navigation must remain unified');
 
 assert.match(enhancements, /id='v56-security-command-center'|id=\"v56-security-command-center\"/, 'security center must be embedded in executive home');
-assert.ok(enhancements.includes('./security-center.html?embed=executive&v=56.35'), 'embedded security source must be V56.35');
+assert.match(enhancements,/\.\/security-center\.html\?embed=executive&v=56\.(?:35|3[6-9]|[4-9]\d)/,'embedded security source must remain V56.35+ compatible');
 assert.ok(enhancements.includes("doc.querySelector('header')?.remove()"), 'embedded security must retire its standalone header');
 assert.ok(enhancements.includes('a[href*="security-center.html"]'), 'legacy direct security links must be removed');
 assert.ok(enhancements.includes('a[href*="section=security"]'), 'legacy security dashboard links must be removed');

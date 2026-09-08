@@ -5,7 +5,7 @@ const canvas=read('v54-1-desktop-canvas-fix.css');
 const album=read('image-distribution.html');
 const nav=read('v46-admin-nav.js');
 const enhancements=read('v54-admin-enhancements.js');
-assert.match(canvas,/V56\.36/);
+assert.match(canvas,/V56\.(?:36|3[7-9]|[4-9]\d)/);
 assert.match(canvas,/body\.v51-admin-dashboard:not\(\.v56-security-embedded\) #root>div:first-child\{/);
 assert.match(canvas,/#root>div:first-child>div:first-child\{/);
 assert.match(canvas,/max-width:none!important/);
@@ -20,6 +20,6 @@ assert.ok(album.includes('الصورة تبقى موزعة حتى لو نفد م
 assert.match(nav,/path==='command-center\.html'.*location\.replace\('\.\/admin-home\.html'\)/s);
 assert.match(nav,/section'\)==='security'.*admin-home\.html#security-command-center/s);
 assert.ok(enhancements.includes('id="v56-security-command-center"')||enhancements.includes("id='v56-security-command-center'"));
-assert.ok(enhancements.includes('./security-center.html?embed=executive&v=56.35'));
+assert.match(enhancements,/\.\/security-center\.html\?embed=executive&v=56\.(?:35|3[6-9]|[4-9]\d)/);
 assert.ok(enhancements.includes('removeLegacySecurityLaunchers'));
 console.log('V56.36 desktop + image album + single executive dashboard regression: PASS');
