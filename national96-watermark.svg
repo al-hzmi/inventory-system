@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <g fill="#CFE5D8">
+    <path d="M72 8h18l18 18-18 18H72L54 26zM108 8h18l18 18-18 18h-18L90 26zM36 44h18l18 18-18 18H36L18 62zM72 44h18l18 18-18 18H72L54 62zM108 44h18l18 18-18 18h-18L90 62zM144 44h18l18 18-18 18h-18l-18-18zM72 80h18l18 18-18 18H72L54 98zM108 80h18l18 18-18 18h-18L90 98zM36 116h18l18 18-18 18H36l-18-18zM72 116h18l18 18-18 18H72l-18-18z"/>
+  </g>
+  <g fill="#B8DCC8" opacity=".75">
+    <rect x="78" y="14" width="12" height="12"/><rect x="114" y="14" width="12" height="12"/><rect x="42" y="50" width="12" height="12"/><rect x="78" y="50" width="12" height="12"/><rect x="114" y="50" width="12" height="12"/><rect x="150" y="50" width="12" height="12"/><rect x="78" y="86" width="12" height="12"/><rect x="114" y="86" width="12" height="12"/>
+  </g>
+</svg>
