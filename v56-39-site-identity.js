@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 const VERSION='56.40';
-const VISUAL_REVISION='56.43';
+const VISUAL_REVISION='56.44';
 const CACHE_KEY='batco_site_identity_cache_v1';
 const PREVIEW_KEY='batco_identity_preview_v1';
 const CONTROL_COLLECTION='system_controls';
@@ -9,7 +9,6 @@ const CONTROL_DOC='site_identity';
 const DEFAULT_IDENTITY='default';
 const NATIONAL_IDENTITY='national96';
 const IDENTITY_APP_NAME='batco-identity-v56-39';
-const OFFICIAL_MARK_URL='https://cdn.gea.gov.sa/ND-2026/brand/brand-emblem-wide.png';
 const DEFAULT_STATE={activeIdentity:DEFAULT_IDENTITY,enabled:false,revision:1};
 const FIREBASE_CONFIG={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};
 let liveState={...DEFAULT_STATE},unsubscribe=null,uiObserver=null,uiFrame=0;
@@ -27,62 +26,50 @@ const ensureStyle=()=>{
   if(link){if(!String(link.href||'').includes('v='+VISUAL_REVISION))link.href='./v56-39-national-day.css?v='+VISUAL_REVISION;return link}
   link=document.createElement('link');link.id='v56-39-national-day-css';link.rel='stylesheet';link.href='./v56-39-national-day.css?v='+VISUAL_REVISION;document.head.appendChild(link);return link;
 };
-const ensureDecorations=()=>afterDom(()=>{
-  if(!document.getElementById('batco-nd96-frame')){const frame=document.createElement('div');frame.id='batco-nd96-frame';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame)}
-  if(!document.getElementById('batco-nd96-badge')){const badge=document.createElement('div');badge.id='batco-nd96-badge';badge.setAttribute('aria-hidden','true');const image=document.createElement('img');image.src=OFFICIAL_MARK_URL;image.alt='';image.decoding='async';image.referrerPolicy='no-referrer';badge.appendChild(image);document.body.appendChild(badge)}
-});
-const clearDecorations=()=>afterDom(()=>{document.getElementById('batco-nd96-frame')?.remove();document.getElementById('batco-nd96-badge')?.remove();document.getElementById('batco-nd96-inventory-masthead')?.remove()});
-const setThemeColor=active=>{const meta=document.querySelector('meta[name="theme-color"]');if(!meta)return;if(!meta.dataset.identityDefault)meta.dataset.identityDefault=meta.getAttribute('content')||'#FFFFFF';meta.setAttribute('content',active?'#07383A':meta.dataset.identityDefault)};
-const addSubtitle=(host,text,className)=>{if(!host||host.querySelector('.'+className))return;const el=document.createElement('span');el.className=className;el.dataset.nd96Injected='1';el.textContent=text;host.appendChild(el)};
+const setThemeColor=active=>{const meta=document.querySelector('meta[name="theme-color"]');if(!meta)return;if(!meta.dataset.identityDefault)meta.dataset.identityDefault=meta.getAttribute('content')||'#FFFFFF';meta.setAttribute('content',active?'#063B3B':meta.dataset.identityDefault)};
 
-const decorateFooter=()=>{
-  document.querySelectorAll('.rights-footer').forEach(footer=>{
-    footer.classList.add('nd96-footer');
-    if(footer.querySelector('.nd96-footer-mark'))return;
-    const mark=document.createElement('img');mark.className='nd96-footer-mark';mark.dataset.nd96Injected='1';mark.src=OFFICIAL_MARK_URL;mark.alt='اليوم الوطني السعودي 96';mark.referrerPolicy='no-referrer';footer.prepend(mark);
-  });
-};
-
+/* V56.44 rule: no injected visual DOM. We only tag existing components so the
+   National Day layer can recolor/texture them without changing base geometry. */
 const decorateCustomer=()=>{
   const rights=document.querySelector('.rights-bar');if(!rights)return false;
   document.body.classList.add('nd96-customer');document.body.classList.remove('nd96-inventory');
+  rights.classList.add('nd96-brand-strip');
   const header=rights.closest('header');if(header)header.classList.add('nd96-customer-header');
   if(header){
     const second=[...header.children].find(el=>el!==rights&&el.querySelector?.('b'));
-    if(second){
-      const title=[...second.querySelectorAll('b')].find(el=>normText(el.textContent).includes('المعرض الرقمي'));
-      if(title){title.classList.add('nd96-portal-title');addSubtitle(title.parentElement,'منتجات مختارة .. لجودة أعلى','nd96-portal-subtitle')}
-      second.querySelectorAll('button').forEach(btn=>btn.classList.add('nd96-header-action'));
-    }
+    second?.classList.add('nd96-customer-headrow');
+    const title=second?[...second.querySelectorAll('b')].find(el=>normText(el.textContent).includes('المعرض الرقمي')):null;
+    title?.classList.add('nd96-portal-title');
+    second?.querySelectorAll('button').forEach(btn=>btn.classList.add('nd96-header-action'));
   }
   const main=document.querySelector('main');
   if(main){
-    allByText('h1','المعرض الرقمي').forEach(h=>h.closest('.mb-4')?.classList.add('nd96-home-summary'));
-    const arrivals=main.querySelector('section[aria-labelledby="new-arrivals-title"]');if(arrivals)arrivals.classList.add('nd96-new-arrivals');
     const search=[...main.querySelectorAll('input')].find(i=>String(i.placeholder||'').includes('ابحث برقم الصنف'));
     if(search){const sticky=search.closest('.sticky');sticky?.classList.add('nd96-search-rail');sticky?.querySelectorAll('button').forEach(btn=>btn.classList.add('nd96-category-chip'))}
-    allByText('b','جميع المنتجات').forEach(title=>{const row=title.closest('.flex');if(row){row.classList.add('nd96-products-heading');addSubtitle(title.parentElement,'اكتشف منتجاتنا المميزة','nd96-products-subtitle')}});
+    allByText('b','جميع المنتجات').forEach(title=>title.closest('.flex')?.classList.add('nd96-products-heading'));
     main.querySelectorAll('.catalog-card').forEach(card=>{card.classList.add('nd96-product-card');card.querySelectorAll('button').forEach(btn=>{if(normText(btn.textContent).includes('إضافة'))btn.classList.add('nd96-add-button')})});
     allByText('h2','الأقسام').forEach(h=>h.closest('.fade-in')?.classList.add('nd96-categories-page'));
     main.querySelectorAll('.category-tile').forEach(tile=>tile.classList.add('nd96-category-tile'));
     allByText('h2','طلب الشراء').forEach(h=>h.closest('.fade-in')?.classList.add('nd96-cart-page'));
     allByText('b','طلبك فارغ').forEach(title=>{let box=title.parentElement;for(let i=0;i<5&&box;i++,box=box.parentElement){if(box.classList?.contains('border')&&box.classList?.contains('bg-surface')){box.classList.add('nd96-empty-cart');break}}});
   }
-  decorateFooter();
+  document.querySelectorAll('.rights-footer').forEach(footer=>footer.classList.add('nd96-footer'));
   return true;
 };
 
-const ensureInventoryMasthead=()=>{
-  if(document.getElementById('batco-nd96-inventory-masthead'))return;
-  const root=document.getElementById('root');if(!root)return;
-  const mast=document.createElement('div');mast.id='batco-nd96-inventory-masthead';mast.dataset.nd96Injected='1';
-  mast.innerHTML=`<div class="nd96-mast-edge nd96-mast-korvi">مشغّل بواسطة <b>Korvi</b></div><img src="${OFFICIAL_MARK_URL}" alt="اليوم الوطني السعودي 96" referrerpolicy="no-referrer"><a class="nd96-mast-edge nd96-mast-dev" href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer">تطوير مهند الحزمي ↗</a>`;
-  document.body.insertBefore(mast,root);
+const findInventoryMeta=()=>{
+  const nodes=[...document.querySelectorAll('div,header,section')].filter(el=>{
+    const t=normText(el.textContent);
+    return t.includes('مشغّل بواسطة')&&t.includes('تطوير مهند الحزمي')&&t.length<220;
+  });
+  if(!nodes.length)return null;
+  return nodes.sort((a,b)=>a.querySelectorAll('*').length-b.querySelectorAll('*').length)[0];
 };
 const decorateInventory=()=>{
   const title=[...document.querySelectorAll('h1,h2')].find(el=>normText(el.textContent).includes('مخزون شركة بيت الأواني الطيبة'));
   if(!title||document.querySelector('.rights-bar'))return false;
-  document.body.classList.add('nd96-inventory');document.body.classList.remove('nd96-customer');ensureInventoryMasthead();
+  document.body.classList.add('nd96-inventory');document.body.classList.remove('nd96-customer');
+  findInventoryMeta()?.classList.add('nd96-inventory-meta');
   title.classList.add('nd96-inventory-title');title.parentElement?.classList.add('nd96-inventory-hero');
   document.querySelectorAll('button').forEach(btn=>{
     const label=normText(btn.textContent);
@@ -101,7 +88,7 @@ const startEnhancer=()=>afterDom(()=>{scheduleEnhance();if(uiObserver)return;uiO
 const stopEnhancer=()=>afterDom(()=>{
   try{uiObserver?.disconnect()}catch{}uiObserver=null;if(uiFrame)cancelAnimationFrame(uiFrame);uiFrame=0;
   document.body.classList.remove('nd96-customer','nd96-inventory');
-  document.querySelectorAll('[data-nd96-injected="1"]').forEach(el=>el.remove());
+  document.querySelectorAll('[data-nd96-injected="1"],#batco-nd96-frame,#batco-nd96-badge,#batco-nd96-inventory-masthead').forEach(el=>el.remove());
   document.querySelectorAll('[class*="nd96-"]').forEach(el=>{[...el.classList].filter(c=>c.startsWith('nd96-')).forEach(c=>el.classList.remove(c))});
 });
 
@@ -109,7 +96,7 @@ const apply=(identity,source='live')=>{
   const active=identity===NATIONAL_IDENTITY;if(active)ensureStyle();
   document.documentElement.classList.toggle('batco-identity-national96',active);document.documentElement.dataset.siteIdentity=active?NATIONAL_IDENTITY:DEFAULT_IDENTITY;
   afterDom(()=>document.body.classList.toggle('batco-identity-national96',active));setThemeColor(active);
-  if(active){ensureDecorations();startEnhancer()}else{stopEnhancer();clearDecorations()}
+  if(active){startEnhancer()}else{stopEnhancer()}
   try{window.dispatchEvent(new CustomEvent('batco:identitychange',{detail:{identity:active?NATIONAL_IDENTITY:DEFAULT_IDENTITY,active,source,version:VERSION,visualRevision:VISUAL_REVISION}}))}catch{}
 };
 const applyCurrent=source=>apply(wanted(),source||'live');
@@ -119,7 +106,7 @@ const loadScript=(id,src)=>new Promise((resolve,reject)=>{const existing=documen
 const defaultFirebaseReady=()=>{try{return Boolean(firebase.app())}catch{return false}};
 const waitForDefaultFirebase=async(timeoutMs=12000)=>{if(defaultFirebaseReady())return true;const started=Date.now();while(Date.now()-started<timeoutMs){await new Promise(resolve=>setTimeout(resolve,80));if(defaultFirebaseReady())return true}return false};
 const firestore=async()=>{if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');if(!await waitForDefaultFirebase())throw new Error('DEFAULT_FIREBASE_BOOTSTRAP_TIMEOUT');let app=(firebase.apps||[]).find(candidate=>candidate?.name===IDENTITY_APP_NAME);if(!app)app=firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME);return app.firestore()};
-const subscribe=async()=>{try{const db=await firestore();unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore')},error=>console.warn('[V56.43 identity] realtime unavailable; cached identity retained',error))}catch(error){console.warn('[V56.43 identity] control unavailable; cached/default identity retained',error)}};
+const subscribe=async()=>{try{const db=await firestore();unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore')},error=>console.warn('[V56.44 identity] realtime unavailable; cached identity retained',error))}catch(error){console.warn('[V56.44 identity] control unavailable; cached/default identity retained',error)}};
 const setPreview=identity=>{try{if(identity===NATIONAL_IDENTITY)sessionStorage.setItem(PREVIEW_KEY,NATIONAL_IDENTITY);else sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview')};
 const clearPreview=()=>{try{sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview-clear')};
 const getState=()=>({version:VERSION,visualRevision:VISUAL_REVISION,live:{...liveState},preview:readPreview(),effective:wanted()});
