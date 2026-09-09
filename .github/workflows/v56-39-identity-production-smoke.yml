@@ -1,4 +1,4 @@
-name: V56.40 Identity Quality + Production Smoke
+name: V56.41 Identity Quality + Production Smoke
 
 on:
   pull_request:
@@ -53,8 +53,13 @@ jobs:
           done
 
           assert_text "#008B4C" v56-39-national-day.css
-          assert_text "#0F2C31" v56-39-national-day.css
+          assert_text "#0A3135" v56-39-national-day.css
           assert_text "$OFFICIAL_VECTOR" v56-39-national-day.css
+          assert_text "$OFFICIAL_MARK" v56-39-national-day.css
+          assert_text "body:has(.rights-bar)" v56-39-national-day.css
+          assert_text ".catalog-card" v56-39-national-day.css
+          assert_text ".category-tile" v56-39-national-day.css
+          assert_text "nd96WeaveSlide" v56-39-national-day.css
           assert_text "prefers-reduced-motion" v56-39-national-day.css
           reject_text "repeating-conic-gradient" v56-39-national-day.css
           reject_text "pattern id=\"weave\"" national-day-96-mark.svg
@@ -69,9 +74,9 @@ jobs:
           css=Path('v56-39-national-day.css').read_text()
           if css.count('{') != css.count('}'):
               raise SystemExit('CSS_BRACE_MISMATCH')
-          print('V56.40_IDENTITY_STATIC_PASS')
+          print('V56.41_IDENTITY_STATIC_PASS')
           PY
-          echo 'Canonical 2026 GEA asset bindings verified. External CDN reachability is intentionally not a CI blocker because the provider rejects GitHub runner traffic with HTTP 403.'
+          echo 'Canonical 2026 GEA bindings and premium customer UI contracts verified. External GEA CDN reachability is intentionally not a CI blocker because the provider rejects GitHub runner traffic with HTTP 403.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
@@ -149,8 +154,12 @@ jobs:
           assert_text "v56-39-site-identity.js?v=56.39" /tmp/index.html
 
           assert_text "#008B4C" /tmp/v56-39-national-day.css
-          assert_text "#0F2C31" /tmp/v56-39-national-day.css
+          assert_text "#0A3135" /tmp/v56-39-national-day.css
           assert_text "vector-green.png" /tmp/v56-39-national-day.css
+          assert_text "brand-emblem-wide.png" /tmp/v56-39-national-day.css
+          assert_text "body:has(.rights-bar)" /tmp/v56-39-national-day.css
+          assert_text ".catalog-card" /tmp/v56-39-national-day.css
+          assert_text ".category-tile" /tmp/v56-39-national-day.css
           assert_text "prefers-reduced-motion" /tmp/v56-39-national-day.css
           reject_text "repeating-conic-gradient" /tmp/v56-39-national-day.css
 
@@ -161,4 +170,4 @@ jobs:
           curl -fsSL --retry 3 --retry-delay 2 "$PROD/identities.html?route=$nonce" -o /tmp/identity-route.html
           test -s /tmp/identity-route.html
           assert_text "الهويات" /tmp/identity-route.html
-          echo "Production serves the exact V56.40 identity manager and official National Day 96 asset bindings from current main."
+          echo "Production serves the exact V56.41 premium National Day customer UI and identity bindings from current main."
