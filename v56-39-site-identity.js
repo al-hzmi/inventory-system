@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 const VERSION='56.40';
-const VISUAL_REVISION='56.44';
+const VISUAL_REVISION='56.45';
 const CACHE_KEY='batco_site_identity_cache_v1';
 const PREVIEW_KEY='batco_identity_preview_v1';
 const CONTROL_COLLECTION='system_controls';
@@ -28,8 +28,8 @@ const ensureStyle=()=>{
 };
 const setThemeColor=active=>{const meta=document.querySelector('meta[name="theme-color"]');if(!meta)return;if(!meta.dataset.identityDefault)meta.dataset.identityDefault=meta.getAttribute('content')||'#FFFFFF';meta.setAttribute('content',active?'#063B3B':meta.dataset.identityDefault)};
 
-/* V56.44 rule: no injected visual DOM. We only tag existing components so the
-   National Day layer can recolor/texture them without changing base geometry. */
+/* V56.45 rule: no injected visual DOM. Existing components receive semantic tags only;
+   the Signature System is painted by CSS from the official GEA 2026 vector asset. */
 const decorateCustomer=()=>{
   const rights=document.querySelector('.rights-bar');if(!rights)return false;
   document.body.classList.add('nd96-customer');document.body.classList.remove('nd96-inventory');
@@ -106,7 +106,7 @@ const loadScript=(id,src)=>new Promise((resolve,reject)=>{const existing=documen
 const defaultFirebaseReady=()=>{try{return Boolean(firebase.app())}catch{return false}};
 const waitForDefaultFirebase=async(timeoutMs=12000)=>{if(defaultFirebaseReady())return true;const started=Date.now();while(Date.now()-started<timeoutMs){await new Promise(resolve=>setTimeout(resolve,80));if(defaultFirebaseReady())return true}return false};
 const firestore=async()=>{if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');if(!await waitForDefaultFirebase())throw new Error('DEFAULT_FIREBASE_BOOTSTRAP_TIMEOUT');let app=(firebase.apps||[]).find(candidate=>candidate?.name===IDENTITY_APP_NAME);if(!app)app=firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME);return app.firestore()};
-const subscribe=async()=>{try{const db=await firestore();unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore')},error=>console.warn('[V56.44 identity] realtime unavailable; cached identity retained',error))}catch(error){console.warn('[V56.44 identity] control unavailable; cached/default identity retained',error)}};
+const subscribe=async()=>{try{const db=await firestore();unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore')},error=>console.warn('[V56.45 identity] realtime unavailable; cached identity retained',error))}catch(error){console.warn('[V56.45 identity] control unavailable; cached/default identity retained',error)}};
 const setPreview=identity=>{try{if(identity===NATIONAL_IDENTITY)sessionStorage.setItem(PREVIEW_KEY,NATIONAL_IDENTITY);else sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview')};
 const clearPreview=()=>{try{sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview-clear')};
 const getState=()=>({version:VERSION,visualRevision:VISUAL_REVISION,live:{...liveState},preview:readPreview(),effective:wanted()});
