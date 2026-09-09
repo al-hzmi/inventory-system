@@ -1,1 +1,0 @@
-No additional release marker files are required after this point.

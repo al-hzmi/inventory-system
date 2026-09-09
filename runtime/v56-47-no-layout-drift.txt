@@ -1,1 +1,0 @@
-No seasonal CSS may alter base UI width/height/padding/margin/gap/grid/font metrics/border radius. Decorative pseudo-elements may size themselves independently outside normal flow.

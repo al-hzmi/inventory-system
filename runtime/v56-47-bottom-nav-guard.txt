@@ -1,1 +1,0 @@
-Seasonal identity CSS must never override persistent customer bottom-nav position, bottom/inset, height, overflow, transform, margin, or padding. Verified by tests/v56-39-identities.mjs.

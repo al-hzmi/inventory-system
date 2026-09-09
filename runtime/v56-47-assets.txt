@@ -1,5 +1,0 @@
-national-day-96/assets/header.svg
-national-day-96/assets/border.svg
-national-day-96/assets/corner.svg
-national-day-96/assets/fort.svg
-national-day-96/assets/landscape.svg

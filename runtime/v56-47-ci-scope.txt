@@ -1,1 +1,0 @@
-CI scope: identity runtime syntax, ZIP-derived asset presence, zero layout drift, bottom-nav persistence, production exact-file smoke.

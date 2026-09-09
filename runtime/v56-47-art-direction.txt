@@ -1,1 +1,0 @@
-Art direction: premium Saudi National Day 96. Existing application geometry is source of truth. Mockups define atmosphere only. Artwork stays outside normal flow and never intercepts interaction.
