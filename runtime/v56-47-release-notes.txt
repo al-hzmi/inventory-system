@@ -1,0 +1,6 @@
+V56.47 Saudi National Day 96 seasonal visual skin
+- ZIP-derived modular visual assets
+- zero layout drift
+- original bottom-navigation positioning preserved
+- no decorative DOM image injection
+- product and category UX unchanged
