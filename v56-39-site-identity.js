@@ -1,6 +1,7 @@
 (()=>{
 'use strict';
 const VERSION='56.40';
+const VISUAL_REVISION='56.42';
 const CACHE_KEY='batco_site_identity_cache_v1';
 const PREVIEW_KEY='batco_identity_preview_v1';
 const CONTROL_COLLECTION='system_controls';
@@ -11,87 +12,45 @@ const IDENTITY_APP_NAME='batco-identity-v56-39';
 const OFFICIAL_MARK_URL='https://cdn.gea.gov.sa/ND-2026/brand/brand-emblem-wide.png';
 const DEFAULT_STATE={activeIdentity:DEFAULT_IDENTITY,enabled:false,revision:1};
 const FIREBASE_CONFIG={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374'};
-let liveState={...DEFAULT_STATE},unsubscribe=null;
-
+let liveState={...DEFAULT_STATE},unsubscribe=null,uiObserver=null,uiFrame=0;
 const safeJson=value=>{try{return JSON.parse(value)}catch{return null}};
 const readPreview=()=>{try{const v=sessionStorage.getItem(PREVIEW_KEY)||'';return v===NATIONAL_IDENTITY?v:''}catch{return''}};
-const normalize=row=>{
-  const source=row&&typeof row==='object'?row:{};
-  const national=source.enabled===true&&source.activeIdentity===NATIONAL_IDENTITY;
-  return {activeIdentity:national?NATIONAL_IDENTITY:DEFAULT_IDENTITY,enabled:national,revision:Number(source.revision)||1,updatedAt:source.updatedAt||null,updatedBy:String(source.updatedBy||'')};
-};
+const normalize=row=>{const source=row&&typeof row==='object'?row:{};const national=source.enabled===true&&source.activeIdentity===NATIONAL_IDENTITY;return {activeIdentity:national?NATIONAL_IDENTITY:DEFAULT_IDENTITY,enabled:national,revision:Number(source.revision)||1,updatedAt:source.updatedAt||null,updatedBy:String(source.updatedBy||'')}};
 const wanted=()=>readPreview()||liveState.activeIdentity||DEFAULT_IDENTITY;
 const afterDom=fn=>document.body?fn():document.addEventListener('DOMContentLoaded',fn,{once:true});
-const ensureStyle=()=>{
-  let link=document.getElementById('v56-39-national-day-css');
-  if(link)return link;
-  link=document.createElement('link');link.id='v56-39-national-day-css';link.rel='stylesheet';link.href='./v56-39-national-day.css?v=56.40';document.head.appendChild(link);return link;
-};
-const ensureDecorations=()=>afterDom(()=>{
-  if(!document.getElementById('batco-nd96-frame')){
-    const frame=document.createElement('div');frame.id='batco-nd96-frame';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
-  }
-  if(!document.getElementById('batco-nd96-badge')){
-    const badge=document.createElement('div');badge.id='batco-nd96-badge';badge.setAttribute('aria-hidden','true');
-    const image=document.createElement('img');image.src=OFFICIAL_MARK_URL;image.alt='';image.decoding='async';image.referrerPolicy='no-referrer';
-    badge.appendChild(image);document.body.appendChild(badge);
-  }
-});
-const clearDecorations=()=>afterDom(()=>{document.getElementById('batco-nd96-frame')?.remove();document.getElementById('batco-nd96-badge')?.remove()});
-const setThemeColor=active=>{
-  const meta=document.querySelector('meta[name="theme-color"]');if(!meta)return;
-  if(!meta.dataset.identityDefault)meta.dataset.identityDefault=meta.getAttribute('content')||'#FFFFFF';
-  meta.setAttribute('content',active?'#0F2C31':meta.dataset.identityDefault);
-};
-const apply=(identity,source='live')=>{
-  const active=identity===NATIONAL_IDENTITY;
-  if(active)ensureStyle();
-  document.documentElement.classList.toggle('batco-identity-national96',active);
-  document.documentElement.dataset.siteIdentity=active?NATIONAL_IDENTITY:DEFAULT_IDENTITY;
-  afterDom(()=>document.body.classList.toggle('batco-identity-national96',active));
-  setThemeColor(active);
-  active?ensureDecorations():clearDecorations();
-  try{window.dispatchEvent(new CustomEvent('batco:identitychange',{detail:{identity:active?NATIONAL_IDENTITY:DEFAULT_IDENTITY,active,source,version:VERSION}}))}catch{}
-};
+const ensureStyle=()=>{let link=document.getElementById('v56-39-national-day-css');if(link){if(!String(link.href||'').includes('v='+VISUAL_REVISION))link.href='./v56-39-national-day.css?v='+VISUAL_REVISION;return link}link=document.createElement('link');link.id='v56-39-national-day-css';link.rel='stylesheet';link.href='./v56-39-national-day.css?v='+VISUAL_REVISION;document.head.appendChild(link);return link};
+const ensureDecorations=()=>afterDom(()=>{if(!document.getElementById('batco-nd96-frame')){const frame=document.createElement('div');frame.id='batco-nd96-frame';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame)}if(!document.getElementById('batco-nd96-badge')){const badge=document.createElement('div');badge.id='batco-nd96-badge';badge.setAttribute('aria-hidden','true');const image=document.createElement('img');image.src=OFFICIAL_MARK_URL;image.alt='';image.decoding='async';image.referrerPolicy='no-referrer';badge.appendChild(image);document.body.appendChild(badge)}});
+const clearDecorations=()=>afterDom(()=>{document.getElementById('batco-nd96-frame')?.remove();document.getElementById('batco-nd96-badge')?.remove();document.getElementById('batco-nd96-inventory-masthead')?.remove()});
+const setThemeColor=active=>{const meta=document.querySelector('meta[name="theme-color"]');if(!meta)return;if(!meta.dataset.identityDefault)meta.dataset.identityDefault=meta.getAttribute('content')||'#FFFFFF';meta.setAttribute('content',active?'#0F2C31':meta.dataset.identityDefault)};
+const svg=(body,viewBox='0 0 24 24')=>`<svg viewBox="${viewBox}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICONS={grid:svg('<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>'),shoe:svg('<path d="M4 15c3 0 5-1 7-4l2-3 2 4c1.2 1.5 2.7 2.1 5 2.4V18H7c-2.2 0-3-1-3-3Z"/><path d="M10 13h4M8 15h3"/>'),grill:svg('<path d="M5 10h14l-2 7H7l-2-7Z"/><path d="M9 17l-2 4m8-4 2 4M8 6c-1-1-1-2 0-3m4 3c-1-1-1-2 0-3m4 3c-1-1-1-2 0-3"/>'),sport:svg('<circle cx="10" cy="9" r="5"/><path d="M6.5 5.5c2 2 5 3 7 1M5 10c3-1 6 0 9 3M3 18c3-2 5 2 8 0s5 2 8 0"/>'),pot:svg('<path d="M6 9h12v10H6zM8 6h8v3M4 11H2m20 0h-2"/><path d="M9 6c0-2 6-2 6 0"/>'),plastic:svg('<rect x="6" y="5" width="12" height="6" rx="1.5"/><rect x="5" y="13" width="14" height="6" rx="1.5"/>'),jar:svg('<path d="M8 5h8M9 5v3l-2 2v9h10v-9l-2-2V5"/><path d="M8 12h8"/>'),tools:svg('<path d="M14 5a4 4 0 0 0 5 5l-9 9-5-5 9-9Z"/><path d="M5 4l5 5M4 5l2-2 3 3-2 2"/>'),gift:svg('<rect x="4" y="9" width="16" height="11" rx="1"/><path d="M12 9v11M3 9h18V6H3zM12 6c-4 0-5-4-2-4 2 0 2 4 2 4Zm0 0c4 0 5-4 2-4-2 0-2 4-2 4Z"/>'),clean:svg('<path d="M9 3h6l-1 4 3 3v10H7V10l3-3-1-4Z"/><path d="M14 5h4m-1-2 2 2-2 2"/>'),book:svg('<path d="M4 5c4-1 6 0 8 2v13c-2-2-4-3-8-2V5Zm16 0c-4-1-6 0-8 2v13c2-2 4-3 8-2V5Z"/>'),dots:svg('<circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/>'),warehouse:svg('<path d="M4 10 12 4l8 6v10H4V10Z"/><path d="M8 20v-7h8v7M9 10h6"/>'),users:svg('<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2-6 6-6s6 2 6 6M17 5a3 3 0 0 1 0 6m1 3c2 .4 3 2.1 3 5"/>'),cart:svg('<path d="M3 4h2l2 10h10l3-7H6"/><circle cx="9" cy="19" r="1" fill="currentColor"/><circle cx="17" cy="19" r="1" fill="currentColor"/>'),eye:svg('<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/>')};
+const CART_ILLUSTRATION=`<svg viewBox="0 0 260 180" aria-hidden="true"><defs><linearGradient id="nd96CartBody" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#DDF2E7"/><stop offset="1" stop-color="#A9D7C4"/></linearGradient><linearGradient id="nd96CartDark" x1="0" x2="1"><stop offset="0" stop-color="#0A3135"/><stop offset="1" stop-color="#0D6150"/></linearGradient></defs><ellipse cx="132" cy="154" rx="79" ry="8" fill="#D5E9DF" opacity=".7"/><path d="M58 58h21l10 57h95l17-49H84" fill="url(#nd96CartBody)" stroke="#88C9AF" stroke-width="4" stroke-linejoin="round"/><path d="M59 58 51 38H30" fill="none" stroke="url(#nd96CartDark)" stroke-width="8" stroke-linecap="round"/><path d="M94 124h88" stroke="#84BCA5" stroke-width="5" stroke-linecap="round"/><circle cx="105" cy="143" r="12" fill="url(#nd96CartDark)"/><circle cx="176" cy="143" r="12" fill="url(#nd96CartDark)"/><rect x="183" y="23" width="12" height="36" rx="6" fill="#7CC6A7" transform="rotate(25 183 23)"/><rect x="212" y="35" width="12" height="32" rx="6" fill="#9DD7BD" transform="rotate(42 212 35)"/></svg>`;
+const normText=value=>String(value||'').replace(/\s+/g,' ').trim();
+const iconForLabel=label=>{const t=normText(label);if(t.includes('OGS')||t.includes('أحذية'))return'shoe';if(t.includes('الشواء'))return'grill';if(t.includes('الألعاب')||t.includes('السباحة'))return'sport';if(t.includes('الأواني'))return'pot';if(t.includes('البلاستيك'))return'plastic';if(t.includes('برطمان'))return'jar';if(t.includes('العدد'))return'tools';if(t.includes('التحف')||t.includes('الهدايا'))return'gift';if(t.includes('العناية')||t.includes('النظافة'))return'clean';if(t.includes('القرطاسية'))return'book';if(t.includes('بقية'))return'dots';if(t.includes('المستودع')||t.includes('مخزون'))return'warehouse';return'grid'};
+const injectIcon=(host,name,className='nd96-injected-icon')=>{if(!host||host.querySelector(`.${className}[data-nd96-injected]`))return;const span=document.createElement('span');span.className=className;span.dataset.nd96Injected='1';span.innerHTML=ICONS[name]||ICONS.grid;host.appendChild(span)};
+const allByText=(selector,text)=>[...document.querySelectorAll(selector)].filter(el=>normText(el.textContent).includes(text));
+const addSubtitle=(host,text,className)=>{if(!host||host.querySelector('.'+className))return;const el=document.createElement('span');el.className=className;el.dataset.nd96Injected='1';el.textContent=text;host.appendChild(el)};
+const addCartCta=empty=>{if(!empty||empty.querySelector('.nd96-cart-illustration'))return;const art=document.createElement('div');art.className='nd96-cart-illustration';art.dataset.nd96Injected='1';art.innerHTML=CART_ILLUSTRATION;empty.insertBefore(art,empty.firstChild);const button=document.createElement('button');button.type='button';button.className='nd96-cart-cta';button.dataset.nd96Injected='1';button.innerHTML='<span>تصفح المعرض الرقمي</span><span aria-hidden="true">←</span>';button.addEventListener('click',()=>{const home=[...document.querySelectorAll('nav button')].find(b=>normText(b.textContent).includes('الرئيسية'));home?.click()});empty.appendChild(button)};
+const decorateFooter=()=>{document.querySelectorAll('.rights-footer').forEach(footer=>{footer.classList.add('nd96-footer');if(!footer.querySelector('.nd96-footer-lockup')){const wrap=document.createElement('div');wrap.className='nd96-footer-lockup';wrap.dataset.nd96Injected='1';const img=document.createElement('img');img.src=OFFICIAL_MARK_URL;img.alt='اليوم الوطني السعودي 96';img.referrerPolicy='no-referrer';const line=document.createElement('span');line.textContent='من طموحنا .. نبني الغد';wrap.append(img,line);footer.prepend(wrap)}})};
+const decorateCustomer=()=>{const rights=document.querySelector('.rights-bar');if(!rights)return false;document.body.classList.add('nd96-customer');document.body.classList.remove('nd96-inventory');const header=rights.closest('header');if(header)header.classList.add('nd96-customer-header');if(header){const second=[...header.children].find(el=>el!==rights&&el.querySelector?.('b'));if(second){const title=[...second.querySelectorAll('b')].find(el=>normText(el.textContent).includes('المعرض الرقمي'));if(title){title.classList.add('nd96-portal-title');addSubtitle(title.parentElement,'منتجات مختارة .. لجودة أعلى','nd96-portal-subtitle')}[...second.querySelectorAll('button')].forEach(btn=>{const t=normText(btn.textContent);btn.classList.add('nd96-header-action');if(t.includes('الموظفين')){btn.classList.add('nd96-header-employees');injectIcon(btn,'users','nd96-action-icon')}else if(btn.querySelector('svg')||t.includes('السلة'))btn.classList.add('nd96-header-cart')})}}const main=document.querySelector('main');if(main){allByText('h1','المعرض الرقمي').forEach(h=>{const card=h.closest('.mb-4');if(card)card.classList.add('nd96-home-summary')});const search=[...main.querySelectorAll('input')].find(i=>String(i.placeholder||'').includes('ابحث برقم الصنف'));if(search){const sticky=search.closest('.sticky');sticky?.classList.add('nd96-search-rail');sticky?.querySelectorAll('button').forEach(btn=>{const label=normText(btn.textContent);if(!label)return;btn.classList.add('nd96-category-chip');injectIcon(btn,label==='الكل'?'grid':iconForLabel(label),'nd96-chip-icon')})}allByText('b','جميع المنتجات').forEach(title=>{const row=title.closest('.flex');if(row){row.classList.add('nd96-products-heading');addSubtitle(title.parentElement,'اكتشف منتجاتنا المميزة','nd96-products-subtitle')}});main.querySelectorAll('.catalog-card').forEach(card=>{card.classList.add('nd96-product-card');card.querySelectorAll('button').forEach(btn=>{if(normText(btn.textContent).includes('إضافة')){btn.classList.add('nd96-add-button');injectIcon(btn,'cart','nd96-button-icon')}})});allByText('h2','الأقسام').forEach(h=>h.closest('.fade-in')?.classList.add('nd96-categories-page'));main.querySelectorAll('.category-tile').forEach(tile=>{tile.classList.add('nd96-category-tile');const label=normText(tile.querySelector('b')?.textContent||tile.textContent);const iconHost=[...tile.querySelectorAll('div')].find(d=>d.className&&String(d.className).includes('w-10')&&String(d.className).includes('h-10'));if(iconHost){iconHost.classList.add('nd96-category-icon');injectIcon(iconHost,iconForLabel(label),'nd96-category-symbol')}});allByText('h2','طلب الشراء').forEach(h=>h.closest('.fade-in')?.classList.add('nd96-cart-page'));allByText('b','طلبك فارغ').forEach(title=>{let box=title.parentElement;for(let i=0;i<5&&box;i++,box=box.parentElement){if(box.classList?.contains('border')&&box.classList?.contains('bg-surface')){box.classList.add('nd96-empty-cart');addCartCta(box);break}}})}decorateFooter();return true};
+const ensureInventoryMasthead=()=>{if(document.getElementById('batco-nd96-inventory-masthead'))return;const root=document.getElementById('root');if(!root)return;const mast=document.createElement('div');mast.id='batco-nd96-inventory-masthead';mast.dataset.nd96Injected='1';mast.innerHTML=`<div class="nd96-mast-edge nd96-mast-korvi">مشغّل بواسطة <b>Korvi</b></div><img src="${OFFICIAL_MARK_URL}" alt="اليوم الوطني السعودي 96" referrerpolicy="no-referrer"><a class="nd96-mast-edge nd96-mast-dev" href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer">تطوير مهند الحزمي ↗</a>`;document.body.insertBefore(mast,root)};
+const decorateInventory=()=>{const title=[...document.querySelectorAll('h1,h2')].find(el=>normText(el.textContent).includes('مخزون شركة بيت الأواني الطيبة'));if(!title||document.querySelector('.rights-bar'))return false;document.body.classList.add('nd96-inventory');ensureInventoryMasthead();title.classList.add('nd96-inventory-title');title.parentElement?.classList.add('nd96-inventory-hero');document.querySelectorAll('button').forEach(btn=>{const label=normText(btn.textContent);if(label.includes('مخزون جدة')||label.includes('مخزون الرياض')){btn.classList.add('nd96-warehouse-button');injectIcon(btn,'warehouse','nd96-warehouse-icon')}else if(label.includes('عملاء')){btn.classList.add('nd96-customers-button');injectIcon(btn,'eye','nd96-customers-icon')}else if(['جديدنا','البلاستيك','الأواني المنزلية','الألعاب والسباحة','العدد','العناية والنظافة','أدوات الشواء','القرطاسية','التحف والهدايا','البرطمان','أحذية OGS','بقية الأصناف'].some(x=>label.includes(x))){btn.classList.add('nd96-inventory-chip');injectIcon(btn,iconForLabel(label),'nd96-chip-icon')}});allByText('h2','المعرض الرقمي').forEach(h=>h.parentElement?.classList.add('nd96-inventory-catalog-heading'));allByText('b','اختر المستودع').forEach(h=>{let box=h.parentElement;for(let i=0;i<5&&box;i++,box=box.parentElement){if(box.classList?.contains('border')){box.classList.add('nd96-warehouse-empty');injectIcon(box,'warehouse','nd96-warehouse-empty-icon');break}}});return true};
+const enhanceNationalUI=()=>{if(!document.body||!document.documentElement.classList.contains('batco-identity-national96'))return;decorateCustomer()||decorateInventory()};
+const scheduleEnhance=()=>{if(uiFrame)return;uiFrame=requestAnimationFrame(()=>{uiFrame=0;enhanceNationalUI()})};
+const startEnhancer=()=>afterDom(()=>{scheduleEnhance();if(uiObserver)return;uiObserver=new MutationObserver(scheduleEnhance);uiObserver.observe(document.body,{subtree:true,childList:true})});
+const stopEnhancer=()=>afterDom(()=>{try{uiObserver?.disconnect()}catch{}uiObserver=null;if(uiFrame)cancelAnimationFrame(uiFrame);uiFrame=0;document.body.classList.remove('nd96-customer','nd96-inventory');document.querySelectorAll('[data-nd96-injected="1"]').forEach(el=>el.remove());document.querySelectorAll('.nd96-customer-header,.nd96-home-summary,.nd96-search-rail,.nd96-products-heading,.nd96-product-card,.nd96-add-button,.nd96-categories-page,.nd96-category-tile,.nd96-cart-page,.nd96-empty-cart,.nd96-footer,.nd96-warehouse-button,.nd96-inventory-chip,.nd96-warehouse-empty').forEach(el=>{[...el.classList].filter(c=>c.startsWith('nd96-')).forEach(c=>el.classList.remove(c))})});
+const apply=(identity,source='live')=>{const active=identity===NATIONAL_IDENTITY;if(active)ensureStyle();document.documentElement.classList.toggle('batco-identity-national96',active);document.documentElement.dataset.siteIdentity=active?NATIONAL_IDENTITY:DEFAULT_IDENTITY;afterDom(()=>document.body.classList.toggle('batco-identity-national96',active));setThemeColor(active);if(active){ensureDecorations();startEnhancer()}else{stopEnhancer();clearDecorations()}try{window.dispatchEvent(new CustomEvent('batco:identitychange',{detail:{identity:active?NATIONAL_IDENTITY:DEFAULT_IDENTITY,active,source,version:VERSION,visualRevision:VISUAL_REVISION}}))}catch{}};
 const applyCurrent=source=>apply(wanted(),source||'live');
 const cache=state=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify({...state,cachedAt:Date.now()}))}catch{}};
-const bootstrapCache=()=>{
-  const preview=readPreview();
-  if(preview){apply(preview,'preview-cache');return}
-  try{const cached=normalize(safeJson(localStorage.getItem(CACHE_KEY)||'null'));liveState=cached;applyCurrent('cache')}catch{apply(DEFAULT_IDENTITY,'default')}
-};
-const loadScript=(id,src)=>new Promise((resolve,reject)=>{
-  const existing=document.getElementById(id);if(existing){if(existing.dataset.ready==='1'||window.firebase)return resolve();existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}
-  const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.ready='1';resolve()};s.onerror=reject;document.head.appendChild(s);
-});
+const bootstrapCache=()=>{const preview=readPreview();if(preview){apply(preview,'preview-cache');return}try{const cached=normalize(safeJson(localStorage.getItem(CACHE_KEY)||'null'));liveState=cached;applyCurrent('cache')}catch{apply(DEFAULT_IDENTITY,'default')}};
+const loadScript=(id,src)=>new Promise((resolve,reject)=>{const existing=document.getElementById(id);if(existing){if(existing.dataset.ready==='1'||window.firebase)return resolve();existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}const s=document.createElement('script');s.id=id;s.src=src;s.async=true;s.onload=()=>{s.dataset.ready='1';resolve()};s.onerror=reject;document.head.appendChild(s)});
 const defaultFirebaseReady=()=>{try{return Boolean(firebase.app())}catch{return false}};
-const waitForDefaultFirebase=async(timeoutMs=12000)=>{
-  if(defaultFirebaseReady())return true;
-  const started=Date.now();
-  while(Date.now()-started<timeoutMs){await new Promise(resolve=>setTimeout(resolve,80));if(defaultFirebaseReady())return true}
-  return false;
-};
-const firestore=async()=>{
-  if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}
-  if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');
-  if(!await waitForDefaultFirebase())throw new Error('DEFAULT_FIREBASE_BOOTSTRAP_TIMEOUT');
-  let app=(firebase.apps||[]).find(candidate=>candidate?.name===IDENTITY_APP_NAME);
-  if(!app)app=firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME);
-  return app.firestore();
-};
-const subscribe=async()=>{
-  try{
-    const db=await firestore();
-    unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{
-      liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore');
-    },error=>console.warn('[V56.40 identity] realtime unavailable; cached identity retained',error));
-  }catch(error){console.warn('[V56.40 identity] control unavailable; cached/default identity retained',error)}
-};
+const waitForDefaultFirebase=async(timeoutMs=12000)=>{if(defaultFirebaseReady())return true;const started=Date.now();while(Date.now()-started<timeoutMs){await new Promise(resolve=>setTimeout(resolve,80));if(defaultFirebaseReady())return true}return false};
+const firestore=async()=>{if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');if(!await waitForDefaultFirebase())throw new Error('DEFAULT_FIREBASE_BOOTSTRAP_TIMEOUT');let app=(firebase.apps||[]).find(candidate=>candidate?.name===IDENTITY_APP_NAME);if(!app)app=firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME);return app.firestore()};
+const subscribe=async()=>{try{const db=await firestore();unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore')},error=>console.warn('[V56.42 identity] realtime unavailable; cached identity retained',error))}catch(error){console.warn('[V56.42 identity] control unavailable; cached/default identity retained',error)}};
 const setPreview=identity=>{try{if(identity===NATIONAL_IDENTITY)sessionStorage.setItem(PREVIEW_KEY,NATIONAL_IDENTITY);else sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview')};
 const clearPreview=()=>{try{sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview-clear')};
-const getState=()=>({version:VERSION,live:{...liveState},preview:readPreview(),effective:wanted()});
-
-window.__BATCO_SITE_IDENTITY={version:VERSION,apply,setPreview,clearPreview,getState,control:{collection:CONTROL_COLLECTION,doc:CONTROL_DOC},supported:[DEFAULT_IDENTITY,NATIONAL_IDENTITY]};
-bootstrapCache();subscribe();
-window.addEventListener('storage',event=>{if(event.key===CACHE_KEY&&!readPreview()){liveState=normalize(safeJson(event.newValue||'null'));applyCurrent('storage')}});
+const getState=()=>({version:VERSION,visualRevision:VISUAL_REVISION,live:{...liveState},preview:readPreview(),effective:wanted()});
+window.__BATCO_SITE_IDENTITY={version:VERSION,visualRevision:VISUAL_REVISION,apply,setPreview,clearPreview,getState,control:{collection:CONTROL_COLLECTION,doc:CONTROL_DOC},supported:[DEFAULT_IDENTITY,NATIONAL_IDENTITY]};
+bootstrapCache();subscribe();window.addEventListener('storage',event=>{if(event.key===CACHE_KEY&&!readPreview()){liveState=normalize(safeJson(event.newValue||'null'));applyCurrent('storage')}});
 })();
