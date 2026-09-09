@@ -1,4 +1,4 @@
-name: V56.45 National Signature Quality + Production Smoke
+name: V56.46 National Art Direction Quality + Production Smoke
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate signature-system identity contract
+      - name: Validate modular visual-skin contract
         shell: bash
         run: |
           set -euo pipefail
@@ -28,75 +28,96 @@ jobs:
           assert_text(){ local needle="$1" file="$2"; grep -Fq -- "$needle" "$file" || { echo "::error::$file missing expected contract: $needle"; exit 1; }; }
           reject_text(){ local needle="$1" file="$2"; if grep -Fq -- "$needle" "$file"; then echo "::error::$file contains retired visual behavior: $needle"; exit 1; fi; }
 
-          OFFICIAL_MARK='https://cdn.gea.gov.sa/ND-2026/brand/brand-emblem-wide.png'
-          OFFICIAL_VECTOR='https://cdn.gea.gov.sa/ND-2026/assets/identity/vector-green.png'
-
           assert_text "VERSION='56.40'" v56-39-site-identity.js
-          assert_text "VISUAL_REVISION='56.45'" v56-39-site-identity.js
+          assert_text "VISUAL_REVISION='56.46'" v56-39-site-identity.js
           assert_text "CONTROL_DOC='site_identity'" v56-39-site-identity.js
           assert_text "NATIONAL_IDENTITY='national96'" v56-39-site-identity.js
           assert_text "enabled:false" v56-39-site-identity.js
           assert_text "onSnapshot" v56-39-site-identity.js
           assert_text "waitForDefaultFirebase" v56-39-site-identity.js
-          assert_text "no injected visual DOM" v56-39-site-identity.js
-          assert_text "official GEA 2026 vector asset" v56-39-site-identity.js
-          reject_text "ensureDecorations" v56-39-site-identity.js
-          reject_text "addSubtitle" v56-39-site-identity.js
-          reject_text "decorateFooter" v56-39-site-identity.js
+          assert_text "no decorative DOM injection" v56-39-site-identity.js
+          reject_text "document.createElement('img')" v56-39-site-identity.js
           reject_text "ensureInventoryMasthead" v56-39-site-identity.js
           reject_text "nd96-new-arrivals" v56-39-site-identity.js
-          reject_text "OFFICIAL_MARK_URL" v56-39-site-identity.js
-          reject_text "document.createElement('img')" v56-39-site-identity.js
 
-          assert_text "$OFFICIAL_MARK" v56-39-national-day.css
-          assert_text "$OFFICIAL_VECTOR" v56-39-national-day.css
-          assert_text "--nd96-green:#009A55" v56-39-national-day.css
-          assert_text "--nd96-deep:#063B3B" v56-39-national-day.css
-          assert_text "National Day Signature System" v56-39-national-day.css
-          assert_text "Authenticity rule" v56-39-national-day.css
-          assert_text "Base application geometry remains authoritative" v56-39-national-day.css
-          assert_text "preserve every base tile" v56-39-national-day.css
-          assert_text "preserve original empty-state geometry" v56-39-national-day.css
-          assert_text "no injected masthead, no body offset" v56-39-national-day.css
-          assert_text "category-tile.nd96-category-tile:nth-child(even)" v56-39-national-day.css
-          assert_text "catalog-card.nd96-product-card:nth-child(even)" v56-39-national-day.css
-          assert_text "prefers-reduced-motion" v56-39-national-day.css
+          assets=(
+            national-day-96/header-scene.svg
+            national-day-96/najdi-pattern.svg
+            national-day-96/corner-pattern.svg
+            national-day-96/fort-scene.svg
+            national-day-96/bottom-landscape.svg
+          )
+          for asset in "${assets[@]}"; do
+            test -s "$asset" || { echo "::error::Missing seasonal asset: $asset"; exit 1; }
+          done
 
-          reject_text ".nd96-new-arrivals{display:none" v56-39-national-day.css
-          reject_text ".category-tile.nd96-category-tile .w-10.h-10{display:none" v56-39-national-day.css
-          reject_text "national96-weave.svg" v56-39-national-day.css
-          reject_text "national96-watermark.svg" v56-39-national-day.css
-          reject_text "national96-landscape.svg" v56-39-national-day.css
-          reject_text "repeating-conic-gradient" v56-39-national-day.css
-          reject_text "nd96WeaveSlide" v56-39-national-day.css
+          assert_text './national-day-96/header-scene.svg' v56-39-national-day.css
+          assert_text './national-day-96/najdi-pattern.svg' v56-39-national-day.css
+          assert_text './national-day-96/corner-pattern.svg' v56-39-national-day.css
+          assert_text './national-day-96/fort-scene.svg' v56-39-national-day.css
+          assert_text './national-day-96/bottom-landscape.svg' v56-39-national-day.css
+          assert_text 'Saudi National Day 96 production visual skin' v56-39-national-day.css
+          assert_text 'Product cards remain content-first' v56-39-national-day.css
+          assert_text 'Categories: one system, not stickers' v56-39-national-day.css
+          assert_text 'Cart: use the empty space deliberately' v56-39-national-day.css
+          assert_text 'same controls, seasonal scene around them' v56-39-national-day.css
+          assert_text 'pointer-events:none' v56-39-national-day.css
+          assert_text 'prefers-reduced-motion' v56-39-national-day.css
+
+          reject_text 'vector-green.png' v56-39-national-day.css
+          reject_text 'repeating-conic-gradient' v56-39-national-day.css
+          reject_text 'national96-weave.svg' v56-39-national-day.css
+          reject_text 'national96-watermark.svg' v56-39-national-day.css
+          reject_text 'national96-landscape.svg' v56-39-national-day.css
 
           python3 - <<'PY'
           import re
+          import xml.etree.ElementTree as ET
           from pathlib import Path
-          from html.parser import HTMLParser
+
           css=Path('v56-39-national-day.css').read_text()
           js=Path('v56-39-site-identity.js').read_text()
           if css.count('{') != css.count('}'):
               raise SystemExit('CSS_BRACE_MISMATCH')
-          forbidden = ['width','height','min-width','max-width','min-height','max-height','padding','padding-top','padding-bottom','padding-left','padding-right','padding-inline','padding-block','margin','margin-top','margin-bottom','margin-left','margin-right','margin-inline','margin-block','gap','row-gap','column-gap','font-size','line-height','grid-template-columns','grid-template-rows','flex-basis','order']
+          if "createElement('img')" in js or 'createElement("img")' in js:
+              raise SystemExit('VISUAL_DOM_INJECTION_FORBIDDEN')
+
+          # Base-layout lock: decorative pseudo-elements may have their own size,
+          # but the skin may not alter spacing, typography, grid or flex geometry.
+          forbidden = [
+              'padding','padding-top','padding-bottom','padding-left','padding-right','padding-inline','padding-block',
+              'margin','margin-top','margin-bottom','margin-left','margin-right','margin-inline','margin-block',
+              'gap','row-gap','column-gap','font-size','line-height','grid-template-columns','grid-template-rows','flex-basis','order'
+          ]
           violations=[]
           for prop in forbidden:
-              if re.search(r'(?<![-\w])'+re.escape(prop)+r'\s*:', css):
+              if re.search(r'(?<![-\\w])'+re.escape(prop)+r'\\s*:', css):
                   violations.append(prop)
           if violations:
               raise SystemExit('BASE_GEOMETRY_OVERRIDE_FORBIDDEN: '+', '.join(sorted(set(violations))))
-          if "createElement('img')" in js or 'createElement("img")' in js:
-              raise SystemExit('VISUAL_DOM_INJECTION_FORBIDDEN')
-          vector_uses=css.count('var(--nd96-official-vector)')
-          if vector_uses < 18:
-              raise SystemExit(f'SIGNATURE_DENSITY_TOO_LOW: {vector_uses}')
-          if css.count('background-repeat:no-repeat') < 12:
-              raise SystemExit('SIGNATURE_PLACEMENT_SYSTEM_MISSING')
-          class P(HTMLParser): pass
-          P().feed(Path('identities.html').read_text())
-          print('V56.45_NATIONAL_SIGNATURE_PASS',vector_uses)
+
+          assets=[
+              'national-day-96/header-scene.svg',
+              'national-day-96/najdi-pattern.svg',
+              'national-day-96/corner-pattern.svg',
+              'national-day-96/fort-scene.svg',
+              'national-day-96/bottom-landscape.svg',
+          ]
+          for asset in assets:
+              root=ET.parse(asset).getroot()
+              if not root.tag.endswith('svg'):
+                  raise SystemExit('INVALID_SVG '+asset)
+              text=Path(asset).read_text()
+              if '<image' in text or 'data:image' in text:
+                  raise SystemExit('RASTER_EMBED_FORBIDDEN '+asset)
+
+          if css.count('::before') + css.count('::after') < 12:
+              raise SystemExit('DECORATIVE_LAYER_SYSTEM_TOO_SHALLOW')
+          if css.count('pointer-events:none') < 10:
+              raise SystemExit('DECORATIVE_POINTER_SAFETY_MISSING')
+          print('V56.46_NATIONAL_ART_DIRECTION_PASS')
           PY
-          echo 'V56.45 verified: authentic official-vector signatures are distributed across existing surfaces without changing base geometry.'
+          echo 'V56.46 verified: modular SVG scenery, semantic variants, locked base geometry and non-interactive decorative layering.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
@@ -120,25 +141,38 @@ jobs:
               ok=1
               break
             fi
-            echo "Attempt $attempt: production has not reached V56.45 yet"
+            echo "Attempt $attempt: production has not reached V56.46 yet"
             sleep 10
           done
-          test "$ok" = "1" || { echo '::error::Production did not reach V56.45 within verification window.'; exit 1; }
+          test "$ok" = "1" || { echo '::error::Production did not reach V56.46 within verification window.'; exit 1; }
 
-      - name: Verify exact signature-system identity files in production
+      - name: Verify exact V56.46 visual-skin files in production
         shell: bash
         run: |
           set -euo pipefail
           nonce="${GITHUB_SHA}-$(date +%s)"
-          files=(index.html identities.html v56-39-site-identity.js v56-39-national-day.css national-day-96-mark.svg v46-admin-nav.js runtime/index-v37-source.txt runtime/v56-39-identity-production-probe.txt)
+          files=(
+            index.html
+            identities.html
+            v56-39-site-identity.js
+            v56-39-national-day.css
+            national-day-96-mark.svg
+            national-day-96/header-scene.svg
+            national-day-96/najdi-pattern.svg
+            national-day-96/corner-pattern.svg
+            national-day-96/fort-scene.svg
+            national-day-96/bottom-landscape.svg
+            v46-admin-nav.js
+            runtime/index-v37-source.txt
+            runtime/v56-39-identity-production-probe.txt
+          )
           for file in "${files[@]}"; do
             mkdir -p "/tmp/$(dirname "$file")"
             curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
-          grep -Fq "VISUAL_REVISION='56.45'" /tmp/v56-39-site-identity.js
-          grep -Fq 'National Day Signature System' /tmp/v56-39-national-day.css
-          grep -Fq 'assets/identity/vector-green.png' /tmp/v56-39-national-day.css
-          ! grep -Fq 'ensureInventoryMasthead' /tmp/v56-39-site-identity.js
-          ! grep -Fq '.nd96-new-arrivals{display:none' /tmp/v56-39-national-day.css
-          echo 'Production serves exact V56.45 National Day Signature System.'
+          grep -Fq "VISUAL_REVISION='56.46'" /tmp/v56-39-site-identity.js
+          grep -Fq 'Saudi National Day 96 production visual skin' /tmp/v56-39-national-day.css
+          grep -Fq './national-day-96/header-scene.svg' /tmp/v56-39-national-day.css
+          ! grep -Fq 'vector-green.png' /tmp/v56-39-national-day.css
+          echo 'Production serves exact V56.46 modular National Day art direction.'
