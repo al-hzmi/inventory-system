@@ -1,4 +1,4 @@
-name: V56.39 Identity Production Smoke
+name: V56.40 Identity Production Smoke
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for production to serve V56.39 identity tree
+      - name: Wait for production to serve the current identity tree
         shell: bash
         run: |
           set -euo pipefail
@@ -25,15 +25,15 @@ jobs:
           for attempt in $(seq 1 48); do
             body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
             if [[ "$body" == "$expected" ]]; then
-              echo "V56.39 identity production probe matched on attempt $attempt"
+              echo "Identity production probe matched on attempt $attempt"
               ok=1
               break
             fi
-            echo "Attempt $attempt: production has not reached V56.39 identity tree yet"
+            echo "Attempt $attempt: production has not reached the current identity tree yet"
             sleep 10
           done
           if [[ "$ok" != "1" ]]; then
-            echo "::error::Production alias did not serve the V56.39 identity probe within the verification window."
+            echo "::error::Production alias did not serve the identity probe within the verification window."
             exit 1
           fi
 
@@ -58,15 +58,17 @@ jobs:
           done
 
           assert_text(){ local needle="$1" file="$2"; grep -Fq "$needle" "$file" || { echo "::error::$file missing expected contract: $needle"; exit 1; }; }
+          reject_text(){ local needle="$1" file="$2"; if grep -Fq "$needle" "$file"; then echo "::error::$file contains retired visual primitive: $needle"; exit 1; fi; }
 
           assert_text "CONTROL_DOC='site_identity'" /tmp/v56-39-site-identity.js
           assert_text "DEFAULT_IDENTITY='default'" /tmp/v56-39-site-identity.js
           assert_text "NATIONAL_IDENTITY='national96'" /tmp/v56-39-site-identity.js
+          assert_text "VERSION='56.40'" /tmp/v56-39-site-identity.js
           assert_text "enabled:false" /tmp/v56-39-site-identity.js
           assert_text "onSnapshot" /tmp/v56-39-site-identity.js
           assert_text "batco-identity-national96" /tmp/v56-39-site-identity.js
           assert_text "waitForDefaultFirebase" /tmp/v56-39-site-identity.js
-          assert_text "national-day-96-mark.svg" /tmp/v56-39-site-identity.js
+          assert_text "brand-emblem-wide.png" /tmp/v56-39-site-identity.js
 
           assert_text "الهويات" /tmp/identities.html
           assert_text "اليوم الوطني السعودي 96" /tmp/identities.html
@@ -74,19 +76,23 @@ jobs:
           assert_text "system_controls" /tmp/identities.html
           assert_text "site_identity" /tmp/identities.html
           assert_text "national96" /tmp/identities.html
+          assert_text "brand-emblem-wide.png" /tmp/identities.html
+          assert_text "vector-green.png" /tmp/identities.html
 
           assert_text "['identity','الهويات','./identities.html']" /tmp/v46-admin-nav.js
           assert_text "v56-39-site-identity.js?v=56.39" /tmp/index.html
 
           assert_text "#008B4C" /tmp/v56-39-national-day.css
           assert_text "#0F2C31" /tmp/v56-39-national-day.css
-          assert_text "repeating-conic-gradient" /tmp/v56-39-national-day.css
+          assert_text "vector-green.png" /tmp/v56-39-national-day.css
           assert_text "prefers-reduced-motion" /tmp/v56-39-national-day.css
+          reject_text "repeating-conic-gradient" /tmp/v56-39-national-day.css
 
           assert_text "هوية اليوم الوطني السعودي 96" /tmp/national-day-96-mark.svg
           assert_text "SAUDI NATIONAL DAY 96" /tmp/national-day-96-mark.svg
+          assert_text "brand-emblem-wide.png" /tmp/national-day-96-mark.svg
 
           curl -fsSL --retry 3 --retry-delay 2 "$PROD/identities.html?route=$nonce" -o /tmp/identity-route.html
           test -s /tmp/identity-route.html
           assert_text "الهويات" /tmp/identity-route.html
-          echo "Production serves the exact V56.39 identity manager and National Day 96 assets from current main."
+          echo "Production serves the exact V56.40 identity manager and official National Day 96 assets from current main."
