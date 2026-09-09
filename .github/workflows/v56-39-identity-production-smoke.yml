@@ -1,4 +1,4 @@
-name: V56.46 National Art Direction Quality + Production Smoke
+name: V56.47 National Day Production Asset Skin
 
 on:
   pull_request:
@@ -13,122 +13,60 @@ permissions:
 jobs:
   identity-quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-      - name: Validate modular visual-skin contract
+      - name: Validate V56.47 non-destructive visual-skin contract
         shell: bash
         run: |
           set -euo pipefail
           node --check v56-39-site-identity.js
+          node tests/v56-39-identities.mjs
+          git diff --check
 
-          assert_text(){ local needle="$1" file="$2"; grep -Fq -- "$needle" "$file" || { echo "::error::$file missing expected contract: $needle"; exit 1; }; }
-          reject_text(){ local needle="$1" file="$2"; if grep -Fq -- "$needle" "$file"; then echo "::error::$file contains retired visual behavior: $needle"; exit 1; fi; }
+          assert_text(){ local needle="$1" file="$2"; grep -Fq -- "$needle" "$file" || { echo "::error::$file missing contract: $needle"; exit 1; }; }
+          reject_text(){ local needle="$1" file="$2"; if grep -Fq -- "$needle" "$file"; then echo "::error::$file contains forbidden behavior: $needle"; exit 1; fi; }
 
-          assert_text "VERSION='56.40'" v56-39-site-identity.js
-          assert_text "VISUAL_REVISION='56.46'" v56-39-site-identity.js
-          assert_text "CONTROL_DOC='site_identity'" v56-39-site-identity.js
-          assert_text "NATIONAL_IDENTITY='national96'" v56-39-site-identity.js
-          assert_text "enabled:false" v56-39-site-identity.js
-          assert_text "onSnapshot" v56-39-site-identity.js
-          assert_text "waitForDefaultFirebase" v56-39-site-identity.js
-          assert_text "no decorative DOM injection" v56-39-site-identity.js
+          assert_text "VISUAL_REVISION='56.47'" v56-39-site-identity.js
+          assert_text 'V56.47 — Saudi National Day 96 production asset skin' v56-39-national-day.css
+          assert_text './national-day-96/assets/header.svg' v56-39-national-day.css
+          assert_text './national-day-96/assets/border.svg' v56-39-national-day.css
+          assert_text './national-day-96/assets/corner.svg' v56-39-national-day.css
+          assert_text './national-day-96/assets/fort.svg' v56-39-national-day.css
+          assert_text './national-day-96/assets/landscape.svg' v56-39-national-day.css
+          assert_text 'CRITICAL NAV CONTRACT' v56-39-national-day.css
+          reject_text 'body.nd96-customer nav{position:' v56-39-national-day.css
+          reject_text 'repeating-conic-gradient' v56-39-national-day.css
           reject_text "document.createElement('img')" v56-39-site-identity.js
-          reject_text "ensureInventoryMasthead" v56-39-site-identity.js
-          reject_text "nd96-new-arrivals" v56-39-site-identity.js
 
-          assets=(
-            national-day-96/header-scene.svg
-            national-day-96/najdi-pattern.svg
-            national-day-96/corner-pattern.svg
-            national-day-96/fort-scene.svg
-            national-day-96/bottom-landscape.svg
-          )
-          for asset in "${assets[@]}"; do
-            test -s "$asset" || { echo "::error::Missing seasonal asset: $asset"; exit 1; }
+          for asset in \
+            national-day-96/assets/header.svg \
+            national-day-96/assets/border.svg \
+            national-day-96/assets/corner.svg \
+            national-day-96/assets/fort.svg \
+            national-day-96/assets/landscape.svg; do
+            test -s "$asset" || { echo "::error::Missing ZIP-derived asset: $asset"; exit 1; }
+            grep -Fq '<svg' "$asset"
+            ! grep -Fq 'data:image/' "$asset"
           done
 
-          assert_text './national-day-96/header-scene.svg' v56-39-national-day.css
-          assert_text './national-day-96/najdi-pattern.svg' v56-39-national-day.css
-          assert_text './national-day-96/corner-pattern.svg' v56-39-national-day.css
-          assert_text './national-day-96/fort-scene.svg' v56-39-national-day.css
-          assert_text './national-day-96/bottom-landscape.svg' v56-39-national-day.css
-          assert_text 'Saudi National Day 96 production visual skin' v56-39-national-day.css
-          assert_text 'Product cards remain content-first' v56-39-national-day.css
-          assert_text 'Categories: one system, not stickers' v56-39-national-day.css
-          assert_text 'Cart: use the empty space deliberately' v56-39-national-day.css
-          assert_text 'same controls, seasonal scene around them' v56-39-national-day.css
-          assert_text 'pointer-events:none' v56-39-national-day.css
-          assert_text 'prefers-reduced-motion' v56-39-national-day.css
-
-          reject_text 'vector-green.png' v56-39-national-day.css
-          reject_text 'repeating-conic-gradient' v56-39-national-day.css
-          reject_text 'national96-weave.svg' v56-39-national-day.css
-          reject_text 'national96-watermark.svg' v56-39-national-day.css
-          reject_text 'national96-landscape.svg' v56-39-national-day.css
-
-          python3 - <<'PY'
-          import re
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-
-          css=Path('v56-39-national-day.css').read_text()
-          js=Path('v56-39-site-identity.js').read_text()
-          if css.count('{') != css.count('}'):
-              raise SystemExit('CSS_BRACE_MISMATCH')
-          if "createElement('img')" in js or 'createElement("img")' in js:
-              raise SystemExit('VISUAL_DOM_INJECTION_FORBIDDEN')
-
-          # Base-layout lock: decorative pseudo-elements may have their own size,
-          # but the skin may not alter spacing, typography, grid or flex geometry.
-          forbidden = [
-              'padding','padding-top','padding-bottom','padding-left','padding-right','padding-inline','padding-block',
-              'margin','margin-top','margin-bottom','margin-left','margin-right','margin-inline','margin-block',
-              'gap','row-gap','column-gap','font-size','line-height','grid-template-columns','grid-template-rows','flex-basis','order'
-          ]
-          violations=[]
-          for prop in forbidden:
-              if re.search(r'(?<![-\\w])'+re.escape(prop)+r'\\s*:', css):
-                  violations.append(prop)
-          if violations:
-              raise SystemExit('BASE_GEOMETRY_OVERRIDE_FORBIDDEN: '+', '.join(sorted(set(violations))))
-
-          assets=[
-              'national-day-96/header-scene.svg',
-              'national-day-96/najdi-pattern.svg',
-              'national-day-96/corner-pattern.svg',
-              'national-day-96/fort-scene.svg',
-              'national-day-96/bottom-landscape.svg',
-          ]
-          for asset in assets:
-              root=ET.parse(asset).getroot()
-              if not root.tag.endswith('svg'):
-                  raise SystemExit('INVALID_SVG '+asset)
-              text=Path(asset).read_text()
-              if '<image' in text or 'data:image' in text:
-                  raise SystemExit('RASTER_EMBED_FORBIDDEN '+asset)
-
-          if css.count('::before') + css.count('::after') < 12:
-              raise SystemExit('DECORATIVE_LAYER_SYSTEM_TOO_SHALLOW')
-          if css.count('pointer-events:none') < 10:
-              raise SystemExit('DECORATIVE_POINTER_SAFETY_MISSING')
-          print('V56.46_NATIONAL_ART_DIRECTION_PASS')
-          PY
-          echo 'V56.46 verified: modular SVG scenery, semantic variants, locked base geometry and non-interactive decorative layering.'
+          echo 'V56.47 quality gate: ZIP-derived art assets + frozen UI geometry + persistent bottom navigation PASS.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
     needs: identity-quality
     runs-on: ubuntu-latest
+    timeout-minutes: 14
     env:
       PROD: https://inventory-system-coral-nu.vercel.app
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for production to serve current identity revision
+      - name: Wait for production to serve V56.47 tree
         shell: bash
         run: |
           set -euo pipefail
@@ -137,32 +75,33 @@ jobs:
           for attempt in $(seq 1 48); do
             body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
             if [[ "$body" == "$expected" ]]; then
-              echo "Identity production probe matched on attempt $attempt"
+              echo "V56.47 production probe matched on attempt $attempt"
               ok=1
               break
             fi
-            echo "Attempt $attempt: production has not reached V56.46 yet"
             sleep 10
           done
-          test "$ok" = "1" || { echo '::error::Production did not reach V56.46 within verification window.'; exit 1; }
+          test "$ok" = "1" || { echo '::error::Production did not reach V56.47 within verification window.'; exit 1; }
 
-      - name: Verify exact V56.46 visual-skin files in production
+      - name: Verify exact production visual-skin files
         shell: bash
         run: |
           set -euo pipefail
           nonce="${GITHUB_SHA}-$(date +%s)"
           files=(
             index.html
+            customer.html
             identities.html
             v56-39-site-identity.js
             v56-39-national-day.css
             national-day-96-mark.svg
-            national-day-96/header-scene.svg
-            national-day-96/najdi-pattern.svg
-            national-day-96/corner-pattern.svg
-            national-day-96/fort-scene.svg
-            national-day-96/bottom-landscape.svg
+            national-day-96/assets/header.svg
+            national-day-96/assets/border.svg
+            national-day-96/assets/corner.svg
+            national-day-96/assets/fort.svg
+            national-day-96/assets/landscape.svg
             v46-admin-nav.js
+            tests/v56-39-identities.mjs
             runtime/index-v37-source.txt
             runtime/v56-39-identity-production-probe.txt
           )
@@ -171,8 +110,8 @@ jobs:
             curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
-          grep -Fq "VISUAL_REVISION='56.46'" /tmp/v56-39-site-identity.js
-          grep -Fq 'Saudi National Day 96 production visual skin' /tmp/v56-39-national-day.css
-          grep -Fq './national-day-96/header-scene.svg' /tmp/v56-39-national-day.css
-          ! grep -Fq 'vector-green.png' /tmp/v56-39-national-day.css
-          echo 'Production serves exact V56.46 modular National Day art direction.'
+
+          grep -Fq "VISUAL_REVISION='56.47'" /tmp/v56-39-site-identity.js
+          grep -Fq 'CRITICAL NAV CONTRACT' /tmp/v56-39-national-day.css
+          ! grep -Fq 'body.nd96-customer nav{position:' /tmp/v56-39-national-day.css
+          echo 'Production serves exact V56.47 non-destructive National Day asset skin.'
