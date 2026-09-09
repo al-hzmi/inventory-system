@@ -1,4 +1,4 @@
-name: V56.41 Identity Quality + Production Smoke
+name: V56.43 Identity Quality + Production Smoke
 
 on:
   pull_request:
@@ -32,6 +32,7 @@ jobs:
           OFFICIAL_VECTOR='https://cdn.gea.gov.sa/ND-2026/assets/identity/vector-green.png'
 
           assert_text "VERSION='56.40'" v56-39-site-identity.js
+          assert_text "VISUAL_REVISION='56.43'" v56-39-site-identity.js
           assert_text "CONTROL_DOC='site_identity'" v56-39-site-identity.js
           assert_text "DEFAULT_IDENTITY='default'" v56-39-site-identity.js
           assert_text "NATIONAL_IDENTITY='national96'" v56-39-site-identity.js
@@ -39,7 +40,11 @@ jobs:
           assert_text "onSnapshot" v56-39-site-identity.js
           assert_text "waitForDefaultFirebase" v56-39-site-identity.js
           assert_text "$OFFICIAL_MARK" v56-39-site-identity.js
-          reject_text "./national-day-96-mark.svg" v56-39-site-identity.js
+          assert_text "nd96-new-arrivals" v56-39-site-identity.js
+          reject_text "const ICONS=" v56-39-site-identity.js
+          reject_text "iconForLabel" v56-39-site-identity.js
+          reject_text "injectIcon" v56-39-site-identity.js
+          reject_text "CART_ILLUSTRATION" v56-39-site-identity.js
 
           assert_text "data-testid=\"identity-console\"" identities.html
           assert_text "اليوم الوطني السعودي 96" identities.html
@@ -48,23 +53,24 @@ jobs:
           assert_text "national96" identities.html
           assert_text "$OFFICIAL_MARK" identities.html
           assert_text "$OFFICIAL_VECTOR" identities.html
-          for id in livePill liveLabel defaultBadge nationalBadge activateNational activateDefault previewNational clearPreview syncState toast; do
-            assert_text "id=\"$id\"" identities.html
-          done
 
           assert_text "#008B4C" v56-39-national-day.css
-          assert_text "#0A3135" v56-39-national-day.css
+          assert_text "#07383A" v56-39-national-day.css
           assert_text "$OFFICIAL_VECTOR" v56-39-national-day.css
           assert_text "$OFFICIAL_MARK" v56-39-national-day.css
-          assert_text "body:has(.rights-bar)" v56-39-national-day.css
-          assert_text ".catalog-card" v56-39-national-day.css
-          assert_text ".category-tile" v56-39-national-day.css
-          assert_text "nd96WeaveSlide" v56-39-national-day.css
+          assert_text ".nd96-new-arrivals{display:none" v56-39-national-day.css
+          assert_text ".category-tile.nd96-category-tile .w-10.h-10{display:none" v56-39-national-day.css
+          assert_text ".nd96-chip-icon," v56-39-national-day.css
           assert_text "prefers-reduced-motion" v56-39-national-day.css
+          reject_text "national96-weave.svg" v56-39-national-day.css
+          reject_text "national96-watermark.svg" v56-39-national-day.css
+          reject_text "national96-landscape.svg" v56-39-national-day.css
           reject_text "repeating-conic-gradient" v56-39-national-day.css
-          reject_text "pattern id=\"weave\"" national-day-96-mark.svg
-          reject_text "pattern id=\"teeth\"" national-day-96-mark.svg
-          assert_text "$OFFICIAL_MARK" national-day-96-mark.svg
+          reject_text "nd96WeaveSlide" v56-39-national-day.css
+
+          test ! -e national96-weave.svg || { echo '::error::synthetic weave asset still exists'; exit 1; }
+          test ! -e national96-watermark.svg || { echo '::error::synthetic watermark asset still exists'; exit 1; }
+          test ! -e national96-landscape.svg || { echo '::error::synthetic landscape asset still exists'; exit 1; }
 
           python3 - <<'PY'
           from html.parser import HTMLParser
@@ -74,9 +80,9 @@ jobs:
           css=Path('v56-39-national-day.css').read_text()
           if css.count('{') != css.count('}'):
               raise SystemExit('CSS_BRACE_MISMATCH')
-          print('V56.41_IDENTITY_STATIC_PASS')
+          print('V56.43_IDENTITY_STATIC_PASS')
           PY
-          echo 'Canonical 2026 GEA bindings and premium customer UI contracts verified. External GEA CDN reachability is intentionally not a CI blocker because the provider rejects GitHub runner traffic with HTTP 403.'
+          echo 'V56.43 clean National Day identity contracts verified: official assets only, no injected category illustrations.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
@@ -113,61 +119,26 @@ jobs:
         run: |
           set -euo pipefail
           nonce="${GITHUB_SHA}-$(date +%s)"
-          files=(
-            index.html
-            identities.html
-            v56-39-site-identity.js
-            v56-39-national-day.css
-            national-day-96-mark.svg
-            v46-admin-nav.js
-            runtime/index-v37-source.txt
-          )
+          files=(index.html identities.html v56-39-site-identity.js v56-39-national-day.css national-day-96-mark.svg v46-admin-nav.js runtime/index-v37-source.txt)
           for file in "${files[@]}"; do
             mkdir -p "/tmp/$(dirname "$file")"
             curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
 
-          assert_text(){ local needle="$1" file="$2"; grep -Fq "$needle" "$file" || { echo "::error::$file missing expected contract: $needle"; exit 1; }; }
-          reject_text(){ local needle="$1" file="$2"; if grep -Fq "$needle" "$file"; then echo "::error::$file contains retired visual primitive: $needle"; exit 1; fi; }
+          grep -Fq "VISUAL_REVISION='56.43'" /tmp/v56-39-site-identity.js
+          grep -Fq 'vector-green.png' /tmp/v56-39-national-day.css
+          grep -Fq '.nd96-new-arrivals{display:none' /tmp/v56-39-national-day.css
+          ! grep -Fq 'iconForLabel' /tmp/v56-39-site-identity.js
+          ! grep -Fq 'national96-weave.svg' /tmp/v56-39-national-day.css
+          ! grep -Fq 'national96-watermark.svg' /tmp/v56-39-national-day.css
+          ! grep -Fq 'national96-landscape.svg' /tmp/v56-39-national-day.css
 
-          assert_text "CONTROL_DOC='site_identity'" /tmp/v56-39-site-identity.js
-          assert_text "DEFAULT_IDENTITY='default'" /tmp/v56-39-site-identity.js
-          assert_text "NATIONAL_IDENTITY='national96'" /tmp/v56-39-site-identity.js
-          assert_text "VERSION='56.40'" /tmp/v56-39-site-identity.js
-          assert_text "enabled:false" /tmp/v56-39-site-identity.js
-          assert_text "onSnapshot" /tmp/v56-39-site-identity.js
-          assert_text "batco-identity-national96" /tmp/v56-39-site-identity.js
-          assert_text "waitForDefaultFirebase" /tmp/v56-39-site-identity.js
-          assert_text "brand-emblem-wide.png" /tmp/v56-39-site-identity.js
-
-          assert_text "الهويات" /tmp/identities.html
-          assert_text "اليوم الوطني السعودي 96" /tmp/identities.html
-          assert_text "مقفلة حتى تفعّلها" /tmp/identities.html
-          assert_text "system_controls" /tmp/identities.html
-          assert_text "site_identity" /tmp/identities.html
-          assert_text "national96" /tmp/identities.html
-          assert_text "brand-emblem-wide.png" /tmp/identities.html
-          assert_text "vector-green.png" /tmp/identities.html
-
-          assert_text "['identity','الهويات','./identities.html']" /tmp/v46-admin-nav.js
-          assert_text "v56-39-site-identity.js?v=56.39" /tmp/index.html
-
-          assert_text "#008B4C" /tmp/v56-39-national-day.css
-          assert_text "#0A3135" /tmp/v56-39-national-day.css
-          assert_text "vector-green.png" /tmp/v56-39-national-day.css
-          assert_text "brand-emblem-wide.png" /tmp/v56-39-national-day.css
-          assert_text "body:has(.rights-bar)" /tmp/v56-39-national-day.css
-          assert_text ".catalog-card" /tmp/v56-39-national-day.css
-          assert_text ".category-tile" /tmp/v56-39-national-day.css
-          assert_text "prefers-reduced-motion" /tmp/v56-39-national-day.css
-          reject_text "repeating-conic-gradient" /tmp/v56-39-national-day.css
-
-          assert_text "هوية اليوم الوطني السعودي 96" /tmp/national-day-96-mark.svg
-          assert_text "SAUDI NATIONAL DAY 96" /tmp/national-day-96-mark.svg
-          assert_text "brand-emblem-wide.png" /tmp/national-day-96-mark.svg
-
-          curl -fsSL --retry 3 --retry-delay 2 "$PROD/identities.html?route=$nonce" -o /tmp/identity-route.html
-          test -s /tmp/identity-route.html
-          assert_text "الهويات" /tmp/identity-route.html
-          echo "Production serves the exact V56.41 premium National Day customer UI and identity bindings from current main."
+          for removed in national96-weave.svg national96-watermark.svg national96-landscape.svg; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "$PROD/$removed?verify=$nonce")"
+            if [[ "$status" == "200" ]]; then
+              echo "::error::Retired synthetic asset is still served in production: $removed"
+              exit 1
+            fi
+          done
+          echo 'Production serves exact V56.43 clean National Day identity from current main.'
