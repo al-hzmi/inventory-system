@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" fill="none">
+  <g fill="#A7D7C3" opacity=".85">
+    <path d="M0 0h34v34H0z" transform="rotate(45 17 17)"/>
+    <path d="M42 8h24v24H42z" transform="rotate(45 54 20)"/>
+    <path d="M74 0h18v18H74z" transform="rotate(45 83 9)"/>
+    <path d="M10 48h24v24H10z" transform="rotate(45 22 60)"/>
+    <path d="M44 46h34v34H44z" transform="rotate(45 61 63)"/>
+    <path d="M88 44h20v20H88z" transform="rotate(45 98 54)"/>
+    <path d="M0 92h34v34H0z" transform="rotate(45 17 109)"/>
+    <path d="M42 88h24v24H42z" transform="rotate(45 54 100)"/>
+    <path d="M74 94h18v18H74z" transform="rotate(45 83 103)"/>
+    <path d="M106 70h28v28h-28z" transform="rotate(45 120 84)"/>
+    <path d="M126 108h18v18h-18z" transform="rotate(45 135 117)"/>
+    <path d="M20 134h28v28H20z" transform="rotate(45 34 148)"/>
+    <path d="M58 132h20v20H58z" transform="rotate(45 68 142)"/>
+    <path d="M84 148h14v14H84z" transform="rotate(45 91 155)"/>
+  </g>
+  <g fill="#D9EDE3" opacity=".9">
+    <path d="M110 18h16v16h-16z" transform="rotate(45 118 26)"/>
+    <path d="M140 10h24v24h-24z" transform="rotate(45 152 22)"/>
+    <path d="M174 0h18v18h-18z" transform="rotate(45 183 9)"/>
+    <path d="M152 48h20v20h-20z" transform="rotate(45 162 58)"/>
+    <path d="M186 48h28v28h-28z" transform="rotate(45 200 62)"/>
+  </g>
+</svg>
