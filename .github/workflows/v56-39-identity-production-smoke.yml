@@ -1,4 +1,4 @@
-name: V56.47 National Day Production Asset Skin
+name: V56.48 National Day Approved Mockup Skin
 
 on:
   pull_request:
@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate V56.47 non-destructive visual-skin contract
+      - name: Validate V56.48 approved-mockup visual-skin contract
         shell: bash
         run: |
           set -euo pipefail
@@ -31,8 +31,8 @@ jobs:
           assert_text(){ local needle="$1" file="$2"; grep -Fq -- "$needle" "$file" || { echo "::error::$file missing contract: $needle"; exit 1; }; }
           reject_text(){ local needle="$1" file="$2"; if grep -Fq -- "$needle" "$file"; then echo "::error::$file contains forbidden behavior: $needle"; exit 1; fi; }
 
-          assert_text "VISUAL_REVISION='56.47'" v56-39-site-identity.js
-          assert_text 'V56.47 — Saudi National Day 96 production asset skin' v56-39-national-day.css
+          assert_text "VISUAL_REVISION='56.48'" v56-39-site-identity.js
+          assert_text 'V56.48 — Saudi National Day 96 approved-mockup composition skin' v56-39-national-day.css
           assert_text './national-day-96/assets/header.svg' v56-39-national-day.css
           assert_text './national-day-96/assets/border.svg' v56-39-national-day.css
           assert_text './national-day-96/assets/corner.svg' v56-39-national-day.css
@@ -40,6 +40,7 @@ jobs:
           assert_text './national-day-96/assets/landscape.svg' v56-39-national-day.css
           assert_text 'CRITICAL NAV CONTRACT' v56-39-national-day.css
           reject_text 'body.nd96-customer nav{position:' v56-39-national-day.css
+          reject_text '.category-tile.nd96-category-tile::after' v56-39-national-day.css
           reject_text 'repeating-conic-gradient' v56-39-national-day.css
           reject_text "document.createElement('img')" v56-39-site-identity.js
 
@@ -49,12 +50,12 @@ jobs:
             national-day-96/assets/corner.svg \
             national-day-96/assets/fort.svg \
             national-day-96/assets/landscape.svg; do
-            test -s "$asset" || { echo "::error::Missing ZIP-derived asset: $asset"; exit 1; }
+            test -s "$asset" || { echo "::error::Missing production National Day asset: $asset"; exit 1; }
             grep -Fq '<svg' "$asset"
             ! grep -Fq 'data:image/' "$asset"
           done
 
-          echo 'V56.47 quality gate: ZIP-derived art assets + frozen UI geometry + persistent bottom navigation PASS.'
+          echo 'V56.48 quality gate: approved mockup composition + frozen UI geometry + persistent bottom navigation PASS.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
@@ -66,7 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for production to serve V56.47 tree
+      - name: Wait for production to serve V56.48 tree
         shell: bash
         run: |
           set -euo pipefail
@@ -75,13 +76,13 @@ jobs:
           for attempt in $(seq 1 48); do
             body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
             if [[ "$body" == "$expected" ]]; then
-              echo "V56.47 production probe matched on attempt $attempt"
+              echo "V56.48 production probe matched on attempt $attempt"
               ok=1
               break
             fi
             sleep 10
           done
-          test "$ok" = "1" || { echo '::error::Production did not reach V56.47 within verification window.'; exit 1; }
+          test "$ok" = "1" || { echo '::error::Production did not reach V56.48 within verification window.'; exit 1; }
 
       - name: Verify exact production visual-skin files
         shell: bash
@@ -111,7 +112,9 @@ jobs:
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
 
-          grep -Fq "VISUAL_REVISION='56.47'" /tmp/v56-39-site-identity.js
+          grep -Fq "VISUAL_REVISION='56.48'" /tmp/v56-39-site-identity.js
+          grep -Fq 'approved-mockup composition skin' /tmp/v56-39-national-day.css
           grep -Fq 'CRITICAL NAV CONTRACT' /tmp/v56-39-national-day.css
           ! grep -Fq 'body.nd96-customer nav{position:' /tmp/v56-39-national-day.css
-          echo 'Production serves exact V56.47 non-destructive National Day asset skin.'
+          ! grep -Fq '.category-tile.nd96-category-tile::after' /tmp/v56-39-national-day.css
+          echo 'Production serves exact V56.48 approved-mockup National Day skin.'
