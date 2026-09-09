@@ -17,7 +17,7 @@ must(runtime.includes('return app.firestore()'),'identity runtime must subscribe
 must(!runtime.includes("document.createElement('img')")&&!runtime.includes('document.createElement("img")'),'decorative image DOM injection is forbidden');
 
 // V56.46 art-direction contract: local modular SVG system, restrained Saudi palette, no retired synthetic skin.
-for(const token of ['--nd96-deep:#065F46','--nd96-emerald:#0F7A5A','--nd96-rust:#D9643A','--nd96-sun:#F3C75E'])must(css.includes(token),`V56.46 palette token missing: ${token}`);
+for(const token of ['--nd96-green:#0F7A5A','--nd96-green-dark:#065F46','--nd96-emerald:#2E8B6E','--nd96-yellow:#F3C75E','--nd96-rust:#D9643A'])must(css.includes(token),`V56.46 palette token missing: ${token}`);
 for(const asset of ['national-day-96/header-scene.svg','national-day-96/najdi-pattern.svg','national-day-96/corner-pattern.svg','national-day-96/fort-scene.svg','national-day-96/bottom-landscape.svg']){
   must(fs.existsSync(asset),`modular National Day asset missing: ${asset}`);
   must(css.includes(asset),`seasonal CSS does not reference: ${asset}`);
