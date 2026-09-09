@@ -25,7 +25,8 @@ for(const asset of ['national-day-96/header-scene.svg','national-day-96/najdi-pa
   must(svg.includes('<svg')&&svg.includes('</svg>'),`invalid SVG asset: ${asset}`);
   must(!svg.includes('data:image/'),`raster embed forbidden in SVG asset: ${asset}`);
 }
-for(const retired of ['repeating-conic-gradient','national96-weave.svg','national96-watermark.svg','national96-landscape.svg','#batco-nd96-frame','#batco-nd96-badge'])must(!css.includes(retired),`retired synthetic visual behavior returned: ${retired}`);
+for(const retired of ['repeating-conic-gradient','national96-weave.svg','national96-watermark.svg','national96-landscape.svg'])must(!css.includes(retired),`retired synthetic visual behavior returned: ${retired}`);
+must(css.includes('/* Retired injected elements stay forcibly disabled if an old hot-reload DOM survives. */')&&css.includes('#batco-nd96-frame')&&css.includes('#batco-nd96-badge')&&css.includes('display:none!important'),'legacy injected visual DOM must remain hard-disabled');
 must(css.includes('pointer-events:none'),'decorative layers must never intercept interaction');
 
 // Existing controls/routes/loaders remain wired to the same base application.
