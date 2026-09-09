@@ -8,7 +8,7 @@ must(runtime.includes("const CONTROL_DOC='site_identity'"),'central identity con
 must(runtime.includes("const DEFAULT_IDENTITY='default'"),'default identity must remain explicit');
 must(runtime.includes("const NATIONAL_IDENTITY='national96'"),'national identity contract missing');
 must(runtime.includes("enabled:false"),'occasion identity must default off');
-must(runtime.includes("VISUAL_REVISION='56.47'"),'V56.47 visual revision missing');
+must(runtime.includes("VISUAL_REVISION='56.48'"),'V56.48 visual revision missing');
 must(runtime.includes('onSnapshot'),'identity must update in realtime');
 must(runtime.includes("PREVIEW_KEY='batco_identity_preview_v1'"),'local preview contract missing');
 must(runtime.includes("const IDENTITY_APP_NAME='batco-identity-v56-39'"),'identity Firestore client must use an isolated named Firebase app');
@@ -16,10 +16,10 @@ must(runtime.includes('candidate?.name===IDENTITY_APP_NAME')&&runtime.includes('
 must(runtime.includes('return app.firestore()'),'identity runtime must subscribe through its isolated app');
 must(!runtime.includes("document.createElement('img')")&&!runtime.includes('document.createElement("img")'),'decorative image DOM injection is forbidden');
 
-// V56.47 art direction: ZIP-derived modular assets, restrained palette, no synthetic substitute.
-for(const token of ['--nd96-deep:#064B43','--nd96-green:#0F7A5A','--nd96-emerald:#2E8B6E','--nd96-yellow:#F3C75E','--nd96-rust:#D9643A'])must(css.includes(token),`V56.47 palette token missing: ${token}`);
+// V56.48 approved-mockup composition uses the production National Day asset family and restrained palette.
+for(const token of ['--nd96-deep:#064B43','--nd96-green:#0F7A5A','--nd96-emerald:#2E8B6E','--nd96-yellow:#F3C75E','--nd96-rust:#D9643A'])must(css.includes(token),`V56.48 palette token missing: ${token}`);
 for(const asset of ['national-day-96/assets/header.svg','national-day-96/assets/border.svg','national-day-96/assets/corner.svg','national-day-96/assets/fort.svg','national-day-96/assets/landscape.svg']){
-  must(fs.existsSync(asset),`ZIP-derived National Day asset missing: ${asset}`);
+  must(fs.existsSync(asset),`National Day asset missing: ${asset}`);
   must(css.includes(asset),`seasonal CSS does not reference: ${asset}`);
   const svg=read(asset);
   must(svg.includes('<svg')&&svg.includes('</svg>'),`invalid SVG asset: ${asset}`);
@@ -28,6 +28,8 @@ for(const asset of ['national-day-96/assets/header.svg','national-day-96/assets/
 for(const retired of ['repeating-conic-gradient','national96-weave.svg','national96-watermark.svg','national96-landscape.svg','header-scene.svg','najdi-pattern.svg','corner-pattern.svg','fort-scene.svg','bottom-landscape.svg'])must(!css.includes(retired),`retired/synthetic visual behavior returned: ${retired}`);
 must(css.includes('#batco-nd96-frame')&&css.includes('#batco-nd96-badge')&&css.includes('display:none!important'),'legacy injected visual DOM must remain hard-disabled');
 must(css.includes('pointer-events:none'),'decorative layers must never intercept interaction');
+must(css.includes('approved-mockup composition skin'),'approved mockup composition marker missing');
+must(!css.includes('.category-tile.nd96-category-tile::after'),'category cards must not receive repetitive decorative wallpaper');
 
 // Critical UX contract: seasonal CSS must never alter persistent bottom-nav mechanics.
 const blocks=[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m=>({selector:m[1].trim(),body:m[2]}));
@@ -55,4 +57,4 @@ must(customer.includes('v56-39-site-identity.js?v=56.39'),'customer runtime iden
 for(const file of ['stocktake.html','stocktake-accountant.html','admin-stocktake.html'])if(fs.existsSync(file))must(read(file).includes('v56-39-site-identity.js?v=56.39'),`${file} identity injection missing`);
 must(fs.existsSync('national-day-96-mark.svg'),'national day mark missing');
 
-console.log('V56.47 occasion identity + zero-layout-drift regression: PASS');
+console.log('V56.48 occasion identity + approved-mockup composition + zero-layout-drift regression: PASS');
