@@ -33,7 +33,7 @@ html.batco-identity-national96 body.nd96-inventory input:focus,
 html.batco-identity-national96 body.nd96-inventory textarea:focus,
 html.batco-identity-national96 body.nd96-inventory select:focus{border-color:var(--nd96-green)!important;box-shadow:0 0 0 3px rgba(15,122,90,.08)!important;outline:none!important}
 
-/* Approved HOME masthead: same live meta row, seasonal artwork painted behind it. */
+/* APPROVED HOME HEADER — existing meta row is untouched; art is paint behind it. */
 html.batco-identity-national96 .nd96-inventory-meta{
   position:relative;
   isolation:isolate;
@@ -62,7 +62,7 @@ html.batco-identity-national96 .nd96-inventory-meta *{color:#F8FBF9!important;po
 html.batco-identity-national96 .nd96-inventory-meta .ltr,
 html.batco-identity-national96 .nd96-inventory-meta b{color:#77DFAE!important}
 
-/* Approved quiet title field: only the two pale corner motifs shown in the reference. */
+/* APPROVED HOME HERO — exactly the two quiet top-corner motifs from the reference. */
 html.batco-identity-national96 .nd96-inventory-hero{
   position:relative;
   isolation:isolate;
@@ -84,7 +84,7 @@ html.batco-identity-national96 .nd96-inventory-hero::after{inset-inline-end:-70p
 html.batco-identity-national96 .nd96-inventory-hero>*{position:relative;z-index:1}
 html.batco-identity-national96 .nd96-inventory-title{color:var(--nd96-ink)!important}
 
-/* Existing controls: color skin only, no geometry edits. */
+/* Existing controls: paint only. */
 html.batco-identity-national96 .nd96-warehouse-button,
 html.batco-identity-national96 .nd96-customers-button,
 html.batco-identity-national96 .nd96-inventory-chip{
@@ -102,32 +102,36 @@ html.batco-identity-national96 .nd96-inventory-chip.bg-primary{
   box-shadow:none!important;
 }
 
-/* HOME approved catalog composition. Artwork is tied to this exact section and sits behind real controls. */
-html.batco-identity-national96 .nd96-home-catalog-zone{
+/* APPROVED HOME LOWER COMPOSITION.
+   Anchored to the real "المعرض الرقمي" heading that V56.48 already tags.
+   Fort is capped to ~23% of viewport width, matching the reference instead of dominating the chips.
+   Landscape is a single occurrence only. */
+html.batco-identity-national96 .nd96-inventory-catalog-heading{
   position:relative;
   isolation:isolate;
   overflow:visible;
+  z-index:0;
+  background:transparent!important;
 }
-html.batco-identity-national96 .nd96-home-catalog-zone::before{
+html.batco-identity-national96 .nd96-inventory-catalog-heading::before{
   content:"";
   position:absolute;
   inset-inline:0;
-  top:44px;
-  bottom:6px;
+  top:48px;
+  height:clamp(286px,68vw,496px);
   z-index:0;
   pointer-events:none;
   user-select:none;
   background-image:var(--nd96-corner),var(--nd96-fort),var(--nd96-landscape);
   background-repeat:no-repeat,no-repeat,no-repeat;
-  background-position:left -66px top 2px,left -18px bottom 18px,center bottom 6px;
-  background-size:176px auto,min(29vw,214px) auto,100% auto;
+  background-position:left -70px top 4px,left -10px bottom 26px,center bottom 4px;
+  background-size:172px auto,min(23vw,168px) auto,100% auto;
   opacity:.98;
 }
-html.batco-identity-national96 .nd96-home-catalog-zone>*{position:relative;z-index:1}
-html.batco-identity-national96 .nd96-inventory-catalog-heading{position:relative;z-index:2;background:transparent!important}
+html.batco-identity-national96 .nd96-inventory-catalog-heading>*{position:relative;z-index:1}
 html.batco-identity-national96 .nd96-inventory-catalog-heading h2{color:var(--nd96-ink)!important}
 
-/* Approved warehouse card: clean UI with corner motifs only; no second landscape. */
+/* APPROVED WAREHOUSE CARD — clean UI + two top corner motifs, no landscape repeat. */
 html.batco-identity-national96 .nd96-warehouse-empty{
   position:relative;
   isolation:isolate;
@@ -156,16 +160,16 @@ html.batco-identity-national96 .nd96-warehouse-empty>*{position:relative;z-index
 html.batco-identity-national96 .nd96-warehouse-empty b{color:var(--nd96-ink)!important}
 html.batco-identity-national96 .nd96-warehouse-empty p{color:#73877E!important}
 
-/* RETIRED: all previous freeform composition hooks remain visually inert in Home-only phase. */
+/* Rejected/freeform injected seasonal DOM stays retired. */
 html.batco-identity-national96 #batco-nd96-frame,
 html.batco-identity-national96 #batco-nd96-badge,
 html.batco-identity-national96 #batco-nd96-inventory-masthead{display:none!important}
 
-/* Bottom navigation is untouched: no seasonal selector is allowed to alter its mechanics. */
+/* BOTTOM NAVIGATION: intentionally no rule at all. The original fixed/persistent contract wins. */
 
 @media(max-width:640px){
   html.batco-identity-national96 .nd96-inventory-meta::before{top:-96px;background-position:right 3% top 26px,center bottom;background-size:min(35vw,190px) auto,auto 100%}
-  html.batco-identity-national96 .nd96-home-catalog-zone::before{background-position:left -70px top 4px,left -14px bottom 18px,center bottom 6px;background-size:162px auto,min(31vw,198px) auto,100% auto}
+  html.batco-identity-national96 .nd96-inventory-catalog-heading::before{top:44px;height:clamp(278px,72vw,430px);background-position:left -68px top 4px,left -8px bottom 22px,center bottom 4px;background-size:158px auto,min(24vw,156px) auto,100% auto}
 }
 
 @media(prefers-reduced-motion:reduce){
