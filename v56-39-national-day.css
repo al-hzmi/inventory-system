@@ -1,5 +1,7 @@
-/* V56.50 PHASED NATIONAL DAY COMPOSITION.
+/* V56.51 PHASED NATIONAL DAY COMPOSITION.
    V56.49 Home remains protected and unchanged.
-   V56.50 adds only the customer Catalog visual layer; Categories / Cart remain base UI. */
+   V56.50 Catalog remains protected and unchanged.
+   V56.51 adds only the customer Categories visual layer; Cart and later pages remain base UI. */
 @import url("./v56-49-nd96-home.css?v=56.49");
 @import url("./v56-50-nd96-catalog.css?v=56.50");
+@import url("./v56-51-nd96-categories.css?v=56.51");
