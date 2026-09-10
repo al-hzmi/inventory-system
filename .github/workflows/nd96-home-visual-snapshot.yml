@@ -68,15 +68,30 @@ jobs:
               meta:[...document.querySelectorAll('.nd96-inventory-meta')].map(x=>box(x.getBoundingClientRect())),
               hero:[...document.querySelectorAll('.nd96-inventory-hero')].map(x=>box(x.getBoundingClientRect())),
               catalog:[...document.querySelectorAll('.nd96-inventory-catalog-heading')].map(x=>box(x.getBoundingClientRect())),
-              empty:[...document.querySelectorAll('.nd96-warehouse-empty')].map(x=>box(x.getBoundingClientRect()))
+              categories:[...document.querySelectorAll('.nd96-inventory-categories')].map(x=>box(x.getBoundingClientRect())),
+              empty:[...document.querySelectorAll('.nd96-warehouse-empty')].map(x=>box(x.getBoundingClientRect())),
+              pseudo:{
+                metaBefore:getComputedStyle(document.querySelector('.nd96-inventory-meta')||document.body,'::before').cssText,
+                categoriesBefore:getComputedStyle(document.querySelector('.nd96-inventory-categories')||document.body,'::before').cssText,
+                emptyBefore:getComputedStyle(document.querySelector('.nd96-warehouse-empty')||document.body,'::before').cssText
+              }
             };
           });
           console.log('ND96_HOME_LAYOUT',JSON.stringify(meta));
-          await sharp('tests/visual-output/home-implementation-364x768.png').jpeg({quality:64}).toFile('tests/visual-output/home-implementation-364.jpg');
+          await sharp('tests/visual-output/home-implementation-364x768.png').jpeg({quality:70}).toFile('tests/visual-output/home-implementation-364.jpg');
           await browser.close();
           JS
           node capture-home.mjs
           rm -f capture-home.mjs
+      - name: Upload Home screenshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nd96-home-visual
+          path: |
+            tests/visual-output/home-implementation-364x768.png
+            tests/visual-output/home-implementation-full.png
+            tests/visual-output/home-implementation-364.jpg
+          retention-days: 3
       - name: Commit visual snapshot for inspection
         shell: bash
         run: |
