@@ -1,0 +1,102 @@
+name: V56.52 National Day Four-View Composition
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  four-view-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate complete phased National Day visual contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v56-39-site-identity.js
+          node tests/v56-39-identities.mjs
+          node tests/v56-50-nd96-catalog.mjs
+          node tests/v56-51-nd96-categories.mjs
+          node tests/v56-52-nd96-cart.mjs
+          git diff --check
+          grep -Fq '@import url("./v56-49-nd96-home.css?v=56.49")' v56-39-national-day.css
+          grep -Fq '@import url("./v56-50-nd96-catalog.css?v=56.50")' v56-39-national-day.css
+          grep -Fq '@import url("./v56-51-nd96-categories.css?v=56.51")' v56-39-national-day.css
+          grep -Fq '@import url("./v56-52-nd96-cart.css?v=56.52")' v56-39-national-day.css
+          grep -Fq 'V56.52 — CART ONLY' v56-52-nd96-cart.css
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const file of ['v56-49-nd96-home.css','v56-50-nd96-catalog.css','v56-51-nd96-categories.css','v56-52-nd96-cart.css']){
+            const css=fs.readFileSync(file,'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+            if(/(^|[\s,>+~])nav(?:[\s.#:[>+~]|$)/m.test(css))throw new Error(`${file} targets navigation`);
+          }
+          NODE
+          echo 'V56.52 quality gate: Home + Catalog + Categories + Cart phased composition, zero bottom-nav override PASS.'
+
+  four-view-production-smoke:
+    if: github.event_name != 'pull_request'
+    needs: four-view-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      PROD: https://inventory-system-coral-nu.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for production to serve V56.52 tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(cat runtime/v56-39-identity-production-probe.txt)"
+          ok=0
+          for attempt in $(seq 1 48); do
+            body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
+            if [[ "$body" == "$expected" ]]; then
+              echo "V56.52 production probe matched on attempt $attempt"
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          test "$ok" = "1" || { echo '::error::Production did not reach V56.52 within verification window.'; exit 1; }
+      - name: Verify exact production four-view phase files
+        shell: bash
+        run: |
+          set -euo pipefail
+          nonce="${GITHUB_SHA}-$(date +%s)"
+          files=(
+            v56-39-site-identity.js
+            v56-39-national-day.css
+            v56-49-nd96-home.css
+            v56-50-nd96-catalog.css
+            v56-51-nd96-categories.css
+            v56-52-nd96-cart.css
+            national-day-96-mark.svg
+            national-day-96/assets/header.svg
+            national-day-96/assets/border.svg
+            national-day-96/assets/corner.svg
+            national-day-96/assets/fort.svg
+            national-day-96/assets/landscape.svg
+            tests/v56-39-identities.mjs
+            tests/v56-50-nd96-catalog.mjs
+            tests/v56-51-nd96-categories.mjs
+            tests/v56-52-nd96-cart.mjs
+            runtime/v56-39-identity-production-probe.txt
+          )
+          for file in "${files[@]}"; do
+            mkdir -p "/tmp/$(dirname "$file")"
+            curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
+            cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
+          done
+          grep -Fq '@import url("./v56-52-nd96-cart.css?v=56.52")' /tmp/v56-39-national-day.css
+          grep -Fq 'V56.52 — CART ONLY' /tmp/v56-52-nd96-cart.css
+          echo 'Production serves exact V56.52 four-view National Day composition.'
