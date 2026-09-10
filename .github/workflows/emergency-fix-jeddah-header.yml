@@ -1,0 +1,84 @@
+name: Emergency Fix Jeddah Inventory Header
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/emergency-fix-jeddah-header.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Repair and verify Jeddah TSV header
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('data/jeddah.tsv')
+          raw = path.read_text(encoding='utf-8')
+          before_lines = raw.splitlines()
+          if len(before_lines) < 2:
+              raise SystemExit('Jeddah TSV is unexpectedly empty')
+
+          header = before_lines[0].split('\t')
+          if len(header) < 5:
+              raise SystemExit(f'Unexpected Jeddah header width: {len(header)}')
+
+          expected_tail = ['اسم الصنف', 'الوحدة', 'الكمية المتوفرة', 'الشد']
+          actual_tail = [cell.strip() for cell in header[1:5]]
+          first = header[0].strip()
+
+          if first == 'رقم الصنف':
+              print('Header is already correct; validation only.')
+          elif first == '' and actual_tail == expected_tail:
+              header[0] = 'رقم الصنف'
+              newline = '\r\n' if raw.startswith(before_lines[0] + '\r\n') else '\n'
+              first_break = raw.find('\n')
+              remainder = raw[first_break + 1:] if first_break >= 0 else ''
+              raw = '\t'.join(header) + newline + remainder
+              path.write_text(raw, encoding='utf-8')
+              print('Repaired missing first header cell.')
+          else:
+              raise SystemExit(f'Refusing unsafe repair. Header={header[:5]!r}')
+
+          fixed = path.read_text(encoding='utf-8')
+          after_lines = fixed.splitlines()
+          fixed_header = [cell.strip() for cell in after_lines[0].split('\t')[:5]]
+          expected = ['رقم الصنف', 'اسم الصنف', 'الوحدة', 'الكمية المتوفرة', 'الشد']
+          if fixed_header != expected:
+              raise SystemExit(f'Header verification failed: {fixed_header!r}')
+
+          before_rows = [line for line in before_lines[1:] if line.split('\t', 1)[0].strip()]
+          after_rows = [line for line in after_lines[1:] if line.split('\t', 1)[0].strip()]
+          if before_rows != after_rows:
+              raise SystemExit('Data rows changed during header-only repair')
+          if len(after_rows) < 100:
+              raise SystemExit(f'Unexpectedly low Jeddah product row count: {len(after_rows)}')
+
+          print(f'Jeddah TSV verification PASS: {len(after_rows)} product rows preserved.')
+          PY
+
+      - name: Commit only the header repair and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/emergency-fix-jeddah-header.yml
+          git add data/jeddah.tsv
+          if git diff --cached --quiet; then
+            echo 'No repair commit required.'
+            exit 0
+          fi
+          git commit -m 'Fix Jeddah inventory TSV header regression'
+          git push origin HEAD:main
