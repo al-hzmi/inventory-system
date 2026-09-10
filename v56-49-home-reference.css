@@ -1,6 +1,5 @@
-/* V56.49 Home reference pass 1 — composition-only seasonal paint.
-   Scope: Inventory Home only. Core UI dimensions, margins, padding, gaps, routing and flow are untouched.
-   Every decorative layer is absolute/background paint with pointer-events disabled. */
+/* V56.49 Home reference pass 2 — composition-only seasonal paint.
+   Inventory Home only. Core UI geometry, spacing, document flow, routing and behavior are untouched. */
 
 html.batco-identity-national96 body.nd96-inventory{
   position:relative;
@@ -8,25 +7,22 @@ html.batco-identity-national96 body.nd96-inventory{
   background-image:none!important;
 }
 
-/* Header artwork is confined to the existing 45px metadata strip: no height/flow mutation. */
+/* Existing 45px metadata strip: crop the approved heritage language into its immutable box. */
 html.batco-identity-national96 body.nd96-inventory .nd96-inventory-meta{
   position:relative;
   isolation:isolate;
   overflow:hidden;
   background-color:var(--nd96-deep)!important;
-  background-image:linear-gradient(rgba(1,57,54,.10),rgba(1,57,54,.10)),var(--nd96-header)!important;
+  background-image:linear-gradient(rgba(1,57,54,.08),rgba(1,57,54,.08)),var(--nd96-header)!important;
   background-repeat:no-repeat,no-repeat!important;
-  background-position:center,center 48%!important;
-  background-size:cover,cover!important;
+  background-position:center,center 53%!important;
+  background-size:cover,auto 76px!important;
   border-color:var(--nd96-deep)!important;
-  box-shadow:inset 0 -2px 0 rgba(15,122,90,.74)!important;
+  box-shadow:inset 0 -2px 0 rgba(15,122,90,.72)!important;
 }
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-meta>*{
-  position:relative;
-  z-index:2;
-}
+html.batco-identity-national96 body.nd96-inventory .nd96-inventory-meta>*{position:relative;z-index:2}
 
-/* The approved Home has quiet pale Najdi corner ornament framing the intro area. */
+/* Reference corner ornaments around the intro field; decoration stays below live content. */
 html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero{
   position:relative;
   isolation:isolate;
@@ -37,20 +33,22 @@ html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::after{
   content:"";
   position:absolute;
   top:70px;
-  width:92px;
-  height:92px;
+  width:82px;
+  height:82px;
   background:var(--nd96-corner) center/contain no-repeat;
-  opacity:.34;
+  opacity:.25;
   pointer-events:none;
   user-select:none;
   z-index:0;
 }
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::before{inset-inline-start:-22px}
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::after{inset-inline-end:-22px;transform:scaleX(-1)}
+html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::before{inset-inline-start:-20px}
+html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::after{inset-inline-end:-20px;transform:scaleX(-1)}
 html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero>*{position:relative;z-index:1}
 
-/* Exact Home relationship: fort is a left anchor; landscape occurs once beneath categories.
-   Both are attached to the real category-chip container so they cannot push page flow. */
+/* Approved Home lower composition.
+   The fort is intentionally much larger than its visible slice and shifted off-canvas left,
+   matching the reference's tall cropped anchor instead of a small standalone icon.
+   The landscape is one single wide layer only. */
 html.batco-identity-national96 body.nd96-inventory .nd96-inventory-categories{
   position:relative;
   isolation:isolate;
@@ -63,53 +61,60 @@ html.batco-identity-national96 body.nd96-inventory .nd96-inventory-categories::b
   width:calc(100% + 32px);
   height:274px;
   background-image:
-    radial-gradient(circle at 16% 28%,var(--nd96-yellow) 0 18px,transparent 19px),
+    radial-gradient(circle at 15% 22%,var(--nd96-yellow) 0 16px,transparent 17px),
     var(--nd96-fort),
-    var(--nd96-landscape),
-    var(--nd96-corner);
-  background-repeat:no-repeat,no-repeat,no-repeat,no-repeat;
-  background-position:center,left -10px bottom 35px,center bottom,left -26px top -4px;
-  background-size:100% 100%,118px auto,100% auto,92px auto;
-  opacity:.98;
+    var(--nd96-landscape);
+  background-repeat:no-repeat,no-repeat,no-repeat;
+  background-position:center,left -84px bottom 36px,center bottom 4px;
+  background-size:100% 100%,205px auto,158% auto;
   pointer-events:none;
   user-select:none;
   z-index:0;
 }
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-categories>*{
-  position:relative;
-  z-index:1;
+html.batco-identity-national96 body.nd96-inventory .nd96-inventory-categories::after{
+  content:"";
+  position:absolute;
+  inset-inline-start:-28px;
+  top:-52px;
+  width:105px;
+  height:105px;
+  background:var(--nd96-corner) center/contain no-repeat;
+  opacity:.27;
+  pointer-events:none;
+  user-select:none;
+  z-index:0;
 }
+html.batco-identity-national96 body.nd96-inventory .nd96-inventory-categories>*{position:relative;z-index:1}
 
-/* Warehouse card keeps its original box geometry; only the two visible reference corners are painted. */
+/* Existing empty-state card geometry remains untouched. */
 html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty{
   position:relative;
   isolation:isolate;
   overflow:hidden;
-  background:rgba(248,251,249,.96)!important;
+  background:rgba(248,251,249,.97)!important;
   border-color:var(--nd96-line)!important;
 }
 html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::before,
 html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::after{
   content:"";
   position:absolute;
-  top:-22px;
-  width:104px;
-  height:104px;
+  top:-18px;
+  width:82px;
+  height:82px;
   background:var(--nd96-corner) center/contain no-repeat;
-  opacity:.28;
+  opacity:.22;
   pointer-events:none;
   user-select:none;
   z-index:0;
 }
-html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::before{inset-inline-start:-28px}
-html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::after{inset-inline-end:-28px;transform:scaleX(-1)}
+html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::before{inset-inline-start:-20px}
+html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::after{inset-inline-end:-20px;transform:scaleX(-1)}
 html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty>*{position:relative;z-index:1}
 
-/* Safety contract: decorative paint never captures input or creates horizontal overflow. */
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-meta::before,
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-meta::after,
+/* Decorative-only safety contract. */
 html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::before,
 html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::after,
 html.batco-identity-national96 body.nd96-inventory .nd96-inventory-categories::before,
+html.batco-identity-national96 body.nd96-inventory .nd96-inventory-categories::after,
 html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::before,
 html.batco-identity-national96 body.nd96-inventory .nd96-warehouse-empty::after{pointer-events:none!important}
