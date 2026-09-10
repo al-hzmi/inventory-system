@@ -1,0 +1,70 @@
+name: Validate Inventory Data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/jeddah.tsv'
+      - 'data/riyadh.tsv'
+      - 'data/pricing.tsv'
+      - '.github/workflows/validate-inventory-data.yml'
+  pull_request:
+    paths:
+      - 'data/jeddah.tsv'
+      - 'data/riyadh.tsv'
+      - 'data/pricing.tsv'
+      - '.github/workflows/validate-inventory-data.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate warehouse TSV schema and rows
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          REQUIRED = {
+              'id': re.compile(r'رقم|كود|sku|item', re.I),
+              'name': re.compile(r'اسم|وصف|description|name', re.I),
+              'qty': re.compile(r'كمية|رصيد|متوفر|qty|quantity', re.I),
+          }
+
+          for filename in ('data/jeddah.tsv', 'data/riyadh.tsv'):
+              path = Path(filename)
+              raw = path.read_text(encoding='utf-8-sig')
+              lines = raw.splitlines()
+              if len(lines) < 2:
+                  raise SystemExit(f'{filename}: file is empty or has no product rows')
+
+              headers = [cell.strip() for cell in lines[0].split('\t')]
+              indices = {}
+              for key, pattern in REQUIRED.items():
+                  indices[key] = next((i for i, h in enumerate(headers) if pattern.search(h)), -1)
+                  if indices[key] < 0:
+                      raise SystemExit(f'{filename}: missing required {key} header; header={headers[:8]!r}')
+
+              if indices['id'] != 0:
+                  raise SystemExit(f'{filename}: SKU/item-number column must be first; header={headers[:8]!r}')
+
+              ids = []
+              for line_no, line in enumerate(lines[1:], start=2):
+                  if not line.strip():
+                      continue
+                  cols = line.split('\t')
+                  sku = cols[indices['id']].strip() if len(cols) > indices['id'] else ''
+                  if sku:
+                      ids.append(sku)
+
+              if len(ids) < 20:
+                  raise SystemExit(f'{filename}: suspiciously low product-row count: {len(ids)}')
+
+              print(f'{filename}: PASS ({len(ids)} product rows)')
+          PY
