@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 const VERSION='56.40';
-const VISUAL_REVISION='56.48';
+const VISUAL_REVISION='56.49';
 const CACHE_KEY='batco_site_identity_cache_v1';
 const PREVIEW_KEY='batco_identity_preview_v1';
 const CONTROL_COLLECTION='system_controls';
@@ -19,7 +19,8 @@ const normalize=row=>{const source=row&&typeof row==='object'?row:{};const natio
 const wanted=()=>readPreview()||liveState.activeIdentity||DEFAULT_IDENTITY;
 const afterDom=fn=>document.body?fn():document.addEventListener('DOMContentLoaded',fn,{once:true});
 const normText=value=>String(value||'').replace(/\s+/g,' ').trim();
-const allByText=(selector,text)=>[...document.querySelectorAll(selector)].filter(el=>normText(el.textContent).includes(text));
+const plainText=value=>normText(value).normalize('NFD').replace(/[\u064B-\u065F\u0670]/g,'');
+const allByText=(selector,text)=>[...document.querySelectorAll(selector)].filter(el=>plainText(el.textContent).includes(plainText(text)));
 
 const ensureStyle=()=>{
   let link=document.getElementById('v56-39-national-day-css');
@@ -28,8 +29,7 @@ const ensureStyle=()=>{
 };
 const setThemeColor=active=>{const meta=document.querySelector('meta[name="theme-color"]');if(!meta)return;if(!meta.dataset.identityDefault)meta.dataset.identityDefault=meta.getAttribute('content')||'#FFFFFF';meta.setAttribute('content',active?'#064B43':meta.dataset.identityDefault)};
 
-/* V56.48: no decorative DOM injection. Existing UI receives semantic variant tags only.
-   Seasonal artwork is CSS/SVG paint outside normal document flow. */
+/* V56.49: semantic tagging only. No decorative DOM injection and no geometry mutation. */
 const decorateCustomer=()=>{
   const rights=document.querySelector('.rights-bar');if(!rights)return false;
   document.body.classList.add('nd96-customer');document.body.classList.remove('nd96-inventory');
@@ -38,7 +38,7 @@ const decorateCustomer=()=>{
   if(header){
     const second=[...header.children].find(el=>el!==rights&&el.querySelector?.('b'));
     second?.classList.add('nd96-customer-headrow');
-    const title=second?[...second.querySelectorAll('b')].find(el=>normText(el.textContent).includes('المعرض الرقمي')):null;
+    const title=second?[...second.querySelectorAll('b')].find(el=>plainText(el.textContent).includes(plainText('المعرض الرقمي'))):null;
     title?.classList.add('nd96-portal-title');
     second?.querySelectorAll('button').forEach(btn=>btn.classList.add('nd96-header-action'));
   }
@@ -47,7 +47,7 @@ const decorateCustomer=()=>{
     const search=[...main.querySelectorAll('input')].find(i=>String(i.placeholder||'').includes('ابحث برقم الصنف'));
     if(search){const sticky=search.closest('.sticky');sticky?.classList.add('nd96-search-rail');sticky?.querySelectorAll('button').forEach(btn=>btn.classList.add('nd96-category-chip'))}
     allByText('b','جميع المنتجات').forEach(title=>title.closest('.flex')?.classList.add('nd96-products-heading'));
-    main.querySelectorAll('.catalog-card').forEach(card=>{card.classList.add('nd96-product-card');card.querySelectorAll('button').forEach(btn=>{if(normText(btn.textContent).includes('إضافة'))btn.classList.add('nd96-add-button')})});
+    main.querySelectorAll('.catalog-card').forEach(card=>{card.classList.add('nd96-product-card');card.querySelectorAll('button').forEach(btn=>{if(plainText(btn.textContent).includes(plainText('إضافة')))btn.classList.add('nd96-add-button')})});
     allByText('h2','الأقسام').forEach(h=>h.closest('.fade-in')?.classList.add('nd96-categories-page'));
     main.querySelectorAll('.category-tile').forEach(tile=>tile.classList.add('nd96-category-tile'));
     allByText('h2','طلب الشراء').forEach(h=>h.closest('.fade-in')?.classList.add('nd96-cart-page'));
@@ -58,24 +58,28 @@ const decorateCustomer=()=>{
 };
 
 const findInventoryMeta=()=>{
-  const nodes=[...document.querySelectorAll('div,header,section')].filter(el=>{const t=normText(el.textContent);return t.includes('مشغّل بواسطة')&&t.includes('تطوير مهند الحزمي')&&t.length<220});
+  const bars=[...document.querySelectorAll('div.border-b.border-border.bg-surface')].filter(el=>{const t=plainText(el.textContent);return t.includes('مشغل بواسطة')&&t.includes('تطوير مهند الحزمي')});
+  if(bars.length)return bars[0];
+  const nodes=[...document.querySelectorAll('div,header,section')].filter(el=>{const t=plainText(el.textContent);return t.includes('مشغل بواسطة')&&t.includes('تطوير مهند الحزمي')&&t.length<220});
   if(!nodes.length)return null;
-  return nodes.sort((a,b)=>a.querySelectorAll('*').length-b.querySelectorAll('*').length)[0];
+  return nodes.sort((a,b)=>b.getBoundingClientRect().width-a.getBoundingClientRect().width)[0];
 };
 const decorateInventory=()=>{
-  const title=[...document.querySelectorAll('h1,h2')].find(el=>normText(el.textContent).includes('مخزون شركة بيت الأواني الطيبة'));
+  const title=[...document.querySelectorAll('h1,h2')].find(el=>plainText(el.textContent).includes(plainText('مخزون شركة بيت الأواني الطيبة')));
   if(!title||document.querySelector('.rights-bar'))return false;
   document.body.classList.add('nd96-inventory');document.body.classList.remove('nd96-customer');
   findInventoryMeta()?.classList.add('nd96-inventory-meta');
   title.classList.add('nd96-inventory-title');title.parentElement?.classList.add('nd96-inventory-hero');
   document.querySelectorAll('button').forEach(btn=>{
-    const label=normText(btn.textContent);
-    if(label.includes('مخزون جدة')||label.includes('مخزون الرياض'))btn.classList.add('nd96-warehouse-button');
-    else if(label.includes('عملاء'))btn.classList.add('nd96-customers-button');
-    else if(['جديدنا','البلاستيك','الأواني المنزلية','الألعاب والسباحة','العدد','العناية والنظافة','أدوات الشواء','القرطاسية','التحف والهدايا','البرطمان','أحذية OGS','مجات OGS','المخفضة','بقية الأصناف'].some(x=>label.includes(x)))btn.classList.add('nd96-inventory-chip');
+    const label=plainText(btn.textContent);
+    if(label.includes(plainText('مخزون جدة'))||label.includes(plainText('مخزون الرياض')))btn.classList.add('nd96-warehouse-button');
+    else if(label.includes(plainText('عملاء')))btn.classList.add('nd96-customers-button');
+    else if(['جديدنا','البلاستيك','الأواني المنزلية','الألعاب والسباحة','العُدد','العدد','العناية والنظافة','العناية والشنط','أدوات الشواء','القرطاسية','التحف والهدايا','البرطمان','أحذية OGS','مجات OGS','المخفضة','بقية الأصناف'].some(x=>label.includes(plainText(x))))btn.classList.add('nd96-inventory-chip');
   });
+  const chips=[...document.querySelectorAll('.nd96-inventory-chip')];
+  if(chips.length){const parent=chips[0].parentElement;if(parent&&chips.every(chip=>chip.parentElement===parent))parent.classList.add('nd96-inventory-categories')}
   allByText('h2','المعرض الرقمي').forEach(h=>h.parentElement?.classList.add('nd96-inventory-catalog-heading'));
-  allByText('b','اختر المستودع').forEach(h=>{let box=h.parentElement;for(let i=0;i<5&&box;i++,box=box.parentElement){if(box.classList?.contains('border')){box.classList.add('nd96-warehouse-empty');break}}});
+  allByText('b,strong,h3,h2,p,span','اختر المستودع').forEach(h=>{let box=h.parentElement;for(let i=0;i<7&&box;i++,box=box.parentElement){if(box.classList?.contains('border')&&(box.classList?.contains('bg-surface')||box.classList?.contains('bg-white'))){box.classList.add('nd96-warehouse-empty');break}}});
   return true;
 };
 
@@ -103,7 +107,7 @@ const loadScript=(id,src)=>new Promise((resolve,reject)=>{const existing=documen
 const defaultFirebaseReady=()=>{try{return Boolean(firebase.app())}catch{return false}};
 const waitForDefaultFirebase=async(timeoutMs=12000)=>{if(defaultFirebaseReady())return true;const started=Date.now();while(Date.now()-started<timeoutMs){await new Promise(resolve=>setTimeout(resolve,80));if(defaultFirebaseReady())return true}return false};
 const firestore=async()=>{if(!window.firebase?.firestore){await loadScript('batco-identity-firebase-app','https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');await loadScript('batco-identity-firestore','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js')}if(!window.firebase?.firestore)throw new Error('FIREBASE_UNAVAILABLE');if(!await waitForDefaultFirebase())throw new Error('DEFAULT_FIREBASE_BOOTSTRAP_TIMEOUT');let app=(firebase.apps||[]).find(candidate=>candidate?.name===IDENTITY_APP_NAME);if(!app)app=firebase.initializeApp(FIREBASE_CONFIG,IDENTITY_APP_NAME);return app.firestore()};
-const subscribe=async()=>{try{const db=await firestore();unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore')},error=>console.warn('[V56.48 identity] realtime unavailable; cached identity retained',error))}catch(error){console.warn('[V56.48 identity] control unavailable; cached/default identity retained',error)}};
+const subscribe=async()=>{try{const db=await firestore();unsubscribe=db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(snap=>{liveState=normalize(snap.exists?snap.data():DEFAULT_STATE);cache(liveState);applyCurrent(readPreview()?'preview':'firestore')},error=>console.warn('[V56.49 identity] realtime unavailable; cached identity retained',error))}catch(error){console.warn('[V56.49 identity] control unavailable; cached/default identity retained',error)}};
 const setPreview=identity=>{try{if(identity===NATIONAL_IDENTITY)sessionStorage.setItem(PREVIEW_KEY,NATIONAL_IDENTITY);else sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview')};
 const clearPreview=()=>{try{sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview-clear')};
 const getState=()=>({version:VERSION,visualRevision:VISUAL_REVISION,live:{...liveState},preview:readPreview(),effective:wanted()});
