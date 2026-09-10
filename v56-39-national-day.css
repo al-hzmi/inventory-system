@@ -1,4 +1,5 @@
-/* V56.49 CLEAN RESET — the rejected V56.48 freeform composition is retired.
-   The active seasonal stylesheet now contains Home only, exactly as requested.
-   Catalog / Categories / Cart remain on the untouched base UI until Home is accepted. */
+/* V56.50 PHASED NATIONAL DAY COMPOSITION.
+   V56.49 Home remains protected and unchanged.
+   V56.50 adds only the customer Catalog visual layer; Categories / Cart remain base UI. */
 @import url("./v56-49-nd96-home.css?v=56.49");
+@import url("./v56-50-nd96-catalog.css?v=56.50");
