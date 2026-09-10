@@ -743,16 +743,18 @@ const parsePricingMap = (rawText) => {
 
 const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     if (!rawText || rawText.includes('[قم_بتظليل_هذا_النص')) return [];
-    const lines = rawText.trim().split('\n');
+    const lines = rawText.replace(/^\uFEFF/, '').trimEnd().split('\n');
     if (lines.length < 2) return [];
 
     const headers = lines[0].split('\t').map(h => h.trim());
-    const idIdx   = headers.findIndex(h => /رقم|كود|sku|item/i.test(h));
+    let idIdx     = headers.findIndex(h => /رقم|كود|sku|item/i.test(h));
     const nameIdx = headers.findIndex(h => /اسم|وصف|description|name/i.test(h));
     const qtyIdx  = headers.findIndex(h => /كمية|رصيد|متوفر|qty|quantity/i.test(h));
     const unitIdx = headers.findIndex(h => /وحدة|unit|uom/i.test(h));
     const packIdx = headers.findIndex(h => /شد|الشد/i.test(h));
 
+    // Defensive fallback: preserve a blank first TSV header cell instead of dropping the whole warehouse.
+    if (idIdx === -1 && headers[0] === '' && nameIdx === 1 && qtyIdx >= 2) idIdx = 0;
     if (idIdx === -1) return [];
 
     const dataMap = {};

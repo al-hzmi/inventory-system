@@ -86,14 +86,15 @@
     return map;
   };
   const parseInventory40=(raw,warehouseKey,pricing)=>{
-    const lines=String(raw||'').trim().split(/\r?\n/);
+    const lines=String(raw||'').replace(/^\uFEFF/,'').trimEnd().split(/\r?\n/);
     if(lines.length<2)return [];
     const headers=lines[0].split('\t').map(x=>x.trim());
-    const idIdx=headers.findIndex(h=>/رقم|كود|sku|item/i.test(h));
+    let idIdx=headers.findIndex(h=>/رقم|كود|sku|item/i.test(h));
     const nameIdx=headers.findIndex(h=>/اسم|وصف|description|name/i.test(h));
     const qtyIdx=headers.findIndex(h=>/كمية|رصيد|متوفر|qty|quantity/i.test(h));
     const unitIdx=headers.findIndex(h=>/وحدة|unit|uom/i.test(h));
     const packIdx=headers.findIndex(h=>/شد|الشد/i.test(h));
+    if(idIdx<0&&headers[0]===''&&nameIdx===1&&qtyIdx>=2)idIdx=0;
     if(idIdx<0)return [];
     const map={};
     for(let i=1;i<lines.length;i++){
