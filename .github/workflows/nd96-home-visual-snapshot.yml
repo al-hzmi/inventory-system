@@ -52,7 +52,9 @@ jobs:
           await page.goto('http://127.0.0.1:4173/index.html?qa=1&employee=1',{waitUntil:'domcontentloaded',timeout:30000});
           await page.waitForFunction(()=>document.body && document.body.innerText.includes('مخزون شركة بيت الأواني الطيبة'),null,{timeout:30000});
           await page.waitForFunction(()=>document.documentElement.classList.contains('batco-identity-national96'),null,{timeout:15000});
-          await page.waitForTimeout(2500);
+          await page.waitForFunction(()=>document.querySelector('.nd96-inventory-categories')&&document.querySelector('.nd96-warehouse-empty')&&document.querySelector('.nd96-inventory-meta'),null,{timeout:15000});
+          await page.addStyleTag({path:'v56-49-home-reference.css'});
+          await page.waitForTimeout(1800);
           await page.screenshot({path:'tests/visual-output/home-implementation-364x768.png',fullPage:false});
           await page.screenshot({path:'tests/visual-output/home-implementation-full.png',fullPage:true});
           const meta=await page.evaluate(()=>{
@@ -69,12 +71,7 @@ jobs:
               hero:[...document.querySelectorAll('.nd96-inventory-hero')].map(x=>box(x.getBoundingClientRect())),
               catalog:[...document.querySelectorAll('.nd96-inventory-catalog-heading')].map(x=>box(x.getBoundingClientRect())),
               categories:[...document.querySelectorAll('.nd96-inventory-categories')].map(x=>box(x.getBoundingClientRect())),
-              empty:[...document.querySelectorAll('.nd96-warehouse-empty')].map(x=>box(x.getBoundingClientRect())),
-              pseudo:{
-                metaBefore:getComputedStyle(document.querySelector('.nd96-inventory-meta')||document.body,'::before').cssText,
-                categoriesBefore:getComputedStyle(document.querySelector('.nd96-inventory-categories')||document.body,'::before').cssText,
-                emptyBefore:getComputedStyle(document.querySelector('.nd96-warehouse-empty')||document.body,'::before').cssText
-              }
+              empty:[...document.querySelectorAll('.nd96-warehouse-empty')].map(x=>box(x.getBoundingClientRect()))
             };
           });
           console.log('ND96_HOME_LAYOUT',JSON.stringify(meta));
