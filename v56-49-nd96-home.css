@@ -1,0 +1,179 @@
+/* V56.49 — HOME ONLY — approved Saudi National Day 96 composition.
+   Clean seasonal reset from the pre-composition baseline.
+   Core UI geometry, routing, data, interactions, responsive breakpoints and navigation behavior are immutable.
+   Decorative artwork is paint-only and never participates in normal document flow. */
+
+html.batco-identity-national96 body.nd96-inventory{
+  --nd96-deep:#064B43;
+  --nd96-deep-2:#073E39;
+  --nd96-green:#0F7A5A;
+  --nd96-emerald:#2E8B6E;
+  --nd96-sage:#A7D7C3;
+  --nd96-mint:#EEF7F2;
+  --nd96-cream:#F8FBF9;
+  --nd96-line:#CBE0D4;
+  --nd96-ink:#10373A;
+  --nd96-muted:#71827B;
+  --nd96-yellow:#F3C75E;
+  --nd96-rust:#D9643A;
+  --nd96-mark:url("./national-day-96-mark.svg");
+  --nd96-header:url("./national-day-96/assets/header.svg");
+  --nd96-corner:url("./national-day-96/assets/corner.svg");
+  --nd96-fort:url("./national-day-96/assets/fort.svg");
+  --nd96-landscape:url("./national-day-96/assets/landscape.svg");
+  background-color:var(--nd96-mint)!important;
+  color:var(--nd96-ink)!important;
+}
+
+html.batco-identity-national96 body.nd96-inventory .bg-surface{background-color:rgba(248,251,249,.96)!important}
+html.batco-identity-national96 body.nd96-inventory .border-border{border-color:var(--nd96-line)!important}
+html.batco-identity-national96 body.nd96-inventory .text-accent,
+html.batco-identity-national96 body.nd96-inventory .text-success{color:var(--nd96-green)!important}
+html.batco-identity-national96 body.nd96-inventory input:focus,
+html.batco-identity-national96 body.nd96-inventory textarea:focus,
+html.batco-identity-national96 body.nd96-inventory select:focus{border-color:var(--nd96-green)!important;box-shadow:0 0 0 3px rgba(15,122,90,.08)!important;outline:none!important}
+
+/* APPROVED HOME HEADER — existing meta row is untouched; art is paint behind it. */
+html.batco-identity-national96 .nd96-inventory-meta{
+  position:relative;
+  isolation:isolate;
+  overflow:visible;
+  background-color:transparent!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+  color:#F8FBF9!important;
+}
+html.batco-identity-national96 .nd96-inventory-meta::before{
+  content:"";
+  position:absolute;
+  inset-inline:0;
+  top:-104px;
+  bottom:-8px;
+  z-index:-1;
+  pointer-events:none;
+  user-select:none;
+  background-color:var(--nd96-deep);
+  background-image:var(--nd96-mark),var(--nd96-header);
+  background-repeat:no-repeat,no-repeat;
+  background-position:right 4% top 28px,center bottom;
+  background-size:min(31vw,214px) auto,cover;
+}
+html.batco-identity-national96 .nd96-inventory-meta *{color:#F8FBF9!important;position:relative;z-index:1}
+html.batco-identity-national96 .nd96-inventory-meta .ltr,
+html.batco-identity-national96 .nd96-inventory-meta b{color:#77DFAE!important}
+
+/* APPROVED HOME HERO — exactly the two quiet top-corner motifs from the reference. */
+html.batco-identity-national96 .nd96-inventory-hero{
+  position:relative;
+  isolation:isolate;
+  background:transparent!important;
+}
+html.batco-identity-national96 .nd96-inventory-hero::before,
+html.batco-identity-national96 .nd96-inventory-hero::after{
+  content:"";
+  position:absolute;
+  top:-38px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  opacity:.40;
+  background:var(--nd96-corner) center/contain no-repeat;
+}
+html.batco-identity-national96 .nd96-inventory-hero::before{inset-inline-start:-70px;width:168px;height:168px}
+html.batco-identity-national96 .nd96-inventory-hero::after{inset-inline-end:-70px;width:168px;height:168px;transform:scaleX(-1)}
+html.batco-identity-national96 .nd96-inventory-hero>*{position:relative;z-index:1}
+html.batco-identity-national96 .nd96-inventory-title{color:var(--nd96-ink)!important}
+
+/* Existing controls: paint only. */
+html.batco-identity-national96 .nd96-warehouse-button,
+html.batco-identity-national96 .nd96-customers-button,
+html.batco-identity-national96 .nd96-inventory-chip{
+  background-color:rgba(255,255,255,.97)!important;
+  border-color:var(--nd96-line)!important;
+  color:var(--nd96-ink)!important;
+  box-shadow:none!important;
+}
+html.batco-identity-national96 .nd96-warehouse-button.bg-primary,
+html.batco-identity-national96 .nd96-warehouse-button.active,
+html.batco-identity-national96 .nd96-inventory-chip.bg-primary{
+  background-color:#0B8E68!important;
+  border-color:#0B8E68!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+
+/* APPROVED HOME LOWER COMPOSITION.
+   Anchored to the real "المعرض الرقمي" heading that V56.48 already tags.
+   Fort is capped to ~23% of viewport width, matching the reference instead of dominating the chips.
+   Landscape is a single occurrence only. */
+html.batco-identity-national96 .nd96-inventory-catalog-heading{
+  position:relative;
+  isolation:isolate;
+  overflow:visible;
+  z-index:0;
+  background:transparent!important;
+}
+html.batco-identity-national96 .nd96-inventory-catalog-heading::before{
+  content:"";
+  position:absolute;
+  inset-inline:0;
+  top:48px;
+  height:clamp(286px,68vw,496px);
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  background-image:var(--nd96-corner),var(--nd96-fort),var(--nd96-landscape);
+  background-repeat:no-repeat,no-repeat,no-repeat;
+  background-position:left -70px top 4px,left -10px bottom 26px,center bottom 4px;
+  background-size:172px auto,min(23vw,168px) auto,100% auto;
+  opacity:.98;
+}
+html.batco-identity-national96 .nd96-inventory-catalog-heading>*{position:relative;z-index:1}
+html.batco-identity-national96 .nd96-inventory-catalog-heading h2{color:var(--nd96-ink)!important}
+
+/* APPROVED WAREHOUSE CARD — clean UI + two top corner motifs, no landscape repeat. */
+html.batco-identity-national96 .nd96-warehouse-empty{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  background-color:rgba(248,251,249,.98)!important;
+  background-image:none!important;
+  border-color:var(--nd96-line)!important;
+  box-shadow:none!important;
+}
+html.batco-identity-national96 .nd96-warehouse-empty::before,
+html.batco-identity-national96 .nd96-warehouse-empty::after{
+  content:"";
+  position:absolute;
+  top:-44px;
+  width:146px;
+  height:146px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  opacity:.30;
+  background:var(--nd96-corner) center/contain no-repeat;
+}
+html.batco-identity-national96 .nd96-warehouse-empty::before{inset-inline-start:-54px}
+html.batco-identity-national96 .nd96-warehouse-empty::after{inset-inline-end:-54px;transform:scaleX(-1)}
+html.batco-identity-national96 .nd96-warehouse-empty>*{position:relative;z-index:1}
+html.batco-identity-national96 .nd96-warehouse-empty b{color:var(--nd96-ink)!important}
+html.batco-identity-national96 .nd96-warehouse-empty p{color:#73877E!important}
+
+/* Rejected/freeform injected seasonal DOM stays retired. */
+html.batco-identity-national96 #batco-nd96-frame,
+html.batco-identity-national96 #batco-nd96-badge,
+html.batco-identity-national96 #batco-nd96-inventory-masthead{display:none!important}
+
+/* BOTTOM NAVIGATION: intentionally no rule at all. The original fixed/persistent contract wins. */
+
+@media(max-width:640px){
+  html.batco-identity-national96 .nd96-inventory-meta::before{top:-96px;background-position:right 3% top 26px,center bottom;background-size:min(35vw,190px) auto,auto 100%}
+  html.batco-identity-national96 .nd96-inventory-catalog-heading::before{top:44px;height:clamp(278px,72vw,430px);background-position:left -68px top 4px,left -8px bottom 22px,center bottom 4px;background-size:158px auto,min(24vw,156px) auto,100% auto}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html.batco-identity-national96 *,
+  html.batco-identity-national96 *::before,
+  html.batco-identity-national96 *::after{animation:none!important;transition-duration:.01ms!important}
+}

@@ -1,0 +1,89 @@
+/* V56.51 — CATEGORIES ONLY — Saudi National Day 96 customer categories composition.
+   Additive phase after protected V56.49 Home and V56.50 Catalog.
+   Routing, category data, tile geometry, product layout and bottom navigation remain immutable.
+   Seasonal artwork is paint-only; Cart and later customer pages remain untouched. */
+
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page{
+  position:relative;
+  isolation:isolate;
+  color:var(--nd96-ink,#10373A)!important;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page::before{
+  content:"";
+  position:absolute;
+  inset-inline-end:-66px;
+  top:-54px;
+  width:154px;
+  height:154px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  opacity:.19;
+  background:var(--nd96-corner,url("./national-day-96/assets/corner.svg")) center/contain no-repeat;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page::after{
+  content:"";
+  position:absolute;
+  inset-inline-start:-54px;
+  top:108px;
+  width:118px;
+  height:118px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  opacity:.10;
+  transform:scaleX(-1);
+  background:var(--nd96-corner,url("./national-day-96/assets/corner.svg")) center/contain no-repeat;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page>*{position:relative;z-index:1}
+
+/* Section typography remains exactly the same size/spacing; only identity paint changes. */
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page>.ui-section-head h2{color:var(--nd96-deep,#064B43)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page>.ui-section-head p{color:var(--nd96-muted,#71827B)!important}
+
+/* CATEGORY TILES — retain original 104px minimum, padding, radii and grid breakpoints. */
+html.batco-identity-national96 body.nd96-customer .nd96-category-tile{
+  background-color:#fff!important;
+  border-color:var(--nd96-line,#CBE0D4)!important;
+  color:var(--nd96-ink,#10373A)!important;
+  box-shadow:0 4px 14px rgba(6,75,67,.045)!important;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-category-tile>div:first-child>div:first-child{
+  background-color:rgba(167,215,195,.28)!important;
+  color:var(--nd96-deep,#064B43)!important;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-category-tile>div:first-child>svg{color:var(--nd96-sage,#A7D7C3)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-category-tile>div:last-child>b{color:var(--nd96-ink,#10373A)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-category-tile>div:last-child>span{color:var(--nd96-muted,#71827B)!important}
+
+/* CATEGORY BROWSE — paints existing controls only. No new wrappers or layout rules. */
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page>.flex>button,
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page .sticky input{
+  background-color:#fff!important;
+  border-color:var(--nd96-line,#CBE0D4)!important;
+  color:var(--nd96-ink,#10373A)!important;
+  box-shadow:none!important;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page>.flex>button svg{color:var(--nd96-green,#0F7A5A)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page>.flex .text-muted{color:var(--nd96-muted,#71827B)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page .sticky{
+  background-color:rgba(238,247,242,.96)!important;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page .sticky input::placeholder{color:#95A49E!important}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page .sticky svg{color:var(--nd96-green,#0F7A5A)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-categories-page .sticky+div .bg-primary{
+  background-color:var(--nd96-deep,#064B43)!important;
+  color:#fff!important;
+}
+
+/* Product cards inside an opened category intentionally inherit the already-gated V56.50 Catalog treatment. */
+
+@media(max-width:640px){
+  html.batco-identity-national96 body.nd96-customer .nd96-categories-page::before{inset-inline-end:-58px;top:-48px;width:142px;height:142px}
+  html.batco-identity-national96 body.nd96-customer .nd96-categories-page::after{inset-inline-start:-48px;width:108px;height:108px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html.batco-identity-national96 body.nd96-customer .nd96-categories-page,
+  html.batco-identity-national96 body.nd96-customer .nd96-categories-page *{animation:none!important;transition-duration:.01ms!important}
+}

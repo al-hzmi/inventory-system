@@ -1,0 +1,154 @@
+/* V56.50 — CATALOG ONLY — Saudi National Day 96 customer catalog composition.
+   Additive phase after the protected V56.49 Home skin.
+   Customer routing, product data, card geometry, responsive breakpoints and bottom navigation are immutable.
+   Seasonal artwork is paint-only; Categories and Cart remain untouched. */
+
+html.batco-identity-national96 body.nd96-customer{
+  --nd96-deep:#064B43;
+  --nd96-deep-2:#073E39;
+  --nd96-green:#0F7A5A;
+  --nd96-emerald:#2E8B6E;
+  --nd96-sage:#A7D7C3;
+  --nd96-mint:#EEF7F2;
+  --nd96-cream:#F8FBF9;
+  --nd96-line:#CBE0D4;
+  --nd96-ink:#10373A;
+  --nd96-muted:#71827B;
+  --nd96-yellow:#F3C75E;
+  --nd96-rust:#D9643A;
+  --nd96-mark:url("./national-day-96-mark.svg");
+  --nd96-header:url("./national-day-96/assets/header.svg");
+  --nd96-border:url("./national-day-96/assets/border.svg");
+  --nd96-corner:url("./national-day-96/assets/corner.svg");
+  background-color:var(--nd96-mint)!important;
+  color:var(--nd96-ink)!important;
+}
+
+html.batco-identity-national96 body.nd96-customer .bg-surface{background-color:rgba(248,251,249,.98)!important}
+html.batco-identity-national96 body.nd96-customer .border-border{border-color:var(--nd96-line)!important}
+html.batco-identity-national96 body.nd96-customer .text-accent,
+html.batco-identity-national96 body.nd96-customer .text-success{color:var(--nd96-green)!important}
+html.batco-identity-national96 body.nd96-customer input:focus,
+html.batco-identity-national96 body.nd96-customer textarea:focus,
+html.batco-identity-national96 body.nd96-customer select:focus{border-color:var(--nd96-green)!important;box-shadow:0 0 0 3px rgba(15,122,90,.08)!important;outline:none!important}
+
+/* APPROVED SHARED CUSTOMER MASTHEAD — the live header remains structurally untouched. */
+html.batco-identity-national96 body.nd96-customer .rights-bar,
+html.batco-identity-national96 body.nd96-customer .nd96-brand-strip{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  background-color:var(--nd96-deep)!important;
+  background-image:var(--nd96-mark),var(--nd96-header)!important;
+  background-repeat:no-repeat,no-repeat!important;
+  background-position:right 4% center,center bottom!important;
+  background-size:min(31vw,214px) auto,cover!important;
+  border-color:var(--nd96-deep)!important;
+  box-shadow:none!important;
+  color:#F8FBF9!important;
+}
+html.batco-identity-national96 body.nd96-customer .rights-bar::after,
+html.batco-identity-national96 body.nd96-customer .nd96-brand-strip::after{
+  content:"";
+  position:absolute;
+  inset-inline:0;
+  bottom:0;
+  height:9px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  background:var(--nd96-border) center bottom/auto 100% repeat-x;
+  opacity:.88;
+}
+html.batco-identity-national96 body.nd96-customer .rights-bar>*{position:relative;z-index:1}
+html.batco-identity-national96 body.nd96-customer .rights-bar a,
+html.batco-identity-national96 body.nd96-customer .rights-bar span{color:#F8FBF9!important;text-shadow:none!important}
+html.batco-identity-national96 body.nd96-customer .rights-bar .ltr{color:#77DFAE!important}
+html.batco-identity-national96 body.nd96-customer .nd96-customer-header{background-color:rgba(248,251,249,.99)!important;border-color:var(--nd96-line)!important;box-shadow:none!important}
+html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  background-color:rgba(248,251,249,.99)!important;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::before,
+html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::after{
+  content:"";
+  position:absolute;
+  top:-58px;
+  width:154px;
+  height:154px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  opacity:.26;
+  background:var(--nd96-corner) center/contain no-repeat;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::before{inset-inline-start:-62px}
+html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::after{inset-inline-end:-62px;transform:scaleX(-1)}
+html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow>*{position:relative;z-index:1}
+html.batco-identity-national96 body.nd96-customer .nd96-portal-title{color:var(--nd96-ink)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-header-action{background-color:#fff!important;border-color:var(--nd96-line)!important;color:var(--nd96-ink)!important;box-shadow:none!important}
+
+/* CATALOG SEARCH / FILTER RAIL — no geometry changes, no wallpaper behind content. */
+html.batco-identity-national96 body.nd96-customer .nd96-search-rail{
+  position:relative;
+  isolation:isolate;
+  background-color:rgba(238,247,242,.96)!important;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-search-rail::before{
+  content:"";
+  position:absolute;
+  inset-inline-start:-64px;
+  top:-58px;
+  width:144px;
+  height:144px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  opacity:.18;
+  background:var(--nd96-corner) center/contain no-repeat;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-search-rail>*{position:relative;z-index:1}
+html.batco-identity-national96 body.nd96-customer .nd96-search-rail input{background-color:#fff!important;border-color:var(--nd96-line)!important;color:var(--nd96-ink)!important;box-shadow:none!important}
+html.batco-identity-national96 body.nd96-customer .nd96-search-rail input::placeholder{color:#95A49E!important}
+html.batco-identity-national96 body.nd96-customer .nd96-category-chip{background-color:#fff!important;border-color:var(--nd96-line)!important;color:var(--nd96-ink)!important;box-shadow:none!important}
+html.batco-identity-national96 body.nd96-customer .nd96-category-chip.bg-primary,
+html.batco-identity-national96 body.nd96-customer .nd96-category-chip.active{background-color:var(--nd96-deep)!important;border-color:var(--nd96-deep)!important;color:#fff!important;box-shadow:none!important}
+
+/* CATALOG PRODUCT GRID — product imagery and information remain the visual priority. */
+html.batco-identity-national96 body.nd96-customer .nd96-products-heading{position:relative;isolation:isolate;color:var(--nd96-ink)!important;background:transparent!important}
+html.batco-identity-national96 body.nd96-customer .nd96-products-heading::after{
+  content:"";
+  position:absolute;
+  inset-inline-start:-52px;
+  bottom:-36px;
+  width:118px;
+  height:118px;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  opacity:.15;
+  background:var(--nd96-corner) center/contain no-repeat;
+}
+html.batco-identity-national96 body.nd96-customer .nd96-products-heading>*{position:relative;z-index:1}
+html.batco-identity-national96 body.nd96-customer .catalog-card.nd96-product-card{background-color:#fff!important;border-color:var(--nd96-line)!important;box-shadow:0 4px 14px rgba(6,75,67,.045)!important}
+html.batco-identity-national96 body.nd96-customer .catalog-card.nd96-product-card b,
+html.batco-identity-national96 body.nd96-customer .catalog-card.nd96-product-card strong{color:var(--nd96-ink)!important}
+html.batco-identity-national96 body.nd96-customer .catalog-card.nd96-product-card .text-success{color:var(--nd96-rust)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-add-button{background-color:var(--nd96-deep)!important;border-color:var(--nd96-deep)!important;color:#fff!important;box-shadow:none!important}
+
+/* Categories / Cart deliberately remain base UI in this phase. Bottom navigation is not targeted. */
+
+@media(max-width:640px){
+  html.batco-identity-national96 body.nd96-customer .rights-bar,
+  html.batco-identity-national96 body.nd96-customer .nd96-brand-strip{background-position:right 3% center,center bottom!important;background-size:min(35vw,190px) auto,auto 100%!important}
+  html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::before,
+  html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::after{top:-54px;width:146px;height:146px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html.batco-identity-national96 body.nd96-customer *,
+  html.batco-identity-national96 body.nd96-customer *::before,
+  html.batco-identity-national96 body.nd96-customer *::after{animation:none!important;transition-duration:.01ms!important}
+}
