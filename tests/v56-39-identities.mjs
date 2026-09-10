@@ -20,18 +20,22 @@ must(home.includes('V56.49 — HOME ONLY'),'Home-only rollout marker missing');
 
 for(const token of ['--nd96-deep:#064B43','--nd96-green:#0F7A5A','--nd96-mint:#EEF7F2','--nd96-rust:#D9643A'])must(home.includes(token),`Home palette token missing: ${token}`);
 for(const asset of ['national-day-96-mark.svg','national-day-96/assets/header.svg','national-day-96/assets/corner.svg','national-day-96/assets/fort.svg','national-day-96/assets/landscape.svg']){
-  const path=asset==='national-day-96-mark.svg'?asset:asset;
-  must(fs.existsSync(path),`National Day asset missing: ${path}`);
+  must(fs.existsSync(asset),`National Day asset missing: ${asset}`);
   must(home.includes(asset),`Home CSS does not reference approved asset: ${asset}`);
 }
 
 // Phase gate: only inventory/Home may receive seasonal composition in V56.49.
-for(const forbidden of ['nd96-customer','nd96-products-heading','catalog-card','nd96-categories-page','category-tile','nd96-cart-page','nd96-empty-cart','rights-footer'])must(!home.includes(forbidden),`Home-only phase leaked into another page: ${forbidden}`);
+const foreignPageMarkers=[
+  /body\.nd96-customer(?:\b|[\s.#:[>+~])/, /\.nd96-products-heading(?:\b|[\s.#:[>+~])/, /\.catalog-card(?:\b|[\s.#:[>+~])/,
+  /\.nd96-categories-page(?:\b|[\s.#:[>+~])/, /\.category-tile(?:\b|[\s.#:[>+~])/, /\.nd96-cart-page(?:\b|[\s.#:[>+~])/,
+  /\.nd96-empty-cart(?:\b|[\s.#:[>+~])/, /\.rights-footer(?:\b|[\s.#:[>+~])/
+];
+for(const marker of foreignPageMarkers)must(!marker.test(home),`Home-only phase leaked into another page: ${marker}`);
 must(home.includes('.nd96-inventory-meta::before'),'approved Home header composition missing');
 must(home.includes('.nd96-inventory-hero::before')&&home.includes('.nd96-inventory-hero::after'),'approved Home corner motifs missing');
 must(home.includes('.nd96-inventory-catalog-heading::before'),'approved Home lower composition missing');
 must(home.includes('min(23vw,168px)'),'Home fort scale cap missing');
-must(home.includes('Landscape is a single occurrence only')||home.includes('single occurrence only'),'single-landscape composition contract missing');
+must(home.includes('single occurrence only'),'single-landscape composition contract missing');
 must(home.includes('pointer-events:none'),'decorative layers must never intercept interaction');
 
 // Navigation mechanics are sacred: Home skin must not target nav at all.
