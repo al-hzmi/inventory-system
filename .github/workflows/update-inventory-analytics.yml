@@ -1,0 +1,59 @@
+name: Update inventory movement history
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/jeddah.tsv'
+      - 'data/riyadh.tsv'
+      - 'tools/generate-inventory-analytics.py'
+      - '.github/workflows/update-inventory-analytics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inventory-movement-history
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate movement history
+        run: python3 tools/generate-inventory-analytics.py
+
+      - name: Validate generated data
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('data/inventory-analytics.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          assert data.get('schemaVersion') == 2
+          assert isinstance(data.get('events'), list)
+          for branch in ('jeddah', 'riyadh'):
+              cur = data.get('current', {}).get(branch, {})
+              assert cur.get('skuCount', 0) > 20, (branch, cur)
+          changes = sum(len(e.get('changes', [])) for e in data['events'])
+          print(f"events={len(data['events'])} changes={changes}")
+          assert changes > 0, 'Movement history unexpectedly has no changes'
+          PY
+
+      - name: Commit generated history
+        run: |
+          if git diff --quiet -- data/inventory-analytics.json; then
+            echo 'Movement history already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/inventory-analytics.json
+          git commit -m 'Update inventory movement history [skip ci]'
+          git push
