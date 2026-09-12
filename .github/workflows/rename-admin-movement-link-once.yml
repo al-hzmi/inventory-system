@@ -1,0 +1,39 @@
+name: Expose inventory movement dashboard once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rename-admin-movement-link-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rename admin movement entry
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('admin-home.html')
+          s=p.read_text(encoding='utf-8')
+          old='>تحليل المبيعات</a>'
+          if old not in s:
+              raise SystemExit('Expected admin analytics link was not found')
+          s=s.replace(old,'>حركة الأصناف</a>',1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          rm .github/workflows/rename-admin-movement-link-once.yml
+          git diff --check
+      - name: Commit dashboard entry
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Expose inventory movements in admin dashboard'
+          git push
