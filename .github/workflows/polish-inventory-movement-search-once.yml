@@ -1,0 +1,46 @@
+name: Polish inventory movement search once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/polish-inventory-movement-search-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preserve search focus and clarify filtered misses
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('inventory-analytics.html')
+          s=p.read_text(encoding='utf-8')
+          old="""${missing.length?`<div class=\"missing-box\" style=\"margin-top:10px\"><b>أصناف بحثت عنها ولم تتحرك ضمن ${esc(periodLabel())}:</b><div class=\"missing-list\">${missing.map(x=>`<span>${esc(x)}</span>`).join('')}</div></div>`:''}"""
+          new="""${missing.length?`<div class=\"missing-box\" style=\"margin-top:10px\"><b>أصناف لا توجد لها حركة مطابقة للفلاتر الحالية ضمن ${esc(periodLabel())}:</b><div class=\"missing-list\">${missing.map(x=>`<span>${esc(x)}</span>`).join('')}</div></div>`:''}"""
+          if old not in s:
+              raise SystemExit('Missing-search wording anchor not found')
+          s=s.replace(old,new,1)
+          old_bind="""function bind(){$$('[data-period]').forEach(b=>b.onclick=()=>{S.period=b.dataset.period;render()});$('#branch')?.addEventListener('change',e=>{S.branch=e.target.value;render()});$('#kind')?.addEventListener('change',e=>{S.kind=e.target.value;render()});let timer;$('#q')?.addEventListener('input',e=>{S.q=e.target.value;clearTimeout(timer);timer=setTimeout(render,160)})}"""
+          new_bind="""function bind(){$$('[data-period]').forEach(b=>b.onclick=()=>{S.period=b.dataset.period;render()});$('#branch')?.addEventListener('change',e=>{S.branch=e.target.value;render()});$('#kind')?.addEventListener('change',e=>{S.kind=e.target.value;render()});let timer;$('#q')?.addEventListener('input',e=>{S.q=e.target.value;const caret=e.target.selectionStart;clearTimeout(timer);timer=setTimeout(()=>{render();const q=$('#q');if(q){q.focus({preventScroll:true});try{const pos=Math.min(caret??q.value.length,q.value.length);q.setSelectionRange(pos,pos)}catch{}}},220)})}"""
+          if old_bind not in s:
+              raise SystemExit('Search bind anchor not found')
+          s=s.replace(old_bind,new_bind,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          rm .github/workflows/polish-inventory-movement-search-once.yml
+          git diff --check
+      - name: Commit polish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Polish inventory movement search'
+          git pull --rebase origin main
+          git push origin HEAD:main
