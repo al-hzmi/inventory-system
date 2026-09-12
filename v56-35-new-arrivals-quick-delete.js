@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='56.35.1',API='./api/new-arrivals-admin',WINDOW_MS=420;
+const VERSION='56.35.2',API='./api/new-arrivals-admin',WINDOW_MS=460;
 let lastCard=null,lastAt=0,armedCard=null,busy=false;
 const removedSkus=new Set();
 const canonical=value=>String(value||'').toUpperCase().replace(/[^A-Z0-9_-]/g,'');
@@ -61,12 +61,16 @@ function arm(card){
  if(!card||armedCard===card)return;if(armedCard)disarm();const sku=extractSku(card);if(!sku)return;
  armedCard=card;const button=document.createElement('button');button.type='button';button.className='v56-35-quick-delete';button.dataset.sku=sku;button.textContent='حذف من جديدنا';
  Object.assign(button.style,{width:'calc(100% - 24px)',margin:'0 12px 12px',minHeight:'40px',border:'1px solid rgba(185,28,28,.18)',borderRadius:'10px',background:'#FEF2F2',color:'#B91C1C',fontFamily:'inherit',fontSize:'12px',fontWeight:'700',cursor:'pointer',position:'relative',zIndex:'20'});
- button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();removeSku(card,sku,button)},true);card.appendChild(button);toast(`اختر «حذف من جديدنا» لإزالة ${sku}`)
+ button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();removeSku(card,sku,button)},true);card.appendChild(button);toast(`يمكنك الآن حذف ${sku} من «جديدنا»`)
 }
 function onClick(e){
  if(!inNewArrivals())return;if(e.target.closest('input,textarea,select,button,a'))return;
  const card=e.target.closest('.tap-card');if(!card)return;
- const now=Date.now();if(card===lastCard&&now-lastAt<=WINDOW_MS){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();lastCard=null;lastAt=0;arm(card);return}
+ const now=Date.now();if(card===lastCard&&now-lastAt<=WINDOW_MS){
+  // لا نوقف النقرة الثانية: React يحتاجها لعرض الكمية ويحتاج الثالثة لعرض التفاصيل.
+  // نضيف زر الحذف بعد اكتمال انتشار الحدث حتى لا يتداخل مع عداد الضغطات الأساسي.
+  lastCard=null;lastAt=0;setTimeout(()=>arm(card),0);return
+ }
  lastCard=card;lastAt=now;
 }
 document.addEventListener('click',onClick,true);
