@@ -131,9 +131,9 @@ def changes_for_path(parent: str | None, commit: str, rel_path: str, branch: str
     for sku in sorted(set(before) | set(after), key=lambda x: (len(x), x)):
         old = before.get(sku, {"sku": sku, "name": "", "unit": "", "qty": 0.0})
         new = after.get(sku, {"sku": sku, "name": old.get("name", ""), "unit": old.get("unit", ""), "qty": 0.0})
-        b = float(old.get("qty", 0) or 0)
-        a = float(new.get("qty", 0) or 0)
-        delta = a - b
+        b = round(float(old.get("qty", 0) or 0), 5)
+        a = round(float(new.get("qty", 0) or 0), 5)
+        delta = round(a - b, 5)
         if abs(delta) < 1e-9:
             continue
         changes.append({

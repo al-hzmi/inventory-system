@@ -24,7 +24,7 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const digits=s=>String(s??'').replace(/[٠-٩۰-۹]/g,d=>{const a='٠١٢٣٤٥٦٧٨٩',e='۰۱۲۳۴۵۶۷۸۹',i=a.indexOf(d);return i>=0?String(i):String(e.indexOf(d))});
 const norm=s=>digits(s).toLowerCase().replace(/[\u064B-\u065F\u0670]/g,'').replace(/ـ/g,'').replace(/[أإآٱ]/g,'ا').replace(/[ىئ]/g,'ي').replace(/ؤ/g,'و').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
-const num=(n,d=0)=>new Intl.NumberFormat('en-US',{maximumFractionDigits:d}).format(Number(n)||0);
+const num=(n,d=5)=>new Intl.NumberFormat('en-US',{maximumFractionDigits:d}).format(Math.abs(Number(n)||0)<1e-9?0:Number(n)||0);
 const dt=s=>{try{return new Date(s).toLocaleString('ar-SA',{timeZone:'Asia/Riyadh',dateStyle:'medium',timeStyle:'short'})}catch{return'—'}};
 const dayKey=value=>{const d=value instanceof Date?value:new Date(value),parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d),get=t=>parts.find(x=>x.type===t)?.value||'';return `${get('year')}-${get('month')}-${get('day')}`};
 const todayKey=()=>dayKey(new Date()),offsetKey=n=>dayKey(new Date(Date.now()+n*86400000));
