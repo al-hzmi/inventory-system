@@ -19,12 +19,12 @@ assert.ok(enhancements.includes("doc.querySelector('header')?.remove()"), 'embed
 assert.ok(enhancements.includes('a[href*="security-center.html"]'), 'legacy direct security links must be removed');
 assert.ok(enhancements.includes('a[href*="section=security"]'), 'legacy security dashboard links must be removed');
 assert.ok(enhancements.includes("q.get('section')==='security'"), 'legacy security route guard must exist');
-assert.ok(enhancements.includes("active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'})"), 'active employee module must remain centered/visible');
-assert.ok(!enhancements.includes('if(a.left<s.left+8||a.right>s.right-8)active.scrollIntoView'), 'active tab must not depend on the old unreliable edge test');
-assert.ok(enhancements.includes('lastActiveNode'), 'active-tab guard must track the rendered tab node, not only the module id');
-assert.ok(enhancements.includes('nodeChanged=active!==lastActiveNode'), 'same module must be recentered when React recreates the tab bar');
-assert.ok(enhancements.includes('clipped=a.left<s.left+6||a.right>s.right-6'), 'active tab must recover if the horizontal strip resets to its beginning');
-assert.ok(enhancements.includes("attributeFilter:['data-active']"), 'active module changes must be observed');
+assert.ok(enhancements.includes('if(!clipped)return'), 'active module should move only when its horizontal tab is actually clipped');
+assert.ok(enhancements.includes("active.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'})"), 'active employee module must recover visibility without smooth centering');
+assert.ok(!enhancements.includes("inline:'center',behavior:'smooth'"), 'active tab must never snap back by smooth-centering');
+assert.ok(!enhancements.includes('lastActiveNode')&&!enhancements.includes('nodeChanged=active!==lastActiveNode'), 'render recreation must not force recentering');
+assert.ok(enhancements.includes('clipped=a.left<box.left+6||a.right>box.right-6'), 'active tab must recover only when the horizontal strip clips it');
+assert.ok(enhancements.includes('observer.observe(home,{childList:true})')&&enhancements.includes('setTimeout(()=>observer.disconnect(),8000)'), 'only the bounded admin-home observer may remain');
 
 assert.ok(runtime.includes('.map(normalizeImageSku).filter(Boolean)'), 'New Arrivals overrides must preserve canonical SKU');
 assert.ok(runtime.includes("const cleanSku = normalizeImageSku(sku);"), 'New Arrivals mutations must send canonical SKU');
