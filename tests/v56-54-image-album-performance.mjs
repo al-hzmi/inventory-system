@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const s=fs.readFileSync('image-distribution.html','utf8');
+assert.ok(s.includes('const PAGE_SIZE=120'),'image album must cap initial DOM work');
+assert.ok(s.includes("rows.slice(0,state.limit)"),'image album must render only the visible chunk');
+assert.ok(s.includes("id='albumMore'")||s.includes("more.id='albumMore'"),'image album must offer incremental reveal');
+assert.ok(s.includes('state.assignmentDirty'),'assignment graph must not rebuild on every search keystroke');
+assert.ok(s.includes('ensureAssignment()'),'album assignment cache guard missing');
+assert.ok(s.includes('albumSearchTimer=setTimeout(refresh,140)'),'album search must be debounced');
+assert.ok(s.includes('captureAlbumView()')&&s.includes('restoreAlbumView(view)'),'album rerenders must preserve page/tab/focus state');
+assert.ok(s.includes("decoding=\"async\""),'album images should decode asynchronously');
+assert.ok(s.includes('touch-action:pan-x pan-y')&&s.includes('scroll-behavior:auto'),'album horizontal tabs must use native non-jumping scrolling');
+assert.ok(s.includes('./v46-admin-nav.js?v=56.53'),'album must load the shared admin interaction layer');
+assert.ok(!s.includes('q.oninput=refresh'),'search must not synchronously rebuild the full album per keypress');
+console.log('V56.54 image album performance regression: PASS');
