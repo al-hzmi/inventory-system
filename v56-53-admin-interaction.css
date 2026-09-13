@@ -1,0 +1,15 @@
+/* V56.53 — admin interaction stability + native scrolling */
+:root{scroll-behavior:auto}
+.v52-tabs,.sales-tabs,.period-tabs,.templatebar,.tabs,.overflow-x-auto,.tablewrap,.v52-table-wrap,.movement-table-wrap{
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-inline:contain;
+  scroll-behavior:auto!important;
+  touch-action:pan-x pan-y;
+  min-width:0;
+}
+.v52-table-wrap,.movement-table-wrap,.drawerbody,[class*="overflow-y-auto"]{
+  overscroll-behavior-block:contain;
+  -webkit-overflow-scrolling:touch;
+}
+button,a,[role="button"]{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}

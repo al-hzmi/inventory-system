@@ -1,0 +1,23 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const read=p=>fs.readFileSync(p,'utf8');
+const ux=read('v45-admin-ux.js'),nav=read('v46-admin-nav.js'),enh=read('v54-admin-enhancements.js');
+const dashboard=read('admin-dashboard.html'),movement=read('inventory-analytics.html'),control=read('control-center.html'),home=read('admin-home.html'),css=read('v56-53-admin-interaction.css');
+
+assert.ok(!ux.includes("addEventListener('wheel'")&&!ux.includes('new MutationObserver'),'legacy wheel hijacking and global rescans must stay retired');
+assert.ok(ux.includes('nativeScroll:true'),'native scroll contract missing');
+assert.ok(!nav.includes('mo.observe(document.documentElement')&&!nav.includes('new MutationObserver'),'admin shell must not observe the whole document forever');
+assert.ok(nav.includes('v56-53-admin-interaction.css?v=56.53'),'shared interaction CSS must be loaded');
+assert.ok(!enh.includes("inline:'center',behavior:'smooth'"),'active module must never be forcibly smooth-centered');
+assert.ok(enh.includes("if(!clipped)return")&&enh.includes("inline:'nearest',behavior:'auto'"),'active module should move only when clipped');
+assert.ok(!enh.includes('mo.observe(document.documentElement'),'enhancements must not observe the entire document');
+assert.ok(dashboard.includes('let pendingData={},dataFrame=0')&&dashboard.includes('requestAnimationFrame(flushData)'),'dashboard Firestore snapshots must be render-batched');
+assert.ok(movement.includes('const PAGE_SIZE=300')&&movement.includes('id="moreRows"'),'movement table must cap DOM rows and support incremental reveal');
+assert.ok(movement.includes('captureView()')&&movement.includes('restoreView(view)'),'movement filters must preserve scroll/focus state');
+assert.ok(movement.includes("inventory-analytics.json?v=56.53',{cache:'no-cache'}"),'movement analytics must use revalidation instead of a unique uncached URL each visit');
+assert.ok(control.includes('function scheduleRender()')&&control.includes('scheduleRender()}'),'control-center realtime snapshots must coalesce renders');
+assert.ok(control.includes('restoreControlView(view)')&&control.includes('searchTimer=setTimeout(render,140)'),'control center must preserve view state and debounce search');
+assert.ok(home.includes('function stableRender()')&&home.includes('const coreP=Promise.all')&&home.includes('const secondaryP=Promise.all'),'admin home must progressively paint concurrent data groups');
+assert.ok(css.includes('touch-action:pan-x pan-y')&&css.includes('scroll-behavior:auto!important'),'native two-axis interaction CSS missing');
+assert.ok(dashboard.includes('./v45-admin-ux.js?v=56.53')&&dashboard.includes('./v46-admin-nav.js?v=56.53'),'dashboard cache bust must deliver the fix');
+console.log('V56.53 admin interaction + performance regression: PASS');

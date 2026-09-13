@@ -52,7 +52,7 @@ for(const block of blocks){
 // Existing routes/loaders remain wired to the production application.
 must(page.includes('الهويات والمناسبات')&&page.includes("activeIdentity:national?'national96':'default'"),'identity console activation missing');
 must(nav.includes("['identity','الهويات','./identities.html']"),'admin identities button missing');
-must(adminDashboard.includes('v46-admin-nav.js?v=56.39'),'admin dashboard identity-aware nav missing');
+must(adminDashboard.includes('v46-admin-nav.js?v=56.53'),'admin dashboard identity-aware nav missing');
 must(index.includes('v56-39-site-identity.js?v=56.39'),'employee identity runtime missing');
 must(customer.includes('v56-39-site-identity.js?v=56.39'),'customer identity runtime missing');
 

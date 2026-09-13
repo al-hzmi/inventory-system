@@ -2,7 +2,7 @@
 'use strict';
 // VERSION='56.35' compatibility marker for V56.35 production smoke.
 // security-center.html?embed=executive&v=56.35 compatibility marker for V56.35 production smoke.
-const VERSION='56.38',path=(location.pathname.split('/').pop()||'').toLowerCase();
+const VERSION='56.53',path=(location.pathname.split('/').pop()||'').toLowerCase();
 const employeeExtra={
  viewStockQty:'المخزون — رؤية الكمية الفعلية',viewPrices:'المخزون — رؤية الأسعار',viewImages:'المنتجات — رؤية الصور',switchWarehouse:'المخزون — التبديل بين المستودعات',
  editCart:'الفاتورة — تعديل الكميات',removeCartItems:'الفاتورة — حذف الأصناف',submitOrder:'الفاتورة — اعتماد وإرسال الطلب',viewOrderHistory:'الطلبات — رؤية السجل السابق',
@@ -84,27 +84,34 @@ function renderExecutiveSecurityCenter(){
  integrateSecurityFrame(section.querySelector('iframe'));
  if(location.hash==='#security-command-center'&&!section.dataset.v56HashFocused){section.dataset.v56HashFocused='true';setTimeout(()=>section.scrollIntoView({block:'start',behavior:'smooth'}),80)}
 }
-let lastActiveModule='',lastActiveNode=null;
+let lastActiveModule='';
 function keepActiveModuleVisible(){
  if(path!=='admin-dashboard.html')return;
  const active=document.querySelector('#root [data-admin-module][data-active="true"]');if(!active)return;
  const key=active.getAttribute('data-admin-module')||active.textContent||'';
  let scroller=active.parentElement;
  while(scroller&&scroller!==document.body&&scroller.scrollWidth<=scroller.clientWidth+2)scroller=scroller.parentElement;
- if(!scroller||scroller===document.body){lastActiveModule=key;lastActiveNode=active;return}
- const a=active.getBoundingClientRect(),s=scroller.getBoundingClientRect();
- const nodeChanged=active!==lastActiveNode,moduleChanged=key!==lastActiveModule,clipped=a.left<s.left+6||a.right>s.right-6;
- lastActiveModule=key;lastActiveNode=active;
- if(!nodeChanged&&!moduleChanged&&!clipped)return;
- requestAnimationFrame(()=>requestAnimationFrame(()=>{
+ lastActiveModule=key;
+ if(!scroller||scroller===document.body)return;
+ const a=active.getBoundingClientRect(),box=scroller.getBoundingClientRect();
+ const clipped=a.left<box.left+6||a.right>box.right-6;
+ if(!clipped)return;
+ requestAnimationFrame(()=>{
   if(!document.contains(active))return;
-  active.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
- }));
+  active.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});
+ });
 }
 function retireLegacySecurityRoute(){if(path!=='admin-dashboard.html')return;const q=new URLSearchParams(location.search);if(q.get('section')==='security')location.replace('./admin-home.html#security-command-center')}
 function executiveIntegration(){removeLegacySecurityLaunchers();unifiedPeopleNavigation();retireLegacySecurityRoute();renderExecutiveSecurityCenter();keepActiveModuleVisible()}
 function run(){loadCanvasFix();extendControlCenter();labels();permissionSummary();loadSalesClarity();executiveIntegration()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(run,0));else setTimeout(run,0);
-const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(()=>{loadCanvasFix();labels();permissionSummary();loadSalesClarity();executiveIntegration()},100)});mo.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-active']});
-window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};window.__V56_35_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_37_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_38_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;
+function watchHomeUntilReady(){
+ if(path!=='admin-home.html')return;const home=document.getElementById('home');if(!home)return;
+ const observer=new MutationObserver(()=>{renderExecutiveSecurityCenter();if(document.getElementById('v56-security-command-center'))observer.disconnect()});
+ observer.observe(home,{childList:true});setTimeout(()=>observer.disconnect(),8000);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{run();watchHomeUntilReady()},{once:true});else{run();watchHomeUntilReady()}
+// A few bounded passes cover async first paints without rescanning every DOM mutation.
+setTimeout(run,240);setTimeout(run,1100);setTimeout(run,2600);
+document.addEventListener('click',e=>{if(path!=='admin-dashboard.html'||!e.target.closest('[data-admin-module]'))return;setTimeout(keepActiveModuleVisible,0)},true);
+window.__V54_ADMIN_ENHANCEMENTS={version:VERSION,employeeExtra,customerExtra,refresh:run};window.__V56_35_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_37_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_38_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;window.__V56_53_EXECUTIVE_INTEGRATION=window.__V54_ADMIN_ENHANCEMENTS;
 })();

@@ -12,5 +12,6 @@ assert.ok(admin.includes("HAROUN_REDIRECT_DOC='employee_onboarding_redirects'")&
 assert.ok(admin.includes('windowMs=2*60*60*1000'),'Haroun automatic binding must be limited to a recent session window');
 assert.ok(customer.includes("localStorage.getItem('batco_customer_visitor_id_v1')")&&customer.includes("doc('employee_onboarding_redirects').get()"),'customer boot must read the targeted central route');
 assert.ok(customer.includes("String(row.targetVisitorId||'')!==routeVisitorId")&&customer.includes("batco_employee_onboarding_target_v1"),'customer route must be visitor-specific and sticky for the installed PWA');
-assert.ok(customer.includes("customer-v37-source.txt?v=56.19"),'customer cache bust must advance');
+const customerCoreVersion=customer.match(/customer-v37-source\.txt\?v=(\d+(?:\.\d+)?)/);
+assert.ok(customerCoreVersion&&Number(customerCoreVersion[1])>=56.19,'customer cache bust must remain at or above V56.19');
 console.log('V56.18 page scroll + targeted Haroun routing: OK');

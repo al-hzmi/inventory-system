@@ -496,9 +496,10 @@ function AdminApp(){
   const [newArrivalCatalog,setNewArrivalCatalog]=useState({meta:{items:[]},images:new Set(),prices:new Set(),categorized:new Set(),error:'',loading:true});
 
   useEffect(()=>{
-    let stopped=false;const unsubs=[];const waiting=new Set(Object.keys(COLLECTIONS));
+    let stopped=false;const unsubs=[];const waiting=new Set(Object.keys(COLLECTIONS));let pendingData={},dataFrame=0;
     const markReady=key=>{waiting.delete(key);if(!waiting.size&&!stopped)setSyncing(false)};
-    const apply=(key,name,snap)=>{if(stopped)return;const rows=snap.docs.map(d=>({id:d.id,...d.data(),__collection:name}));setData(prev=>({...prev,[key]:rows}));markReady(key)};
+    const flushData=()=>{dataFrame=0;if(stopped)return;const patch=pendingData;pendingData={};if(Object.keys(patch).length)setData(prev=>({...prev,...patch}))};
+    const apply=(key,name,snap)=>{if(stopped)return;const rows=snap.docs.map(d=>({id:d.id,...d.data(),__collection:name}));pendingData[key]=rows;if(!dataFrame)dataFrame=requestAnimationFrame(flushData);markReady(key)};
     const attach=(key,name)=>{
       const limit=REALTIME_LIMIT[key]||160;let unsubscribe=null,usingFallback=false;
       const field=REALTIME_ORDER[key];
@@ -512,7 +513,7 @@ function AdminApp(){
     Object.entries(COLLECTIONS).forEach(([key,name])=>unsubs.push(attach(key,name)));
     const settle=setTimeout(()=>{if(!stopped)setSyncing(false)},2200);
     adminAudit('admin_dashboard_open');
-    return()=>{stopped=true;clearTimeout(settle);unsubs.forEach(fn=>fn())}
+    return()=>{stopped=true;clearTimeout(settle);if(dataFrame)cancelAnimationFrame(dataFrame);unsubs.forEach(fn=>fn())}
   },[]);
   useEffect(()=>{let alive=true;loadNewArrivalReadiness().then(x=>{if(alive)setNewArrivalCatalog({...x,loading:false})}).catch(e=>{console.error('[New arrivals readiness]',e);if(alive)setNewArrivalCatalog(x=>({...x,error:'تعذر تحميل بيانات جديدنا.',loading:false}))});return()=>{alive=false}},[]);
   useEffect(()=>db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).onSnapshot(doc=>setControl({...DEFAULT_PORTAL_CONTROL,...(doc.exists?doc.data():{})}),e=>console.warn('[Portal control]',e)),[]);
@@ -899,8 +900,8 @@ setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden')
 <script src="./v44-admin-bridge.js?v=44.0"></script>
 
 
-<script src="./v45-admin-ux.js?v=45.0"></script>
-<script src="./v46-admin-nav.js?v=56.39"></script>
+<script src="./v45-admin-ux.js?v=56.53"></script>
+<script src="./v46-admin-nav.js?v=56.53"></script>
 <script src="./v48-admin-security.js?v=48.0"></script>
 </body>
 </html>
