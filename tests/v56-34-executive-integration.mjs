@@ -32,8 +32,9 @@ assert.match(enhancements,/admin-home\.html#security-command-center/);
 assert.match(enhancements,/id='v56-security-command-center'/);
 assert.match(enhancements,/مركز القيادة والتحكم الأمني/);
 assert.match(enhancements,/security-center\.html\?embed=executive&v=56\.(?:35|3[6-9]|[4-9]\d)/);
-assert.match(enhancements,/active\.scrollIntoView\(\{block:'nearest',inline:'center',behavior:'smooth'\}\)/);
-assert.match(enhancements,/attributeFilter:\['data-active'\]/);
+assert.match(enhancements,/active\.scrollIntoView\(\{block:'nearest',inline:'nearest',behavior:'auto'\}\)/);
+assert.match(enhancements,/observer\.observe\(home,\{childList:true\}\)/);
+assert.ok(!enhancements.includes("inline:'center',behavior:'smooth'"),'executive navigation must not reintroduce smooth centering');
 assert.match(enhancements,/__V56_35_EXECUTIVE_INTEGRATION/);
 assert.match(nav,/v54-admin-enhancements\.js/);
 
