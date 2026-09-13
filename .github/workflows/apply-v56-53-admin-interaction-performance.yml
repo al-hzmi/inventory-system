@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/scripts/v56-53-admin-interaction-performance.py'
+      - '.github/workflows/apply-v56-53-admin-interaction-performance.yml'
   workflow_dispatch:
 
 permissions:
@@ -20,6 +21,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Normalize V56.53 patch anchors
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/scripts/v56-53-admin-interaction-performance.py')
+          s=p.read_text(encoding='utf-8')
+          needle="s=replace_once(s,old_fn,new_fn,'v54 active module stability')"
+          fixed="old_fn=old_fn.replace('\\\\\"','\"');new_fn=new_fn.replace('\\\\\"','\"')\n"+needle
+          if fixed not in s:
+              if needle not in s: raise SystemExit('V56.53 v54 anchor call missing')
+              s=s.replace(needle,fixed,1)
+              p.write_text(s,encoding='utf-8')
+          PY
       - name: Apply V56.53 patch
         run: python3 .github/scripts/v56-53-admin-interaction-performance.py
       - name: Run focused admin regressions
