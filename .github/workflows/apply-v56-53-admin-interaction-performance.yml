@@ -38,6 +38,17 @@ jobs:
               txt=f.read_text(encoding='utf-8')
               if not txt.endswith('\n'):
                   f.write_text(txt+'\n',encoding='utf-8')
+          # V56.18 historically pinned an exact customer core cache version (56.19).
+          # The production shell is now newer, so preserve the real invariant: never regress below 56.19.
+          test=Path('tests/v56-18-scroll-haroun.mjs')
+          t=test.read_text(encoding='utf-8')
+          old='assert.ok(customer.includes("customer-v37-source.txt?v=56.19"),\'customer cache bust must advance\');'
+          new='const customerCoreVersion=customer.match(/customer-v37-source\\.txt\\?v=(\\d+(?:\\.\\d+)?)/);\nassert.ok(customerCoreVersion&&Number(customerCoreVersion[1])>=56.19,\'customer cache bust must remain at or above V56.19\');'
+          if old in t:
+              t=t.replace(old,new,1)
+              test.write_text(t,encoding='utf-8')
+          elif new not in t:
+              raise SystemExit('V56.18 cache-bust regression anchor missing')
           PY
       - name: Apply V56.53 patch
         run: python3 .github/scripts/v56-53-admin-interaction-performance.py
