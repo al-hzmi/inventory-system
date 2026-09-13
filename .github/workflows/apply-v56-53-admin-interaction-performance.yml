@@ -1,5 +1,5 @@
 name: Apply V56.53 admin interaction performance
-# V56.53 rerun trigger: 2026-09-13
+# V56.53 rerun trigger: 2026-09-13-b
 
 on:
   push:
@@ -50,6 +50,17 @@ jobs:
               test.write_text(t,encoding='utf-8')
           elif new not in t:
               raise SystemExit('V56.18 cache-bust regression anchor missing')
+          # V56.20 asserted the old unconditional hook spelling. V56.53 keeps the
+          # same drawer isolation while making activation explicit from the row state.
+          test20=Path('tests/v56-20-admin-body-scroll-lock.mjs')
+          t20=test20.read_text(encoding='utf-8')
+          old20="assert.ok(admin.includes('function DetailDrawer({row,onClose,onCustomerMessage}){\\n  useBodyScrollLock();'),'the drawer must still isolate body scroll while actually open');"
+          new20="assert.ok(admin.includes('function DetailDrawer({row,onClose,onCustomerMessage}){\\n  useBodyScrollLock(Boolean(row));'),'the drawer must still isolate body scroll while actually open');"
+          if old20 in t20:
+              t20=t20.replace(old20,new20,1)
+              test20.write_text(t20,encoding='utf-8')
+          elif new20 not in t20:
+              raise SystemExit('V56.20 body-lock regression anchor missing')
           PY
       - name: Apply V56.53 patch
         run: python3 .github/scripts/v56-53-admin-interaction-performance.py
