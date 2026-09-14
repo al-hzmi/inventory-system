@@ -1,30 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 220" role="presentation" aria-hidden="true">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 260" role="presentation" aria-hidden="true">
   <defs>
-    <linearGradient id="d1" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#E8F2ED"/><stop offset="1" stop-color="#F1F6F3"/></linearGradient>
-    <linearGradient id="d2" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#D8E9E1"/><stop offset="1" stop-color="#E7F0EC"/></linearGradient>
+    <linearGradient id="hillA" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#EAF4F0"/><stop offset="1" stop-color="#DDEDE7"/></linearGradient>
+    <linearGradient id="hillB" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#D9EBE4"/><stop offset="1" stop-color="#CDE3DB"/></linearGradient>
   </defs>
-  <circle cx="1065" cy="82" r="42" fill="#F3E8C7" opacity=".42"/>
-  <path d="M0 146C108 103 202 116 292 146C387 178 482 126 576 127C680 128 742 166 837 157C941 148 1023 101 1128 117C1240 134 1325 177 1428 151C1495 134 1547 119 1600 132V220H0Z" fill="url(#d1)" opacity=".92"/>
-  <path d="M0 172C122 130 229 164 333 178C447 194 540 151 653 152C776 153 868 199 991 177C1121 154 1215 145 1327 168C1422 188 1516 176 1600 156V220H0Z" fill="url(#d2)" opacity=".88"/>
-  <g fill="#A7C8BA" opacity=".58">
-    <path d="M728 155v-62h15v62zm4-69h7l4-17h-15z"/>
-    <path d="M760 155v-49h10v49zm2-55h6l3-14h-12z"/>
-    <path d="M789 155v-75h12v75zm3-81h6l3-18h-12z"/>
-    <path d="M818 155v-92h16v92zm4-99h8l4-22h-16z"/>
-    <path d="M849 155v-57h11v57zm2-63h7l3-16h-12z"/>
-    <path d="M878 155v-68h14v68zm4-75h6l4-19h-13z"/>
-    <rect x="907" y="112" width="12" height="43" rx="1"/>
-    <path d="M938 155v-46h11v46zm2-52h7l3-15h-12z"/>
-    <path d="M967 155v-83h18v83zm4-89h10l5-20h-24z"/>
+  <circle cx="1165" cy="86" r="36" fill="#F2E7C6" opacity=".50"/>
+  <path d="M0 166C104 132 205 135 314 158C433 182 524 132 635 132C751 132 832 176 939 166C1042 157 1119 123 1226 136C1334 149 1441 187 1600 150V260H0Z" fill="url(#hillA)"/>
+  <path d="M0 194C125 153 242 187 353 199C484 214 592 164 706 168C823 171 918 214 1041 191C1160 169 1261 167 1375 189C1465 207 1539 198 1600 184V260H0Z" fill="url(#hillB)" opacity=".95"/>
+
+  <!-- left heritage cluster -->
+  <g fill="#A5C9BC" opacity=".72">
+    <path d="M160 189v-54h58v54h15v-72h26v72h18v-44h44v44h18v12H142v-12z"/>
+    <path d="M178 135l11-15 11 15h-22zm66-18l14-18 14 18h-28z"/>
   </g>
-  <g fill="#9DBEAF" opacity=".52">
-    <path d="M166 164h95v-42l11-8 11 8v42h34v-63h16v63h22v-76h19v76h31v-51h14v51h28v14H166Z"/>
-    <path d="M1238 168h164v-58h18v58h23v-72h20v72h30v-50h16v50h44v16h-315Z"/>
+
+  <!-- Riyadh skyline: Kingdom Centre + Faisaliah + towers -->
+  <g fill="#9FC4B7" opacity=".72">
+    <path d="M716 194V91h40v103h20V71h48v123h20V112h28v82h22v-65h26v65h24v-84h30v84h22v-54h26v54h30v14H700v-14z"/>
+    <path d="M781 71h38l-6-25h-26l-6 25zm9-23h20l-3-18h-14l-3 18z"/>
+    <path d="M883 129l14-29 14 29h-28z"/>
+    <path d="M921 110l13-25 13 25h-26z"/>
   </g>
-  <g stroke="#91B9A8" stroke-width="8" stroke-linecap="round" fill="none" opacity=".52">
-    <path d="M100 176v-49M98 128c-17-13-30-12-42-6M98 128c13-19 29-22 45-18M98 128c-3-19-2-33 7-45"/>
-    <path d="M521 184v-42M519 144c-14-10-26-11-38-5M519 144c12-17 25-19 40-15M519 144c-3-16 0-28 6-39"/>
-    <path d="M1168 181v-46M1166 137c-15-11-28-10-39-5M1166 137c12-17 26-20 41-15M1166 137c-2-17 0-29 7-41"/>
-    <path d="M1518 179v-45M1516 136c-15-11-27-10-39-5M1516 136c12-17 26-19 40-14M1516 136c-2-17 0-29 7-41"/>
+
+  <!-- right heritage / Masmak-like fort -->
+  <g fill="#A2C7BA" opacity=".70">
+    <path d="M1240 195v-58h82v58h22v-78h31v78h24v-52h67v52h30v13h-286v-13z"/>
+    <path d="M1254 137l12-14 12 14h-24zm103-20l13-16 13 16h-26z"/>
+  </g>
+
+  <!-- palms -->
+  <g stroke="#8CB9A9" stroke-width="7" stroke-linecap="round" fill="none" opacity=".72">
+    <path d="M95 207v-54M95 154c-18-16-34-18-49-10M95 154c18-18 37-19 52-10M95 154c-2-18 2-35 13-48"/>
+    <path d="M485 207v-46M485 162c-15-13-28-15-41-8M485 162c15-15 30-16 44-9M485 162c-2-15 2-29 11-40"/>
+    <path d="M1095 207v-49M1095 159c-16-14-31-16-44-9M1095 159c16-16 33-17 47-9M1095 159c-2-16 2-31 11-42"/>
+    <path d="M1510 208v-54M1510 155c-18-16-34-18-49-10M1510 155c18-18 37-19 52-10M1510 155c-2-18 2-35 13-48"/>
   </g>
 </svg>
