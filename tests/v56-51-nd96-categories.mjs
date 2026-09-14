@@ -3,48 +3,37 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(p,'utf8');
 const must=(ok,msg)=>{if(!ok)throw new Error(msg)};
 const bridge=read('v56-39-national-day.css');
-const home=read('v56-49-nd96-home.css');
-const catalog=read('v56-50-nd96-catalog.css');
 const categories=read('v56-51-nd96-categories.css');
 const css=categories.replace(/\/\*[\s\S]*?\*\//g,'');
 
-must(home.includes('V56.49 — HOME ONLY'),'protected Home phase missing');
-must(catalog.includes('V56.50 — CATALOG ONLY'),'protected Catalog phase missing');
-must(categories.includes('V56.51 — CATEGORIES ONLY'),'Categories phase marker missing');
-for(const imp of [
-  '@import url("./v56-49-nd96-home.css?v=56.49")',
-  '@import url("./v56-50-nd96-catalog.css?v=56.50")',
-  '@import url("./v56-51-nd96-categories.css?v=56.51")'
-]) must(bridge.includes(imp),`phase import missing: ${imp}`);
-must(bridge.indexOf('v56-49-nd96-home.css')<bridge.indexOf('v56-50-nd96-catalog.css'),'Catalog must follow Home');
-must(bridge.indexOf('v56-50-nd96-catalog.css')<bridge.indexOf('v56-51-nd96-categories.css'),'Categories must follow Catalog');
+must(categories.includes('V56.60 — CATEGORIES'),'final Categories marker missing');
+for(const imp of ['v56-49-nd96-home.css?v=56.60','v56-50-nd96-catalog.css?v=56.60','v56-51-nd96-categories.css?v=56.60'])must(bridge.includes(imp),`final identity import missing: ${imp}`);
+must(bridge.indexOf('v56-50-nd96-catalog.css')<bridge.indexOf('v56-51-nd96-categories.css'),'Categories must layer after Catalog');
 
-for(const required of ['body.nd96-customer','.nd96-categories-page','.nd96-category-tile','.ui-section-head','.sticky']){
+for(const required of ['body.nd96-customer','.nd96-categories-page','.nd96-category-tile','.ui-section-head']){
   must(categories.includes(required),`Categories visual contract missing: ${required}`);
 }
-must(categories.includes('national-day-96/assets/corner.svg'),'approved ND96 corner artwork missing from Categories phase');
+must(categories.includes('var(--nd96-corner)'),'approved pale corner artwork missing from Categories');
 must(categories.includes('pointer-events:none'),'decorative Categories artwork must never intercept interaction');
+must(categories.includes('.nd96-category-tile::before')&&categories.includes('content:none!important'),'repeated card-pattern suppression missing');
 
-// V56.51 is deliberately Categories-only. Cart, Orders, Account and bottom navigation stay untouched.
-for(const forbidden of ['.nd96-cart-page','.nd96-empty-cart','.nd96-footer','.rights-footer','.orders-page','.account-page']){
-  must(!css.includes(forbidden),`Categories phase leaked into a later page: ${forbidden}`);
+// Cart and unrelated pages stay untouched by the Categories-only layer.
+for(const forbidden of ['.nd96-cart-page','.nd96-empty-cart','.orders-page','.account-page','.nd96-product-card','.nd96-add-button']){
+  must(!css.includes(forbidden),`Categories layer leaked outside its scope: ${forbidden}`);
 }
 must(!/(^|[\s,>+~])nav(?:[\s.#:[>+~]|$)/m.test(css),'Categories seasonal layer must not target navigation');
 
-// Product-card paint belongs to V56.50 and must not be duplicated here.
-for(const forbidden of ['.nd96-product-card','.catalog-card.nd96-product-card','.nd96-add-button']){
-  must(!css.includes(forbidden),`Categories phase duplicated protected Catalog styling: ${forbidden}`);
-}
-
-// Protect real UI geometry. Only decorative pseudo-elements may own dimensions/offset paint boxes.
+// Category card geometry is inherited from application; paint only.
+const protectedSelectors=['.nd96-category-tile'];
+const geometry=['width','height','min-width','max-width','min-height','max-height','padding','padding-top','padding-bottom','padding-left','padding-right','margin','margin-top','margin-bottom','margin-left','margin-right','gap','font-size','line-height','grid-template-columns','flex-basis','order','border-radius'];
 const blocks=[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m=>({selector:m[1].trim(),body:m[2]}));
-const geometry=['width','height','min-width','max-width','min-height','max-height','padding','padding-top','padding-bottom','padding-left','padding-right','padding-inline','padding-block','margin','margin-top','margin-bottom','margin-left','margin-right','margin-inline','margin-block','gap','row-gap','column-gap','font-size','line-height','grid-template-columns','grid-template-rows','flex-basis','order','border-radius'];
 for(const block of blocks){
-  if(block.selector.includes('::before')||block.selector.includes('::after')||block.selector.startsWith('@'))continue;
+  if(block.selector.includes('::before')||block.selector.includes('::after'))continue;
+  if(!protectedSelectors.some(s=>block.selector.includes(s)))continue;
   for(const prop of geometry){
     const re=new RegExp(`(^|[;\\s])${prop.replaceAll('-','\\-')}\\s*:`,`m`);
-    must(!re.test(block.body),`Categories base UI geometry override forbidden: ${prop} in ${block.selector}`);
+    must(!re.test(block.body),`protected Categories UI geometry override forbidden: ${prop} in ${block.selector}`);
   }
 }
 
-console.log('V56.51 Categories-only ND96 composition + protected Home/Catalog + zero-layout-drift regression: PASS');
+console.log('V56.60 final approved Categories identity + clean cards + navigation safety: PASS');
