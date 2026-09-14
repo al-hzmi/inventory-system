@@ -1,20 +1,20 @@
 /* V56.60 — CART — approved empty-state composition */
 html.batco-identity-national96 body.nd96-customer .nd96-cart-page{position:relative;isolation:isolate;color:var(--nd96-ink)!important}
-html.batco-identity-national96 body.nd96-customer .nd96-cart-page::before{content:"";position:absolute;right:-70px;top:-40px;width:140px;height:172px;pointer-events:none;opacity:.075;transform:scaleX(-1);background:var(--nd96-corner) center/contain no-repeat;z-index:0}
+html.batco-identity-national96 body.nd96-customer .nd96-cart-page::before{content:"";position:absolute;right:-38px;top:-24px;width:86px;height:108px;pointer-events:none;opacity:.075;transform:scaleX(-1);background:var(--nd96-corner) center/contain no-repeat;z-index:0}
 html.batco-identity-national96 body.nd96-customer .nd96-cart-page>*{position:relative;z-index:1}
 html.batco-identity-national96 body.nd96-customer .nd96-cart-page>.ui-section-head h2{color:var(--nd96-deep)!important}
 html.batco-identity-national96 body.nd96-customer .nd96-cart-page>.ui-section-head p{color:#666D69!important}
 
 html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar{height:118px!important;background:#FBFDFC!important;overflow:hidden}
-html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar::before{top:8px;width:clamp(190px,29vw,245px)}
+html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar::before{top:8px;width:clamp(190px,29vw,225px)}
 html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:34px;background:var(--nd96-deep)!important;opacity:1;z-index:1}
 html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar>div{position:absolute!important;left:0;right:0;bottom:0;height:34px!important;padding-top:0!important;align-items:center!important;z-index:3!important;color:#fff!important}
 html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar a{color:#fff!important}
-html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar span{color:rgba(255,255,255,.62)!important}
+html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar span{color:rgba(255,255,255,.66)!important}
 html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar .ltr{color:#7EE1B5!important}
 
 html.batco-identity-national96 body.nd96-customer .nd96-empty-cart{
-  position:relative;isolation:isolate;overflow:hidden;background-color:#fff!important;background-image:var(--nd96-corner),var(--nd96-corner),var(--nd96-landscape)!important;background-repeat:no-repeat,no-repeat,no-repeat!important;background-position:left -78px top -95px,right -78px top -95px,center bottom!important;background-size:155px auto,155px auto,100% auto!important;border-color:var(--nd96-line)!important;box-shadow:0 4px 16px rgba(10,81,67,.035)!important;
+  position:relative;isolation:isolate;overflow:hidden;background-color:#fff!important;background-image:var(--nd96-corner),var(--nd96-corner),var(--nd96-landscape)!important;background-repeat:no-repeat,no-repeat,no-repeat!important;background-position:left -48px top -52px,right -48px top -52px,center bottom!important;background-size:98px auto,98px auto,100% auto!important;border-color:var(--nd96-line)!important;box-shadow:0 4px 16px rgba(10,81,67,.035)!important;
 }
 html.batco-identity-national96 body.nd96-customer .nd96-empty-cart>*{position:relative;z-index:1}
 html.batco-identity-national96 body.nd96-customer .nd96-empty-cart b{color:var(--nd96-deep)!important}
@@ -28,5 +28,5 @@ html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-f
 
 @media(max-width:640px){
   html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-bar{height:110px!important}
-  html.batco-identity-national96 body.nd96-customer .nd96-empty-cart{background-size:138px auto,138px auto,100% auto!important}
+  html.batco-identity-national96 body.nd96-customer .nd96-empty-cart{background-size:86px auto,86px auto,100% auto!important;background-position:left -42px top -46px,right -42px top -46px,center bottom!important}
 }
