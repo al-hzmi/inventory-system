@@ -11,6 +11,7 @@ const cart=read('v56-52-nd96-cart.css');
 const index=read('index.html');
 const customer=read('customer.html');
 const identityConsole=read('identities.html');
+const vercel=JSON.parse(read('vercel.json'));
 
 // V56.60 runtime contract: centralized identity control, realtime activation, no decorative DOM injection.
 must(runtime.includes("const CONTROL_DOC='site_identity'"),'central identity control missing');
@@ -20,6 +21,25 @@ must(runtime.includes('onSnapshot'),'identity realtime control missing');
 must(runtime.includes("PREVIEW_KEY='batco_identity_preview_v1'"),'preview contract missing');
 must(!runtime.includes("document.createElement('img')")&&!runtime.includes('document.createElement("img")'),'decorative image DOM injection is forbidden');
 must(runtime.includes("active?'#0A5143'"),'approved browser theme color missing');
+
+// The identity loader is still referenced by legacy ?v=56.39 entrypoints. Vercel must therefore force
+// revalidation/no-store for the runtime and all seasonal paint assets so old rejected bytes cannot persist.
+const headerRules=new Map((Array.isArray(vercel.headers)?vercel.headers:[]).map(rule=>[rule.source,rule]));
+for(const source of [
+  '/v56-39-site-identity.js',
+  '/v56-39-national-day.css',
+  '/v56-49-nd96-home.css',
+  '/v56-50-nd96-catalog.css',
+  '/v56-51-nd96-categories.css',
+  '/v56-52-nd96-cart.css',
+  '/national-day-96-mark.svg',
+  '/national-day-96/assets/:path*'
+]){
+  const rule=headerRules.get(source);
+  must(rule,`Vercel cache policy missing for ${source}`);
+  const cache=(Array.isArray(rule.headers)?rule.headers:[]).find(h=>String(h.key||'').toLowerCase()==='cache-control');
+  must(cache&&/\bno-store\b/i.test(String(cache.value||'')),`no-store cache policy missing for ${source}`);
+}
 
 // Final four-view bridge must point exclusively to the V56.60 approved layers.
 for(const file of ['v56-49-nd96-home.css','v56-50-nd96-catalog.css','v56-51-nd96-categories.css','v56-52-nd96-cart.css'])must(fs.existsSync(file),`identity layer missing: ${file}`);
@@ -83,4 +103,4 @@ must(index.includes('v56-39-site-identity.js'),'employee identity runtime missin
 must(customer.includes('v56-39-site-identity.js'),'customer identity runtime missing');
 must(identityConsole.includes('الهويات والمناسبات')&&identityConsole.includes("activeIdentity:national?'national96':'default'"),'identity console activation missing');
 
-console.log('V56.60 National Day four-view reference contract + cache revision + app-safety regression: PASS');
+console.log('V56.60 National Day four-view reference + no-store cache policy + app-safety regression: PASS');
