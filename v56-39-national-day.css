@@ -1,8 +1,7 @@
-/* V56.61 — FINAL APPROVED NATIONAL DAY 96 IDENTITY.
-   Exact repository artwork is now wired into the four approved reference views:
-   official badge, approved mint geometric corners and approved Saudi skyline.
-   Core application geometry, routing, data, card sizing and persistent navigation remain untouched. */
-@import url("./v56-49-nd96-home.css?v=56.61");
-@import url("./v56-50-nd96-catalog.css?v=56.61");
-@import url("./v56-51-nd96-categories.css?v=56.61");
-@import url("./v56-52-nd96-cart.css?v=56.61");
+/* V56.62 — FINAL APPROVED NATIONAL DAY 96 IDENTITY.
+   Safari-safe implementation using the approved official badge, restrained mint motifs
+   and the local Saudi landscape without changing core application geometry or navigation. */
+@import url("./v56-49-nd96-home.css?v=56.62");
+@import url("./v56-50-nd96-catalog.css?v=56.62");
+@import url("./v56-51-nd96-categories.css?v=56.62");
+@import url("./v56-52-nd96-cart.css?v=56.62");
