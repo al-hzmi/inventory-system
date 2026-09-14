@@ -38,6 +38,12 @@
       ]
     },
     {
+      "source": "/v56-63-nd96-exact-webp.css",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
+    {
       "source": "/national-day-96-mark.svg",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, max-age=0" }

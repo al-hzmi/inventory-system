@@ -1,4 +1,4 @@
-name: V56.62 National Day Safari-Safe Reference
+name: V56.63 National Day Exact WebP Reference
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Validate V56.62 Safari-safe identity contract
+      - name: Validate V56.63 exact-artwork identity contract
         shell: bash
         run: |
           set -euo pipefail
@@ -28,18 +28,18 @@ jobs:
           git diff --check
           grep -Fq "VERSION='56.62'" v56-39-site-identity.js
           grep -Fq "VISUAL_REVISION='56.62'" v56-39-site-identity.js
-          grep -Fq '@import url("./v56-49-nd96-home.css?v=56.62")' v56-39-national-day.css
-          grep -Fq '@import url("./v56-50-nd96-catalog.css?v=56.62")' v56-39-national-day.css
-          grep -Fq '@import url("./v56-51-nd96-categories.css?v=56.62")' v56-39-national-day.css
-          grep -Fq '@import url("./v56-52-nd96-cart.css?v=56.62")' v56-39-national-day.css
-          grep -Fq 'V56.62 — HOME / INVENTORY' v56-49-nd96-home.css
-          grep -Fq 'V56.62 — CUSTOMER / CATALOG' v56-50-nd96-catalog.css
-          grep -Fq 'V56.62 — CATEGORIES' v56-51-nd96-categories.css
-          grep -Fq 'V56.62 — CART' v56-52-nd96-cart.css
-          test -s national-day-96/assets/corner.svg
-          test -s national-day-96/assets/landscape.svg
-          ! grep -Rq 'exact-corner-top.svg\|exact-corner-bottom.svg\|exact-skyline.svg' v56-49-nd96-home.css v56-50-nd96-catalog.css v56-51-nd96-categories.css v56-52-nd96-cart.css
-          echo 'V56.62 quality gate: Safari-safe artwork + four reference views + no-store + application safety PASS.'
+          grep -Fq '@import url("./v56-63-nd96-exact-webp.css?v=56.63")' v56-39-national-day.css
+          grep -Fq 'V56.63 — EXACT APPROVED ND96 ARTWORK' v56-63-nd96-exact-webp.css
+          grep -Fq 'v56-63-mark.webp' v56-63-nd96-exact-webp.css
+          grep -Fq 'v56-63-corner.webp' v56-63-nd96-exact-webp.css
+          grep -Fq 'v56-63-skyline.webp' v56-63-nd96-exact-webp.css
+          test -s national-day-96/assets/v56-63-mark.webp
+          test -s national-day-96/assets/v56-63-corner.webp
+          test -s national-day-96/assets/v56-63-skyline.webp
+          ! grep -Fq 'exact-corner-top.svg' v56-63-nd96-exact-webp.css
+          ! grep -Fq 'exact-corner-bottom.svg' v56-63-nd96-exact-webp.css
+          ! grep -Fq 'exact-skyline.svg' v56-63-nd96-exact-webp.css
+          echo 'V56.63 quality gate: exact supplied standalone artwork + Safari/iOS safety + application safety PASS.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
@@ -50,7 +50,7 @@ jobs:
       PROD: https://inventory-system-coral-nu.vercel.app
     steps:
       - uses: actions/checkout@v4
-      - name: Wait for production to serve V56.62 tree
+      - name: Wait for production to serve V56.63 tree
         shell: bash
         run: |
           set -euo pipefail
@@ -59,32 +59,56 @@ jobs:
           for attempt in $(seq 1 48); do
             body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
             if [[ "$body" == "$expected" ]]; then
-              echo "V56.62 production probe matched on attempt $attempt"
+              echo "V56.63 production probe matched on attempt $attempt"
               ok=1
               break
             fi
             sleep 10
           done
-          test "$ok" = "1" || { echo '::error::Production did not reach V56.62 within verification window.'; exit 1; }
-      - name: Verify exact production V56.62 identity files and cache headers
+          test "$ok" = "1" || { echo '::error::Production did not reach V56.63 within verification window.'; exit 1; }
+      - name: Verify production V56.63 bytes and no-store headers
         shell: bash
         run: |
           set -euo pipefail
           nonce="${GITHUB_SHA}-$(date +%s)"
-          files=(index.html customer.html v56-39-site-identity.js v56-39-national-day.css v56-49-nd96-home.css v56-50-nd96-catalog.css v56-51-nd96-categories.css v56-52-nd96-cart.css national-day-96/assets/corner.svg national-day-96/assets/landscape.svg tests/v56-39-identities.mjs runtime/v56-39-identity-production-probe.txt)
+          files=(
+            index.html
+            customer.html
+            v56-39-site-identity.js
+            v56-39-national-day.css
+            v56-49-nd96-home.css
+            v56-50-nd96-catalog.css
+            v56-51-nd96-categories.css
+            v56-52-nd96-cart.css
+            v56-63-nd96-exact-webp.css
+            national-day-96/assets/v56-63-mark.webp
+            national-day-96/assets/v56-63-corner.webp
+            national-day-96/assets/v56-63-skyline.webp
+            tests/v56-39-identities.mjs
+            runtime/v56-39-identity-production-probe.txt
+          )
           for file in "${files[@]}"; do
             mkdir -p "/tmp/$(dirname "$file")"
             curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
           grep -Fq "VISUAL_REVISION='56.62'" /tmp/v56-39-site-identity.js
-          grep -Fq 'FINAL APPROVED NATIONAL DAY 96 IDENTITY' /tmp/v56-39-national-day.css
-          grep -Fq 'V56.62 — CART' /tmp/v56-52-nd96-cart.css
-          grep -Fq 'landscape.svg' /tmp/v56-50-nd96-catalog.css
-          for path in v56-39-site-identity.js v56-39-national-day.css v56-49-nd96-home.css v56-50-nd96-catalog.css v56-51-nd96-categories.css v56-52-nd96-cart.css national-day-96/assets/corner.svg national-day-96/assets/landscape.svg; do
+          grep -Fq 'V56.63 — FINAL APPROVED NATIONAL DAY 96 IDENTITY' /tmp/v56-39-national-day.css
+          grep -Fq 'V56.63 — EXACT APPROVED ND96 ARTWORK' /tmp/v56-63-nd96-exact-webp.css
+          for path in \
+            v56-39-site-identity.js \
+            v56-39-national-day.css \
+            v56-49-nd96-home.css \
+            v56-50-nd96-catalog.css \
+            v56-51-nd96-categories.css \
+            v56-52-nd96-cart.css \
+            v56-63-nd96-exact-webp.css \
+            national-day-96/assets/v56-63-mark.webp \
+            national-day-96/assets/v56-63-corner.webp \
+            national-day-96/assets/v56-63-skyline.webp; do
             headers="$(curl -fsSI --retry 3 --retry-delay 2 "$PROD/$path?headers=$nonce")"
             cache="$(printf '%s\n' "$headers" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^cache-control:/{sub(/^[^:]+:[[:space:]]*/,""); print; exit}')"
             echo "$path cache-control: $cache"
             printf '%s' "$cache" | grep -Eqi '(^|[ ,])no-store([ ,]|$)' || { echo "::error::Production $path is not served with Cache-Control: no-store."; exit 1; }
           done
-          echo 'Production serves V56.62 Safari-safe artwork bytes with no-store cache protection.'
+          echo 'Production serves exact V56.63 artwork bytes with no-store cache protection.'
