@@ -1,151 +1,111 @@
-/* V56.63 — EXACT APPROVED ND96 ARTWORK — Safari/iOS-safe binary assets.
-   This is a paint-only correction layer. It must never change application geometry,
-   routing, product/category behavior, warehouse logic, or bottom-navigation mechanics. */
+/* V56.63 — EXACT APPROVED ND96 ARTWORK — Safari/iOS-safe standalone WebP assets.
+   Paint only: no app geometry, flow, navigation, product, search, cart or warehouse logic changes. */
 
 html.batco-identity-national96 body.nd96-inventory,
 html.batco-identity-national96 body.nd96-customer{
-  --nd96-mark-local:url("./national-day-96/assets/v56-63-mark.png");
-  --nd96-corner-top-local:url("./national-day-96/assets/v56-63-corner-top.webp");
-  --nd96-corner-bottom-local:url("./national-day-96/assets/v56-63-corner-bottom.webp");
+  --nd96-mark-local:url("./national-day-96/assets/v56-63-mark.webp");
+  --nd96-corner-local:url("./national-day-96/assets/v56-63-corner.webp");
   --nd96-skyline-local:url("./national-day-96/assets/v56-63-skyline.webp");
 }
 
-/* ---------- HOME / INVENTORY ---------- */
+/* HOME — exact badge, restrained supplied motif, supplied pale skyline. */
 html.batco-identity-national96 .nd96-inventory-meta::after{
   background:var(--nd96-mark-local) center/contain no-repeat!important;
-  width:clamp(190px,31vw,248px)!important;
-  bottom:7px!important;
+  width:clamp(190px,31vw,248px)!important;bottom:7px!important;
 }
 html.batco-identity-national96 .nd96-inventory-hero::before,
 html.batco-identity-national96 .nd96-inventory-hero::after{
-  background:var(--nd96-corner-top-local) center/contain no-repeat!important;
-  width:clamp(88px,15vw,116px)!important;
-  opacity:.78!important;
-  top:-18px!important;
+  content:""!important;position:absolute!important;top:-16px!important;width:clamp(82px,14vw,108px)!important;aspect-ratio:300/488!important;
+  background:var(--nd96-corner-local) left top/contain no-repeat!important;opacity:.68!important;pointer-events:none!important;z-index:0!important;
 }
-html.batco-identity-national96 .nd96-inventory-hero::before{left:-28px!important}
-html.batco-identity-national96 .nd96-inventory-hero::after{right:-28px!important;transform:scaleX(-1)!important}
-html.batco-identity-national96 .nd96-warehouse-empty{
-  background-color:rgba(255,255,255,.99)!important;
-  background-image:none!important;
-  overflow:visible!important;
-}
+html.batco-identity-national96 .nd96-inventory-hero::before{left:-20px!important}
+html.batco-identity-national96 .nd96-inventory-hero::after{right:-20px!important;left:auto!important;transform:scaleX(-1)!important}
+html.batco-identity-national96 .nd96-inventory-hero>*{position:relative!important;z-index:1!important}
+
+html.batco-identity-national96 .nd96-warehouse-empty{position:relative!important;isolation:isolate!important;background:#fff!important;background-image:none!important;overflow:visible!important}
 html.batco-identity-national96 .nd96-warehouse-empty::before{
-  background:var(--nd96-skyline-local) center bottom/100% auto no-repeat!important;
-  opacity:.78!important;
-  height:clamp(96px,15vw,126px)!important;
-  bottom:calc(100% - 8px)!important;
+  content:""!important;position:absolute!important;left:-1px!important;right:-1px!important;bottom:calc(100% - 8px)!important;height:clamp(92px,14vw,120px)!important;
+  background:var(--nd96-skyline-local) center bottom/100% auto no-repeat!important;opacity:.76!important;pointer-events:none!important;z-index:0!important;
 }
 html.batco-identity-national96 .nd96-warehouse-empty::after{
-  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;border-radius:inherit;
-  background:var(--nd96-corner-bottom-local) left -38px bottom -42px/112px auto no-repeat,
-             var(--nd96-corner-bottom-local) right -38px bottom -42px/112px auto no-repeat;
-  opacity:.52;
+  content:""!important;position:absolute!important;left:-18px!important;bottom:-28px!important;width:92px!important;height:150px!important;
+  background:var(--nd96-corner-local) left bottom/contain no-repeat!important;transform:rotate(180deg)!important;opacity:.42!important;pointer-events:none!important;z-index:0!important;
 }
-html.batco-identity-national96 .nd96-warehouse-empty>*{position:relative;z-index:1}
+html.batco-identity-national96 .nd96-warehouse-empty>*{position:relative!important;z-index:1!important}
 
-/* ---------- CUSTOMER SHARED MASTHEAD ---------- */
+/* SHARED CUSTOMER MASTHEAD — exact official artwork only once, soft edge motif only. */
 html.batco-identity-national96 body.nd96-customer .rights-bar::before{
-  background:var(--nd96-mark-local) center/contain no-repeat!important;
-  width:clamp(194px,30vw,238px)!important;
-  top:8px!important;
-  z-index:3!important;
+  background:var(--nd96-mark-local) center/contain no-repeat!important;width:clamp(194px,30vw,238px)!important;top:8px!important;z-index:3!important;
 }
 html.batco-identity-national96 body.nd96-customer .rights-bar::after{content:none!important}
-html.batco-identity-national96 body.nd96-customer .rights-bar>div{
-  position:relative!important;z-index:2!important;
-}
+html.batco-identity-national96 body.nd96-customer .rights-bar>div{position:relative!important;z-index:2!important}
 html.batco-identity-national96 body.nd96-customer .rights-bar>div::before,
 html.batco-identity-national96 body.nd96-customer .rights-bar>div::after{
-  content:"";position:absolute;top:-20px;width:94px;height:106px;pointer-events:none;opacity:.68;
-  background:var(--nd96-corner-top-local) center/contain no-repeat;z-index:-1;
+  content:"";position:absolute;top:-22px;width:80px;height:132px;pointer-events:none;opacity:.48;background:var(--nd96-corner-local) left top/contain no-repeat;z-index:-1;
 }
-html.batco-identity-national96 body.nd96-customer .rights-bar>div::before{left:-28px}
-html.batco-identity-national96 body.nd96-customer .rights-bar>div::after{right:-28px;transform:scaleX(-1)}
+html.batco-identity-national96 body.nd96-customer .rights-bar>div::before{left:-18px}
+html.batco-identity-national96 body.nd96-customer .rights-bar>div::after{right:-18px;left:auto;transform:scaleX(-1)}
 html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::before,
 html.batco-identity-national96 body.nd96-customer .nd96-customer-headrow::after{content:none!important}
 
-/* ---------- CATALOG ---------- */
+/* CATALOG — UI remains clean; identity only breathes at the lower edge. */
 html.batco-identity-national96 body.nd96-customer:not(:has(.nd96-categories-page)):not(:has(.nd96-cart-page))::after{
-  content:""!important;position:fixed!important;left:0!important;right:0!important;bottom:74px!important;
-  height:clamp(70px,11vw,102px)!important;pointer-events:none!important;z-index:0!important;opacity:.54!important;
-  background:var(--nd96-skyline-local) center bottom/100% auto no-repeat!important;
+  content:""!important;position:fixed!important;left:0!important;right:0!important;bottom:74px!important;height:clamp(68px,10vw,96px)!important;
+  pointer-events:none!important;z-index:0!important;opacity:.52!important;background:var(--nd96-skyline-local) center bottom/100% auto no-repeat!important;
 }
 html.batco-identity-national96 body.nd96-customer:not(:has(.nd96-categories-page)):not(:has(.nd96-cart-page)) main,
-html.batco-identity-national96 body.nd96-customer:not(:has(.nd96-categories-page)):not(:has(.nd96-cart-page)) header{
-  position:relative;z-index:1;
-}
+html.batco-identity-national96 body.nd96-customer:not(:has(.nd96-categories-page)):not(:has(.nd96-cart-page)) header{position:relative!important;z-index:1!important}
 
-/* ---------- CATEGORIES ---------- */
+/* CATEGORIES — two quiet edge accents + skyline; no motif inside cards. */
 html.batco-identity-national96 body.nd96-customer .nd96-categories-page::before{
-  background-image:var(--nd96-corner-top-local)!important;
-  width:96px!important;height:118px!important;right:-36px!important;top:-24px!important;opacity:.62!important;transform:scaleX(-1)!important;
+  content:""!important;background:var(--nd96-corner-local) left top/contain no-repeat!important;width:82px!important;height:134px!important;right:-20px!important;left:auto!important;top:-22px!important;opacity:.48!important;transform:scaleX(-1)!important;pointer-events:none!important;
 }
 html.batco-identity-national96 body.nd96-customer .nd96-categories-page::after{
-  background-image:var(--nd96-corner-bottom-local)!important;
-  width:104px!important;height:122px!important;left:-40px!important;bottom:62px!important;opacity:.58!important;
+  content:""!important;background:var(--nd96-corner-local) left top/contain no-repeat!important;width:88px!important;height:144px!important;left:-22px!important;right:auto!important;bottom:58px!important;top:auto!important;opacity:.42!important;transform:rotate(180deg)!important;pointer-events:none!important;
 }
+html.batco-identity-national96 body.nd96-customer .nd96-category-tile::before,
+html.batco-identity-national96 body.nd96-customer .nd96-category-tile::after{content:none!important}
 html.batco-identity-national96 body.nd96-customer:has(.nd96-categories-page)::after{
-  content:""!important;position:fixed!important;left:0!important;right:0!important;bottom:74px!important;
-  height:clamp(70px,11vw,104px)!important;pointer-events:none!important;z-index:0!important;opacity:.60!important;
-  background:var(--nd96-skyline-local) center bottom/100% auto no-repeat!important;
+  content:""!important;position:fixed!important;left:0!important;right:0!important;bottom:74px!important;height:clamp(72px,11vw,102px)!important;
+  pointer-events:none!important;z-index:0!important;opacity:.58!important;background:var(--nd96-skyline-local) center bottom/100% auto no-repeat!important;
 }
 html.batco-identity-national96 body.nd96-customer:has(.nd96-categories-page) main,
-html.batco-identity-national96 body.nd96-customer:has(.nd96-categories-page) header{position:relative;z-index:1}
+html.batco-identity-national96 body.nd96-customer:has(.nd96-categories-page) header{position:relative!important;z-index:1!important}
 
-/* ---------- CART ---------- */
+/* CART — supplied skyline belongs inside the empty state, never over text. */
 html.batco-identity-national96 body.nd96-customer .nd96-cart-page::before{
-  background:var(--nd96-corner-top-local) center/contain no-repeat!important;
-  width:92px!important;height:112px!important;right:-34px!important;top:-24px!important;opacity:.58!important;transform:scaleX(-1)!important;
+  content:""!important;background:var(--nd96-corner-local) left top/contain no-repeat!important;width:80px!important;height:132px!important;right:-20px!important;top:-22px!important;opacity:.46!important;transform:scaleX(-1)!important;pointer-events:none!important;
 }
 html.batco-identity-national96 body.nd96-customer .nd96-empty-cart{
-  background-color:#fff!important;
-  background-image:var(--nd96-skyline-local)!important;
-  background-repeat:no-repeat!important;
-  background-position:center bottom!important;
-  background-size:100% auto!important;
+  position:relative!important;isolation:isolate!important;overflow:hidden!important;background-color:#fff!important;
+  background-image:var(--nd96-skyline-local)!important;background-repeat:no-repeat!important;background-position:center bottom!important;background-size:100% auto!important;
 }
 html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::before,
 html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::after{
-  content:""!important;position:absolute;top:-24px;width:98px;height:112px;pointer-events:none;z-index:0;opacity:.58;
-  background:var(--nd96-corner-top-local) center/contain no-repeat!important;
+  content:""!important;position:absolute!important;top:-20px!important;width:78px!important;height:128px!important;pointer-events:none!important;z-index:0!important;opacity:.42!important;
+  background:var(--nd96-corner-local) left top/contain no-repeat!important;
 }
-html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::before{left:-34px}
-html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::after{right:-34px;transform:scaleX(-1)}
-html.batco-identity-national96 body.nd96-customer .nd96-empty-cart>*{position:relative;z-index:1}
-html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer{
-  position:relative;overflow:hidden;background:#FBFDFC!important;
-}
+html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::before{left:-18px!important}
+html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::after{right:-18px!important;left:auto!important;transform:scaleX(-1)!important}
+html.batco-identity-national96 body.nd96-customer .nd96-empty-cart>*{position:relative!important;z-index:1!important}
+
+html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer{position:relative!important;overflow:hidden!important;background:#FBFDFC!important}
 html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer::before,
 html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer::after{
-  content:"";position:absolute;bottom:-36px;width:110px;height:110px;pointer-events:none;opacity:.42;
-  background:var(--nd96-corner-bottom-local) center/contain no-repeat;
+  content:"";position:absolute;bottom:-50px;width:78px;height:128px;pointer-events:none;opacity:.30;background:var(--nd96-corner-local) left top/contain no-repeat;
 }
-html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer::before{left:-34px}
-html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer::after{right:-34px;transform:scaleX(-1)}
-
-/* Never let seasonal art intercept UI or redefine bottom navigation positioning. */
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-meta::after,
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::before,
-html.batco-identity-national96 body.nd96-inventory .nd96-inventory-hero::after,
-html.batco-identity-national96 body.nd96-customer .rights-bar::before,
-html.batco-identity-national96 body.nd96-customer .rights-bar>div::before,
-html.batco-identity-national96 body.nd96-customer .rights-bar>div::after,
-html.batco-identity-national96 body.nd96-customer .nd96-categories-page::before,
-html.batco-identity-national96 body.nd96-customer .nd96-categories-page::after,
-html.batco-identity-national96 body.nd96-customer .nd96-cart-page::before,
-html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::before,
-html.batco-identity-national96 body.nd96-customer .nd96-empty-cart::after{pointer-events:none!important}
+html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer::before{left:-18px;transform:rotate(180deg)}
+html.batco-identity-national96 body.nd96-customer:has(.nd96-cart-page) .rights-footer::after{right:-18px;transform:rotate(180deg) scaleX(-1)}
 
 @media(max-width:640px){
   html.batco-identity-national96 .nd96-inventory-meta::after{width:min(46vw,210px)!important}
   html.batco-identity-national96 .nd96-inventory-hero::before,
-  html.batco-identity-national96 .nd96-inventory-hero::after{width:88px!important;opacity:.70!important;top:-10px!important}
-  html.batco-identity-national96 .nd96-warehouse-empty::before{height:102px!important;opacity:.72!important}
+  html.batco-identity-national96 .nd96-inventory-hero::after{width:76px!important;top:-9px!important;opacity:.60!important}
+  html.batco-identity-national96 .nd96-warehouse-empty::before{height:96px!important;opacity:.70!important}
   html.batco-identity-national96 body.nd96-customer .rights-bar::before{width:min(44vw,205px)!important}
   html.batco-identity-national96 body.nd96-customer .rights-bar>div::before,
-  html.batco-identity-national96 body.nd96-customer .rights-bar>div::after{width:82px;height:94px;opacity:.56}
+  html.batco-identity-national96 body.nd96-customer .rights-bar>div::after{width:70px;height:114px;opacity:.42}
   html.batco-identity-national96 body.nd96-customer:not(:has(.nd96-categories-page)):not(:has(.nd96-cart-page))::after,
-  html.batco-identity-national96 body.nd96-customer:has(.nd96-categories-page)::after{height:78px!important;opacity:.52!important}
-  html.batco-identity-national96 body.nd96-customer .nd96-empty-cart{background-size:auto 96px!important}
+  html.batco-identity-national96 body.nd96-customer:has(.nd96-categories-page)::after{height:76px!important;opacity:.50!important}
+  html.batco-identity-national96 body.nd96-customer .nd96-empty-cart{background-size:auto 94px!important}
 }
