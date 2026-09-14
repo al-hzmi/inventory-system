@@ -1,59 +1,33 @@
-/* V56.61 — HOME / INVENTORY — exact approved National Day artwork */
+/* V56.62 — HOME / INVENTORY — Safari-safe approved National Day composition */
 html.batco-identity-national96 body.nd96-inventory{
   --nd96-deep:#0A5143;--nd96-green:#0F765B;--nd96-ink:#0C4038;--nd96-muted:#807F7B;--nd96-line:#DDE9E4;--nd96-soft:#F8FBF9;--nd96-mint:#EDF6F2;--nd96-warm:#FFF5D9;--nd96-rust:#B85C16;
-  --nd96-mark:url("./national-day-96-mark.svg");--nd96-corner-top:url("./national-day-96/assets/exact-corner-top.svg");--nd96-corner-bottom:url("./national-day-96/assets/exact-corner-bottom.svg");--nd96-landscape:url("./national-day-96/assets/exact-skyline.svg");
+  --nd96-mark:url("https://cdn.gea.gov.sa/ND-2026/brand/brand-emblem-wide.png");--nd96-corner:url("./national-day-96/assets/corner.svg");--nd96-landscape:url("./national-day-96/assets/landscape.svg");
   background:#FBFDFC!important;color:var(--nd96-ink)!important;
 }
 html.batco-identity-national96 body.nd96-inventory .bg-surface{background-color:#FBFDFC!important}
 html.batco-identity-national96 body.nd96-inventory .border-border{border-color:var(--nd96-line)!important}
 html.batco-identity-national96 body.nd96-inventory .text-accent,html.batco-identity-national96 body.nd96-inventory .text-success{color:var(--nd96-green)!important}
-
-html.batco-identity-national96 .nd96-inventory-meta{
-  position:relative;isolation:isolate;min-height:clamp(112px,15vw,132px);padding-bottom:clamp(72px,10vw,86px)!important;overflow:visible;background:#FBFDFC!important;border-color:var(--nd96-line)!important;color:#3F4542!important;box-shadow:none!important;
-}
-html.batco-identity-national96 .nd96-inventory-meta::after{
-  content:"";position:absolute;left:50%;bottom:8px;width:clamp(190px,31vw,250px);aspect-ratio:3/1;transform:translateX(-50%);pointer-events:none;background:var(--nd96-mark) center/contain no-repeat;z-index:2;
-}
+html.batco-identity-national96 .nd96-inventory-meta{position:relative;isolation:isolate;min-height:clamp(108px,14vw,126px);padding-bottom:clamp(68px,9vw,80px)!important;overflow:visible;background:#FBFDFC!important;border-color:var(--nd96-line)!important;color:#3F4542!important;box-shadow:none!important}
+html.batco-identity-national96 .nd96-inventory-meta::after{content:"";position:absolute;left:50%;bottom:8px;width:clamp(188px,30vw,238px);aspect-ratio:3/1;transform:translateX(-50%);pointer-events:none;background:var(--nd96-mark) center/contain no-repeat;z-index:2}
 html.batco-identity-national96 .nd96-inventory-meta .ltr,html.batco-identity-national96 .nd96-inventory-meta b{color:var(--nd96-green)!important}
-
-html.batco-identity-national96 .nd96-inventory-hero{position:relative;isolation:isolate;background:#FBFDFC!important}
-html.batco-identity-national96 .nd96-inventory-hero::before,html.batco-identity-national96 .nd96-inventory-hero::after{
-  content:"";position:absolute;top:-14px;width:clamp(82px,14vw,112px);aspect-ratio:1/1;pointer-events:none;opacity:.96;background:var(--nd96-corner-top) center/contain no-repeat;z-index:0;
-}
-html.batco-identity-national96 .nd96-inventory-hero::before{left:-30px}
-html.batco-identity-national96 .nd96-inventory-hero::after{right:-30px;transform:scaleX(-1)}
+html.batco-identity-national96 .nd96-inventory-hero{position:relative;isolation:isolate;background:#FBFDFC!important;overflow:hidden}
+html.batco-identity-national96 .nd96-inventory-hero::before,html.batco-identity-national96 .nd96-inventory-hero::after{content:"";position:absolute;top:-20px;width:clamp(86px,14vw,112px);aspect-ratio:1/1;pointer-events:none;opacity:.12;background:var(--nd96-corner) center/contain no-repeat;z-index:0}
+html.batco-identity-national96 .nd96-inventory-hero::before{left:-34px}
+html.batco-identity-national96 .nd96-inventory-hero::after{right:-34px;transform:scaleX(-1)}
 html.batco-identity-national96 .nd96-inventory-hero>*{position:relative;z-index:1}
 html.batco-identity-national96 .nd96-inventory-title{color:var(--nd96-ink)!important}
-
-html.batco-identity-national96 .nd96-warehouse-button,html.batco-identity-national96 .nd96-customers-button,html.batco-identity-national96 .nd96-inventory-chip{
-  background:#fff!important;border-color:var(--nd96-line)!important;color:#494A47!important;box-shadow:none!important;
-}
-html.batco-identity-national96 .nd96-warehouse-button.bg-primary,html.batco-identity-national96 .nd96-warehouse-button.active{
-  background:linear-gradient(135deg,#0F765B,#0A6651)!important;border-color:#0F765B!important;color:#fff!important;
-}
+html.batco-identity-national96 .nd96-warehouse-button,html.batco-identity-national96 .nd96-customers-button,html.batco-identity-national96 .nd96-inventory-chip{background:#fff!important;border-color:var(--nd96-line)!important;color:#494A47!important;box-shadow:none!important}
+html.batco-identity-national96 .nd96-warehouse-button.bg-primary,html.batco-identity-national96 .nd96-warehouse-button.active{background:linear-gradient(135deg,#0F765B,#0A6651)!important;border-color:#0F765B!important;color:#fff!important}
 html.batco-identity-national96 body.nd96-inventory input{background:#fff!important;border-color:var(--nd96-line)!important;box-shadow:none!important}
-
 html.batco-identity-national96 .nd96-inventory-catalog-heading{position:relative;isolation:isolate;background:transparent!important}
 html.batco-identity-national96 .nd96-inventory-catalog-heading h2{color:var(--nd96-ink)!important}
 html.batco-identity-national96 .nd96-inventory-catalog-heading::after{content:none!important}
 html.batco-identity-national96 .nd96-inventory-catalog-heading>*{position:relative;z-index:1}
-
-html.batco-identity-national96 .nd96-warehouse-empty{
-  position:relative;isolation:isolate;overflow:visible;background:var(--nd96-corner-bottom) left -34px bottom -26px/108px auto no-repeat,var(--nd96-corner-bottom) right -34px bottom -26px/108px auto no-repeat,rgba(255,255,255,.985)!important;border-color:var(--nd96-line)!important;box-shadow:0 4px 18px rgba(10,81,67,.035)!important;
-}
-html.batco-identity-national96 .nd96-warehouse-empty::before{
-  content:"";position:absolute;left:-1px;right:-1px;bottom:calc(100% - 8px);height:clamp(92px,15vw,128px);pointer-events:none;opacity:.84;background:var(--nd96-landscape) center bottom/100% auto no-repeat;z-index:0;
-}
+html.batco-identity-national96 .nd96-warehouse-empty{position:relative;isolation:isolate;overflow:visible;background:var(--nd96-corner) left -68px top -68px/132px auto no-repeat,var(--nd96-corner) right -68px top -68px/132px auto no-repeat,rgba(255,255,255,.985)!important;border-color:var(--nd96-line)!important;box-shadow:0 4px 18px rgba(10,81,67,.035)!important}
+html.batco-identity-national96 .nd96-warehouse-empty::before{content:"";position:absolute;left:-1px;right:-1px;bottom:calc(100% - 8px);height:clamp(90px,14vw,120px);pointer-events:none;opacity:.30;background:var(--nd96-landscape) center bottom/100% auto no-repeat;z-index:0}
 html.batco-identity-national96 .nd96-warehouse-empty>*{position:relative;z-index:1}
 html.batco-identity-national96 .nd96-warehouse-empty b{color:var(--nd96-ink)!important}
 html.batco-identity-national96 .nd96-warehouse-empty p{color:#686C69!important}
 html.batco-identity-national96 #batco-nd96-frame,html.batco-identity-national96 #batco-nd96-badge,html.batco-identity-national96 #batco-nd96-inventory-masthead{display:none!important}
-
-@media(max-width:640px){
-  html.batco-identity-national96 .nd96-inventory-meta{min-height:112px;padding-bottom:74px!important}
-  html.batco-identity-national96 .nd96-inventory-meta::after{width:min(46vw,210px);bottom:8px}
-  html.batco-identity-national96 .nd96-inventory-hero::before,html.batco-identity-national96 .nd96-inventory-hero::after{width:88px;top:-7px;opacity:.92}
-  html.batco-identity-national96 .nd96-warehouse-empty{background-size:92px auto,92px auto,auto!important;background-position:left -30px bottom -24px,right -30px bottom -24px,center!important}
-  html.batco-identity-national96 .nd96-warehouse-empty::before{height:104px;bottom:calc(100% - 8px);opacity:.78}
-}
+@media(max-width:640px){html.batco-identity-national96 .nd96-inventory-meta{min-height:108px;padding-bottom:70px!important}html.batco-identity-national96 .nd96-inventory-meta::after{width:min(44vw,198px);bottom:8px}html.batco-identity-national96 .nd96-inventory-hero::before,html.batco-identity-national96 .nd96-inventory-hero::after{width:86px;top:-10px;opacity:.10}html.batco-identity-national96 .nd96-warehouse-empty{background-size:108px auto,108px auto,auto!important;background-position:left -58px top -58px,right -58px top -58px,center!important}html.batco-identity-national96 .nd96-warehouse-empty::before{height:96px;bottom:calc(100% - 8px);opacity:.26}}
 @media(prefers-reduced-motion:reduce){html.batco-identity-national96 *,html.batco-identity-national96 *::before,html.batco-identity-national96 *::after{animation:none!important;transition-duration:.01ms!important}}
