@@ -1,8 +1,8 @@
-/* V56.60 — FINAL APPROVED NATIONAL DAY 96 IDENTITY.
-   The seasonal layer follows the four approved references: quiet white/mint surfaces,
-   the approved "عزنا بطبعنا" badge, restrained Najdi corner motifs and one pale Saudi landscape.
-   Core application geometry, routing, data, card sizing and persistent navigation are untouched. */
-@import url("./v56-49-nd96-home.css?v=56.60");
-@import url("./v56-50-nd96-catalog.css?v=56.60");
-@import url("./v56-51-nd96-categories.css?v=56.60");
-@import url("./v56-52-nd96-cart.css?v=56.60");
+/* V56.61 — FINAL APPROVED NATIONAL DAY 96 IDENTITY.
+   Exact repository artwork is now wired into the four approved reference views:
+   official badge, approved mint geometric corners and approved Saudi skyline.
+   Core application geometry, routing, data, card sizing and persistent navigation remain untouched. */
+@import url("./v56-49-nd96-home.css?v=56.61");
+@import url("./v56-50-nd96-catalog.css?v=56.61");
+@import url("./v56-51-nd96-categories.css?v=56.61");
+@import url("./v56-52-nd96-cart.css?v=56.61");
