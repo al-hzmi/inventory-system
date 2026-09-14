@@ -1,4 +1,4 @@
-name: V56.60 National Day Final Four-View Reference
+name: V56.61 National Day Exact Artwork Reference
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Validate V56.60 final four-view identity contract
+      - name: Validate V56.61 exact-artwork identity contract
         shell: bash
         run: |
           set -euo pipefail
@@ -28,15 +28,18 @@ jobs:
           git diff --check
           grep -Fq "VERSION='56.60'" v56-39-site-identity.js
           grep -Fq "VISUAL_REVISION='56.60'" v56-39-site-identity.js
-          grep -Fq '@import url("./v56-49-nd96-home.css?v=56.60")' v56-39-national-day.css
-          grep -Fq '@import url("./v56-50-nd96-catalog.css?v=56.60")' v56-39-national-day.css
-          grep -Fq '@import url("./v56-51-nd96-categories.css?v=56.60")' v56-39-national-day.css
-          grep -Fq '@import url("./v56-52-nd96-cart.css?v=56.60")' v56-39-national-day.css
-          grep -Fq 'V56.60 — HOME / INVENTORY' v56-49-nd96-home.css
-          grep -Fq 'V56.60 — CUSTOMER / CATALOG' v56-50-nd96-catalog.css
-          grep -Fq 'V56.60 — CATEGORIES' v56-51-nd96-categories.css
-          grep -Fq 'V56.60 — CART' v56-52-nd96-cart.css
-          echo 'V56.60 quality gate: four approved reference views + no-store cache policy + application safety PASS.'
+          grep -Fq '@import url("./v56-49-nd96-home.css?v=56.61")' v56-39-national-day.css
+          grep -Fq '@import url("./v56-50-nd96-catalog.css?v=56.61")' v56-39-national-day.css
+          grep -Fq '@import url("./v56-51-nd96-categories.css?v=56.61")' v56-39-national-day.css
+          grep -Fq '@import url("./v56-52-nd96-cart.css?v=56.61")' v56-39-national-day.css
+          grep -Fq 'V56.61 — HOME / INVENTORY' v56-49-nd96-home.css
+          grep -Fq 'V56.61 — CUSTOMER / CATALOG' v56-50-nd96-catalog.css
+          grep -Fq 'V56.61 — CATEGORIES' v56-51-nd96-categories.css
+          grep -Fq 'V56.61 — CART' v56-52-nd96-cart.css
+          test -s national-day-96/assets/exact-corner-top.svg
+          test -s national-day-96/assets/exact-corner-bottom.svg
+          test -s national-day-96/assets/exact-skyline.svg
+          echo 'V56.61 quality gate: exact approved artwork + four reference views + no-store + application safety PASS.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
@@ -47,7 +50,7 @@ jobs:
       PROD: https://inventory-system-coral-nu.vercel.app
     steps:
       - uses: actions/checkout@v4
-      - name: Wait for production to serve V56.60 tree
+      - name: Wait for production to serve V56.61 exact-artwork tree
         shell: bash
         run: |
           set -euo pipefail
@@ -56,14 +59,14 @@ jobs:
           for attempt in $(seq 1 48); do
             body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
             if [[ "$body" == "$expected" ]]; then
-              echo "V56.60 production probe matched on attempt $attempt"
+              echo "V56.61 production probe matched on attempt $attempt"
               ok=1
               break
             fi
             sleep 10
           done
-          test "$ok" = "1" || { echo '::error::Production did not reach V56.60 within verification window.'; exit 1; }
-      - name: Verify exact production V56.60 identity files and cache headers
+          test "$ok" = "1" || { echo '::error::Production did not reach V56.61 within verification window.'; exit 1; }
+      - name: Verify exact production V56.61 identity files and cache headers
         shell: bash
         run: |
           set -euo pipefail
@@ -78,11 +81,9 @@ jobs:
             v56-51-nd96-categories.css
             v56-52-nd96-cart.css
             national-day-96-mark.svg
-            national-day-96/assets/header.svg
-            national-day-96/assets/border.svg
-            national-day-96/assets/corner.svg
-            national-day-96/assets/fort.svg
-            national-day-96/assets/landscape.svg
+            national-day-96/assets/exact-corner-top.svg
+            national-day-96/assets/exact-corner-bottom.svg
+            national-day-96/assets/exact-skyline.svg
             tests/v56-39-identities.mjs
             runtime/v56-39-identity-production-probe.txt
           )
@@ -93,13 +94,14 @@ jobs:
           done
           grep -Fq "VISUAL_REVISION='56.60'" /tmp/v56-39-site-identity.js
           grep -Fq 'FINAL APPROVED NATIONAL DAY 96 IDENTITY' /tmp/v56-39-national-day.css
-          grep -Fq 'V56.60 — CART' /tmp/v56-52-nd96-cart.css
+          grep -Fq 'V56.61 — CART' /tmp/v56-52-nd96-cart.css
+          grep -Fq 'exact-skyline.svg' /tmp/v56-50-nd96-catalog.css
 
-          for path in v56-39-site-identity.js v56-39-national-day.css v56-49-nd96-home.css v56-50-nd96-catalog.css v56-51-nd96-categories.css v56-52-nd96-cart.css national-day-96-mark.svg national-day-96/assets/corner.svg; do
+          for path in v56-39-site-identity.js v56-39-national-day.css v56-49-nd96-home.css v56-50-nd96-catalog.css v56-51-nd96-categories.css v56-52-nd96-cart.css national-day-96-mark.svg national-day-96/assets/exact-corner-top.svg national-day-96/assets/exact-corner-bottom.svg national-day-96/assets/exact-skyline.svg; do
             headers="$(curl -fsSI --retry 3 --retry-delay 2 "$PROD/$path?headers=$nonce")"
             cache="$(printf '%s\n' "$headers" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^cache-control:/{sub(/^[^:]+:[[:space:]]*/,""); print; exit}')"
             echo "$path cache-control: $cache"
             printf '%s' "$cache" | grep -Eqi '(^|[ ,])no-store([ ,]|$)' || { echo "::error::Production $path is not served with Cache-Control: no-store."; exit 1; }
           done
 
-          echo 'Production serves exact V56.60 identity bytes with no-store cache protection.'
+          echo 'Production serves exact V56.61 artwork bytes with no-store cache protection.'
