@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-14T14:16:45.869449Z",
+  "generatedAt": "2026-09-15T14:16:18.045239Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
     "jeddah": {
-      "skuCount": 848,
-      "inStock": 848,
-      "totalQty": 8348.885792
+      "skuCount": 849,
+      "inStock": 849,
+      "totalQty": 8379.885792
     },
     "riyadh": {
       "skuCount": 473,
@@ -16,6 +16,32 @@
     }
   },
   "events": [
+    {
+      "id": "d17c12740a05",
+      "commit": "d17c12740a0537abcd2c96c1707dd2b7fe144178",
+      "timestamp": "2026-09-15T17:16:00+03:00",
+      "message": "Update jeddah.tsv",
+      "paths": [
+        "data/jeddah.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "200007",
+          "name": "شريط لاصق",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 0,
+          "after": 31,
+          "delta": 31,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "efb2fe07ba2b",
       "commit": "efb2fe07ba2be133b5e1c8c9954e45c83d4ec227",
