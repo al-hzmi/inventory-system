@@ -1,8 +1,4 @@
-/* V56.63 — FINAL APPROVED NATIONAL DAY 96 IDENTITY.
-   V56.62 keeps the proven geometry-safe page treatments; V56.63 is the final paint override
-   using the user's exact standalone artwork binaries for Safari/iOS compatibility. */
-@import url("./v56-49-nd96-home.css?v=56.62");
-@import url("./v56-50-nd96-catalog.css?v=56.62");
-@import url("./v56-51-nd96-categories.css?v=56.62");
-@import url("./v56-52-nd96-cart.css?v=56.62");
-@import url("./v56-63-nd96-exact-webp.css?v=56.63");
+/* V56.65 — MINIMAL CLEAN NATIONAL DAY 96 IDENTITY.
+   Deliberately reduced to the official "عزنا بطبعنا" top mark + light Najdi motifs.
+   No scenic illustration, no fort, skyline, palms, mountains, sun, birds, or layout rework. */
+@import url("./v56-65-nd96-minimal.css?v=56.65");
