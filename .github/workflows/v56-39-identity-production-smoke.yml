@@ -1,4 +1,4 @@
-name: V56.65 National Day Minimal Clean
+name: V56.66 National Day Visible Minimal
 
 on:
   pull_request:
@@ -19,19 +19,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Validate V56.65 minimal-clean identity contract
+      - name: Validate V56.66 visible-minimal identity contract
         shell: bash
         run: |
           set -euo pipefail
           node --check v56-39-site-identity.js
           node tests/v56-39-identities.mjs
           git diff --check
-          grep -Fq '@import url("./v56-65-nd96-minimal.css?v=56.65")' v56-39-national-day.css
-          grep -Fq 'V56.65 — National Day 96 minimal clean identity' v56-65-nd96-minimal.css
+          grep -Fq '@import url("./v56-65-nd96-minimal.css?v=56.66")' v56-39-national-day.css
+          grep -Fq 'V56.66 — National Day 96 visible-minimal identity' v56-65-nd96-minimal.css
           grep -Fq 'v56-63-mark.webp' v56-65-nd96-minimal.css
           grep -Fq 'corner.svg' v56-65-nd96-minimal.css
-          grep -Fq 'nd96-inventory-meta::after' v56-65-nd96-minimal.css
-          grep -Fq 'rights-bar::before' v56-65-nd96-minimal.css
+          grep -Fq 'background-image:var(--nd96-logo)' v56-65-nd96-minimal.css
+          grep -Fq 'body.nd96-customer .rights-bar' v56-65-nd96-minimal.css
           test -s national-day-96/assets/v56-63-mark.webp
           test -s national-day-96/assets/corner.svg
           ! grep -Fq '@import url("./v56-63-nd96-exact-webp.css' v56-39-national-day.css
@@ -39,7 +39,7 @@ jobs:
           ! grep -Fq '@import url("./v56-50-nd96-catalog.css' v56-39-national-day.css
           ! grep -Fq '@import url("./v56-51-nd96-categories.css' v56-39-national-day.css
           ! grep -Fq '@import url("./v56-52-nd96-cart.css' v56-39-national-day.css
-          echo 'V56.65 quality gate: top mark + subtle motifs only; old scenic layers detached.'
+          echo 'V56.66 quality gate: visible top mark + sparse motifs; original layout remains owned by base app.'
 
   identity-production-smoke:
     if: github.event_name != 'pull_request'
@@ -50,7 +50,7 @@ jobs:
       PROD: https://inventory-system-coral-nu.vercel.app
     steps:
       - uses: actions/checkout@v4
-      - name: Wait for production to serve V56.65 tree
+      - name: Wait for production to serve V56.66 tree
         shell: bash
         run: |
           set -euo pipefail
@@ -59,14 +59,14 @@ jobs:
           for attempt in $(seq 1 48); do
             body="$(curl -fsSL --connect-timeout 10 --max-time 20 -H 'Cache-Control: no-cache' "$PROD/runtime/v56-39-identity-production-probe.txt?sha=$GITHUB_SHA&attempt=$attempt" 2>/dev/null || true)"
             if [[ "$body" == "$expected" ]]; then
-              echo "V56.65 production probe matched on attempt $attempt"
+              echo "V56.66 production probe matched on attempt $attempt"
               ok=1
               break
             fi
             sleep 10
           done
-          test "$ok" = "1" || { echo '::error::Production did not reach V56.65 within verification window.'; exit 1; }
-      - name: Verify production V56.65 bytes and no-store headers
+          test "$ok" = "1" || { echo '::error::Production did not reach V56.66 within verification window.'; exit 1; }
+      - name: Verify production V56.66 bytes and no-store headers
         shell: bash
         run: |
           set -euo pipefail
@@ -87,8 +87,8 @@ jobs:
             curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/$file?verify=$nonce" -o "/tmp/$file"
             cmp -s "$file" "/tmp/$file" || { echo "::error::Production $file differs from current main."; exit 1; }
           done
-          grep -Fq 'V56.65 — MINIMAL CLEAN NATIONAL DAY 96 IDENTITY' /tmp/v56-39-national-day.css
-          grep -Fq 'V56.65 — National Day 96 minimal clean identity' /tmp/v56-65-nd96-minimal.css
+          grep -Fq 'V56.66 — VISIBLE MINIMAL NATIONAL DAY 96 IDENTITY' /tmp/v56-39-national-day.css
+          grep -Fq 'V56.66 — National Day 96 visible-minimal identity' /tmp/v56-65-nd96-minimal.css
           for path in \
             v56-39-site-identity.js \
             v56-39-national-day.css \
@@ -100,4 +100,4 @@ jobs:
             echo "$path cache-control: $cache"
             printf '%s' "$cache" | grep -Eqi '(^|[ ,])no-store([ ,]|$)' || { echo "::error::Production $path is not served with Cache-Control: no-store."; exit 1; }
           done
-          echo 'Production serves V56.65 minimal-clean identity bytes with no-store cache protection.'
+          echo 'Production serves V56.66 visible-minimal identity bytes with no-store cache protection.'
