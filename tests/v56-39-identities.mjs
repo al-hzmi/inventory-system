@@ -47,9 +47,9 @@ must(!navPosition,'seasonal CSS must not redefine bottom-navigation positioning'
 must(!minimal.includes('position:fixed'),'V56.65 minimal identity must not introduce fixed decorative layers');
 
 // Explicitly suppress the former scenic/composite paint paths.
-must(minimal.includes('body.nd96-customer::after{content:none!important'), 'customer scenic layer suppression missing');
-must(minimal.includes('.nd96-warehouse-empty::before')&&minimal.includes('content:none!important'),'home scenic layer suppression missing');
-must(minimal.includes('.nd96-empty-cart::before')&&minimal.includes('content:none!important'),'cart scenic layer suppression missing');
+must(minimal.includes('body.nd96-customer::before')&&minimal.includes('body.nd96-customer::after')&&minimal.includes('content:none!important'),'customer scenic layer suppression missing');
+must(minimal.includes('.nd96-warehouse-empty::before')&&minimal.includes('.nd96-warehouse-empty::after'),'home scenic layer suppression missing');
+must(minimal.includes('.nd96-empty-cart::before')&&minimal.includes('.nd96-empty-cart::after'),'cart scenic layer suppression missing');
 
 // No-store policies for live identity files/assets.
 const headerRules=new Map((Array.isArray(vercel.headers)?vercel.headers:[]).map(rule=>[rule.source,rule]));
