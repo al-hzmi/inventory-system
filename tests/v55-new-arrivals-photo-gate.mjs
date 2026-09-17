@@ -29,9 +29,9 @@ let failed=false;
 const report=(name,data)=>console.log(name,JSON.stringify(data));
 try{
   for(const [w,h] of [[390,844],[1440,900]]){
-    const ctx=await browser.newContext({viewport:{width:w,height:h}});await installLocalCdn(ctx);await ctx.addInitScript(()=>localStorage.setItem('batco_customer_portal_preview_v2','admin-preview'));const p=await ctx.newPage(),errors=[];
+    const ctx=await browser.newContext({viewport:{width:w,height:h}});await installLocalCdn(ctx);await ctx.addInitScript(()=>{localStorage.setItem('batco_customer_portal_preview_v2','admin-preview');localStorage.setItem('inventory_user_name_v2','QA Employee');localStorage.setItem('inventory_employee_id_v2','qa_employee');localStorage.setItem('inventory_employee_auth_version_v2','2')});const p=await ctx.newPage(),errors=[];
     p.on('pageerror',e=>errors.push(String(e)));
-    await p.goto(`${base}/customer.html?qa=1`,{waitUntil:'domcontentloaded',timeout:60000});
+    await p.goto(`${base}/customer.html?employeeView=1&qa=1`,{waitUntil:'domcontentloaded',timeout:60000});
     await p.waitForFunction(()=>document.body?.innerText?.includes('جديدنا'),null,{timeout:60000});await p.waitForTimeout(800);
     const g=await p.evaluate(()=>{const title=[...document.querySelectorAll('h2')].find(x=>x.textContent.trim()==='جديدنا'),sec=title?.closest('section'),search=document.querySelector('input[placeholder*="ابحث برقم"]'),strip=sec?.querySelector('.overflow-x-auto'),cards=strip?.querySelectorAll('article')||[],sr=sec?.getBoundingClientRect(),qr=search?.getBoundingClientRect();return{title:!!title,count:cards.length,above:sr&&qr?sr.bottom<=qr.top+2:false,horizontal:strip?strip.scrollWidth>strip.clientWidth:false,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth}});
     report(`CUSTOMER_${w}`,{...g,errors});if(!g.title||g.count<1||!g.above||!g.horizontal||g.overflow>3||errors.length)failed=true;await ctx.close();
