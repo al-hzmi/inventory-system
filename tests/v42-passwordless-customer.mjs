@@ -1,26 +1,45 @@
+import fs from 'node:fs';
 import { chromium } from 'playwright';
 
 const base=process.env.V42_BASE_URL||'http://127.0.0.1:4173';
 const NAME='عميل اختبار V42';
 const COMPANY='__V42_QA__ شركة اختبار';
 const VISITOR='cv_v42_qa_'+Date.now().toString(36);
-const SKU='120005';
+const toEnglishDigits=value=>String(value||'').replace(/[٠-٩۰-۹]/g,d=>{const a='٠١٢٣٤٥٦٧٨٩',e='۰۱۲۳۴۵۶۷۸۹';const i=a.indexOf(d);return i>=0?String(i):String(e.indexOf(d))});
+const cleanId=value=>toEnglishDigits(value).replace(/\D/g,'');
+const LIVE_PRODUCT=(()=>{
+  const lines=fs.readFileSync('data/jeddah.tsv','utf8').replace(/^\uFEFF/,'').trimEnd().split(/\r?\n/);
+  const headers=(lines.shift()||'').split('\t').map(x=>x.trim());
+  const idIdx=headers.findIndex(h=>/رقم|كود|sku|item/i.test(h));
+  const nameIdx=headers.findIndex(h=>/اسم|وصف|description|name/i.test(h));
+  const qtyIdx=headers.findIndex(h=>/كمية|رصيد|متوفر|qty|quantity/i.test(h));
+  const current=new Map();
+  for(const line of lines){
+    const cols=line.split('\t').map(x=>x.trim());
+    const id=cleanId(cols[idIdx]);
+    const qty=parseFloat(toEnglishDigits(cols[qtyIdx]).replace(/,/g,''));
+    if(id)current.set(id,{cleanId:id,id:String(cols[idIdx]||id),name:String(cols[nameIdx]||id),qty:Number.isFinite(qty)?qty:0});
+  }
+  return [...current.values()].find(row=>row.qty>1);
+})();
+if(!LIVE_PRODUCT)throw new Error('V42_TEST_FIXTURE_MISSING_LIVE_JEDDAH_PRODUCT');
+const SKU=LIVE_PRODUCT.cleanId;
 const fail=m=>{throw new Error(m)};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 async function seed(browser){
   const context=await browser.newContext();
-  await context.addInitScript(({NAME,VISITOR,SKU})=>{
+  await context.addInitScript(({NAME,VISITOR,LIVE_PRODUCT})=>{
     try{
       if(sessionStorage.getItem('__v42_seeded')==='1')return;
       localStorage.clear();sessionStorage.clear();
       localStorage.setItem('customer_guest_name_v1',NAME);
       localStorage.setItem('batco_customer_visitor_id_v1',VISITOR);
       localStorage.setItem('customer_guest_branches_v1',JSON.stringify([{id:'b1',name:'الفرع الرئيسي'}]));
-      localStorage.setItem('customer_guest_cart_v1',JSON.stringify({[SKU]:{cleanId:SKU,id:SKU,name:'منتج اختبار',imageFile:'',cartonPrice:0,pack:'',branchQuantities:{b1:.5}}}));
+      localStorage.setItem('customer_guest_cart_v1',JSON.stringify({[LIVE_PRODUCT.cleanId]:{cleanId:LIVE_PRODUCT.cleanId,id:LIVE_PRODUCT.id,name:LIVE_PRODUCT.name,imageFile:'',cartonPrice:0,pack:'',branchQuantities:{b1:.5}}}));
       sessionStorage.setItem('__v42_seeded','1');
     }catch{}
-  },{NAME,VISITOR,SKU});
+  },{NAME,VISITOR,LIVE_PRODUCT});
   return context;
 }
 
@@ -81,9 +100,11 @@ try{
   if(state.orders.length!==1)fail('order was not saved exactly once');
   const order=state.orders[0];knownOrderId=order.id;
   if(order.customer?.company!==COMPANY||order.customer?.name!==NAME||order.customer?.phone!==''||order.checkoutVersion!==7||String(order.notes||'')!=='')fail('order payload does not match simplified checkout');
+  const orderedIds=(order.items||[]).map(x=>cleanId(x.cleanId||x.id));
+  if(!orderedIds.includes(SKU))fail('order did not preserve the live test SKU');
   if(state.cart&&state.cart!=='{}')fail('cart was not cleared after successful order');
   if(pageErrors.length)fail('runtime page errors: '+pageErrors.join(' | '));
-  console.log('V42_COMPANY_ONLY_CHECKOUT_PASS',state.uid);
+  console.log('V42_COMPANY_ONLY_CHECKOUT_PASS',state.uid,SKU,LIVE_PRODUCT.name);
 
   cleanupResult=await cleanup(page,knownOrderId);
   if(!cleanupResult.ok)fail('QA cleanup failed: '+cleanupResult.errors.join(' | '));
