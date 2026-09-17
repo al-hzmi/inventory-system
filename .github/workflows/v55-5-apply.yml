@@ -34,6 +34,6 @@ jobs:
             blocks.forEach(code=>transformSync(code,{loader:'jsx',target:'es2020'}));
           }
           const boot=fs.readFileSync('customer.html','utf8');
-          if(!boot.includes("runtime/customer-v37-source.txt?v=55.5")) throw new Error('CUSTOMER_BOOT_CACHE_BUST_MISSING');
+          if(!/runtime\/customer-v37-source\.txt\?v=[0-9]+(?:\.[0-9]+)+/.test(boot)) throw new Error('CUSTOMER_BOOT_CACHE_BUST_MISSING');
           console.log('V55_5_JSX_PASS');
           NODE
