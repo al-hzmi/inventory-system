@@ -21,6 +21,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
           required=['v45-admin-ux.js','v46-admin-nav.js','index.html','customer.html','admin-dashboard.html','command-center.html','admin-home.html']
           miss=[x for x in required if not Path(x).exists()]
           if miss: raise SystemExit('MISSING '+','.join(miss))
@@ -28,12 +29,12 @@ jobs:
           checks={
             'legacy launchers retired': 'legacyLaunchers:false' in js and 'removeLegacyLaunchers' in js,
             'legacy messages listener retired': 'employee_notifications' not in js,
-            'desktop horizontal support': 'enableDesktopHorizontal' in js and "addEventListener('wheel'" in js,
+            'native scrolling retained': 'nativeScroll:true' in js and "addEventListener('wheel'" not in js and 'touch-action:pan-x pan-y' in js,
             'unified shell': 'v51-admin-shell' in nav and 'v52-sidebar' in nav,
             'legacy command redirect': "path==='command-center.html'" in nav and 'admin-home.html' in nav,
-            'admin V45 injection retained':'v45-admin-ux.js?v=45.0' in adm,
-            'employee wrapper untouched':'v45-admin-ux.js?v=45.0' not in idx,
-            'customer wrapper untouched':'v45-admin-ux.js?v=45.0' not in cust,
+            'admin V45 injection retained': bool(re.search(r'v45-admin-ux\.js\?v=[0-9]+(?:\.[0-9]+)+',adm)),
+            'employee wrapper untouched':'v45-admin-ux.js?v=' not in idx,
+            'customer wrapper untouched':'v45-admin-ux.js?v=' not in cust,
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V45_STATIC_FAIL '+', '.join(bad))
