@@ -25,11 +25,12 @@ jobs:
           node --check v48-auth-security.js
           node --check v48-admin-security.js
           node --check v46-admin-nav.js
+          node --check v54-admin-enhancements.js
           python -m py_compile tools/patch_v48_auth_security.py
           python3 - <<'PY'
           from pathlib import Path
           import re
-          auth=Path('v48-auth-security.js').read_text(); adm=Path('v48-admin-security.js').read_text(); nav=Path('v46-admin-nav.js').read_text(); core=Path('runtime/index-v37-source.txt').read_text()
+          auth=Path('v48-auth-security.js').read_text(); adm=Path('v48-admin-security.js').read_text(); nav=Path('v46-admin-nav.js').read_text(); enhancements=Path('v54-admin-enhancements.js').read_text(); core=Path('runtime/index-v37-source.txt').read_text()
           files={p:Path(p).read_text() for p in ['index.html','customer.html','admin-dashboard.html','control-center.html','command-center.html']}
           checks={
             'employee runtime injected': all(re.search(r'v48-auth-security\.js\?v=\d+(?:\.\d+)*',files[p]) for p in ['index.html','customer.html']),
@@ -46,7 +47,7 @@ jobs:
             'admin self protected': "norm(x.canonicalName||x.name||'')!=='مهند'" in adm,
             'standalone launcher retired': 'launcher:false' in adm and 'removeLegacyLauncher' in adm,
             'security api exposed': 'open:openModal' in adm,
-            'unified security entry': 'v51-security' in nav and 'openSecurity' in nav,
+            'integrated security center': all(x in enhancements for x in ['removeLegacySecurityLaunchers','v56-security-command-center','security-center.html?embed=executive','admin-home.html#security-command-center']) and "q.get('section')==='security'" in nav,
           }
           bad=[k for k,v in checks.items() if not v]
           if bad: raise SystemExit('V48_STATIC_FAIL '+', '.join(bad))
@@ -78,9 +79,9 @@ jobs:
 
             const a=await b.newContext({viewport:{width:1440,height:900}});await a.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z')});const ap=await a.newPage();const adminErrors=[];ap.on('pageerror',e=>adminErrors.push(String(e)));
             await ap.goto('http://127.0.0.1:4173/control-center.html?qa=1',{waitUntil:'domcontentloaded',timeout:30000});await ap.waitForTimeout(4500);
-            const shell=await ap.locator('#v51-admin-shell').count(),legacy=await ap.locator('#v48-security-btn').count();const aw=await ap.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,hasApi:Boolean(window.__V48_ADMIN_SECURITY)}));
-            await ap.locator('#v51-security').click();await ap.waitForTimeout(250);const modal=await ap.locator('#v48-security-bg.on').count();
-            console.log('admin unified security',shell,legacy,modal,aw,adminErrors.slice(0,3));if(shell!==1||legacy!==0||modal!==1||!aw.hasApi||aw.sw>aw.cw+3||adminErrors.length)failed=true;await a.close();
+            const shell=await ap.locator('#v51-admin-shell').count(),legacy=await ap.locator('#v48-security-btn,#v51-security,#v52-mobile-security,#v52-sheet-security').count();const aw=await ap.evaluate(()=>({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,hasApi:Boolean(window.__V48_ADMIN_SECURITY)}));
+            console.log('admin security runtime',shell,legacy,aw,adminErrors.slice(0,3));if(shell!==1||legacy!==0||!aw.hasApi||aw.sw>aw.cw+3||adminErrors.length)failed=true;
+            await ap.goto('http://127.0.0.1:4173/admin-dashboard.html?section=security&qa=1',{waitUntil:'domcontentloaded',timeout:30000});await ap.waitForTimeout(1200);const redirected=ap.url().includes('admin-home.html#security-command-center');console.log('security route redirect',ap.url());if(!redirected)failed=true;await a.close();
           }catch(e){console.error(e);failed=true}
           await b.close();if(failed)process.exit(1);
           JS

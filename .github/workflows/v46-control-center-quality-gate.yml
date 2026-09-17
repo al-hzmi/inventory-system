@@ -95,8 +95,11 @@ jobs:
               await c.close();
             }
             let {c,p,errors}=await pageAt(1440,900,'admin-dashboard.html?section=customers&module=live&qa=1');
-            const shell=await p.locator('#v51-admin-shell').count();const customers=await p.locator('#v51-admin-shell [data-v51-key="customers"].on').count();
-            console.log('admin shell',shell,customers,errors.slice(0,3));if(shell!==1||customers!==1||errors.length)fail=true;await c.close();
+            const shell=await p.locator('#v51-admin-shell').count();
+            const people=await p.locator('#v51-admin-shell [data-v51-key="employees"].on').count();
+            const customerArea=await p.locator('#root [data-admin-area="customers"][data-active="true"]').count();
+            console.log('admin shell',shell,people,customerArea,errors.slice(0,3));
+            if(shell!==1||people!==1||customerArea!==1||errors.length)fail=true;await c.close();
           }catch(e){console.error(e);fail=true}
           await b.close();if(fail)process.exit(1);
           JS

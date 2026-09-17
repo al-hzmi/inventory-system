@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { chromium } from 'playwright';
 import { transformSync } from 'esbuild';
 
@@ -6,7 +7,31 @@ const EMP = { inventory_user_name_v2:'اختبار موظف', inventory_employee
 const TK = 'batco_employee_customer_cart_transfer_v1';
 const TB = 'batco_employee_customer_cart_transfer_backup_v1';
 const CART = 'b2b_cart_اختبار موظف';
-const SKU = '120005';
+const toEnglishDigits = value => String(value || '').replace(/[٠-٩۰-۹]/g, d => {
+  const arabic='٠١٢٣٤٥٦٧٨٩', eastern='۰۱۲۳۴۵۶۷۸۹';
+  const i=arabic.indexOf(d);
+  return i >= 0 ? String(i) : String(eastern.indexOf(d));
+});
+const cleanId = value => toEnglishDigits(value).replace(/\D/g,'');
+const liveJeddahProducts = (() => {
+  const lines=fs.readFileSync('data/jeddah.tsv','utf8').replace(/^\uFEFF/,'').trimEnd().split(/\r?\n/);
+  const headers=(lines.shift() || '').split('\t').map(x=>x.trim());
+  const idIdx=headers.findIndex(h=>/رقم|كود|sku|item/i.test(h));
+  const nameIdx=headers.findIndex(h=>/اسم|وصف|description|name/i.test(h));
+  const qtyIdx=headers.findIndex(h=>/كمية|رصيد|متوفر|qty|quantity/i.test(h));
+  const current=new Map();
+  for(const line of lines){
+    const cols=line.split('\t').map(x=>x.trim());
+    const id=cleanId(cols[idIdx]);
+    const qty=parseFloat(toEnglishDigits(cols[qtyIdx]).replace(/,/g,''));
+    if(id)current.set(id,{cleanId:id,id:String(cols[idIdx]||id),name:String(cols[nameIdx]||id),qty:Number.isFinite(qty)?qty:0});
+  }
+  return [...current.values()].filter(row=>row.qty>2);
+})();
+const LIVE_PRODUCT = liveJeddahProducts[0];
+if(!LIVE_PRODUCT) throw new Error('V40_TEST_FIXTURE_MISSING_LIVE_JEDDAH_PRODUCT');
+const SKU = LIVE_PRODUCT.cleanId;
+const SKU_NAME = LIVE_PRODUCT.name;
 const fail = message => { throw new Error(message); };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -72,7 +97,7 @@ try {
       ...EMP,
       customer_guest_branches_v1:[{ id:'b1', name:'الفرع الرئيسي' }],
       customer_guest_cart_v1:{
-        [SKU]:{ cleanId:SKU, id:SKU, name:'حصالات كبير L', imageFile:'', cartonPrice:0, pack:'36', branchQuantities:{ b1:1 } }
+        [SKU]:{ cleanId:SKU, id:LIVE_PRODUCT.id, name:SKU_NAME, imageFile:'', cartonPrice:0, pack:'36', branchQuantities:{ b1:1 } }
       }
     };
     const context = await seedContext(browser, seed);
@@ -109,14 +134,14 @@ try {
     await sleep(1800);
     const qty = await page.evaluate(({ cartKey, sku }) => Number((JSON.parse(localStorage.getItem(cartKey) || '{}')[sku] || {}).cartQty || 0), { cartKey:CART, sku:SKU });
     if (qty !== 1) fail('idempotency failed: reload duplicated quantity');
-    console.log('E2E_HANDOFF_PASS', state.item.warehouseKey);
+    console.log('E2E_HANDOFF_PASS', state.item.warehouseKey, SKU);
     await context.close();
   }
 
   // Existing employee cart must merge only after confirmation and refresh stock metadata from the current warehouse file.
   {
-    const payload = { version:3, transferId:'merge_case', employeeName:'اختبار موظف', employeeId:'audit_employee', items:[{ cleanId:SKU, id:SKU, name:'حصالات كبير L', totalQty:.5, branchQuantities:{ b1:.5 } }], branches:[{ id:'b1', name:'الرئيسي' }] };
-    const existing = { [SKU]:{ cleanId:SKU, id:SKU, name:'حصالات كبير L', warehouseKey:'jeddah', qty:0, cartQty:1 } };
+    const payload = { version:3, transferId:'merge_case', employeeName:'اختبار موظف', employeeId:'audit_employee', items:[{ cleanId:SKU, id:LIVE_PRODUCT.id, name:SKU_NAME, totalQty:.5, branchQuantities:{ b1:.5 } }], branches:[{ id:'b1', name:'الرئيسي' }] };
+    const existing = { [SKU]:{ cleanId:SKU, id:LIVE_PRODUCT.id, name:SKU_NAME, warehouseKey:'jeddah', qty:0, cartQty:1 } };
     const context = await seedContext(browser, { ...EMP, [TK]:payload, [TB]:payload, [CART]:existing });
     const page = await context.newPage();
     let dialogs = 0;
@@ -125,15 +150,15 @@ try {
     await page.waitForFunction(({ key, sku }) => Number((JSON.parse(localStorage.getItem(key) || '{}')?.[sku] || {}).cartQty) === 1.5, { key:CART, sku:SKU }, { timeout:15000 });
     if (dialogs < 1) fail('existing-cart merge confirmation did not appear');
     const merged = await page.evaluate(({ cartKey, sku }) => JSON.parse(localStorage.getItem(cartKey) || '{}')[sku] || null, { cartKey:CART, sku:SKU });
-    if (!merged || Number(merged.qty) <= 0) fail('merged cart retained stale stock metadata instead of current warehouse data');
-    console.log('MERGE_CONFIRM_AND_REFRESH_PASS', merged.qty);
+    if (!merged || Number(merged.qty) !== Number(LIVE_PRODUCT.qty)) fail(`merged cart did not refresh stock metadata from current Jeddah data: expected ${LIVE_PRODUCT.qty}, got ${merged?.qty}`);
+    console.log('MERGE_CONFIRM_AND_REFRESH_PASS', merged.qty, SKU);
     await context.close();
   }
 
   // Cancelled merge preserves both existing employee cart and pending transfer.
   {
-    const payload = { version:3, transferId:'cancel_case', employeeName:'اختبار موظف', employeeId:'audit_employee', items:[{ cleanId:SKU, id:SKU, totalQty:2, branchQuantities:{ b1:2 } }], branches:[{ id:'b1', name:'الرئيسي' }] };
-    const existing = { [SKU]:{ cleanId:SKU, id:SKU, warehouseKey:'jeddah', qty:7.5, cartQty:1 } };
+    const payload = { version:3, transferId:'cancel_case', employeeName:'اختبار موظف', employeeId:'audit_employee', items:[{ cleanId:SKU, id:LIVE_PRODUCT.id, totalQty:2, branchQuantities:{ b1:2 } }], branches:[{ id:'b1', name:'الرئيسي' }] };
+    const existing = { [SKU]:{ cleanId:SKU, id:LIVE_PRODUCT.id, warehouseKey:'jeddah', qty:7.5, cartQty:1 } };
     const context = await seedContext(browser, { ...EMP, [TK]:payload, [TB]:payload, [CART]:existing });
     const page = await context.newPage();
     page.on('dialog', dialog => dialog.dismiss());
@@ -147,7 +172,7 @@ try {
 
   // Payload belonging to a different employee must never leak into this cart.
   {
-    const payload = { version:3, transferId:'wrong_employee', employeeName:'موظف آخر', employeeId:'other_id', items:[{ cleanId:SKU, id:SKU, totalQty:1, branchQuantities:{ b1:1 } }], branches:[] };
+    const payload = { version:3, transferId:'wrong_employee', employeeName:'موظف آخر', employeeId:'other_id', items:[{ cleanId:SKU, id:LIVE_PRODUCT.id, totalQty:1, branchQuantities:{ b1:1 } }], branches:[] };
     const context = await seedContext(browser, { ...EMP, [TK]:payload, [TB]:payload });
     const page = await context.newPage();
     await page.goto(base + '/index.html?employee=1&customerCartTransfer=1', { waitUntil:'domcontentloaded', timeout:45000 });
@@ -173,7 +198,7 @@ try {
 
   // Create a real stock conflict. The generated-runtime test above independently verifies the hard submit guard is injected and compiles.
   {
-    const payload = { version:3, transferId:'overstock_case', employeeName:'اختبار موظف', employeeId:'audit_employee', items:[{ cleanId:SKU, id:SKU, totalQty:999999, branchQuantities:{ b1:999999 } }], branches:[{ id:'b1', name:'الرئيسي' }] };
+    const payload = { version:3, transferId:'overstock_case', employeeName:'اختبار موظف', employeeId:'audit_employee', items:[{ cleanId:SKU, id:LIVE_PRODUCT.id, totalQty:999999, branchQuantities:{ b1:999999 } }], branches:[{ id:'b1', name:'الرئيسي' }] };
     const context = await seedContext(browser, { ...EMP, [TK]:payload, [TB]:payload });
     const page = await context.newPage();
     page.on('dialog', dialog => dialog.accept());
@@ -185,7 +210,7 @@ try {
     await context.close();
   }
 
-  console.log('V40_ALL_TRANSFER_TESTS_PASS');
+  console.log('V40_ALL_TRANSFER_TESTS_PASS', SKU, SKU_NAME);
 } finally {
   await browser.close();
 }

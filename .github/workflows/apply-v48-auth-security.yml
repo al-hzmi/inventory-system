@@ -7,8 +7,6 @@ on:
       - v48-auth-security.js
       - v48-admin-security.js
       - .github/workflows/apply-v48-auth-security.yml
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
