@@ -7,6 +7,8 @@ on:
     paths:
       - '.github/scripts/v56-67-new-arrivals-customer-controls.py'
       - '.github/workflows/apply-v56-67-new-arrivals-customer-controls.yml'
+      - 'tests/v56-67-new-arrivals-customer-controls.mjs'
+      - 'tests/v55-5-customer-new-arrivals-override.mjs'
   workflow_dispatch:
 
 permissions:
