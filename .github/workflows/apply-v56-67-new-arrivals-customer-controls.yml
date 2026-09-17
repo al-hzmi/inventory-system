@@ -1,0 +1,59 @@
+name: Apply V56.67 New Arrivals Customer Controls
+
+on:
+  push:
+    branches:
+      - fix/v56-67-new-arrivals-customer-controls
+    paths:
+      - '.github/scripts/v56-67-new-arrivals-customer-controls.py'
+      - '.github/workflows/apply-v56-67-new-arrivals-customer-controls.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-v56-67-new-arrivals-customer-controls
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/v56-67-new-arrivals-customer-controls
+          fetch-depth: 0
+
+      - name: Apply admin discoverability fix
+        run: python3 .github/scripts/v56-67-new-arrivals-customer-controls.py
+
+      - name: Regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/v56-67-new-arrivals-customer-controls.mjs
+          if [[ -f tests/v55-5-customer-new-arrivals-override.mjs ]]; then node tests/v55-5-customer-new-arrivals-override.mjs; fi
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('admin-dashboard.html').read_text(errors='replace')
+          for bad in ('<<<<<<<','>>>>>>>','... (truncated)'):
+              assert bad not in s, bad
+          assert 'data-new-arrivals-customer-control="1"' in s
+          print('V56.67 structural checks: PASS')
+          PY
+
+      - name: Commit applied fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'V56.67 already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin-dashboard.html
+          git commit -m 'V56.67 — expose New Arrivals customer controls'
+          git push origin HEAD:fix/v56-67-new-arrivals-customer-controls
