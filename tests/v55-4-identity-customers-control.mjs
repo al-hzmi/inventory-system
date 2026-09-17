@@ -58,7 +58,7 @@ assert(/runtime\/customer-v37-source\.txt\?v=[0-9]+(?:\.[0-9]+)+/.test(customerB
 assert(adminNav.includes("q.get('section')") && adminNav.includes("raw==='customers'?'customers'") && adminNav.includes('activateRequested'), 'admin route bridge must initialize the customer area from the URL');
 assert(admin.includes('data-admin-area="customers"'), 'customer area must have a deterministic route target');
 assert(admin.includes('data-admin-module={id}'), 'customer modules must have deterministic route targets');
-assert(admin.includes('label="عرض قسم «جديدنا»"'), 'admin must expose the new arrivals switch');
+assert(admin.includes('data-new-arrivals-customer-control="1"') && admin.includes('label="إعداد العرض العام لـ«جديدنا»"'), 'admin must expose the current global new arrivals customer switch');
 assert(admin.includes("window.open('./customer.html?employeeView=1','_blank')"), 'admin preview must explicitly open customer view');
 assert(admin.includes("./control-center.html?tab=permissions&scope=customers"), 'customer permissions must be directly reachable');
 assert(admin.includes('كل نشاط العملاء'), 'customer live view must link to full activity');
