@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-19T14:53:59.304240Z",
+  "generatedAt": "2026-09-19T15:15:27.574352Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
@@ -10,12 +10,206 @@
       "totalQty": 9226.077502
     },
     "riyadh": {
-      "skuCount": 473,
-      "inStock": 473,
-      "totalQty": 1845.2550622
+      "skuCount": 471,
+      "inStock": 471,
+      "totalQty": 1783.2550622
     }
   },
   "events": [
+    {
+      "id": "0730189b451a",
+      "commit": "0730189b451a01ef8d78b1292fc2b3aba08f5368",
+      "timestamp": "2026-09-19T18:15:12+03:00",
+      "message": "Modify quantities and add new decorative items",
+      "paths": [
+        "data/riyadh.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "28515",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 11,
+          "after": 6,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28519",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 16,
+          "after": 11,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28520",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 4,
+          "after": 0,
+          "delta": -4,
+          "zeroed": true,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28521",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 24,
+          "after": 19,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28522",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 16,
+          "after": 11,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28523",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 24,
+          "after": 19,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28524",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 16,
+          "after": 11,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28525",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 21,
+          "after": 16,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28526",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 16,
+          "after": 11,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28527",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 3,
+          "after": 0,
+          "delta": -3,
+          "zeroed": true,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28528",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 10,
+          "after": 5,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28529",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 53,
+          "after": 48,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28530",
+          "name": "احجار زينة",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 20,
+          "after": 15,
+          "delta": -5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "c308054709dd",
       "commit": "c308054709dd712cbeae1dbdcaa8290276dbf1b5",
