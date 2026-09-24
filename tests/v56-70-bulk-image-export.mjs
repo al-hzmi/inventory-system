@@ -66,6 +66,22 @@ if(values.duplicates!=='1')throw new Error('Duplicate suppression failed: '+JSON
 if(values.zipDisabled)throw new Error('ZIP action should be enabled when images exist');
 if(!values.albumLink)throw new Error('Image album return link missing');
 
+await page.fill('#skuInput','AR_289\u200EAR_287\nBA_296\u200FBA_7303\nBA_');
+const unicodeCounter=await page.locator('#inputCounter').innerText();
+if(!unicodeCounter.startsWith('4 / 500'))throw new Error('Hidden Unicode separators merged SKU input: '+unicodeCounter);
+await page.click('#extractBtn');
+await page.waitForFunction(()=>document.querySelector('#requestedCount')?.textContent?.trim()==='4');
+const unicodeValues=await page.evaluate(()=>({
+  requested:document.querySelector('#requestedCount')?.textContent?.trim(),
+  found:document.querySelector('#foundCount')?.textContent?.trim(),
+  missing:document.querySelector('#missingCount')?.textContent?.trim(),
+  missingText:document.querySelector('#missingList')?.textContent||'',
+  hint:document.querySelector('#missingHint')?.textContent||''
+}));
+if(unicodeValues.requested!=='4'||unicodeValues.found!=='4'||unicodeValues.missing!=='0')throw new Error('Unicode/merged SKU recovery failed: '+JSON.stringify(unicodeValues));
+if(/AR_289AR_287|BA_296BA_7303|BA_\b/.test(unicodeValues.missingText))throw new Error('Malformed merged SKU leaked into review list: '+JSON.stringify(unicodeValues));
+if(!unicodeValues.hint.includes('1 مدخل غير صالح'))throw new Error('Invalid fragment should be ignored and disclosed: '+JSON.stringify(unicodeValues));
+
 const pagedRows=allRows.slice(0,30);
 await page.fill('#skuInput',pagedRows.join('\n'));
 await page.click('#extractBtn');
@@ -109,5 +125,5 @@ const capValues=await page.evaluate(()=>({
 if(capValues.requested!=='500'||capValues.missing!=='500'||capValues.imageNodes!==0)throw new Error('500 item cap failed: '+JSON.stringify(capValues));
 if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
 
-console.log('V56.72_NATIVE_SHARE_AND_FREEZE_GUARD_PASS',{bootMs,...values,pageValues,preparedLabel,shareValues,capValues});
+console.log('V56.73_SAFE_SKU_TOKENIZER_PASS',{bootMs,...values,unicodeValues,pageValues,preparedLabel,shareValues,capValues});
 await browser.close();
