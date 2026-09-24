@@ -87,6 +87,12 @@ const pricedSku=[...priceMap.keys()].find(sku=>{
 if(!pricedSku)throw new Error('No SKU with sale price, pack, and unique image mapping found');
 const expectedUnit=Number((priceMap.get(pricedSku)/packMap.get(pricedSku)).toFixed(2)).toString()+' ⃁';
 if(priceMap.get('AR_278')!==120||packMap.get('AR_278')!==30||Number((priceMap.get('AR_278')/packMap.get('AR_278')).toFixed(2))!==4)throw new Error('AR_278 unit-price contract must remain 120 / 30 = 4');
+const historyRows=fs.readFileSync('data/historical_pricing.tsv','utf8').split(/\r?\n/).filter(Boolean);
+if(historyRows.length!==17)throw new Error('Historical pricing memory must contain header + 16 audited rows');
+const historyMap=new Map(historyRows.slice(1).map(line=>{const c=line.split('\t');return[c[0],{sale:Number(c[1]),pack:Number(c[2]),unit:Number(c[3]),alias:c[8],name:c[9]}]}));
+if(historyMap.get('BA_326')?.sale!==144||historyMap.get('BA_326')?.pack!==12||historyMap.get('BA_326')?.unit!==12)throw new Error('BA_326 historical memory must be 144 / 12 = 12');
+if(historyMap.get('BA_357')?.alias!=='BA_357_C'||historyMap.get('BA_357')?.sale!==120||historyMap.get('BA_357')?.pack!==10||historyMap.get('BA_357')?.unit!==12)throw new Error('BA_357 historical alias contract must be BA_357_C, 120 / 10 = 12');
+
 await page.fill('#skuInput',pricedSku);
 await page.click('#extractBtn');
 await page.waitForFunction(()=>document.querySelector('#foundCount')?.textContent?.trim()==='1');
@@ -103,6 +109,17 @@ await page.waitForFunction(()=>window.__shareCalls?.length===1);
 const pricedShare=await page.evaluate(()=>window.__shareCalls[0]);
 if(pricedShare.count!==1||!pricedShare.names[0].includes('-unit-price.jpg')||!pricedShare.types.every(t=>t==='image/jpeg'))throw new Error('Unit-price album image was not passed to native share: '+JSON.stringify(pricedShare));
 await page.locator('#priceStampToggle').evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}))});
+await page.fill('#skuInput','BA_326\nBA_357');
+await page.click('#extractBtn');
+await page.waitForFunction(()=>document.querySelector('#foundCount')?.textContent?.trim()==='2');
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))});
+await page.waitForFunction(()=>document.querySelectorAll('.bulk-price-preview').length===2);
+const legacyPrices=await page.locator('.bulk-price-preview').allInnerTexts();
+if(JSON.stringify(legacyPrices)!==JSON.stringify(['12 ⃁','12 ⃁']))throw new Error('Historical unit prices must stamp BA_326 and BA_357 as 12 ⃁: '+JSON.stringify(legacyPrices));
+const legacyCoverage=await page.locator('#priceCoverage').innerText();
+if(!legacyCoverage.includes('2 تاريخي')||!legacyCoverage.includes('متوفر لكل الصور'))throw new Error('Historical-only price coverage failed: '+legacyCoverage);
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}))});
+
 await page.evaluate(()=>{window.__shareCalls=[]});
 
 await page.fill('#skuInput','AR_289\u200EAR_287\nBA_296\u200FBA_7303\nBA_');
@@ -141,7 +158,7 @@ if(exactValues.missingItems.some(x=>forbidden.includes(x)))throw new Error('Inve
 await page.locator('#priceStampToggle').evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))});
 await page.waitForFunction(()=>document.querySelector('#priceCoverage')&&!document.querySelector('#priceCoverage').hidden);
 const coverageText=await page.locator('#priceCoverage').innerText();
-if(!coverageText.includes('69 صورة')||!coverageText.includes('16 صورة بدون سعر أو شد'))throw new Error('Price coverage must explain the 16 unpriced matched images: '+coverageText);
+if(!coverageText.includes('69 حالي')||!coverageText.includes('16 تاريخي')||!coverageText.includes('متوفر لكل الصور'))throw new Error('Historical price coverage must resolve all 85 matched images: '+coverageText);
 await page.locator('#priceStampToggle').evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}))});
 const pagedRows=allRows.slice(0,30);
 await page.fill('#skuInput',pagedRows.join('\n'));
@@ -193,5 +210,5 @@ const exportJs=fs.readFileSync('v56-70-bulk-image-export.js','utf8');
 if(exportJs.includes('const batches=[]'))throw new Error('ZIP export still uses multiple batches');
 if(!exportJs.includes("تم تجهيز '+S.results.length+' صورة في ملف ZIP واحد"))throw new Error('Single ZIP completion contract missing');
 
-console.log('V56.77_SAVE_ALL_ALBUM_PRICE_COVERAGE_PASS',{bootMs,...values,pricedSku,expectedUnit,pricePreview,pricedShare,unicodeValues,exactValues,coverageText,pageValues,preparedLabel,shareValues,capValues});
+console.log('V56.78_HISTORICAL_PRICE_MEMORY_PASS',{bootMs,...values,pricedSku,expectedUnit,pricePreview,pricedShare,unicodeValues,exactValues,coverageText,legacyPrices,legacyCoverage,pageValues,preparedLabel,shareValues,capValues});
 await browser.close();
