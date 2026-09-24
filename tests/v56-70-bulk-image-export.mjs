@@ -89,9 +89,20 @@ const expectedUnit=Number((priceMap.get(pricedSku)/packMap.get(pricedSku)).toFix
 if(priceMap.get('AR_278')!==120||packMap.get('AR_278')!==30||Number((priceMap.get('AR_278')/packMap.get('AR_278')).toFixed(2))!==4)throw new Error('AR_278 unit-price contract must remain 120 / 30 = 4');
 const historyRows=fs.readFileSync('data/historical_pricing.tsv','utf8').split(/\r?\n/).filter(Boolean);
 if(historyRows.length!==17)throw new Error('Historical pricing memory must contain header + 16 audited rows');
-const historyMap=new Map(historyRows.slice(1).map(line=>{const c=line.split('\t');return[c[0],{sale:Number(c[1]),pack:Number(c[2]),unit:Number(c[3]),alias:c[8],name:c[9]}]}));
-if(historyMap.get('BA_326')?.sale!==144||historyMap.get('BA_326')?.pack!==12||historyMap.get('BA_326')?.unit!==12)throw new Error('BA_326 historical memory must be 144 / 12 = 12');
-if(historyMap.get('BA_357')?.alias!=='BA_357_C'||historyMap.get('BA_357')?.sale!==120||historyMap.get('BA_357')?.pack!==10||historyMap.get('BA_357')?.unit!==12)throw new Error('BA_357 historical alias contract must be BA_357_C, 120 / 10 = 12');
+const historyMap=new Map(historyRows.slice(1).map(line=>{const c=line.split('\t');return[c[0],{sale:Number(c[1]),pack:Number(c[2]),unit:Number(c[3]),priceDate:c[4],packDate:c[5],priceCommit:c[6],packCommit:c[7],alias:c[8],name:c[9]}]}));
+const expectedHistory={
+  BA_622:[56,4,14],BA_822:[14,1,14],BA_301:[72,8,9],BA_515:[72,12,6],
+  BA_585:[14,1,14],BA_406:[54,6,9],BA_973:[240,30,8],BA_997:[90,6,15],
+  BA_727:[32,8,4],BA_143:[144,12,12],BA_326:[144,12,12],BA_319:[140,10,14],
+  BA_234:[108,12,9],BA_357:[120,10,12],BA_166:[162,36,4.5],BA_608:[48,6,8]
+};
+for(const [sku,[sale,pack,unit]] of Object.entries(expectedHistory)){
+  const row=historyMap.get(sku);
+  if(!row||row.sale!==sale||row.pack!==pack||row.unit!==unit)throw new Error('Historical price memory mismatch for '+sku+': '+JSON.stringify(row));
+  if(!row.priceCommit||!row.packCommit||!row.priceDate||!row.packDate)throw new Error('Historical provenance missing for '+sku+': '+JSON.stringify(row));
+}
+if(historyMap.get('BA_357')?.alias!=='BA_357_C')throw new Error('BA_357 historical alias contract must be BA_357_C');
+if(historyMap.get('BA_406')?.priceCommit!=='237b6db9'||historyMap.get('BA_406')?.packCommit!=='4dcea4b0')throw new Error('BA_406 must use latest audited price and latest audited pack snapshots');
 
 await page.fill('#skuInput',pricedSku);
 await page.click('#extractBtn');
