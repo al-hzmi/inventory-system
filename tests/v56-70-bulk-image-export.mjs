@@ -101,7 +101,7 @@ await page.waitForFunction(()=>document.querySelector('#shareImagesBtn')?.textCo
 await page.click('#shareImagesBtn');
 await page.waitForFunction(()=>window.__shareCalls?.length===1);
 const pricedShare=await page.evaluate(()=>window.__shareCalls[0]);
-if(pricedShare.count!==1||!pricedShare.names[0].includes('-unit-price.'))throw new Error('Unit-price-stamped image was not passed to native share: '+JSON.stringify(pricedShare));
+if(pricedShare.count!==1||!pricedShare.names[0].includes('-unit-price.jpg')||!pricedShare.types.every(t=>t==='image/jpeg'))throw new Error('Unit-price album image was not passed to native share: '+JSON.stringify(pricedShare));
 await page.locator('#priceStampToggle').evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}))});
 await page.evaluate(()=>{window.__shareCalls=[]});
 
@@ -137,6 +137,12 @@ if(exactValues.duplicates!=='0'||/تم تجاهل/.test(exactValues.hint))throw 
 if(JSON.stringify(exactValues.missingItems)!==JSON.stringify(exactMissing))throw new Error('Review list is not the exact unresolved subset of source SKUs: '+JSON.stringify(exactValues));
 const forbidden=['9','AR_2','183','AR_28','528528','21','31','BA_5','0','1148','664','007','EAK_300','BA_30','A1','BA_BA_100'];
 if(exactValues.missingItems.some(x=>forbidden.includes(x)))throw new Error('Invented SKU fragment leaked into review list: '+JSON.stringify(exactValues));
+
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))});
+await page.waitForFunction(()=>document.querySelector('#priceCoverage')&&!document.querySelector('#priceCoverage').hidden);
+const coverageText=await page.locator('#priceCoverage').innerText();
+if(!coverageText.includes('69 صورة')||!coverageText.includes('16 صورة بدون سعر أو شد'))throw new Error('Price coverage must explain the 16 unpriced matched images: '+coverageText);
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}))});
 const pagedRows=allRows.slice(0,30);
 await page.fill('#skuInput',pagedRows.join('\n'));
 await page.click('#extractBtn');
@@ -152,19 +158,20 @@ pageValues=await page.evaluate(()=>({cards:document.querySelectorAll('#resultGri
 if(pageValues.cards!==6||!pageValues.pager.includes('2 / 2'))throw new Error('Second result page failed: '+JSON.stringify(pageValues));
 
 const shareBefore=await page.locator('#shareImagesBtn').innerText();
-if(!shareBefore.includes('1–20')||!shareBefore.includes('30'))throw new Error('Native share first batch label is wrong: '+shareBefore);
+if(!shareBefore.includes('تجهيز الكل للألبوم')||!shareBefore.includes('30'))throw new Error('Save-all album label is wrong: '+shareBefore);
 await page.click('#shareImagesBtn');
 await page.waitForFunction(()=>document.querySelector('#shareImagesBtn')?.textContent?.includes('فتح المشاركة'));
 const preparedLabel=await page.locator('#shareImagesBtn').innerText();
+if(!preparedLabel.includes('30 صورة'))throw new Error('All 30 images were not prepared together: '+preparedLabel);
 await page.click('#shareImagesBtn');
 await page.waitForFunction(()=>Array.isArray(window.__shareCalls)&&window.__shareCalls.length===1);
 const shareValues=await page.evaluate(()=>({
   meta:window.__shareCalls[0],
   nextLabel:document.querySelector('#shareImagesBtn')?.textContent||''
 }));
-if(shareValues.meta.count<1||shareValues.meta.count>20)throw new Error('Native share batch size is unsafe: '+JSON.stringify(shareValues));
-if(!shareValues.meta.names.every(n=>/\.(webp|png|jpe?g)$/i.test(n)))throw new Error('Native share must contain actual image files: '+JSON.stringify(shareValues));
-if(shareValues.nextLabel.includes('1–20'))throw new Error('Native share did not advance to the next batch: '+JSON.stringify(shareValues));
+if(shareValues.meta.count!==30)throw new Error('All album images must be shared in one native share call: '+JSON.stringify(shareValues));
+if(!shareValues.meta.names.every(n=>/\.jpg$/i.test(n))||!shareValues.meta.types.every(t=>t==='image/jpeg'))throw new Error('Album export must use optimized JPEG files: '+JSON.stringify(shareValues));
+if(!shareValues.nextLabel.includes('تجهيز الكل للألبوم'))throw new Error('Save-all action did not reset after successful share: '+JSON.stringify(shareValues));
 
 const overflowRows=Array.from({length:501},(_,i)=>'QA_NO_IMAGE_'+String(100000+i));
 await page.fill('#skuInput',overflowRows.join('\n'));
@@ -186,5 +193,5 @@ const exportJs=fs.readFileSync('v56-70-bulk-image-export.js','utf8');
 if(exportJs.includes('const batches=[]'))throw new Error('ZIP export still uses multiple batches');
 if(!exportJs.includes("تم تجهيز '+S.results.length+' صورة في ملف ZIP واحد"))throw new Error('Single ZIP completion contract missing');
 
-console.log('V56.76_UNIT_PRICE_MICRO_STAMP_PASS',{bootMs,...values,pricedSku,expectedUnit,pricePreview,pricedShare,unicodeValues,exactValues,pageValues,preparedLabel,shareValues,capValues});
+console.log('V56.77_SAVE_ALL_ALBUM_PRICE_COVERAGE_PASS',{bootMs,...values,pricedSku,expectedUnit,pricePreview,pricedShare,unicodeValues,exactValues,coverageText,pageValues,preparedLabel,shareValues,capValues});
 await browser.close();
