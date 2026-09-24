@@ -1,0 +1,25 @@
+name: V56.74 Temporary Canonical SKU Validation
+on:
+  push:
+    branches:
+      - fix/v56-74-canonical-sku-tokenizer
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax
+        run: node --check v56-70-bulk-image-export.js
+      - name: Browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install chromium >/dev/null
+          python3 -m http.server 4173 >/tmp/v56-74-http.log 2>&1 &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          node tests/v56-70-bulk-image-export.mjs
