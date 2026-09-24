@@ -99,7 +99,7 @@ function updatePriceCoverage(){
   const current=S.results.filter(x=>x.unitPrice&&x.priceSource==='current').length,historical=S.results.filter(x=>x.unitPrice&&x.priceSource==='historical').length,priced=current+historical,unpriced=S.results.length-priced;
   E.priceCoverage.hidden=false;E.priceCoverage.className='bulk-price-coverage'+(unpriced?' warn':'');
   if(unpriced)E.priceCoverage.textContent='سعر الحبة جاهز لـ '+priced+' صورة ('+current+' حالي + '+historical+' تاريخي) · '+unpriced+' صورة بلا سعر موثوق.';
-  else if(historical)E.priceCoverage.textContent='سعر الحبة متوفر لكل الصور: '+current+' حالي + '+historical+' من آخر سعر و شد تاريخيين موثقين.';
+  else if(historical)E.priceCoverage.textContent='سعر الحبة متوفر لكل الصور: '+current+' حالي + '+historical+' تاريخي موثق.';
   else E.priceCoverage.textContent='سعر الحبة متوفر لكل الصور من البيانات الحالية.';
 }
 function render(total){E.empty.hidden=true;E.stats.hidden=false;E.toolbar.hidden=false;E.requested.textContent=total;E.found.textContent=S.results.length;E.missingCount.textContent=S.missing.length;E.duplicates.textContent=S.duplicates;E.zip.disabled=!S.results.length;E.copy.disabled=!S.missing.length;E.zip.textContent='تنزيل الكل — ZIP واحد';updateShareButton();E.resultsSection.hidden=!S.results.length;E.missingSection.hidden=!S.missing.length;E.chip.textContent=S.results.length+' صورة';renderCards();updatePriceCoverage();E.missingList.innerHTML=S.missing.map(x=>'<span class="bulk-missing-chip">'+esc(x.sku)+'</span>').join('');E.missingHint.textContent=S.missing.length+' رقم'+(S.invalid?' · تم تجاهل '+S.invalid+' مدخل غير صالح':'');requestAnimationFrame(()=>window.scrollTo({top:Math.max(0,E.stats.offsetTop-100),behavior:'smooth'}))}
