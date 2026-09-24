@@ -26,6 +26,7 @@ const INVISIBLE_FORMAT=/[\u00AD\u034F\u061C\u180E\u200B-\u200F\u202A-\u202E\u206
 function plausibleSku(token){return /\d/.test(token)&&/^(?:\d+|[A-Z0-9]+(?:[_-][A-Z0-9]+)*)$/.test(token)}
 function segmentKnownSku(token){
   if(S.known.has(token))return[token];
+  if(!/[0-9][A-Z]{2,}[_-]/.test(token))return[token];
   const memo=new Map;
   function walk(pos){
     if(pos===token.length)return[];
