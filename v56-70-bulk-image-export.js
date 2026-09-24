@@ -3,7 +3,7 @@ const HASH='1jh297-spgf2z',LOCAL=['localhost','127.0.0.1'].includes(location.hos
 function adminOK(){try{const p=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null');return String(localStorage.getItem('inventory_user_name_v2')||'').trim()==='مهند'&&String(localStorage.getItem('inventory_admin_token_v2')||'')===HASH&&(LOCAL||(p?.role==='admin'&&Boolean(p?.photoId)))}catch{return false}}
 if(!adminOK()){location.replace('./index.html?employee=1');throw Error('ADMIN_ONLY')}
 const AR='٠١٢٣٤٥٦٧٨٩',FA='۰۱۲۳۴۵۶۷۸۹',MAX=500,PAGE=24,BATCH=25,SHARE_MAX_FILES=20,SHARE_MAX_BYTES=28*1024*1024;
-const S={ready:false,images:new Map,digits:new Map,bindings:{},bindingsReady:false,bindingsPromise:null,names:new Map,results:[],missing:[],duplicates:0,invalid:0,overflow:0,busy:false,page:0,shareOffset:0,sharePrepared:null};
+const S={ready:false,images:new Map,digits:new Map,known:new Set,bindings:{},bindingsReady:false,bindingsPromise:null,names:new Map,results:[],missing:[],duplicates:0,invalid:0,overflow:0,busy:false,page:0,shareOffset:0,sharePrepared:null};
 const $=id=>document.getElementById(id),E={input:$('skuInput'),counter:$('inputCounter'),extract:$('extractBtn'),paste:$('pasteBtn'),clear:$('clearBtn'),stats:$('stats'),requested:$('requestedCount'),found:$('foundCount'),missingCount:$('missingCount'),duplicates:$('duplicateCount'),toolbar:$('toolbar'),share:$('shareImagesBtn'),zip:$('downloadZipBtn'),copy:$('copyMissingBtn'),fresh:$('newSearchBtn'),progress:$('progress'),bar:$('progressBar'),progressText:$('progressText'),resultsSection:$('resultsSection'),grid:$('resultGrid'),pager:$('resultPager'),chip:$('resultChip'),missingSection:$('missingSection'),missingList:$('missingList'),missingHint:$('missingHint'),empty:$('emptyState'),toast:$('toast')};
 const digits=s=>String(s??'').replace(/[٠-٩۰-۹]/g,d=>{const a=AR.indexOf(d);return a>-1?String(a):String(FA.indexOf(d))});
 const norm=s=>digits(s).trim().toUpperCase().replace(/\.(WEBP|PNG|JPE?G)$/i,'').replace(/\s+/g,'').replace(/[^A-Z0-9_\-]/g,'');
@@ -16,28 +16,38 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function fetchTimed(path,ms,options={}){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(path,{...options,signal:c.signal})}finally{clearTimeout(t)}}
 async function text(path){const r=await fetchTimed(path,12000,{cache:'no-store'});if(!r.ok)throw Error(path+' '+r.status);return r.text()}
 function toast(m,err=false){E.toast.textContent=m;E.toast.className='bulk-toast on'+(err?' err':'');clearTimeout(toast.t);toast.t=setTimeout(()=>E.toast.className='bulk-toast',3300)}
-function parseImages(raw){for(const line of String(raw).split(/\r?\n/)){const t=line.trim();if(!t||t.startsWith('#'))continue;const p=t.split('\t').map(x=>x.trim()).filter(Boolean),key=norm(p.length>1?p[0]:p.at(-1)),file=p.at(-1);if(!key||!file)continue;const row={key,file};S.images.set(key,row);const d=nums(key);if(d){if(!S.digits.has(d))S.digits.set(d,[]);S.digits.get(d).push(row)}}}
-function parseInv(raw){const l=String(raw).split(/\r?\n/).filter(Boolean);if(l.length<2)return;const h=l[0].split('\t').map(x=>x.trim());let si=h.findIndex(x=>/رقم|كود|sku|item/i.test(x)),ni=h.findIndex(x=>/اسم|وصف|name/i.test(x));if(si<0)si=0;for(const line of l.slice(1)){const c=line.split('\t'),sku=norm(c[si]),name=String(c[ni>=0?ni:1]||'').trim();if(sku&&name&&!S.names.has(sku))S.names.set(sku,name)}}
-async function loadBindings(){try{const r=await fetchTimed('./api/image-admin?action=bindings',3500,{cache:'no-store'});if(!r.ok)return{};const d=await r.json();return d?.bindings&&typeof d.bindings==='object'?d.bindings:{}}catch(e){console.warn('[V56.73 bindings skipped]',e?.name||e);return{}}}
+function parseImages(raw){for(const line of String(raw).split(/\r?\n/)){const t=line.trim();if(!t||t.startsWith('#'))continue;const p=t.split('\t').map(x=>x.trim()).filter(Boolean),key=norm(p.length>1?p[0]:p.at(-1)),file=p.at(-1);if(!key||!file)continue;const row={key,file};S.images.set(key,row);S.known.add(key);const fileSku=norm(file);if(fileSku)S.known.add(fileSku);const d=nums(key);if(d){if(!S.digits.has(d))S.digits.set(d,[]);S.digits.get(d).push(row)}}}
+function parseInv(raw){const l=String(raw).split(/\r?\n/).filter(Boolean);if(l.length<2)return;const h=l[0].split('\t').map(x=>x.trim());let si=h.findIndex(x=>/رقم|كود|sku|item/i.test(x)),ni=h.findIndex(x=>/اسم|وصف|name/i.test(x));if(si<0)si=0;for(const line of l.slice(1)){const c=line.split('\t'),sku=norm(c[si]),name=String(c[ni>=0?ni:1]||'').trim();if(sku)S.known.add(sku);if(sku&&name&&!S.names.has(sku))S.names.set(sku,name)}}
+async function loadBindings(){try{const r=await fetchTimed('./api/image-admin?action=bindings',3500,{cache:'no-store'});if(!r.ok)return{};const d=await r.json();return d?.bindings&&typeof d.bindings==='object'?d.bindings:{}}catch(e){console.warn('[V56.74 bindings skipped]',e?.name||e);return{}}}
 function startBindings(){S.bindingsPromise=loadBindings().then(b=>{S.bindings=b;S.bindingsReady=true;return b}).catch(()=>{S.bindingsReady=true;return{}})}
-async function boot(){E.extract.disabled=true;E.extract.textContent='جاري تجهيز بيانات الصور…';startBindings();try{const [i,j,r]=await Promise.all([text('./data/images_list.txt'),text('./data/jeddah.tsv'),text('./data/riyadh.tsv')]);parseImages(i);parseInv(j);parseInv(r);S.ready=true;E.extract.disabled=false;E.extract.textContent='استخراج الصور'}catch(e){console.error('[V56.73 boot]',e);E.extract.disabled=false;E.extract.textContent='إعادة المحاولة';E.extract.onclick=()=>location.reload();toast('تعذر تحميل بيانات الصور خلال المهلة. تحقق من الاتصال ثم أعد المحاولة.',true)}}
-const INVISIBLE_SEPARATORS=/[\u00AD\u034F\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
+async function boot(){E.extract.disabled=true;E.extract.textContent='جاري تجهيز بيانات الصور…';startBindings();try{const [i,j,r]=await Promise.all([text('./data/images_list.txt'),text('./data/jeddah.tsv'),text('./data/riyadh.tsv')]);parseImages(i);parseInv(j);parseInv(r);S.ready=true;E.extract.disabled=false;E.extract.textContent='استخراج الصور'}catch(e){console.error('[V56.74 boot]',e);E.extract.disabled=false;E.extract.textContent='إعادة المحاولة';E.extract.onclick=()=>location.reload();toast('تعذر تحميل بيانات الصور خلال المهلة. تحقق من الاتصال ثم أعد المحاولة.',true)}}
+const INVISIBLE_FORMATTING=/[\u00AD\u034F\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
+function repairRepeatedPrefix(token){
+  let value=String(token||'');
+  const m=value.match(/^([A-Z]{2,5}[_-])\1(.+)$/);
+  if(!m)return value;
+  const candidate=m[1]+m[2];
+  return S.known.has(candidate)?candidate:value;
+}
 function splitMergedSku(token){
-  const marked=String(token||'').replace(/(\d)(?=[A-Z]{2,}[_-])/g,'$1 ');
-  const parts=marked.split(/\s+/).filter(Boolean);
-  return parts.length>1?parts:[token];
+  const marked=String(token||'').replace(/(\d)(?=[A-Z]{2,5}[_-])/g,'$1 ');
+  const parts=marked.split(/\s+/).filter(Boolean).map(repairRepeatedPrefix);
+  return parts.length>1?parts:[repairRepeatedPrefix(token)];
 }
 function plausibleSku(token){return /\d/.test(token)&&/^(?:\d+|[A-Z0-9]+(?:[_-][A-Z0-9]+)*)$/.test(token)}
 function inputTokens(raw){
   const prepared=digits(String(raw??'')).normalize('NFKC').toUpperCase()
-    .replace(INVISIBLE_SEPARATORS,' ')
+    .replace(INVISIBLE_FORMATTING,'')
     .replace(/\r\n?/g,'\n');
   const primary=prepared.split(/[\s,،;؛|]+/).map(x=>x.trim()).filter(Boolean);
   const out=[];
   for(const rawToken of primary){
-    const cleaned=norm(rawToken);
+    const cleaned=repairRepeatedPrefix(norm(rawToken));
     if(!cleaned)continue;
-    for(const part of splitMergedSku(cleaned))out.push(part);
+    for(const part of splitMergedSku(cleaned)){
+      const fixed=repairRepeatedPrefix(part);
+      if(fixed)out.push(fixed);
+    }
   }
   return out;
 }
@@ -93,7 +103,7 @@ async function prepareShareBatch(){
     S.sharePrepared={files,start,next,totalBytes};
     toast('تم تجهيز '+files.length+' صورة. اضغط الزر مرة ثانية لفتح المشاركة ثم اختر «حفظ الصور».');
   }catch(e){
-    console.error('[V56.73 prepare share]',e);
+    console.error('[V56.74 prepare share]',e);
     S.sharePrepared=null;
     toast('تعذر تجهيز مشاركة الصور على هذا المتصفح. يمكنك استخدام ZIP كخيار بديل.',true);
   }finally{
@@ -109,7 +119,7 @@ async function openPreparedShare(){
     else toast('تمت الدفعة. جهّز الدفعة التالية للحفظ أو المشاركة.');
   }catch(e){
     if(e?.name==='AbortError')toast('تم إلغاء المشاركة. الدفعة ما زالت جاهزة.');
-    else{console.error('[V56.73 native share]',e);toast('تعذر فتح المشاركة. حاول مرة أخرى أو استخدم ZIP.',true)}
+    else{console.error('[V56.74 native share]',e);toast('تعذر فتح المشاركة. حاول مرة أخرى أو استخدم ZIP.',true)}
   }finally{updateShareButton()}
 }
 async function shareImages(){if(S.sharePrepared)return openPreparedShare();return prepareShareBatch()}
@@ -118,7 +128,7 @@ async function saveOne(i,b){const x=S.results[i];if(!x)return;const old=b.textCo
 function progress(done,total,msg){E.progress.classList.add('on');E.bar.style.width=Math.round(done/Math.max(1,total)*100)+'%';E.progressText.textContent=msg||done+' / '+total}
 function loadScript(src,ms=8000){return new Promise((resolve,reject)=>{const el=document.createElement('script'),timer=setTimeout(()=>{el.remove();reject(Error('SCRIPT_TIMEOUT'))},ms);el.src=src;el.async=true;el.onload=()=>{clearTimeout(timer);resolve()};el.onerror=()=>{clearTimeout(timer);el.remove();reject(Error('SCRIPT_LOAD'))};document.head.appendChild(el)})}
 async function ensureZip(){if(window.JSZip)return true;for(const src of ['https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js','https://unpkg.com/jszip@3.10.1/dist/jszip.min.js']){try{await loadScript(src);if(window.JSZip)return true}catch{}}return false}
-async function zipAll(){if(S.busy||!S.results.length)return;S.busy=true;E.zip.disabled=true;E.extract.disabled=true;try{progress(0,S.results.length,'جاري تجهيز أداة ZIP…');if(!(await ensureZip()))throw Error('ZIP_LIBRARY');const batches=[];for(let i=0;i<S.results.length;i+=BATCH)batches.push(S.results.slice(i,i+BATCH));let done=0;for(let bi=0;bi<batches.length;bi++){const z=new JSZip,b=batches[bi];for(const x of b){z.file(String(x.index+1).padStart(3,'0')+'-'+safe(x.sku)+'.'+ext(x.file),await blob(x));done++;progress(done,S.results.length,'تجهيز الصور: '+done+' / '+S.results.length);await wait(0)}z.file('_manifest.tsv','SKU\tImage File\tName\n'+b.map(x=>x.sku+'\t'+x.file+'\t'+(x.name||'')).join('\n'));progress(done,S.results.length,'إنشاء ملف ZIP '+(bi+1)+' من '+batches.length+'…');const out=await z.generateAsync({type:'blob',compression:'STORE'});download(out,'صور-الأصناف'+(batches.length>1?'-'+String(bi+1).padStart(2,'0')+'-of-'+String(batches.length).padStart(2,'0'):'')+'.zip');await wait(250)}toast('تم تجهيز '+S.results.length+' صورة للتنزيل.')}catch(e){console.error('[V56.73 zip]',e);toast('تعذر إكمال ZIP. الصور ما زالت متاحة للحفظ الفردي أو فتح الأصلية.',true)}finally{S.busy=false;E.zip.disabled=!S.results.length;E.extract.disabled=false;setTimeout(()=>{E.progress.classList.remove('on');E.bar.style.width='0'},1200)}}
+async function zipAll(){if(S.busy||!S.results.length)return;S.busy=true;E.zip.disabled=true;E.extract.disabled=true;try{progress(0,S.results.length,'جاري تجهيز أداة ZIP…');if(!(await ensureZip()))throw Error('ZIP_LIBRARY');const batches=[];for(let i=0;i<S.results.length;i+=BATCH)batches.push(S.results.slice(i,i+BATCH));let done=0;for(let bi=0;bi<batches.length;bi++){const z=new JSZip,b=batches[bi];for(const x of b){z.file(String(x.index+1).padStart(3,'0')+'-'+safe(x.sku)+'.'+ext(x.file),await blob(x));done++;progress(done,S.results.length,'تجهيز الصور: '+done+' / '+S.results.length);await wait(0)}z.file('_manifest.tsv','SKU\tImage File\tName\n'+b.map(x=>x.sku+'\t'+x.file+'\t'+(x.name||'')).join('\n'));progress(done,S.results.length,'إنشاء ملف ZIP '+(bi+1)+' من '+batches.length+'…');const out=await z.generateAsync({type:'blob',compression:'STORE'});download(out,'صور-الأصناف'+(batches.length>1?'-'+String(bi+1).padStart(2,'0')+'-of-'+String(batches.length).padStart(2,'0'):'')+'.zip');await wait(250)}toast('تم تجهيز '+S.results.length+' صورة للتنزيل.')}catch(e){console.error('[V56.74 zip]',e);toast('تعذر إكمال ZIP. الصور ما زالت متاحة للحفظ الفردي أو فتح الأصلية.',true)}finally{S.busy=false;E.zip.disabled=!S.results.length;E.extract.disabled=false;setTimeout(()=>{E.progress.classList.remove('on');E.bar.style.width='0'},1200)}}
 async function copyMissing(){const v=S.missing.map(x=>x.sku).join('\n');if(!v)return;try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}toast('تم نسخ '+S.missing.length+' رقمًا مفقودًا.')}
 async function paste(){try{const v=await navigator.clipboard.readText();if(!v)return toast('الحافظة فارغة.',true);E.input.value=v;count();E.input.focus()}catch{toast('الصق يدويًا داخل المربع.',true)}}
 function reset(){if(S.busy)return;E.input.value='';S.results=[];S.missing=[];S.invalid=0;S.page=0;S.shareOffset=0;S.sharePrepared=null;E.stats.hidden=true;E.toolbar.hidden=true;E.resultsSection.hidden=true;E.missingSection.hidden=true;E.empty.hidden=false;E.grid.innerHTML='';E.pager.innerHTML='';E.missingList.innerHTML='';count();window.scrollTo({top:0,behavior:'smooth'});E.input.focus()}
