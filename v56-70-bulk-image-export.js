@@ -69,6 +69,27 @@ function renderCards(){const total=S.results.length,pages=Math.max(1,Math.ceil(t
 function scrollResults(){requestAnimationFrame(()=>window.scrollTo({top:Math.max(0,E.resultsSection.offsetTop-90),behavior:'smooth'}))}
 function render(total){E.empty.hidden=true;E.stats.hidden=false;E.toolbar.hidden=false;E.requested.textContent=total;E.found.textContent=S.results.length;E.missingCount.textContent=S.missing.length;E.duplicates.textContent=S.duplicates;E.zip.disabled=!S.results.length;E.copy.disabled=!S.missing.length;E.zip.textContent='تنزيل الكل — ZIP واحد';updateShareButton();E.resultsSection.hidden=!S.results.length;E.missingSection.hidden=!S.missing.length;E.chip.textContent=S.results.length+' صورة';renderCards();E.missingList.innerHTML=S.missing.map(x=>'<span class="bulk-missing-chip">'+esc(x.sku)+'</span>').join('');E.missingHint.textContent=S.missing.length+' رقم'+(S.invalid?' · تم تجاهل '+S.invalid+' مدخل غير صالح':'');requestAnimationFrame(()=>window.scrollTo({top:Math.max(0,E.stats.offsetTop-100),behavior:'smooth'}))}
 async function blob(row){const r=await fetchTimed(url(row.file),30000,{cache:'force-cache'});if(!r.ok)throw Error('IMAGE_'+r.status);return r.blob()}
+function priceStampEnabled(){return Boolean(E.priceToggle?.checked)}
+function outputName(row){return safe(row.sku)+(priceStampEnabled()&&row.price?'-price':'')+'.'+ext(row.file)}
+function rr(ctx,x,y,w,h,r){const q=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+q,y);ctx.arcTo(x+w,y,x+w,y+h,q);ctx.arcTo(x+w,y+h,x,y+h,q);ctx.arcTo(x,y+h,x,y,q);ctx.arcTo(x,y,x+w,y,q);ctx.closePath()}
+async function stampPrice(source,row){
+  if(!priceStampEnabled()||!row.price)return source;
+  const u=URL.createObjectURL(source),img=new Image();
+  await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=u});
+  try{
+    const w=img.naturalWidth,h=img.naturalHeight,c=document.createElement('canvas');c.width=w;c.height=h;
+    const x=c.getContext('2d');if(!x)throw Error('CANVAS');
+    x.drawImage(img,0,0,w,h);
+    const m=Math.max(18,Math.round(Math.min(w,h)*.026)),fs=Math.max(28,Math.min(84,Math.round(Math.min(w,h)*.058))),px=Math.round(fs*.55),py=Math.round(fs*.34),label=String(row.price).trim()+' ر.س';
+    x.font='700 '+fs+'px Arial, sans-serif';x.textAlign='right';x.textBaseline='middle';x.direction='rtl';
+    const tw=Math.ceil(x.measureText(label).width),bw=tw+px*2,bh=fs+py*2,bx=w-m-bw,by=h-m-bh;
+    x.save();x.shadowColor='rgba(0,0,0,.16)';x.shadowBlur=Math.max(6,Math.round(fs*.16));x.shadowOffsetY=Math.max(2,Math.round(fs*.05));x.fillStyle='rgba(255,255,255,.95)';rr(x,bx,by,bw,bh,Math.round(fs*.28));x.fill();x.restore();
+    x.fillStyle='#17211c';x.fillText(label,w-m-px,by+bh/2);
+    const mime=['image/jpeg','image/png','image/webp'].includes(source.type)?source.type:'image/webp';
+    return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(Error('STAMP_BLOB')),mime,mime==='image/png'?undefined:.96));
+  }finally{URL.revokeObjectURL(u)}
+}
+async function outputBlob(row){return stampPrice(await blob(row),row)}
 function shareSupported(){return typeof navigator.share==='function'&&typeof File==='function'}
 function updateShareButton(){
   if(!E.share)return;
