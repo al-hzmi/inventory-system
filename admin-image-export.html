@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./v52-admin.css?v=54.0">
 <link rel="stylesheet" href="./v54-admin-overhaul.css?v=54.0">
-<link rel="stylesheet" href="./v56-70-bulk-image-export.css?v=56.77">
+<link rel="stylesheet" href="./v56-70-bulk-image-export.css?v=56.78">
 </head>
 <body>
 <main class="v52-page bulk-page">
@@ -23,12 +23,12 @@
       <div class="bulk-label"><b>أرقام الأصناف</b><span id="inputCounter">0 / 500</span></div>
       <textarea id="skuInput" class="bulk-textarea" spellcheck="false" placeholder="230086&#10;230102&#10;230145&#10;..."></textarea>
       <div class="bulk-actions"><button id="extractBtn" class="bulk-btn primary">استخراج الصور</button><button id="pasteBtn" class="bulk-btn">لصق من الحافظة</button><button id="clearBtn" class="bulk-btn">مسح</button></div>
-      <label class="bulk-price-option"><input id="priceStampToggle" type="checkbox"><span class="bulk-switch" aria-hidden="true"></span><span><b>إظهار سعر الحبة على الصورة</b><small>يُحسب من سعر البيع ÷ الشد، ويظهر بختم صغير جدًا أسفل يمين الصورة.</small></span></label>
+      <label class="bulk-price-option"><input id="priceStampToggle" type="checkbox"><span class="bulk-switch" aria-hidden="true"></span><span><b>إظهار سعر الحبة على الصورة</b><small>يُحسب من سعر البيع ÷ الشد. إذا كان الصنف مخلصًا، يُستخدم آخر سعر و شد تاريخيين موثقين من سجل النظام.</small></span></label>
     </section>
     <aside class="bulk-card bulk-side-card">
-      <div><div class="bulk-label"><b>طريقة العمل</b><span>V56.77</span></div><div class="bulk-note">كل رقم في سطر مستقل، كما تقبل الأداة اللصق من Excel والفواصل والمسافات، وتتعامل مع المحارف المخفية بدون دمج أرقام الأصناف. تحفظ ترتيبك وتزيل التكرار تلقائيًا.</div></div>
+      <div><div class="bulk-label"><b>طريقة العمل</b><span>V56.78</span></div><div class="bulk-note">كل رقم في سطر مستقل، كما تقبل الأداة اللصق من Excel والفواصل والمسافات، وتتعامل مع المحارف المخفية بدون دمج أرقام الأصناف. تحفظ ترتيبك وتزيل التكرار تلقائيًا.</div></div>
       <div class="bulk-limit">الحد الأقصى <strong>500 صنف</strong>. الربط اليدوي المعتمد في ألبوم الصور له الأولوية ثم الربط المباشر.</div>
-      <div class="bulk-note">على الآيفون استخدم <strong>حفظ الكل للألبوم</strong>. سيتم تجهيز نسخ محسّنة ثم فتح نافذة مشاركة واحدة بكل الصور؛ اختر «حفظ الصور».</div>
+      <div class="bulk-note">على الآيفون استخدم <strong>حفظ الكل للألبوم</strong>. الأسعار الحالية لها الأولوية، والأصناف المخلصة تستفيد من الذاكرة التاريخية الموثقة تلقائيًا.</div>
     </aside>
   </div>
   <div id="stats" class="bulk-stats" hidden>
@@ -44,7 +44,7 @@
   <div id="emptyState" class="bulk-empty"><b>جاهز لاستخراج الصور</b><span>ألصق القائمة أعلاه ثم اضغط «استخراج الصور».</span></div>
 </main>
 <div id="toast" class="bulk-toast"></div>
-<script src="./v56-70-bulk-image-export.js?v=56.77"></script>
+<script src="./v56-70-bulk-image-export.js?v=56.78"></script>
 <script src="./v46-admin-nav.js?v=56.70"></script>
 </body>
 </html>
