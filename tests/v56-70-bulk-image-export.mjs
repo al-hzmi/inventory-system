@@ -103,9 +103,13 @@ const userListValues=await page.evaluate(()=>({
   requested:document.querySelector('#requestedCount')?.textContent?.trim(),
   found:document.querySelector('#foundCount')?.textContent?.trim(),
   missing:document.querySelector('#missingCount')?.textContent?.trim(),
+  duplicates:document.querySelector('#duplicateCount')?.textContent?.trim(),
   review:[...document.querySelectorAll('#missingList .bulk-missing-chip')].map(x=>x.textContent.trim()),
   visibleSkus:[...document.querySelectorAll('#resultGrid .bulk-sku')].map(x=>x.textContent.trim())
 }));
+if(userOriginal.length!==112)throw new Error('Locked user source list must contain exactly 112 SKUs, got '+userOriginal.length);
+if(userListValues.requested!=='112')throw new Error('User source list must remain exactly 112 requested SKUs: '+JSON.stringify(userListValues));
+if(userListValues.duplicates!=='0')throw new Error('User source list has no duplicates; parser invented duplicates: '+JSON.stringify(userListValues));
 const originalSet=new Set(userOriginal);
 const foreignReview=userListValues.review.filter(x=>!originalSet.has(x));
 if(foreignReview.length)throw new Error('Review list contains generated fragments not present in user source: '+JSON.stringify(foreignReview));
