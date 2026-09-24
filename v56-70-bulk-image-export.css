@@ -29,3 +29,4 @@ button,textarea{font:inherit}.bulk-page{max-width:1500px}
 @media(max-width:1200px){.bulk-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:900px){.bulk-hero{grid-template-columns:1fr}.bulk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.bulk-textarea{min-height:210px}}
 @media(max-width:620px){.bulk-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.bulk-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.bulk-input-card,.bulk-side-card{padding:14px}.bulk-card-actions{grid-template-columns:1fr}.bulk-page{padding-bottom:86px!important}.bulk-toolbar-actions{width:100%}.bulk-toolbar .bulk-btn{flex:1}.bulk-progress{min-width:100%;max-width:none}}
+.bulk-pager{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 4px}.bulk-page-info{font-size:9px;color:#66716b;min-width:120px;text-align:center}.bulk-pager .bulk-btn{min-height:38px;padding:0 12px}.bulk-pager:empty{display:none}
