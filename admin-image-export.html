@@ -26,7 +26,7 @@
       <div class="bulk-actions"><button id="extractBtn" class="bulk-btn primary">استخراج الصور</button><button id="pasteBtn" class="bulk-btn">لصق من الحافظة</button><button id="clearBtn" class="bulk-btn">مسح</button></div>
     </section>
     <aside class="bulk-card bulk-side-card">
-      <div><div class="bulk-label"><b>طريقة العمل</b><span>V56.70</span></div><div class="bulk-note">كل رقم في سطر مستقل، كما تقبل الأداة اللصق من Excel والفواصل والمسافات. تحفظ ترتيبك وتزيل التكرار تلقائيًا.</div></div>
+      <div><div class="bulk-label"><b>طريقة العمل</b><span>V56.71</span></div><div class="bulk-note">كل رقم في سطر مستقل، كما تقبل الأداة اللصق من Excel والفواصل والمسافات. تحفظ ترتيبك وتزيل التكرار تلقائيًا.</div></div>
       <div class="bulk-limit">الحد الأقصى <strong>500 صنف</strong>. الربط اليدوي المعتمد في ألبوم الصور له الأولوية ثم الربط المباشر.</div>
       <div class="bulk-note">يمكن حفظ كل صورة منفردة أو تنزيل النتائج ZIP. القوائم الكبيرة تقسم تلقائيًا إلى دفعات آمنة للمتصفح.</div>
     </aside>
@@ -39,12 +39,12 @@
     <div class="bulk-toolbar-actions"><button id="downloadZipBtn" class="bulk-btn success">تنزيل الموجود ZIP</button><button id="copyMissingBtn" class="bulk-btn">نسخ الأرقام المفقودة</button><button id="newSearchBtn" class="bulk-btn">بحث جديد</button></div>
     <div class="bulk-progress" id="progress"><div class="bulk-progress-track"><div class="bulk-progress-bar" id="progressBar"></div></div><div id="progressText"></div></div>
   </div>
-  <section id="resultsSection" hidden><div class="bulk-section-head"><div><h2>الصور المطابقة</h2><p>مرتبة حسب ترتيب الإدخال.</p></div><span class="v52-chip ok" id="resultChip">0 صورة</span></div><div id="resultGrid" class="bulk-grid"></div></section>
+  <section id="resultsSection" hidden><div class="bulk-section-head"><div><h2>الصور المطابقة</h2><p>مرتبة حسب ترتيب الإدخال. يتم عرض 24 صورة فقط في الصفحة لحماية أداء الجوال.</p></div><span class="v52-chip ok" id="resultChip">0 صورة</span></div><div id="resultGrid" class="bulk-grid"></div><div id="resultPager" class="bulk-pager"></div></section>
   <section id="missingSection" hidden><div class="bulk-section-head"><div><h2>لم يتم العثور على صورة</h2><p>انسخها وراجعها لاحقًا في ألبوم توزيع الصور.</p></div></div><div class="bulk-missing"><div class="bulk-missing-head"><b>أرقام تحتاج مراجعة</b><span id="missingHint"></span></div><div id="missingList" class="bulk-missing-list"></div></div></section>
   <div id="emptyState" class="bulk-empty"><b>جاهز لاستخراج الصور</b><span>ألصق القائمة أعلاه ثم اضغط «استخراج الصور».</span></div>
 </main>
 <div id="toast" class="bulk-toast"></div>
-<script src="./v56-70-bulk-image-export.js?v=56.70"></script>
+<script src="./v56-70-bulk-image-export.js?v=56.71"></script>
 <script src="./v46-admin-nav.js?v=56.70"></script>
 </body>
 </html>
