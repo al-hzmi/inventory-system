@@ -82,6 +82,39 @@ if(unicodeValues.requested!=='4'||unicodeValues.found!=='4'||unicodeValues.missi
 if(/AR_289AR_287|BA_296BA_7303|BA_\b/.test(unicodeValues.missingText))throw new Error('Malformed merged SKU leaked into review list: '+JSON.stringify(unicodeValues));
 if(!unicodeValues.hint.includes('1 مدخل غير صالح'))throw new Error('Invalid fragment should be ignored and disclosed: '+JSON.stringify(unicodeValues));
 
+const userOriginalRaw="AR_27124\nAR_278\nAR_279\nAR_281\nAR_28219\nAR_283\nAR_28347\nAR_28366\nAR_285\nAR_28520\nAR_28527\nAR_28528\nAR_286\nAR_28626\nAR_28627\nAR_287\nAR_289\nAR_28919\nAR_28920\nAR_28921\nAR_28922\nAR_28923\nAR_295\nAR_296\nAR_297\nBA_018\nBA_045\nBA_063\nBA_070\nBA_093\nBA_100\nBA_1033\nBA_1034\nBA_1035\nBA_1036\nBA_116\nBA_124\nBA_131\nBA_148\nBA_155\nBA_162\nBA_167\nBA_195\nBA_215\nBA_225\nBA_232\nBA_249\nBA_285\nBA_296\nBA_298\nBA_342\nBA_352\nBA_371\nBA_386\nBA_444\nBA_461\nBA_495\nBA_560\nBA_564\nBA_571\nBA_649\nBA_7275\nBA_7283\nBA_7289\nBA_7290\nBA_7291\nBA_7292\nBA_7301\nBA_7302\nBA_7303\nBA_734\nBA_789\nBA_796\nBA_806\nBA_830\nBA_837\nBA_843\nBA_846\nBA_956\nEAK_300005\nEAK_300007\nEAQ_200004\nEAR_200001\nIBQ_200007\nIBQ_200008\nIBQ_200016\nOGS_00004\nOGS_00005\nBA_615\nBA_622\nBA_591\nBA_106_11\nBA_822\nBA_301\nBA_052\nBA_069\nBA_423\nBA_515\nBA_585\nBA_229\nBA_406\nBA_973\nBA_997\nBA_829\nBA_727\nBA_143\nBA_326\nBA_319\nBA_234\nBA_357\nBA_166\nBA_608";
+const userOriginal=userOriginalRaw.split('\n').filter(Boolean);
+const corruptedUserOriginal=userOriginal.map(x=>{
+  if(x==='AR_278')return 'AR_2\u200E78';
+  if(x==='AR_283')return 'AR_2\u200F83';
+  if(x==='AR_28921')return 'AR_289\u200E21';
+  if(x==='BA_195')return 'BA_1\u200E95';
+  if(x==='BA_301')return 'BA_30\u200F1';
+  if(x==='EAK_300007')return 'EAK_300\u200E007';
+  if(x==='BA_100')return 'BA_BA_100';
+  return x;
+}).join('\n');
+await page.fill('#skuInput',corruptedUserOriginal);
+const userCounter=await page.locator('#inputCounter').innerText();
+if(!userCounter.startsWith(userOriginal.length+' / 500'))throw new Error('User original list token count changed: '+userCounter+' expected '+userOriginal.length);
+await page.click('#extractBtn');
+await page.waitForFunction(expected=>document.querySelector('#requestedCount')?.textContent?.trim()===String(expected),userOriginal.length);
+const userListValues=await page.evaluate(()=>({
+  requested:document.querySelector('#requestedCount')?.textContent?.trim(),
+  found:document.querySelector('#foundCount')?.textContent?.trim(),
+  missing:document.querySelector('#missingCount')?.textContent?.trim(),
+  review:[...document.querySelectorAll('#missingList .bulk-missing-chip')].map(x=>x.textContent.trim()),
+  visibleSkus:[...document.querySelectorAll('#resultGrid .bulk-sku')].map(x=>x.textContent.trim())
+}));
+const originalSet=new Set(userOriginal);
+const foreignReview=userListValues.review.filter(x=>!originalSet.has(x));
+if(foreignReview.length)throw new Error('Review list contains generated fragments not present in user source: '+JSON.stringify(foreignReview));
+const knownBad=['9','AR_2','183','AR_28','528528','21','31','BA_5','1148','0','664','EAK_300','007','BA_30','BA_BA_100'];
+const leaked=userListValues.review.filter(x=>knownBad.includes(x));
+if(leaked.length)throw new Error('Known corruption fragments leaked into review: '+JSON.stringify(leaked));
+if(userListValues.visibleSkus.includes('BA_BA_100'))throw new Error('Repeated prefix was not canonicalized');
+if(Number(userListValues.found)+Number(userListValues.missing)!==userOriginal.length)throw new Error('Found + missing does not reconcile to source list: '+JSON.stringify(userListValues));
+
 const pagedRows=allRows.slice(0,30);
 await page.fill('#skuInput',pagedRows.join('\n'));
 await page.click('#extractBtn');
@@ -125,5 +158,5 @@ const capValues=await page.evaluate(()=>({
 if(capValues.requested!=='500'||capValues.missing!=='500'||capValues.imageNodes!==0)throw new Error('500 item cap failed: '+JSON.stringify(capValues));
 if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
 
-console.log('V56.73_SAFE_SKU_TOKENIZER_PASS',{bootMs,...values,unicodeValues,pageValues,preparedLabel,shareValues,capValues});
+console.log('V56.74_CANONICAL_SKU_TOKENIZER_PASS',{bootMs,...values,unicodeValues,userListValues,pageValues,preparedLabel,shareValues,capValues});
 await browser.close();
