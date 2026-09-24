@@ -110,10 +110,10 @@ async function prepareShareBatch(){
     const goal=Math.min(SHARE_MAX_FILES,S.results.length-start);
     progress(0,goal,'جاري تجهيز صور المشاركة…');
     while(next<S.results.length&&files.length<SHARE_MAX_FILES){
-      const row=S.results[next],b=await blob(row);
+      const row=S.results[next],b=await outputBlob(row);
       if(files.length&&totalBytes+b.size>SHARE_MAX_BYTES)break;
       const type=b.type||({'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp'}[ext(row.file)]||'application/octet-stream');
-      files.push(new File([b],safe(row.sku)+'.'+ext(row.file),{type,lastModified:Date.now()}));
+      files.push(new File([b],outputName(row),{type,lastModified:Date.now()}));
       totalBytes+=b.size;next++;
       progress(files.length,goal,'تجهيز الصور: '+files.length+' / '+goal);
       if(totalBytes>=SHARE_MAX_BYTES)break;
@@ -146,7 +146,7 @@ async function openPreparedShare(){
 }
 async function shareImages(){if(S.sharePrepared)return openPreparedShare();return prepareShareBatch()}
 function download(data,name){const u=URL.createObjectURL(data),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000)}
-async function saveOne(i,b){const x=S.results[i];if(!x)return;const old=b.textContent;b.disabled=true;b.textContent='جاري الحفظ…';try{download(await blob(x),safe(x.sku)+'-'+safe(x.file));toast('تم تجهيز صورة الصنف '+x.sku+' للحفظ.')}catch(e){console.error(e);toast('تعذر حفظ صورة '+x.sku+'. افتح الأصلية وحاول حفظها يدويًا.',true)}finally{b.disabled=false;b.textContent=old}}
+async function saveOne(i,b){const x=S.results[i];if(!x)return;const old=b.textContent;b.disabled=true;b.textContent='جاري الحفظ…';try{download(await outputBlob(x),outputName(x));toast('تم تجهيز صورة الصنف '+x.sku+(priceStampEnabled()&&x.price?' مع السعر':'')+' للحفظ.')}catch(e){console.error(e);toast('تعذر حفظ صورة '+x.sku+'. افتح الأصلية وحاول حفظها يدويًا.',true)}finally{b.disabled=false;b.textContent=old}}
 function progress(done,total,msg){E.progress.classList.add('on');E.bar.style.width=Math.round(done/Math.max(1,total)*100)+'%';E.progressText.textContent=msg||done+' / '+total}
 function loadScript(src,ms=8000){return new Promise((resolve,reject)=>{const el=document.createElement('script'),timer=setTimeout(()=>{el.remove();reject(Error('SCRIPT_TIMEOUT'))},ms);el.src=src;el.async=true;el.onload=()=>{clearTimeout(timer);resolve()};el.onerror=()=>{clearTimeout(timer);el.remove();reject(Error('SCRIPT_LOAD'))};document.head.appendChild(el)})}
 async function ensureZip(){if(window.JSZip)return true;for(const src of ['https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js','https://unpkg.com/jszip@3.10.1/dist/jszip.min.js']){try{await loadScript(src);if(window.JSZip)return true}catch{}}return false}
