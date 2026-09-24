@@ -100,44 +100,57 @@ async function stampPrice(source,row){
   }finally{URL.revokeObjectURL(u)}
 }
 async function outputBlob(row){return stampPrice(await blob(row),row)}
+function albumOutputName(row){return safe(row.sku)+(priceStampEnabled()&&row.unitPrice?'-unit-price':'')+'.jpg'}
+async function albumBlob(row){
+  const source=await blob(row),u=URL.createObjectURL(source),img=new Image();
+  await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src=u});
+  try{
+    const sw=img.naturalWidth,sh=img.naturalHeight,scale=Math.min(1,ALBUM_MAX_DIM/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*scale)),h=Math.max(1,Math.round(sh*scale));
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const x=c.getContext('2d');if(!x)throw Error('ALBUM_CANVAS');
+    x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,0,0,w,h);
+    if(priceStampEnabled()&&row.unitPrice){
+      const minSide=Math.min(w,h),m=Math.max(5,Math.round(minSide*.011)),fs=Math.max(11,Math.min(24,Math.round(minSide*.020))),px=Math.max(4,Math.round(fs*.36)),py=Math.max(2,Math.round(fs*.16)),label=row.unitPrice;
+      x.font='700 '+fs+'px system-ui, -apple-system, Arial, sans-serif';x.textAlign='right';x.textBaseline='middle';x.direction='rtl';
+      const tw=Math.ceil(x.measureText(label).width),bw=tw+px*2,bh=fs+py*2,bx=w-m-bw,by=h-m-bh;
+      x.save();x.shadowColor='rgba(0,0,0,.08)';x.shadowBlur=Math.max(2,Math.round(fs*.08));x.shadowOffsetY=1;x.fillStyle='rgba(255,255,255,.86)';rr(x,bx,by,bw,bh,Math.max(4,Math.round(fs*.18)));x.fill();x.restore();
+      x.fillStyle='#17211c';x.fillText(label,w-m-px,by+bh/2);
+    }
+    return await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(Error('ALBUM_BLOB')),'image/jpeg',ALBUM_QUALITY));
+  }finally{URL.revokeObjectURL(u)}
+}
 function shareSupported(){return typeof navigator.share==='function'&&typeof File==='function'}
 function updateShareButton(){
   if(!E.share)return;
-  if(!S.results.length){E.share.disabled=true;E.share.textContent='مشاركة / حفظ في الصور';return}
-  if(!shareSupported()){E.share.disabled=true;E.share.textContent='المشاركة غير مدعومة';return}
+  if(!S.results.length){E.share.disabled=true;E.share.textContent='حفظ الكل للألبوم';return}
+  if(!shareSupported()){E.share.disabled=true;E.share.textContent='الحفظ للألبوم غير مدعوم';return}
   E.share.disabled=Boolean(S.busy);
   if(S.sharePrepared){E.share.textContent='فتح المشاركة — '+S.sharePrepared.files.length+' صورة';return}
-  const start=S.shareOffset>=S.results.length?0:S.shareOffset,end=Math.min(start+SHARE_MAX_FILES,S.results.length);
-  E.share.textContent=(S.shareOffset>=S.results.length?'إعادة المشاركة ':'مشاركة / حفظ ')+(start+1)+'–'+end+' من '+S.results.length;
+  E.share.textContent='تجهيز الكل للألبوم — '+S.results.length+' صورة';
 }
-async function prepareShareBatch(){
+async function prepareAllForAlbum(){
   if(S.busy||!S.results.length)return;
   if(!shareSupported()){toast('المتصفح الحالي لا يدعم مشاركة ملفات الصور مباشرة. استخدم Safari على الآيفون أو ZIP.',true);return}
-  const start=S.shareOffset>=S.results.length?0:S.shareOffset;
   S.busy=true;E.extract.disabled=true;E.zip.disabled=true;updateShareButton();
-  const files=[];let totalBytes=0,next=start;
+  const files=[];let totalBytes=0;
   try{
-    const goal=Math.min(SHARE_MAX_FILES,S.results.length-start);
-    progress(0,goal,'جاري تجهيز صور المشاركة…');
-    while(next<S.results.length&&files.length<SHARE_MAX_FILES){
-      const row=S.results[next],b=await outputBlob(row);
-      if(files.length&&totalBytes+b.size>SHARE_MAX_BYTES)break;
-      const type=b.type||({'jpg':'image/jpeg','jpeg':'image/jpeg','png':'image/png','webp':'image/webp'}[ext(row.file)]||'application/octet-stream');
-      files.push(new File([b],outputName(row),{type,lastModified:Date.now()}));
-      totalBytes+=b.size;next++;
-      progress(files.length,goal,'تجهيز الصور: '+files.length+' / '+goal);
-      if(totalBytes>=SHARE_MAX_BYTES)break;
-      await wait(0);
+    progress(0,S.results.length,'جاري تجهيز كل الصور للألبوم…');
+    for(let i=0;i<S.results.length;i++){
+      const row=S.results[i],b=await albumBlob(row);
+      files.push(new File([b],albumOutputName(row),{type:'image/jpeg',lastModified:Date.now()}));
+      totalBytes+=b.size;progress(i+1,S.results.length,'تجهيز الصور: '+(i+1)+' / '+S.results.length);
+      if(i%4===3)await wait(0);
     }
-    if(!files.length)throw Error('NO_SHARE_FILES');
+    if(!files.length)throw Error('NO_ALBUM_FILES');
     const payload={files,title:'صور الأصناف'};
-    if(typeof navigator.canShare==='function'&&!navigator.canShare(payload))throw Error('FILE_SHARE_UNSUPPORTED');
-    S.sharePrepared={files,start,next,totalBytes};
-    toast('تم تجهيز '+files.length+' صورة. اضغط الزر مرة ثانية لفتح المشاركة ثم اختر «حفظ الصور».');
+    if(typeof navigator.canShare==='function'&&!navigator.canShare(payload))throw Error('ALL_FILES_SHARE_UNSUPPORTED');
+    S.sharePrepared={files,totalBytes,all:true};
+    const mb=(totalBytes/1024/1024).toFixed(1);
+    toast('تم تجهيز '+files.length+' صورة ('+mb+' MB). اضغط الزر مرة ثانية ثم اختر «حفظ الصور».');
   }catch(e){
-    console.error('[V56.77 prepare share]',e);
+    console.error('[V56.77 prepare all album]',e);
     S.sharePrepared=null;
-    toast('تعذر تجهيز مشاركة الصور على هذا المتصفح. يمكنك استخدام ZIP كخيار بديل.',true);
+    toast('تعذر تجهيز كل الصور دفعة واحدة على هذا الجهاز. ZIP الواحد ما زال متاحًا.',true);
   }finally{
     S.busy=false;E.extract.disabled=false;E.zip.disabled=!S.results.length;updateShareButton();setTimeout(()=>{E.progress.classList.remove('on');E.bar.style.width='0'},700);
   }
@@ -146,15 +159,14 @@ async function openPreparedShare(){
   const pack=S.sharePrepared;if(!pack)return;
   try{
     await navigator.share({files:pack.files,title:'صور الأصناف'});
-    S.shareOffset=pack.next;S.sharePrepared=null;
-    if(S.shareOffset>=S.results.length)toast('تمت آخر دفعة. يمكنك إعادة المشاركة من البداية عند الحاجة.');
-    else toast('تمت الدفعة. جهّز الدفعة التالية للحفظ أو المشاركة.');
+    S.sharePrepared=null;
+    toast('تم إرسال كل الصور إلى نافذة المشاركة. اختر «حفظ الصور» لإضافتها للألبوم.');
   }catch(e){
-    if(e?.name==='AbortError')toast('تم إلغاء المشاركة. الدفعة ما زالت جاهزة.');
-    else{console.error('[V56.77 native share]',e);toast('تعذر فتح المشاركة. حاول مرة أخرى أو استخدم ZIP.',true)}
+    if(e?.name==='AbortError')toast('تم إلغاء المشاركة. كل الصور ما زالت جاهزة.');
+    else{console.error('[V56.77 native all share]',e);toast('رفض iOS مشاركة العدد كاملًا. ZIP الواحد متاح كبديل.',true)}
   }finally{updateShareButton()}
 }
-async function shareImages(){if(S.sharePrepared)return openPreparedShare();return prepareShareBatch()}
+async function shareImages(){if(S.sharePrepared)return openPreparedShare();return prepareAllForAlbum()}
 function download(data,name){const u=URL.createObjectURL(data),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000)}
 async function saveOne(i,b){const x=S.results[i];if(!x)return;const old=b.textContent;b.disabled=true;b.textContent='جاري الحفظ…';try{download(await outputBlob(x),outputName(x));toast('تم تجهيز صورة الصنف '+x.sku+(priceStampEnabled()&&x.unitPrice?' مع سعر الحبة':'')+' للحفظ.')}catch(e){console.error(e);toast('تعذر حفظ صورة '+x.sku+'. افتح الأصلية وحاول حفظها يدويًا.',true)}finally{b.disabled=false;b.textContent=old}}
 function progress(done,total,msg){E.progress.classList.add('on');E.bar.style.width=Math.round(done/Math.max(1,total)*100)+'%';E.progressText.textContent=msg||done+' / '+total}
