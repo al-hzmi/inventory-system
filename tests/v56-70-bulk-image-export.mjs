@@ -83,7 +83,7 @@ await page.fill('#skuInput',pricedSku);
 await page.click('#extractBtn');
 await page.waitForFunction(()=>document.querySelector('#foundCount')?.textContent?.trim()==='1');
 if(await page.locator('.bulk-price-preview').count())throw new Error('Price preview must be off by default');
-await page.check('#priceStampToggle');
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))});
 await page.waitForFunction(()=>document.querySelector('.bulk-price-preview'));
 const pricePreview=await page.locator('.bulk-price-preview').innerText();
 if(!pricePreview.includes(priceMap.get(pricedSku)))throw new Error('System price was not shown in preview: '+pricePreview);
@@ -94,7 +94,7 @@ await page.click('#shareImagesBtn');
 await page.waitForFunction(()=>window.__shareCalls?.length===1);
 const pricedShare=await page.evaluate(()=>window.__shareCalls[0]);
 if(pricedShare.count!==1||!pricedShare.names[0].includes('-price.'))throw new Error('Price-stamped image was not passed to native share: '+JSON.stringify(pricedShare));
-await page.uncheck('#priceStampToggle');
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}))});
 await page.evaluate(()=>{window.__shareCalls=[]});
 
 await page.fill('#skuInput','AR_289\u200EAR_287\nBA_296\u200FBA_7303\nBA_');
