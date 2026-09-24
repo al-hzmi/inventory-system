@@ -12,6 +12,16 @@ const context=await browser.newContext();
 await context.addInitScript(()=>{
   localStorage.setItem('inventory_user_name_v2','مهند');
   localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');
+  Object.defineProperty(navigator,'canShare',{configurable:true,value:data=>Array.isArray(data?.files)&&data.files.length>0});
+  Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{
+    window.__shareCalls=window.__shareCalls||[];
+    window.__shareCalls.push({
+      count:data.files?.length||0,
+      names:(data.files||[]).map(f=>f.name),
+      types:(data.files||[]).map(f=>f.type),
+      bytes:(data.files||[]).reduce((n,f)=>n+(f.size||0),0)
+    });
+  }});
 });
 const page=await context.newPage();
 const errors=[];
@@ -70,6 +80,21 @@ await page.waitForFunction(()=>document.querySelectorAll('#resultGrid .bulk-imag
 pageValues=await page.evaluate(()=>({cards:document.querySelectorAll('#resultGrid .bulk-image-card').length,pager:document.querySelector('#resultPager')?.textContent||''}));
 if(pageValues.cards!==6||!pageValues.pager.includes('2 / 2'))throw new Error('Second result page failed: '+JSON.stringify(pageValues));
 
+const shareBefore=await page.locator('#shareImagesBtn').innerText();
+if(!shareBefore.includes('1–20')||!shareBefore.includes('30'))throw new Error('Native share first batch label is wrong: '+shareBefore);
+await page.click('#shareImagesBtn');
+await page.waitForFunction(()=>document.querySelector('#shareImagesBtn')?.textContent?.includes('فتح المشاركة'));
+const preparedLabel=await page.locator('#shareImagesBtn').innerText();
+await page.click('#shareImagesBtn');
+await page.waitForFunction(()=>Array.isArray(window.__shareCalls)&&window.__shareCalls.length===1);
+const shareValues=await page.evaluate(()=>({
+  meta:window.__shareCalls[0],
+  nextLabel:document.querySelector('#shareImagesBtn')?.textContent||''
+}));
+if(shareValues.meta.count<1||shareValues.meta.count>20)throw new Error('Native share batch size is unsafe: '+JSON.stringify(shareValues));
+if(!shareValues.meta.names.every(n=>/\.(webp|png|jpe?g)$/i.test(n)))throw new Error('Native share must contain actual image files: '+JSON.stringify(shareValues));
+if(shareValues.nextLabel.includes('1–20'))throw new Error('Native share did not advance to the next batch: '+JSON.stringify(shareValues));
+
 const overflowRows=Array.from({length:501},(_,i)=>'QA_NO_IMAGE_'+String(100000+i));
 await page.fill('#skuInput',overflowRows.join('\n'));
 const counter=await page.locator('#inputCounter').innerText();
@@ -84,5 +109,5 @@ const capValues=await page.evaluate(()=>({
 if(capValues.requested!=='500'||capValues.missing!=='500'||capValues.imageNodes!==0)throw new Error('500 item cap failed: '+JSON.stringify(capValues));
 if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
 
-console.log('V56.71_BULK_IMAGE_EXPORT_FREEZE_GUARD_PASS',{bootMs,...values,pageValues,capValues});
+console.log('V56.72_NATIVE_SHARE_AND_FREEZE_GUARD_PASS',{bootMs,...values,pageValues,preparedLabel,shareValues,capValues});
 await browser.close();
