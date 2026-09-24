@@ -23,7 +23,8 @@ function startBindings(){S.bindingsPromise=loadBindings().then(b=>{S.bindings=b;
 async function boot(){E.extract.disabled=true;E.extract.textContent='جاري تجهيز بيانات الصور…';startBindings();try{const [i,j,r]=await Promise.all([text('./data/images_list.txt'),text('./data/jeddah.tsv'),text('./data/riyadh.tsv')]);parseImages(i);parseInv(j);parseInv(r);S.ready=true;E.extract.disabled=false;E.extract.textContent='استخراج الصور'}catch(e){console.error('[V56.73 boot]',e);E.extract.disabled=false;E.extract.textContent='إعادة المحاولة';E.extract.onclick=()=>location.reload();toast('تعذر تحميل بيانات الصور خلال المهلة. تحقق من الاتصال ثم أعد المحاولة.',true)}}
 const INVISIBLE_SEPARATORS=/[\u00AD\u034F\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
 function splitMergedSku(token){
-  const parts=String(token||'').split(/(?<=\d)(?=[A-Z]{2,}[_-])/g).filter(Boolean);
+  const marked=String(token||'').replace(/(\d)(?=[A-Z]{2,}[_-])/g,'$1 ');
+  const parts=marked.split(/\s+/).filter(Boolean);
   return parts.length>1?parts:[token];
 }
 function plausibleSku(token){return /\d/.test(token)&&/^(?:\d+|[A-Z0-9]+(?:[_-][A-Z0-9]+)*)$/.test(token)}
