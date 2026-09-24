@@ -82,6 +82,22 @@ if(unicodeValues.requested!=='4'||unicodeValues.found!=='4'||unicodeValues.missi
 if(/AR_289AR_287|BA_296BA_7303|BA_\b/.test(unicodeValues.missingText))throw new Error('Malformed merged SKU leaked into review list: '+JSON.stringify(unicodeValues));
 if(!unicodeValues.hint.includes('1 مدخل غير صالح'))throw new Error('Invalid fragment should be ignored and disclosed: '+JSON.stringify(unicodeValues));
 
+const exactOriginal=["AR_27124","AR_278","AR_279","AR_281","AR_28219","AR_283","AR_28347","AR_28366","AR_285","AR_28520","AR_28527","AR_28528","AR_286","AR_28626","AR_28627","AR_287","AR_289","AR_28919","AR_28920","AR_28921","AR_28922","AR_28923","AR_295","AR_296","AR_297","BA_018","BA_045","BA_063","BA_070","BA_093","BA_100","BA_1033","BA_1034","BA_1035","BA_1036","BA_116","BA_124","BA_131","BA_148","BA_155","BA_162","BA_167","BA_195","BA_215","BA_225","BA_232","BA_249","BA_285","BA_296","BA_298","BA_342","BA_352","BA_371","BA_386","BA_444","BA_461","BA_495","BA_560","BA_564","BA_571","BA_649","BA_7275","BA_7283","BA_7289","BA_7290","BA_7291","BA_7292","BA_7301","BA_7302","BA_7303","BA_734","BA_789","BA_796","BA_806","BA_830","BA_837","BA_843","BA_846","BA_956","EAK_300005","EAK_300007","EAQ_200004","EAR_200001","IBQ_200007","IBQ_200008","IBQ_200016","OGS_00004","OGS_00005","BA_615","BA_622","BA_591","BA_106_11","BA_822","BA_301","BA_052","BA_069","BA_423","BA_515","BA_585","BA_229","BA_406","BA_973","BA_997","BA_829","BA_727","BA_143","BA_326","BA_319","BA_234","BA_357","BA_166","BA_608"];
+const exactMissing=["AR_278","AR_279","AR_281","AR_283","AR_28347","AR_28527","AR_28528","AR_295","AR_297","BA_093","BA_1033","BA_1034","BA_1035","BA_1036","BA_7289","BA_7290","BA_7291","EAQ_200004","IBQ_200007","IBQ_200008","OGS_00004","OGS_00005","BA_106_11","BA_052","BA_069","BA_229","BA_829"];
+const exactCorrupted=exactOriginal.map(sku=>{let value=sku.replace('_','_\u200E');if(sku==='BA_100')value='BA_BA_100';return value;});
+const exactPieces=[];
+for(let i=0;i<exactCorrupted.length;i++){if(i%13===0&&i+1<exactCorrupted.length){exactPieces.push(exactCorrupted[i]+'\u200F'+exactCorrupted[i+1]);i++;}else exactPieces.push(exactCorrupted[i]);}
+await page.fill('#skuInput',exactPieces.join('\n'));
+const exactCounter=await page.locator('#inputCounter').innerText();
+if(!exactCounter.startsWith('112 / 500'))throw new Error('Exact 112-SKU list was corrupted before extraction: '+exactCounter);
+await page.click('#extractBtn');
+await page.waitForFunction(()=>document.querySelector('#requestedCount')?.textContent?.trim()==='112');
+const exactValues=await page.evaluate(()=>({requested:document.querySelector('#requestedCount')?.textContent?.trim(),found:document.querySelector('#foundCount')?.textContent?.trim(),missing:document.querySelector('#missingCount')?.textContent?.trim(),duplicates:document.querySelector('#duplicateCount')?.textContent?.trim(),hint:document.querySelector('#missingHint')?.textContent||'',missingItems:[...document.querySelectorAll('#missingList .bulk-missing-chip')].map(x=>x.textContent.trim())}));
+if(exactValues.requested!=='112'||exactValues.found!=='85'||exactValues.missing!=='27')throw new Error('Exact source list totals changed: '+JSON.stringify(exactValues));
+if(exactValues.duplicates!=='0'||/تم تجاهل/.test(exactValues.hint))throw new Error('Exact source list must not create duplicates/invalid fragments: '+JSON.stringify(exactValues));
+if(JSON.stringify(exactValues.missingItems)!==JSON.stringify(exactMissing))throw new Error('Review list is not the exact unresolved subset of source SKUs: '+JSON.stringify(exactValues));
+const forbidden=['9','AR_2','183','AR_28','528528','21','31','BA_5','0','1148','664','007','EAK_300','BA_30','A1','BA_BA_100'];
+if(exactValues.missingItems.some(x=>forbidden.includes(x)))throw new Error('Invented SKU fragment leaked into review list: '+JSON.stringify(exactValues));
 const pagedRows=allRows.slice(0,30);
 await page.fill('#skuInput',pagedRows.join('\n'));
 await page.click('#extractBtn');
@@ -125,5 +141,5 @@ const capValues=await page.evaluate(()=>({
 if(capValues.requested!=='500'||capValues.missing!=='500'||capValues.imageNodes!==0)throw new Error('500 item cap failed: '+JSON.stringify(capValues));
 if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
 
-console.log('V56.73_SAFE_SKU_TOKENIZER_PASS',{bootMs,...values,unicodeValues,pageValues,preparedLabel,shareValues,capValues});
+console.log('V56.74_EXACT_SKU_LIST_INTEGRITY_PASS',{bootMs,...values,unicodeValues,exactValues,pageValues,preparedLabel,shareValues,capValues});
 await browser.close();
