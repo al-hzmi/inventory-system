@@ -86,6 +86,7 @@ const pricedSku=[...priceMap.keys()].find(sku=>{
 });
 if(!pricedSku)throw new Error('No SKU with sale price, pack, and unique image mapping found');
 const expectedUnit=Number((priceMap.get(pricedSku)/packMap.get(pricedSku)).toFixed(2)).toString()+' ⃁';
+if(priceMap.get('AR_278')!==120||packMap.get('AR_278')!==30||Number((priceMap.get('AR_278')/packMap.get('AR_278')).toFixed(2))!==4)throw new Error('AR_278 unit-price contract must remain 120 / 30 = 4');
 await page.fill('#skuInput',pricedSku);
 await page.click('#extractBtn');
 await page.waitForFunction(()=>document.querySelector('#foundCount')?.textContent?.trim()==='1');
@@ -179,6 +180,8 @@ const capValues=await page.evaluate(()=>({
 if(capValues.requested!=='500'||capValues.missing!=='500'||capValues.imageNodes!==0)throw new Error('500 item cap failed: '+JSON.stringify(capValues));
 if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
 
+const exportCss=fs.readFileSync('v56-70-bulk-image-export.css','utf8');
+if(!exportCss.includes('font-size:6.5px')||!exportCss.includes('padding:2px 4px'))throw new Error('Micro price preview styling regressed');
 const exportJs=fs.readFileSync('v56-70-bulk-image-export.js','utf8');
 if(exportJs.includes('const batches=[]'))throw new Error('ZIP export still uses multiple batches');
 if(!exportJs.includes("تم تجهيز '+S.results.length+' صورة في ملف ZIP واحد"))throw new Error('Single ZIP completion contract missing');
