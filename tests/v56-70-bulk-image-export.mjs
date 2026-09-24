@@ -21,6 +21,10 @@ await page.waitForSelector('#extractBtn:not([disabled])',{timeout:15000});
 await page.fill('#skuInput',[toArabicDigits(skuA),skuB,skuA,missing].join('\n'));
 await page.click('#extractBtn');
 await page.waitForFunction(()=>document.querySelector('#stats')?.hidden===false);
+await page.waitForFunction(()=>{
+  const images=[...document.querySelectorAll('#resultGrid img')];
+  return images.length===2&&images.every(img=>img.complete&&img.naturalWidth>0);
+},{timeout:15000});
 
 const values=await page.evaluate(()=>({
   requested:document.querySelector('#requestedCount')?.textContent?.trim(),
