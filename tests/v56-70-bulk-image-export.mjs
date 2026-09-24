@@ -66,6 +66,37 @@ if(values.duplicates!=='1')throw new Error('Duplicate suppression failed: '+JSON
 if(values.zipDisabled)throw new Error('ZIP action should be enabled when images exist');
 if(!values.albumLink)throw new Error('Image album return link missing');
 
+const pricingLines=fs.readFileSync('data/pricing.tsv','utf8').split(/\r?\n/);
+const priceMap=new Map();
+for(const line of pricingLines.slice(2)){
+  const c=line.split('\t');
+  if(c[0]?.trim()&&c[1]?.trim())priceMap.set(c[0].trim(),c[1].trim());
+  if(c[5]?.trim()&&c[6]?.trim())priceMap.set(c[5].trim(),c[6].trim());
+}
+const imageText=fs.readFileSync('data/images_list.txt','utf8');
+const pricedSku=[...priceMap.keys()].find(sku=>{
+  const d=sku.replace(/\D/g,'');
+  return d&&imageText.split(/\r?\n/).filter(line=>(line.split('\t')[0]||'').replace(/\D/g,'')===d).length===1;
+});
+if(!pricedSku)throw new Error('No priced SKU with unique image mapping found');
+await page.fill('#skuInput',pricedSku);
+await page.click('#extractBtn');
+await page.waitForFunction(()=>document.querySelector('#foundCount')?.textContent?.trim()==='1');
+if(await page.locator('.bulk-price-preview').count())throw new Error('Price preview must be off by default');
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))});
+await page.waitForFunction(()=>document.querySelector('.bulk-price-preview'));
+const pricePreview=await page.locator('.bulk-price-preview').innerText();
+if(!pricePreview.includes(priceMap.get(pricedSku)))throw new Error('System price was not shown in preview: '+pricePreview);
+await page.evaluate(()=>{window.__shareCalls=[]});
+await page.click('#shareImagesBtn');
+await page.waitForFunction(()=>document.querySelector('#shareImagesBtn')?.textContent?.includes('فتح المشاركة'));
+await page.click('#shareImagesBtn');
+await page.waitForFunction(()=>window.__shareCalls?.length===1);
+const pricedShare=await page.evaluate(()=>window.__shareCalls[0]);
+if(pricedShare.count!==1||!pricedShare.names[0].includes('-price.'))throw new Error('Price-stamped image was not passed to native share: '+JSON.stringify(pricedShare));
+await page.locator('#priceStampToggle').evaluate(el=>{el.checked=false;el.dispatchEvent(new Event('change',{bubbles:true}))});
+await page.evaluate(()=>{window.__shareCalls=[]});
+
 await page.fill('#skuInput','AR_289\u200EAR_287\nBA_296\u200FBA_7303\nBA_');
 const unicodeCounter=await page.locator('#inputCounter').innerText();
 if(!unicodeCounter.startsWith('4 / 500'))throw new Error('Hidden Unicode separators merged SKU input: '+unicodeCounter);
@@ -141,5 +172,9 @@ const capValues=await page.evaluate(()=>({
 if(capValues.requested!=='500'||capValues.missing!=='500'||capValues.imageNodes!==0)throw new Error('500 item cap failed: '+JSON.stringify(capValues));
 if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
 
-console.log('V56.74_EXACT_SKU_LIST_INTEGRITY_PASS',{bootMs,...values,unicodeValues,exactValues,pageValues,preparedLabel,shareValues,capValues});
+const exportJs=fs.readFileSync('v56-70-bulk-image-export.js','utf8');
+if(exportJs.includes('const batches=[]'))throw new Error('ZIP export still uses multiple batches');
+if(!exportJs.includes("تم تجهيز '+S.results.length+' صورة في ملف ZIP واحد"))throw new Error('Single ZIP completion contract missing');
+
+console.log('V56.75_PRICE_STAMP_SINGLE_ZIP_PASS',{bootMs,...values,pricedSku,pricePreview,pricedShare,unicodeValues,exactValues,pageValues,preparedLabel,shareValues,capValues});
 await browser.close();

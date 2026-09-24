@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./v52-admin.css?v=54.0">
 <link rel="stylesheet" href="./v54-admin-overhaul.css?v=54.0">
-<link rel="stylesheet" href="./v56-70-bulk-image-export.css?v=56.74">
+<link rel="stylesheet" href="./v56-70-bulk-image-export.css?v=56.75">
 </head>
 <body>
 <main class="v52-page bulk-page">
@@ -23,11 +23,12 @@
       <div class="bulk-label"><b>أرقام الأصناف</b><span id="inputCounter">0 / 500</span></div>
       <textarea id="skuInput" class="bulk-textarea" spellcheck="false" placeholder="230086&#10;230102&#10;230145&#10;..."></textarea>
       <div class="bulk-actions"><button id="extractBtn" class="bulk-btn primary">استخراج الصور</button><button id="pasteBtn" class="bulk-btn">لصق من الحافظة</button><button id="clearBtn" class="bulk-btn">مسح</button></div>
+      <label class="bulk-price-option"><input id="priceStampToggle" type="checkbox"><span class="bulk-switch" aria-hidden="true"></span><span><b>إظهار السعر على الصورة</b><small>يُستخدم سعر البيع الحالي من النظام ويظهر أسفل يمين الصورة.</small></span></label>
     </section>
     <aside class="bulk-card bulk-side-card">
-      <div><div class="bulk-label"><b>طريقة العمل</b><span>V56.74</span></div><div class="bulk-note">كل رقم في سطر مستقل، كما تقبل الأداة اللصق من Excel والفواصل والمسافات، وتتعامل مع المحارف المخفية بدون دمج أرقام الأصناف. تحفظ ترتيبك وتزيل التكرار تلقائيًا.</div></div>
+      <div><div class="bulk-label"><b>طريقة العمل</b><span>V56.75</span></div><div class="bulk-note">كل رقم في سطر مستقل، كما تقبل الأداة اللصق من Excel والفواصل والمسافات، وتتعامل مع المحارف المخفية بدون دمج أرقام الأصناف. تحفظ ترتيبك وتزيل التكرار تلقائيًا.</div></div>
       <div class="bulk-limit">الحد الأقصى <strong>500 صنف</strong>. الربط اليدوي المعتمد في ألبوم الصور له الأولوية ثم الربط المباشر.</div>
-      <div class="bulk-note">على الآيفون استخدم <strong>مشاركة / حفظ في الصور</strong> ثم اختر «حفظ الصور» من نافذة المشاركة. ZIP أصبح خيارًا ثانويًا فقط.</div>
+      <div class="bulk-note">على الآيفون استخدم <strong>مشاركة / حفظ في الصور</strong>. وللتنزيل الكامل استخدم <strong>تنزيل الكل</strong> وسيخرج ملف ZIP واحد فقط مهما كان عدد الصور.</div>
     </aside>
   </div>
   <div id="stats" class="bulk-stats" hidden>
@@ -35,7 +36,7 @@
     <div class="bulk-stat bad"><small>بدون صورة</small><b id="missingCount">0</b></div><div class="bulk-stat"><small>مكرر تم تجاهله</small><b id="duplicateCount">0</b></div>
   </div>
   <div id="toolbar" class="bulk-toolbar" hidden>
-    <div class="bulk-toolbar-actions"><button id="shareImagesBtn" class="bulk-btn success">مشاركة / حفظ في الصور</button><button id="downloadZipBtn" class="bulk-btn">ZIP</button><button id="copyMissingBtn" class="bulk-btn">نسخ الأرقام المفقودة</button><button id="newSearchBtn" class="bulk-btn">بحث جديد</button></div>
+    <div class="bulk-toolbar-actions"><button id="shareImagesBtn" class="bulk-btn success">مشاركة / حفظ في الصور</button><button id="downloadZipBtn" class="bulk-btn">تنزيل الكل — ZIP واحد</button><button id="copyMissingBtn" class="bulk-btn">نسخ الأرقام المفقودة</button><button id="newSearchBtn" class="bulk-btn">بحث جديد</button></div>
     <div class="bulk-progress" id="progress"><div class="bulk-progress-track"><div class="bulk-progress-bar" id="progressBar"></div></div><div id="progressText"></div></div><div id="shareGuide" class="bulk-share-guide">للألبوم: اضغط الزر، جهّز الدفعة، ثم افتح المشاركة واختر «حفظ الصور».</div>
   </div>
   <section id="resultsSection" hidden><div class="bulk-section-head"><div><h2>الصور المطابقة</h2><p>مرتبة حسب ترتيب الإدخال. يتم عرض 24 صورة فقط في الصفحة لحماية أداء الجوال.</p></div><span class="v52-chip ok" id="resultChip">0 صورة</span></div><div id="resultGrid" class="bulk-grid"></div><div id="resultPager" class="bulk-pager"></div></section>
@@ -43,7 +44,7 @@
   <div id="emptyState" class="bulk-empty"><b>جاهز لاستخراج الصور</b><span>ألصق القائمة أعلاه ثم اضغط «استخراج الصور».</span></div>
 </main>
 <div id="toast" class="bulk-toast"></div>
-<script src="./v56-70-bulk-image-export.js?v=56.74"></script>
+<script src="./v56-70-bulk-image-export.js?v=56.75"></script>
 <script src="./v46-admin-nav.js?v=56.70"></script>
 </body>
 </html>
