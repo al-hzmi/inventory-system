@@ -110,3 +110,4 @@ jobs:
           await b.close();if(fail)process.exit(1);
           JS
           node ./.site-smoke.mjs
+          node tests/v56-70-bulk-image-export.mjs

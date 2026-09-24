@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5f7f6">
+<title>استخراج صور الأصناف | بيت الأواني الطيبة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./v52-admin.css?v=54.0">
+<link rel="stylesheet" href="./v54-admin-overhaul.css?v=54.0">
+<link rel="stylesheet" href="./v56-70-bulk-image-export.css?v=56.70">
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+<main class="v52-page bulk-page">
+  <div class="v52-page-head">
+    <div><div class="v52-eyebrow">أداة خاصة بمسؤول النظام</div><h1 class="v52-page-title">استخراج صور الأصناف</h1><div class="v52-page-sub">ألصق حتى 500 رقم صنف، وسيتم جلب الصور الحالية بالترتيب نفسه مع فصل الأرقام التي لا تملك صورة.</div></div>
+    <div class="v52-head-actions"><a class="v52-btn soft" href="./image-distribution.html">ألبوم توزيع الصور</a><a class="v52-btn" href="./admin-home.html">الرئيسية</a></div>
+  </div>
+  <div class="bulk-hero">
+    <section class="bulk-card bulk-input-card">
+      <div class="bulk-label"><b>أرقام الأصناف</b><span id="inputCounter">0 / 500</span></div>
+      <textarea id="skuInput" class="bulk-textarea" spellcheck="false" placeholder="230086&#10;230102&#10;230145&#10;..."></textarea>
+      <div class="bulk-actions"><button id="extractBtn" class="bulk-btn primary">استخراج الصور</button><button id="pasteBtn" class="bulk-btn">لصق من الحافظة</button><button id="clearBtn" class="bulk-btn">مسح</button></div>
+    </section>
+    <aside class="bulk-card bulk-side-card">
+      <div><div class="bulk-label"><b>طريقة العمل</b><span>V56.70</span></div><div class="bulk-note">كل رقم في سطر مستقل، كما تقبل الأداة اللصق من Excel والفواصل والمسافات. تحفظ ترتيبك وتزيل التكرار تلقائيًا.</div></div>
+      <div class="bulk-limit">الحد الأقصى <strong>500 صنف</strong>. الربط اليدوي المعتمد في ألبوم الصور له الأولوية ثم الربط المباشر.</div>
+      <div class="bulk-note">يمكن حفظ كل صورة منفردة أو تنزيل النتائج ZIP. القوائم الكبيرة تقسم تلقائيًا إلى دفعات آمنة للمتصفح.</div>
+    </aside>
+  </div>
+  <div id="stats" class="bulk-stats" hidden>
+    <div class="bulk-stat"><small>أرقام مطلوبة</small><b id="requestedCount">0</b></div><div class="bulk-stat ok"><small>صور موجودة</small><b id="foundCount">0</b></div>
+    <div class="bulk-stat bad"><small>بدون صورة</small><b id="missingCount">0</b></div><div class="bulk-stat"><small>مكرر تم تجاهله</small><b id="duplicateCount">0</b></div>
+  </div>
+  <div id="toolbar" class="bulk-toolbar" hidden>
+    <div class="bulk-toolbar-actions"><button id="downloadZipBtn" class="bulk-btn success">تنزيل الموجود ZIP</button><button id="copyMissingBtn" class="bulk-btn">نسخ الأرقام المفقودة</button><button id="newSearchBtn" class="bulk-btn">بحث جديد</button></div>
+    <div class="bulk-progress" id="progress"><div class="bulk-progress-track"><div class="bulk-progress-bar" id="progressBar"></div></div><div id="progressText"></div></div>
+  </div>
+  <section id="resultsSection" hidden><div class="bulk-section-head"><div><h2>الصور المطابقة</h2><p>مرتبة حسب ترتيب الإدخال.</p></div><span class="v52-chip ok" id="resultChip">0 صورة</span></div><div id="resultGrid" class="bulk-grid"></div></section>
+  <section id="missingSection" hidden><div class="bulk-section-head"><div><h2>لم يتم العثور على صورة</h2><p>انسخها وراجعها لاحقًا في ألبوم توزيع الصور.</p></div></div><div class="bulk-missing"><div class="bulk-missing-head"><b>أرقام تحتاج مراجعة</b><span id="missingHint"></span></div><div id="missingList" class="bulk-missing-list"></div></div></section>
+  <div id="emptyState" class="bulk-empty"><b>جاهز لاستخراج الصور</b><span>ألصق القائمة أعلاه ثم اضغط «استخراج الصور».</span></div>
+</main>
+<div id="toast" class="bulk-toast"></div>
+<script src="./v56-70-bulk-image-export.js?v=56.70"></script>
+<script src="./v46-admin-nav.js?v=56.70"></script>
+</body>
+</html>
