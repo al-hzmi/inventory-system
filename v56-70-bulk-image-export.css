@@ -30,3 +30,7 @@ button,textarea{font:inherit}.bulk-page{max-width:1500px}
 @media(max-width:900px){.bulk-hero{grid-template-columns:1fr}.bulk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.bulk-textarea{min-height:210px}}
 @media(max-width:620px){.bulk-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.bulk-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.bulk-input-card,.bulk-side-card{padding:14px}.bulk-card-actions{grid-template-columns:1fr}.bulk-page{padding-bottom:86px!important}.bulk-toolbar-actions{width:100%}.bulk-toolbar .bulk-btn{flex:1}.bulk-progress{min-width:100%;max-width:none}}
 .bulk-pager{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 4px}.bulk-page-info{font-size:9px;color:#66716b;min-width:120px;text-align:center}.bulk-pager .bulk-btn{min-height:38px;padding:0 12px}.bulk-pager:empty{display:none}
+
+.bulk-share-guide{width:100%;font-size:8px;line-height:1.7;color:#66716b;background:#f4f8f6;border:1px solid #e3ece7;border-radius:10px;padding:8px 10px}
+.bulk-toolbar-actions #shareImagesBtn{min-width:170px}
+@media(max-width:620px){.bulk-share-guide{font-size:8.5px}.bulk-toolbar-actions #shareImagesBtn{flex-basis:100%}}
