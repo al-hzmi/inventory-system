@@ -203,6 +203,8 @@ const SEARCH_LOG_DEBOUNCE_MS = 1500;
 const MULTI_TAP_WINDOW_MS    = 300;
 const MAX_SKU_RESULTS        = 5;
 const MAX_NAME_RESULTS       = 15;
+const MAX_DEPLETED_SKU_RESULTS = 8;
+const MAX_DEPLETED_NAME_RESULTS = 8;
 const MIN_NAME_QUERY_LENGTH  = 2;
 const GALLERY_PAGE_SIZE      = 60;
 const LOW_STOCK_THRESHOLD    = 10;
@@ -255,7 +257,7 @@ const DEFAULT_EMPLOYEE_SITE_CONTROL = {
 
 const VISIBILITY_RULES = {
     hideOutOfStockInGallery         : true,
-    hideOutOfStockInSearchWithImage : true,
+    hideOutOfStockInSearchWithImage : false,
     hideOutOfStockInPlainSearch     : false,
     hideQtyInSearchWithImage        : false,
 };
@@ -789,6 +791,37 @@ const parseExcelData = (rawText, warehouseKey, pricingMap) => {
     }
     return Object.values(dataMap);
 };
+
+const parseDepletedArchive = (raw) => {
+    const lines = String(raw || '').replace(/^\uFEFF/, '').trimEnd().split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) return [];
+    const headers = lines[0].split('\t').map(x => x.trim());
+    const idx = names => headers.findIndex(h => names.test(h));
+    const skuIdx = idx(/SKU|رقم|كود|صنف/i), nameIdx = idx(/Name|اسم|وصف/i), unitIdx = idx(/Unit|وحدة/i), packIdx = idx(/Pack|شد/i);
+    const imageIdx = idx(/ImageFile|صورة/i), whIdx = idx(/LastWarehouse|مستودع/i), seenIdx = idx(/LastSeen|آخر ظهور/i);
+    if (skuIdx < 0 || imageIdx < 0) return [];
+    const out = [];
+    for (let i = 1; i < lines.length; i++) {
+        const c = lines[i].split('\t'), id = String(c[skuIdx] || '').trim(), imageFile = String(c[imageIdx] || '').trim();
+        if (!id || !imageFile) continue;
+        const searchId = toEnglishDigits(id).toLowerCase(), cleanId = normalizeCleanId(id);
+        if (!cleanId) continue;
+        const name = nameIdx >= 0 ? String(c[nameIdx] || '').trim() : '';
+        out.push({
+            uid: 'depleted:' + normalizeImageSku(id) + ':' + i,
+            warehouseKey: 'depleted',
+            id, searchId, cleanId, imageSku: normalizeImageSku(id),
+            name, searchName: normalizeText(name), qty: 0,
+            unit: unitIdx >= 0 ? String(c[unitIdx] || '').trim() : '',
+            pack: packIdx >= 0 ? String(c[packIdx] || '').trim() : '',
+            price: 0, approxPrice: 0, imageFile,
+            isDepletedArchive: true,
+            lastWarehouse: whIdx >= 0 ? String(c[whIdx] || '').trim() : '',
+            lastSeen: seenIdx >= 0 ? String(c[seenIdx] || '').trim() : ''
+        });
+    }
+    return out;
+};
     
 const reportCleanIdCollisions = (items, warehouseKey) => {};
 
@@ -875,7 +908,7 @@ const buildResolvedImagesMap = (imagesMap, databases, overrides = {}) => {
     return resolved;
 };
 
-const imageForItem = (resolvedImages, item) => item?.uid ? (resolvedImages?.get(item.uid) || '') : '';
+const imageForItem = (resolvedImages, item) => item?.imageFile || (item?.uid ? (resolvedImages?.get(item.uid) || '') : '');
 const hasImageForItem = (resolvedImages, item) => Boolean(imageForItem(resolvedImages, item));
 
 const IMAGE_BINDING_BACKEND = './api/image-admin';
@@ -1072,42 +1105,60 @@ const bulkSaveProductCategory = async ({ items, category, currentCategoryById, s
     return cleanIds.length;
 };
 
-const runSearch = (activeDb, rawQuery, hideOutOfStock) => {
+const runSearch = (activeDb, rawQuery, hideOutOfStock, depletedDb = []) => {
     const cleanQuery = normalizeCleanId(rawQuery);
     const textQuery  = normalizeText(rawQuery);
     const nameTokens = textQuery.length >= MIN_NAME_QUERY_LENGTH ? textQuery.split(' ').filter(Boolean) : [];
 
-    if (!cleanQuery && nameTokens.length === 0) return { visible: [], total: 0, exact: null };
+    if (!cleanQuery && nameTokens.length === 0) return { visible: [], availableVisible: [], depletedVisible: [], total: 0, availableTotal: 0, depletedTotal: 0, exact: null };
 
-    const ranked = [];
-    for (let i = 0; i < activeDb.length; i++) {
-        const item = activeDb[i];
-        if (hideOutOfStock && item.qty <= 0) continue;
-
-        let rank = -1;
-        if (cleanQuery && item.cleanId.startsWith(cleanQuery)) {
-            rank = item.cleanId === cleanQuery ? 0 : 1;
-        } else if (nameTokens.length && item.searchName) {
+    const rankItem = item => {
+        if (cleanQuery && item.cleanId && item.cleanId.startsWith(cleanQuery)) return item.cleanId === cleanQuery ? 0 : 1;
+        if (nameTokens.length && item.searchName) {
             let all = true;
             for (let t = 0; t < nameTokens.length; t++) {
                 if (!item.searchName.includes(nameTokens[t])) { all = false; break; }
             }
-            if (all) rank = item.searchName.startsWith(nameTokens[0]) ? 2 : 3;
+            if (all) return item.searchName.startsWith(nameTokens[0]) ? 2 : 3;
         }
-        if (rank !== -1) ranked.push({ item, rank });
-    }
+        return -1;
+    };
+    const sortRanked = (a,b) => (a.rank - b.rank) || String(a.item.cleanId || '').localeCompare(String(b.item.cleanId || ''), 'en', { numeric:true });
 
-    ranked.sort((a, b) => a.rank - b.rank);
-
-    const sku = [], nm = [];
-    for (let i = 0; i < ranked.length; i++) {
-        const r = ranked[i];
-        if (r.rank <= 1) { if (sku.length < MAX_SKU_RESULTS) sku.push(r.item); }
-        else             { if (nm.length  < MAX_NAME_RESULTS) nm.push(r.item);  }
+    const availableRanked = [], depletedRanked = [];
+    for (let i = 0; i < activeDb.length; i++) {
+        const item = activeDb[i], rank = rankItem(item);
+        if (rank < 0) continue;
+        if (item.qty > 0) availableRanked.push({item,rank});
+        else if (!hideOutOfStock) depletedRanked.push({item:{...item,isDepletedArchive:Boolean(item.isDepletedArchive)},rank});
     }
-    return { visible: sku.concat(nm), total: ranked.length, exact: ranked.length && ranked[0].rank === 0 ? ranked[0].item : null };
+    for (let i = 0; i < depletedDb.length; i++) {
+        const item = depletedDb[i], rank = rankItem(item);
+        if (rank >= 0) depletedRanked.push({item:{...item,qty:0,isDepletedArchive:true},rank});
+    }
+    availableRanked.sort(sortRanked); depletedRanked.sort(sortRanked);
+
+    const cap = (ranked, skuMax, nameMax) => {
+        const sku=[], nm=[];
+        for (const r of ranked) {
+            if (r.rank <= 1) { if (sku.length < skuMax) sku.push(r.item); }
+            else if (nm.length < nameMax) nm.push(r.item);
+        }
+        return sku.concat(nm);
+    };
+    const availableVisible = cap(availableRanked, MAX_SKU_RESULTS, MAX_NAME_RESULTS);
+    const depletedVisible = cap(depletedRanked, MAX_DEPLETED_SKU_RESULTS, MAX_DEPLETED_NAME_RESULTS);
+    const availableExact = availableRanked.find(r => r.rank === 0)?.item || null;
+    const depletedExact = depletedRanked.find(r => r.rank === 0)?.item || null;
+    const exact = availableExact || (availableVisible.length === 0 ? depletedExact : null);
+    return {
+        visible: availableVisible.concat(depletedVisible),
+        availableVisible, depletedVisible,
+        total: availableRanked.length + depletedRanked.length,
+        availableTotal: availableRanked.length, depletedTotal: depletedRanked.length,
+        exact
+    };
 };
-
 const stockTone = (qty) => {
     if (qty <= 0) return { text:'text-danger',  bg:'bg-dangerSoft'  };
     if (qty <= LOW_STOCK_THRESHOLD) return { text:'text-warn', bg:'bg-warnSoft' };
@@ -4174,6 +4225,7 @@ const App = () => {
     const [selectedSearchItem, setSelectedSearchItem] = useState(null);
     
     const [databases, setDatabases]   = useState({ jeddah: [], riyadh: [] });
+    const [depletedCatalog, setDepletedCatalog] = useState([]);
     const [imagesList, setImagesList] = useState(new Map());
     const [rawImagesList, setRawImagesList] = useState(new Map());
     const [imageBindingOverrides, setImageBindingOverrides] = useState({});
@@ -4202,8 +4254,8 @@ const App = () => {
         let alive = true;
         (async () => {
             try {
-                const [jT, rT, iT, cT, vJ, pT, nJ] = await Promise.all([
-                    fetchText(`${DATA_PATH}jeddah.tsv`), fetchText(`${DATA_PATH}riyadh.tsv`), fetchText(`${DATA_PATH}images_list.txt`), fetchText(`${DATA_PATH}categories.tsv`), fetchJson(`${DATA_PATH}version.json`), fetchText(`${DATA_PATH}pricing.tsv`), fetchJson(`${DATA_PATH}new-arrivals.json`)
+                const [jT, rT, iT, cT, vJ, pT, nJ, dT] = await Promise.all([
+                    fetchText(`${DATA_PATH}jeddah.tsv`), fetchText(`${DATA_PATH}riyadh.tsv`), fetchText(`${DATA_PATH}images_list.txt`), fetchText(`${DATA_PATH}categories.tsv`), fetchJson(`${DATA_PATH}version.json`), fetchText(`${DATA_PATH}pricing.tsv`), fetchJson(`${DATA_PATH}new-arrivals.json`), fetchText(`${DATA_PATH}depleted_inventory.tsv`)
                 ]);
                 if (!alive) return;
 
@@ -4215,13 +4267,15 @@ const App = () => {
                 reportCleanIdCollisions(riyadh, WAREHOUSES.riyadh.key);
 
                 const nextDatabases = { jeddah, riyadh };
+                const depleted = parseDepletedArchive(dT);
                 setDatabases(nextDatabases);
+                setDepletedCatalog(depleted);
                 const rawImgMap = buildImagesMap(iT);
                 setRawImagesList(rawImgMap);
                 const [bindingOverrides, arrivalOverrides] = await Promise.all([loadImageBindingOverrides(), loadNewArrivalOverrides()]);
                 if (!alive) return;
                 setImageBindingOverrides(bindingOverrides);
-                setImagesList(buildResolvedImagesMap(rawImgMap, nextDatabases, bindingOverrides));
+                setImagesList(buildResolvedImagesMap(rawImgMap, { ...nextDatabases, depleted }, bindingOverrides));
                 setNewArrivalsMeta(nJ && Array.isArray(nJ.items) ? nJ : { items: [] });
                 setNewArrivalOverrides(arrivalOverrides);
                 setBaseCategories(parseCategories(cT));
@@ -4243,14 +4297,14 @@ const App = () => {
             const next = await loadImageBindingOverrides();
             if (!alive) return;
             setImageBindingOverrides(next);
-            setImagesList(buildResolvedImagesMap(rawImagesList, databases, next));
+            setImagesList(buildResolvedImagesMap(rawImagesList, { ...databases, depleted: depletedCatalog }, next));
         };
         refreshBindings().catch(err => console.warn('[V56.32 image bindings poll]', err));
         const timer = setInterval(() => {
             if (document.visibilityState === 'visible') refreshBindings().catch(err => console.warn('[V56.32 image bindings poll]', err));
         }, 15000);
         return () => { alive = false; clearInterval(timer); };
-    }, [rawImagesList, databases]);
+    }, [rawImagesList, databases, depletedCatalog]);
 
     // مزامنة التصنيفات اللحظية: أي تعديل من مهند يظهر لكل الأجهزة المفتوحة فوراً.
     useEffect(() => {
@@ -4310,7 +4364,7 @@ const App = () => {
     useEffect(() => {
         const cleanQ = normalizeCleanId(query);
         if (cleanQ.length >= 8 && /^\d+$/.test(cleanQ)) {
-            const pool = databases[warehouse] || [];
+            const pool = [...(databases[warehouse] || []), ...depletedCatalog];
             const exactMatch = pool.find(item => item.cleanId === cleanQ);
             if (exactMatch) return; 
 
@@ -4321,7 +4375,7 @@ const App = () => {
                 if (bestMatch.id !== query) setQuery(bestMatch.id); 
             }
         }
-    }, [query, warehouse, databases]);
+    }, [query, warehouse, databases, depletedCatalog]);
     
     const applyTaps = useCallback((uid, taps) => {
         setCardViews(prev => {
@@ -4350,8 +4404,8 @@ const App = () => {
 
     const search = useMemo(() => {
         if (!warehouse || !query.trim()) return null;
-        return runSearch(databases[warehouse] || [], query, hideOutOfStockInSearch);
-    }, [query, warehouse, databases, hideOutOfStockInSearch]);
+        return runSearch(databases[warehouse] || [], query, hideOutOfStockInSearch, depletedCatalog);
+    }, [query, warehouse, databases, depletedCatalog, hideOutOfStockInSearch]);
 
     useEffect(() => {
         if (!warehouse || !search || search.total === 0) return;
