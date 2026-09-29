@@ -64,6 +64,7 @@ jobs:
           PY
           node tests/v56-stocktake-workflow.mjs
           node tests/v56-5-stocktake-direct-mobile.mjs
+          node tests/v56-79-depleted-search-ios-images.mjs
       - name: Parse every JavaScript and JSX script
         shell: bash
         run: |
@@ -111,3 +112,4 @@ jobs:
           JS
           node ./.site-smoke.mjs
           node tests/v56-70-bulk-image-export.mjs
+          node tests/v56-79-depleted-search-ios-images.mjs
