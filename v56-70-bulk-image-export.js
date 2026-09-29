@@ -32,11 +32,20 @@ function parseHistoricalPricing(raw){
 
 function numberValue(value){const n=Number(digits(String(value??'')).replace(/,/g,'').replace(/[^0-9.\-]/g,''));return Number.isFinite(n)?n:NaN}
 function unitPriceLabel(salePrice,packQty){const sale=numberValue(salePrice),pack=numberValue(packQty);if(!(sale>0)||!(pack>0))return'';const unit=sale/pack;if(!(unit>0)||!Number.isFinite(unit))return'';return Number(unit.toFixed(2)).toString()+' ⃁'}
+function currentPackFor(key){
+  const direct=S.packs.get(key)||'';if(numberValue(direct)>0)return{packQty:direct,packKey:key};
+  const prefix=key+'_',matches=[...S.packs.entries()].filter(([candidate,pack])=>{
+    if(!candidate.startsWith(prefix))return false;
+    const suffix=candidate.slice(prefix.length);
+    return /^\d+(?:\.\d+)?$/.test(suffix)&&numberValue(suffix)===numberValue(pack)&&numberValue(pack)>0
+  });
+  return matches.length===1?{packQty:matches[0][1],packKey:matches[0][0]}:{packQty:'',packKey:''}
+}
 function unitPriceFor(sku,img){
   const candidates=[sku,img?.key,norm(img?.file||'')].filter(Boolean);
   for(const key of candidates){
-    const salePrice=S.prices.get(key)||'',packQty=S.packs.get(key)||'',unitPrice=unitPriceLabel(salePrice,packQty);
-    if(unitPrice)return{salePrice,packQty,unitPrice,priceKey:key,priceSource:'current',historyName:''}
+    const salePrice=S.prices.get(key)||'',pack=currentPackFor(key),packQty=pack.packQty,unitPrice=unitPriceLabel(salePrice,packQty);
+    if(unitPrice)return{salePrice,packQty,unitPrice,priceKey:key,packKey:pack.packKey||key,priceSource:'current',historyName:''}
   }
   for(const key of candidates){
     const h=S.historical.get(key);if(!h)continue;
