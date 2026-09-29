@@ -87,6 +87,7 @@ const pricedSku=[...priceMap.keys()].find(sku=>{
 if(!pricedSku)throw new Error('No SKU with sale price, pack, and unique image mapping found');
 const expectedUnit=Number((priceMap.get(pricedSku)/packMap.get(pricedSku)).toFixed(2)).toString()+' ⃁';
 if(priceMap.get('AR_278')!==120||packMap.get('AR_278')!==30||Number((priceMap.get('AR_278')/packMap.get('AR_278')).toFixed(2))!==4)throw new Error('AR_278 unit-price contract must remain 120 / 30 = 4');
+if(priceMap.get('BA_423')!==96||packMap.get('BA_423_12')!==12)throw new Error('BA_423 renamed-pack contract must remain price 96 with BA_423_12 pack 12');
 const historyRows=fs.readFileSync('data/historical_pricing.tsv','utf8').split(/\r?\n/).filter(Boolean);
 if(historyRows.length!==17)throw new Error('Historical pricing memory must contain header + 16 audited rows');
 const historyMap=new Map(historyRows.slice(1).map(line=>{const c=line.split('\t');return[c[0],{sale:Number(c[1]),pack:Number(c[2]),unit:Number(c[3]),priceDate:c[4],packDate:c[5],priceCommit:c[6],packCommit:c[7],alias:c[8],name:c[9]}]}));
@@ -218,6 +219,7 @@ if(errors.length)throw new Error('Page errors: '+errors.join(' | '));
 const exportCss=fs.readFileSync('v56-70-bulk-image-export.css','utf8');
 if(!exportCss.includes('font-size:6.5px')||!exportCss.includes('padding:2px 4px'))throw new Error('Micro price preview styling regressed');
 const exportJs=fs.readFileSync('v56-70-bulk-image-export.js','utf8');
+if(!exportJs.includes('function currentPackFor(key)')||!exportJs.includes("candidate.startsWith(prefix)"))throw new Error('Safe renamed-SKU pack resolver missing');
 if(exportJs.includes('const batches=[]'))throw new Error('ZIP export still uses multiple batches');
 if(!exportJs.includes("تم تجهيز '+S.results.length+' صورة في ملف ZIP واحد"))throw new Error('Single ZIP completion contract missing');
 
