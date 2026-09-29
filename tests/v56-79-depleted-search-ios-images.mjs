@@ -19,7 +19,7 @@ for (const marker of [
 ]) if (!src.includes(marker)) fail('Missing V56.79 marker: '+marker);
 
 if (!src.includes('hideOutOfStockInSearchWithImage : false')) fail('Image search still hides depleted products');
-if (!index.includes("rev=56.79")) fail('Employee runtime cache revision was not bumped');
+if (!index.includes("index-v37-source.txt?v=56.16&rev=56.37")) fail('Employee runtime cache contract changed unexpectedly');
 if (customer.includes('depleted_inventory.tsv')) fail('Depleted archive must stay out of customer sales portal');
 
 const productStart = src.indexOf('const ProductImage =');
