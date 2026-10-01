@@ -68,3 +68,39 @@ jobs:
 
               print(f'{filename}: PASS ({len(ids)} product rows)')
           PY
+      - name: Audit active SKU pricing coverage
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def inventory_skus(path):
+              rows = Path(path).read_text(encoding='utf-8-sig').splitlines()[1:]
+              out = set()
+              for line in rows:
+                  cols = line.split('\t')
+                  if not cols or not cols[0].strip():
+                      continue
+                  sku = cols[0].strip()
+                  try:
+                      qty = float((cols[3] if len(cols) > 3 else '0').replace(',', ''))
+                  except ValueError:
+                      qty = 0
+                  if qty > 0:
+                      out.add(sku)
+              return out
+
+          price_rows = Path('data/pricing.tsv').read_text(encoding='utf-8-sig').splitlines()[2:]
+          priced = set()
+          for line in price_rows:
+              cols = line.split('\t')
+              if len(cols) > 0 and cols[0].strip(): priced.add(cols[0].strip())
+              if len(cols) > 5 and cols[5].strip(): priced.add(cols[5].strip())
+
+          active = inventory_skus('data/jeddah.tsv') | inventory_skus('data/riyadh.tsv')
+          missing = sorted(active - priced)
+          print(f'Pricing coverage: {len(active)-len(missing)}/{len(active)} active SKUs')
+          if missing:
+              print('WARNING: active SKUs without verified price:')
+              print('\n'.join(missing))
+          PY
