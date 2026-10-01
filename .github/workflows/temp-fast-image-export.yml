@@ -1,0 +1,24 @@
+name: Fast inventory image export
+on:
+  push:
+    paths:
+      - '.github/workflows/temp-fast-image-export.yml'
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download selected images
+        shell: bash
+        run: |
+          mkdir -p export-images
+          files=(
+          "727.webp" "BA_018.webp" "BA_195.webp" "BA_131.webp" "BA_070.webp" "045.webp" "BA_100.webp" "143.webp" "225.webp" "796.webp" "232.webp" "802.webp" "BA_734.webp" "BA_063.webp" "249.webp" "273.webp" "BA_956.webp" "BA_371.webp" "186.webp" "BA_326.webp" "319.webp" "437.webp" "BA_468.webp" "234.webp" "357.webp" "BA_529.webp" "BA_512.webp" "656.webp" "BA_806.webp" "166.webp" "BA_669.webp" "BA_137.webp" "BA_522.webp" "BA_546.webp" "608.webp" "615.webp" "622.webp" "148.webp" "591.webp" "BA_155.webp" "162.webp" "846.webp" "BA_564.webp" "BA_285.webp" "BA_142.webp" "BA_830.webp" "116.webp" "BA_789.webp" "BA_461.webp" "BA_595.webp" "837.webp" "BA_653.webp" "179.webp" "BA_822.webp" "BA_444.webp" "BA_495.webp" "106.webp" "301.webp" "076.webp" "083.webp" "167.webp" "BA_423.webp" "515.webp" "BA_560.webp" "690.webp" "386.webp" "BA_287.webp" "126.webp" "352.webp" "959.webp" "342.webp" "BA_296.webp" "BA_843.webp" "124.webp" "585.webp" "BA_649.webp" "298.webp" "BA_215.webp" "406.webp" "973.webp" "997.webp" "571.webp" "209.webp" "193.webp"
+          )
+          for f in "${files[@]}"; do
+            curl -fsSL "https://raw.githubusercontent.com/al-hzmi/inventory-system/main/images/$f" -o "export-images/$f" || true
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inventory-images-fast
+          path: export-images/
+          compression-level: 6
