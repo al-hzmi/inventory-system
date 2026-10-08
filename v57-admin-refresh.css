@@ -121,3 +121,14 @@ body.v51-admin-dashboard #root .fixed.inset-0:not(:first-child){max-width:100vw}
 }
 @media(hover:none){.v57-action:hover{background:transparent;border-color:transparent}}
 @media(prefers-reduced-motion:reduce){.v57-action,*{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Keep every management tab discoverable on desktop; retain native swipe on phones. */
+@media(min-width:901px){
+ body.v51-admin-dashboard #root .overflow-x-auto:has(> [data-admin-module]){flex-wrap:wrap!important;overflow:visible!important;gap:5px;padding:7px 10px;height:auto!important}
+ body.v51-admin-dashboard #root [data-admin-module]{flex:0 0 auto;min-width:unset!important;border-radius:9px;border:1px solid transparent;min-height:40px}
+ body.v51-admin-dashboard #root [data-admin-module][data-active="true"]{border-color:#c9e5d6}
+}
+@media(max-width:900px){
+ body.v51-admin-dashboard #root .overflow-x-auto:has(> [data-admin-module]){scroll-snap-type:x proximity;overscroll-behavior-x:contain;padding-inline:7px}
+ body.v51-admin-dashboard #root [data-admin-module]{scroll-snap-align:start;min-width:118px!important}
+}
