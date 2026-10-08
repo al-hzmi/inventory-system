@@ -132,3 +132,5 @@ body.v51-admin-dashboard #root .fixed.inset-0:not(:first-child){max-width:100vw}
  body.v51-admin-dashboard #root .overflow-x-auto:has(> [data-admin-module]){scroll-snap-type:x proximity;overscroll-behavior-x:contain;padding-inline:7px}
  body.v51-admin-dashboard #root [data-admin-module]{scroll-snap-align:start;min-width:118px!important}
 }
+
+.v57-action-icon svg{width:19px;height:19px;display:block;stroke-width:1.7}
