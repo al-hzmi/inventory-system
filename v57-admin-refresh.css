@@ -137,3 +137,6 @@ body.v51-admin-dashboard #root .fixed.inset-0:not(:first-child){max-width:100vw}
 
 /* Fix legacy content-box + 100% width that clipped buttons beyond the viewport. */
 body.v52-admin-layout .v52-page,body.v52-admin-layout .v57-import-main,body.v52-admin-layout main{box-sizing:border-box!important}
+
+/* Remove browser-default 8px body margin on standalone admin pages. */
+body.v52-admin-layout{margin:0!important}
