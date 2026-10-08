@@ -2,8 +2,8 @@
 const root=document.getElementById('app');
 let proof={};try{proof=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'{}')}catch(e){}
 if(localStorage.getItem('inventory_user_name_v2')!=='مهند'||localStorage.getItem('inventory_admin_token_v2')!=='1jh297-spgf2z'||proof.role!=='admin'||!proof.photoId){location.replace('./index.html?employee=1');return}
-document.body.style='font:16px system-ui;background:#f5f7f6;color:#173d30;max-width:760px;margin:30px auto;padding:20px';
-root.innerHTML='<p>ارفع CSV أو TSV، أو الصق الجدول المنسوخ من Excel. يجب تضمين صف العناوين.</p><label>نوع التحديث</label><p><select id="kind"><option value="jeddah">كميات جدة</option><option value="riyadh">كميات الرياض</option><option value="pricing">التسعيرة</option></select></p><input type="file" id="file" accept=".xlsx,.xls,.csv,.tsv,.txt"><p>ملفات XLSX: افتحها في Excel وانسخ الأعمدة والصقها أدناه.</p><textarea id="data" rows="13" style="width:100%;box-sizing:border-box;direction:ltr" placeholder="الصق الجدول هنا"></textarea><p><button id="preview">فحص ومعاينة</button> <button id="save" disabled>اعتماد التحديث</button></p><pre id="result" style="white-space:pre-wrap"></pre><a href="./admin-home.html">العودة للإدارة</a>';
+document.body.classList.add('v57-import-layout');
+root.innerHTML='<p>ارفع CSV أو TSV، أو الصق الجدول المنسوخ من Excel. يجب تضمين صف العناوين.</p><label>نوع التحديث</label><p><select id="kind"><option value="jeddah">كميات جدة</option><option value="riyadh">كميات الرياض</option><option value="pricing">التسعيرة</option></select></p><input type="file" id="file" accept=".xlsx,.xls,.csv,.tsv,.txt"><p>يدعم رفع Excel مباشرة، أو النسخ واللصق من Excel.</p><textarea id="data" rows="13" style="width:100%;box-sizing:border-box;direction:ltr" placeholder="الصق الجدول هنا"></textarea><p><button id="preview">فحص ومعاينة</button> <button id="save" disabled>اعتماد التحديث</button></p><pre id="result" style="white-space:pre-wrap"></pre><a href="./admin-home.html">العودة للإدارة</a>';
 const el=id=>document.getElementById(id);let snapshot=null;
 function reset(){snapshot=null;el('save').disabled=true}
 el('kind').onchange=reset;el('data').oninput=reset;
