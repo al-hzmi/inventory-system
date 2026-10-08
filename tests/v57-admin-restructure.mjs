@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
 const read=p=>fs.readFileSync(p,'utf8');
 const home=read('admin-home.html'),dashboard=read('admin-dashboard.html'),importPage=read('admin-inventory-import.html');
 const nav=read('v46-admin-nav.js'),workspace=read('v57-admin-workspace.js'),importer=read('inventory-import-ui.js'),api=read('api/inventory-import.js'),css=read('v57-admin-refresh.css'),formCSS=read('v57-admin-import.css');
