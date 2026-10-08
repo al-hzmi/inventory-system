@@ -1,0 +1,36 @@
+name: V57 Admin Restructure Regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-home.html'
+      - 'admin-dashboard.html'
+      - 'admin-inventory-import.html'
+      - 'inventory-import-ui.js'
+      - 'api/inventory-import.js'
+      - 'v46-admin-nav.js'
+      - 'v57-admin-refresh.css'
+      - 'v57-admin-import.css'
+      - 'v57-admin-workspace.js'
+      - 'tests/v57-admin-restructure.mjs'
+      - '.github/workflows/v57-admin-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Admin UI routes, responsive and Excel import checks
+        run: |
+          node tests/v57-admin-restructure.mjs
+          node --check v46-admin-nav.js
+          node --check v57-admin-workspace.js
+          node --check inventory-import-ui.js
+          node --check api/inventory-import.js
+          git diff --check
