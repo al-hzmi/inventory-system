@@ -10,7 +10,7 @@ const skuOf=x=>String(x||'').trim().toUpperCase();
 const numeric=(x,line,name,zero=true)=>{const s=String(x??'').trim().replace(/,/g,'');if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(s)||!Number.isFinite(Number(s))||Number(s)<0||(!zero&&Number(s)===0))throw Error('السطر '+line+': '+name+' غير صالح ('+s+')');return String(Number(s))};
 function prepare(kind,input,current){
  const source=readLines(input);if(source.length<2)throw Error('الصق صف العناوين وصفًا واحدًا على الأقل');
- const blankRowsSkipped=String(input||'').replace(/\r\n?/g,'\n').split('\n').filter(l=>!l.trim()).length;
+ const inputLines=String(input||'').replace(/\r\n?/g,'\n').split('\n');if(inputLines.at(-1)==='')inputLines.pop();const blankRowsSkipped=inputLines.filter(l=>!l.trim()).length;
  const price=kind==='pricing',two=price&&source[0].cells[0].includes('مخزون جدة');
  const headers=source[two?1:0]?.cells.map(x=>x.trim().replace(/^\uFEFF/,''))||[];
  const col=(regex,start=0)=>headers.findIndex((x,i)=>i>=start&&regex.test(x));
