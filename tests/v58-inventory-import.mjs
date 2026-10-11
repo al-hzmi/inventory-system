@@ -35,13 +35,13 @@ check('Actual two-column warehouse pricing file unchanged',()=>{
 check('User copy/paste with original 22 blank separator rows and decimal quantities',()=>{
  const changed=jed
  .replace(/(ARM_10015\t[^\n]*?\t)50(\t32)/,'$146.875$2')
- .replace(/(BA_1033\t[^\n]*?\t)45\.5(\t60)/,'$146.5$2');
+ .replace(/(BA_1033\t[^\n]*?\t)46\.5(\t60)/,'$145.5$2');
  assert.notEqual(changed,jed);
  const result=prepare('jeddah',changed,jed);
  assert.equal(result.summary.changed,2);
  assert.equal(result.summary.added,0);
  assert.ok(result.content.includes('ARM_10015\tبرطمان 4000 مل دائري  - غطاء اصفر\tكرتون\t46.875\t32\t\t\t'));
- assert.ok(result.content.includes('BA_1033\tحاجز باب 90\tكرتون\t46.5\t60\t\t\t'));
+ assert.ok(result.content.includes('BA_1033\tحاجز باب 90\tكرتون\t45.5\t60\t\t\t'));
  assert.ok(result.content.includes('AR_23653\t ملعقة تقليب سمك\tكرتون\t'));
  assert.equal(result.content.split('\n').filter(x=>!x.trim()).length,jed.split('\n').filter(x=>!x.trim()).length);
 });
