@@ -25,7 +25,7 @@ function prepare(kind,input,current){
   if(!/^[A-Z0-9][A-Z0-9_.\/-]{0,79}$/.test(id))throw Error('السطر '+row.line+': رقم صنف غير صالح: '+id);
   const value=numeric(row.cells[valCol],row.line,price?'السعر':'الكمية');
   if(values.has(id)){const prev=values.get(id);if(price&&prev.value===value)return;throw Error('الصنف '+id+' مكرر في السطرين '+prev.line+' و'+row.line)}
-  let meta=null;if(full){meta={name:String(row.cells[name]||'').trim(),unit:String(row.cells[unit]||'').trim(),pack:numeric(row.cells[pack],row.line,'الشد',false)};if(!meta.name||!meta.unit)throw Error('السطر '+row.line+': اسم الصنف والوحدة مطلوبان')}
+  let meta=null;if(full){meta={name:String(row.cells[name]||''),unit:String(row.cells[unit]||''),pack:numeric(row.cells[pack],row.line,'الشد',false)};if(!meta.name.trim()||!meta.unit.trim())throw Error('السطر '+row.line+': اسم الصنف والوحدة مطلوبان')}
   values.set(id,{id,value,meta,line:row.line});
  };
  for(const row of source.slice(two?2:1)){put(row,id,v);if(two)put(row,id2,v2)}
