@@ -5,6 +5,9 @@ on:
     paths:
       - 'api/inventory-import.js'
       - 'inventory-import-ui.js'
+      - 'v59-admin-import-ui.js'
+      - 'v59-admin-import.css'
+      - 'admin-inventory-import.html'
       - 'tests/v58-inventory-import.mjs'
       - '.github/workflows/v58-inventory-import.yml'
   workflow_dispatch:
@@ -23,6 +26,10 @@ jobs:
         run: |
           node --check api/inventory-import.js
           node --check inventory-import-ui.js
+          node --check v59-admin-import-ui.js
+          grep -q 'v59-admin-import-ui.js?v=59.1' admin-inventory-import.html
+          grep -q 'v59-admin-import.css?v=59.1' admin-inventory-import.html
+          grep -q 'v59-review' v59-admin-import-ui.js
           node tests/v58-inventory-import.mjs
           git diff --check
   production:
