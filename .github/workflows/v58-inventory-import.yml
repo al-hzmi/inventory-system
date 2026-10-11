@@ -1,0 +1,46 @@
+name: V58 Inventory Import Regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/inventory-import.js'
+      - 'inventory-import-ui.js'
+      - 'tests/v58-inventory-import.mjs'
+      - '.github/workflows/v58-inventory-import.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  importer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test full inventory and pricing TSV formats
+        run: |
+          node --check api/inventory-import.js
+          node --check inventory-import-ui.js
+          node tests/v58-inventory-import.mjs
+          git diff --check
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify importer responds in production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            body="$(curl -fsSL --connect-timeout 5 --max-time 12 -H 'Cache-Control: no-cache' "https://inventory-system-coral-nu.vercel.app/api/inventory-import?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
+            if echo "$body" | grep -Fq '"version":"v58-blank-rows"' && echo "$body" | grep -Fq '"configured":true'; then
+              echo 'Production inventory importer is configured and serving V58: PASS'
+              exit 0
+            fi
+            echo "Waiting for production importer (attempt $attempt/24)"
+            sleep 10
+          done
+          echo 'Production import endpoint did not become ready'
+          exit 1
