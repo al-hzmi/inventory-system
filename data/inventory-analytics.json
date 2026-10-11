@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T14:57:00.444721Z",
+  "generatedAt": "2026-10-11T15:28:27.553347Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
     "jeddah": {
       "skuCount": 859,
       "inStock": 859,
-      "totalQty": 8756.179242
+      "totalQty": 8743.054242
     },
     "riyadh": {
       "skuCount": 595,
@@ -16,6 +16,116 @@
     }
   },
   "events": [
+    {
+      "id": "a4dc6b5f2978",
+      "commit": "a4dc6b5f29788af261e0e8e7b0354e6e3e27dbc2",
+      "timestamp": "2026-10-11T18:28:06+03:00",
+      "message": "admin: import jeddah",
+      "paths": [
+        "data/jeddah.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "1033",
+          "name": "حاجز باب 90",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 46.5,
+          "after": 45.5,
+          "delta": -1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "1034",
+          "name": "حاجز باب 100",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 37.5,
+          "after": 36.5,
+          "delta": -1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "1035",
+          "name": "حاجز باب 110",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 53,
+          "after": 51,
+          "delta": -2,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "1036",
+          "name": "حاجز باب 120",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 36.5,
+          "after": 34.5,
+          "delta": -2,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "2029",
+          "name": "برطمان 1500 مل دائري  - غطاء اصفر",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 13,
+          "after": 11,
+          "delta": -2,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "4001",
+          "name": "برطمان 2000 مل دائري - غطاء اصفر",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 43,
+          "after": 41,
+          "delta": -2,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "10015",
+          "name": "برطمان 4000 مل دائري  - غطاء اصفر",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 50,
+          "after": 46.875,
+          "delta": -3.125,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "acfec7a5d3e1",
       "commit": "acfec7a5d3e17f0c8eee886c2582cdeba717b3eb",
