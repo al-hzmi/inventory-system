@@ -28,7 +28,7 @@ jobs:
           node --check api/inventory-import.js
           node --check inventory-import-ui.js
           node --check v59-admin-import-ui.js
-          grep -q 'v59-admin-import-ui.js?v=59.1' admin-inventory-import.html
+          grep -q 'v59-admin-import-ui.js?v=60.1' admin-inventory-import.html
           grep -q 'v59-admin-import.css?v=59.1' admin-inventory-import.html
           grep -q 'v59-review' v59-admin-import-ui.js
           node tests/v58-inventory-import.mjs
