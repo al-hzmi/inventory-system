@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'api/inventory-import.js'
+      - 'vercel.json'
       - 'inventory-import-ui.js'
       - 'v59-admin-import-ui.js'
       - 'v59-admin-import.css'
@@ -33,6 +34,7 @@ jobs:
           grep -q 'v59-review' v59-admin-import-ui.js
           node tests/v58-inventory-import.mjs
           node tests/v60-inventory-import-version.mjs
+          node -e "const c=require('./vercel.json');for(const p of ['/data/version.json','/data/jeddah.tsv','/data/riyadh.tsv','/data/pricing.tsv']){if(!c.headers.some(e=>e.source===p&&e.headers.some(h=>h.key==='Cache-Control'&&h.value.includes('no-store'))))process.exitCode=1}"
           git diff --check
   production:
     runs-on: ubuntu-latest
