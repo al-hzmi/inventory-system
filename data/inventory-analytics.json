@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T14:35:16.355754Z",
+  "generatedAt": "2026-10-13T14:42:42.746764Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
@@ -12,10 +12,64 @@
     "riyadh": {
       "skuCount": 595,
       "inStock": 595,
-      "totalQty": 2876.5850622
+      "totalQty": 2873.5850622
     }
   },
   "events": [
+    {
+      "id": "0517776c18e2",
+      "commit": "0517776c18e2de86fad95ef720d937b12651252e",
+      "timestamp": "2026-10-13T17:42:19+03:00",
+      "message": "admin: import riyadh",
+      "paths": [
+        "data/riyadh.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "00412",
+          "name": "مظلات",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 10,
+          "after": 9,
+          "delta": -1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "21774",
+          "name": "قلم تزيين كيك",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 3,
+          "after": 2,
+          "delta": -1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "27120",
+          "name": "مشن زيت 16 سم",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 3.5,
+          "after": 2.5,
+          "delta": -1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "f59a77e17807",
       "commit": "f59a77e1780771f4a93ae6687e55138116b5c7d5",
