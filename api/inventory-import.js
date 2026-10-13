@@ -3,7 +3,7 @@ const HASH='f03cbd5064d744450fd61c889dabc2874a8acbb0005d06561db00159bfd3c0c7';
 const paths={jeddah:'data/jeddah.tsv',riyadh:'data/riyadh.tsv',pricing:'data/pricing.tsv'};
 const respond=(res,status,data)=>{res.setHeader('Cache-Control','no-store');return res.status(status).json(data)};
 const config=()=>({token:process.env.GITHUB_TOKEN,owner:process.env.GITHUB_OWNER||process.env.VERCEL_GIT_REPO_OWNER,repo:process.env.GITHUB_REPO||process.env.VERCEL_GIT_REPO_SLUG||'inventory-system',branch:process.env.GITHUB_BRANCH||'main'});
-async function remote(c,path,body){const url='https://api.github.com/repos/'+c.owner+'/'+c.repo+'/contents/'+path;const r=await fetch(url+(body?'':'?ref='+c.branch),{method:body?'PUT':'GET',headers:{Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error('GitHub: '+data.message);return data}
+async function remote(c,path,body,ref){const url='https://api.github.com/repos/'+c.owner+'/'+c.repo+'/contents/'+path;const r=await fetch(url+(body?'':'?ref='+encodeURIComponent(ref||c.branch)),{method:body?'PUT':'GET',headers:{Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error('GitHub: '+data.message);return data}
 
 const readLines=text=>String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').split('\n').map((line,i)=>({line:i+1,cells:line.split('\t')})).filter(r=>r.cells.some(c=>c.trim()));
 const skuOf=x=>String(x||'').trim().toUpperCase();
@@ -54,4 +54,33 @@ function prepare(kind,input,current){
  return {summary,content:changes.length?[...old,...added].map(r=>r.join('\t')).join(ending)+ending:current};
 }
 
-module.exports=async(req,res)=>{if(req.method==='GET'){const c=config();return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v58-blank-rows',imports:['jeddah','riyadh','pricing']})}if(req.method!=='POST')return respond(res,405,{error:'Method not allowed'});const c=config(),b=req.body||{};if(!c.token||!c.owner||!c.repo)return respond(res,503,{error:'GitHub غير مهيأ'});if(crypto.createHash('sha256').update(String(b.adminToken||'')).digest('hex')!==HASH||b.adminProof?.role!=='admin'||!b.adminProof?.photoId)return respond(res,401,{error:'صلاحيات المدير مطلوبة'});if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'مصدر غير مسموح'})}catch{return respond(res,403,{error:'مصدر غير صالح'})}}if(!paths[b.kind]||!['preview','save'].includes(b.action)||typeof b.text!=='string'||b.text.length>2000000)return respond(res,400,{error:'طلب غير صالح'});try{const file=await remote(c,paths[b.kind]),current=Buffer.from(file.content.replace(/\s/g,''),'base64').toString('utf8'),result=prepare(b.kind,b.text,current);if(b.action==='preview')return respond(res,200,{sha:file.sha,summary:result.summary});if(b.sha!==file.sha)return respond(res,409,{error:'تغيّرت البيانات. أعد المعاينة'});if(result.content===current)return respond(res,200,{ok:true,summary:result.summary});const saved=await remote(c,paths[b.kind],{message:'admin: import '+b.kind,content:Buffer.from(result.content).toString('base64'),sha:file.sha,branch:c.branch});return respond(res,200,{ok:true,summary:result.summary,commit:saved.commit.sha})}catch(e){return respond(res,400,{error:e.message})}};
+
+async function gitData(c,route,method='GET',payload){
+ const url='https://api.github.com/repos/'+encodeURIComponent(c.owner)+'/'+encodeURIComponent(c.repo)+'/'+route;
+ const r=await fetch(url,{method,headers:{Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json','Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'},body:payload===undefined?undefined:JSON.stringify(payload)});
+ let data={};try{data=await r.json()}catch{}
+ if(!r.ok){const e=new Error('GitHub: '+String(data.message||('HTTP '+r.status)));e.status=r.status;throw e}
+ return data;
+}
+function riyadhDate(now=new Date()){
+ const formatter=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ const parts=Object.fromEntries(formatter.formatToParts(now).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+ return parts.year+'-'+parts.month+'-'+parts.day+' '+parts.hour+':'+parts.minute;
+}
+async function saveInventoryWithVersion(c,headSha,dataPath,text){
+ const parent=await gitData(c,'git/commits/'+encodeURIComponent(headSha));
+ if(!parent.tree?.sha)throw Error('تعذر قراءة نسخة المستودع الحالية');
+ const lastUpdate=riyadhDate();
+ const tree=await gitData(c,'git/trees','POST',{base_tree:parent.tree.sha,tree:[
+  {path:dataPath,mode:'100644',type:'blob',content:text},
+  {path:'data/version.json',mode:'100644',type:'blob',content:JSON.stringify({lastUpdate})+'\n'}
+ ]});
+ if(!tree.sha)throw Error('تعذر تجهيز ملفات التحديث');
+ const commit=await gitData(c,'git/commits','POST',{message:'admin: import '+dataPath+' and update inventory timestamp',tree:tree.sha,parents:[headSha]});
+ if(!commit.sha)throw Error('تعذر إنشاء نسخة حفظ التحديث');
+ try{await gitData(c,'git/refs/heads/'+c.branch,'PATCH',{sha:commit.sha,force:false})}
+ catch(e){if(e.status===409||e.status===422){const conflict=new Error('تغيّر المستودع أثناء الاعتماد. أعد المعاينة ثم حاول مجددًا.');conflict.status=409;throw conflict}throw e}
+ return {sha:commit.sha,lastUpdate};
+}
+
+module.exports=async(req,res)=>{if(req.method==='GET'){const c=config();return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v60-atomic-last-update',imports:['jeddah','riyadh','pricing']})}if(req.method!=='POST')return respond(res,405,{error:'Method not allowed'});const c=config(),b=req.body||{};if(!c.token||!c.owner||!c.repo)return respond(res,503,{error:'GitHub غير مهيأ'});if(crypto.createHash('sha256').update(String(b.adminToken||'')).digest('hex')!==HASH||b.adminProof?.role!=='admin'||!b.adminProof?.photoId)return respond(res,401,{error:'صلاحيات المدير مطلوبة'});if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'مصدر غير مسموح'})}catch{return respond(res,403,{error:'مصدر غير صالح'})}}if(!paths[b.kind]||!['preview','save'].includes(b.action)||typeof b.text!=='string'||b.text.length>2000000)return respond(res,400,{error:'طلب غير صالح'});try{const head=b.action==='save'?await gitData(c,'git/ref/heads/'+c.branch):null;const file=await remote(c,paths[b.kind],undefined,head?.object?.sha),current=Buffer.from(file.content.replace(/\s/g,''),'base64').toString('utf8'),result=prepare(b.kind,b.text,current);if(b.action==='preview')return respond(res,200,{sha:file.sha,summary:result.summary});if(b.sha!==file.sha)return respond(res,409,{error:'تغيّرت البيانات. أعد المعاينة'});if(result.content===current)return respond(res,200,{ok:true,summary:result.summary});const saved=await saveInventoryWithVersion(c,head.object.sha,paths[b.kind],result.content);return respond(res,200,{ok:true,summary:result.summary,commit:saved.sha,lastUpdate:saved.lastUpdate,versionUpdated:true})}catch(e){return respond(res,e.status===409?409:400,{error:e.message})}};
