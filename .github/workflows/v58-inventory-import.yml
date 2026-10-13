@@ -9,6 +9,7 @@ on:
       - 'v59-admin-import.css'
       - 'admin-inventory-import.html'
       - 'tests/v58-inventory-import.mjs'
+      - 'tests/v60-inventory-import-version.mjs'
       - '.github/workflows/v58-inventory-import.yml'
   workflow_dispatch:
 permissions:
@@ -31,6 +32,7 @@ jobs:
           grep -q 'v59-admin-import.css?v=59.1' admin-inventory-import.html
           grep -q 'v59-review' v59-admin-import-ui.js
           node tests/v58-inventory-import.mjs
+          node tests/v60-inventory-import-version.mjs
           git diff --check
   production:
     runs-on: ubuntu-latest
@@ -42,8 +44,8 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 24); do
             body="$(curl -fsSL --connect-timeout 5 --max-time 12 -H 'Cache-Control: no-cache' "https://inventory-system-coral-nu.vercel.app/api/inventory-import?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
-            if echo "$body" | grep -Fq '"version":"v58-blank-rows"' && echo "$body" | grep -Fq '"configured":true'; then
-              echo 'Production inventory importer is configured and serving V58: PASS'
+            if echo "$body" | grep -Fq '"version":"v60-atomic-last-update"' && echo "$body" | grep -Fq '"configured":true'; then
+              echo 'Production inventory importer is configured and serving V60: PASS'
               exit 0
             fi
             echo "Waiting for production importer (attempt $attempt/24)"
