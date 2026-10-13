@@ -107,7 +107,7 @@ save.addEventListener('click',async()=>{
  const count=Number(snapshot.summary?.changed||0)+Number(snapshot.summary?.added||0);
  if(!confirm('تأكيد اعتماد '+count+' صنف متغير أو جديد في '+kind.selectedOptions[0].textContent+'؟'))return;
  loading=true;save.disabled=true;preview.disabled=true;message('جارٍ حفظ التغييرات في GitHub…');
- try{const response=await request('save');snapshot=null;review.hidden=true;stage('save');message('تم اعتماد التحديث وحفظه في GitHub بنجاح.'+(response.commit?' رقم العملية: '+response.commit:''),'success')}
+ try{const response=await request('save');snapshot=null;review.hidden=true;stage('save');message('تم حفظ التحديث وتحديث وقت آخر تعديل للمخزون'+(response.lastUpdate?' إلى '+response.lastUpdate+' بتوقيت السعودية':'')+'. سيظهر الوقت الجديد في النظام بعد اكتمال النشر ثم تحديث صفحة المخزون.'+(response.commit?' رقم العملية: '+response.commit:''),'success')}
  catch(e){invalidate();message('تعذر الحفظ: '+e.message+' أعد المعاينة للمحاولة مجددًا.','error')}
  finally{loading=false;preview.disabled=false}
 });
