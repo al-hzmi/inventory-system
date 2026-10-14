@@ -82,10 +82,19 @@ async function saveControl(){
 }
 function attach(){
  const app=$('.app');if(!app)return;
- const shortcut=create('button','b61a-launch','تجربة واجهة الموظفين');
- shortcut.type='button';shortcut.id='b61a-launch';shortcut.addEventListener('click',open);
- const top=app.querySelector('.topin')||app.querySelector('.top')||app;
- top.append(shortcut);
+ const refreshShortcut=()=>{
+  if($('#b61a-launch'))return;
+  const top=app.querySelector('.topin')||app.querySelector('.top');
+  if(!top)return;
+  const shortcut=create('button','b61a-launch','تجربة واجهة الموظفين');
+  shortcut.type='button';shortcut.id='b61a-launch';shortcut.addEventListener('click',open);
+  top.append(shortcut);
+ };
+ refreshShortcut();
+ // Watch only direct children of the control center: existing Firestore renders replace the header.
+ const observer=new MutationObserver(refreshShortcut);
+ observer.observe(app,{childList:true});
+ window.addEventListener('beforeunload',()=>observer.disconnect(),{once:true});
  if(pilotFlag)open();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach,{once:true});else attach();
