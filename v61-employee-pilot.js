@@ -189,6 +189,12 @@ function init(){
   else if(++attempt>120){clearInterval(bootTimer)}
  },350);
 }
+window.addEventListener('batco61:product-open',event=>{
+ if(!active||!currentId)return;
+ const sku=String(event.detail?.sku||'').trim(),branch=String(event.detail?.warehouse||'');
+ if(!sku||!['jeddah','riyadh'].includes(branch))return;
+ remember(sku,branch);
+});
 document.addEventListener('input',handleSearch,true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 window.BatcoPilot={decode,delta,allowlisted,version:VERSION}; // Read-only test helpers.
