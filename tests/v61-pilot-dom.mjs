@@ -14,7 +14,20 @@ w.localStorage.setItem('inventory_employee_id_v2','101049');
 w.localStorage.setItem('inventory_employee_auth_version_v2','2');
 w.localStorage.setItem('inventory_login_photo_proof_v2',JSON.stringify({role:'employee',employeeId:'101049',photoId:'proof'}));
 let notify;
-w.firebase={apps:[{}],firestore:()=>({collection:()=>({doc:()=>({onSnapshot(fn){notify=fn;fn({exists:true,data:()=>({enabled:true,allowedEmployeeIds:['101049']})});return ()=>{}})})})})};
+w.firebase={
+ apps:[{}],
+ firestore:()=>({
+  collection:()=>({
+   doc:()=>({
+    onSnapshot(fn){
+     notify=fn;
+     fn({exists:true,data:()=>({enabled:true,allowedEmployeeIds:['101049']})});
+     return ()=>{};
+    }
+   })
+  })
+ })
+};
 w.fetch=async path=>({ok:true,text:async()=>stock(path.includes('riyadh')?'riyadh':'jeddah')});
 w.eval(js);
 w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
