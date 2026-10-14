@@ -43,3 +43,6 @@
 .b61a-buttons button:disabled{opacity:.43;cursor:not-allowed}
 @media(max-width:820px){.b61a-header{display:block}.b61a-back{margin-top:12px}.b61a-card{padding:17px}.b61a-accounts{grid-template-columns:1fr}}
 @media(max-width:550px){.b61a-shell{padding:14px 10px 100px}.b61a-header h1{font-size:20px}.b61a-row{flex-wrap:wrap}.b61a-stats>div{padding:12px 9px}.b61a-stats b{font-size:18px}.b61a-footer{display:block;bottom:5px}#b61a-message{margin-bottom:10px}.b61a-buttons{display:flex;gap:7px}.b61a-buttons a,.b61a-buttons button{flex:1;padding:10px 8px;font-size:10px}.b61a-launch{min-width:0;white-space:normal}}
+
+/* Ensure the original control center is fully hidden while rollout controls are open. */
+.app[hidden]{display:none!important}
