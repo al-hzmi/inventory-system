@@ -11,7 +11,7 @@ const key=(id)=>'batco_pilot61_'+String(id).replace(/[^a-zA-Z0-9_-]/g,'_');
 const fmt=x=>Number.isFinite(Number(x))?new Intl.NumberFormat('ar-SA',{maximumFractionDigits:5}).format(Number(x)):'—';
 const branchName=b=>b==='riyadh'?'الرياض':'جدة';
 const el=(tag,cl,txt)=>{const e=document.createElement(tag);if(cl)e.className=cl;if(txt!==undefined)e.textContent=String(txt);return e};
-const user=()=>{try{const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(),id=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(),p=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null'),admin=name==='مهند'&&p?.role==='admin'&&Boolean(p?.photoId),auth=localStorage.getItem('inventory_employee_auth_version_v2')==='2';if(!name)return null;if(admin)return{id:'admin_mohanad',name};if(id&&auth&&p?.photoId)return{id,name};return null}catch{return null}};
+const user=()=>{try{const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(),id=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(),p=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null'),admin=name==='مهند'&&p?.role==='admin'&&Boolean(p?.photoId),auth=localStorage.getItem('inventory_employee_auth_version_v2')==='2';if(!name)return null;if(admin&&p?.employeeId==='admin_mohanad')return{id:'admin_mohanad',name};if(id&&auth&&p?.role==='employee'&&String(p.employeeId||'')===id&&p?.photoId)return{id,name};return null}catch{return null}};
 function decode(text){
  const out={};const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/);
  for(const line of lines.slice(1)){
