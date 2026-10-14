@@ -62,6 +62,7 @@ const a=adminDom.window;
 const saved=[];
 const employee={id:'e1',data:()=>({employeeId:'101049',canonicalName:'موظف حقيقي'})};
 a.confirm=()=>true;
+a.firebase={firestore:{FieldValue:{increment:()=>1,serverTimestamp:()=>({seconds:12345})}}};
 a.isAdmin=()=>true;
 a.db={collection(name){
  if(name==='employee_accounts')return{limit(){return{get:async()=>({docs:[employee]})}}};
