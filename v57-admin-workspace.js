@@ -10,6 +10,7 @@ const sections=[
 ]},
 {n:'02',title:'الموظفون والعملاء',desc:'الحسابات والطلبات وصلاحيات الوصول.',links:[
 ['الموظفون والجلسات','الحضور والحسابات النشطة','./admin-dashboard.html?section=employees&module=live','♙'],
+['التجربة الجديدة للموظفين','تفعيل التصميم لحسابات محددة فقط','./control-center.html?pilot=1','◎'],
 ['إدارة العملاء','حسابات العملاء والشركات','./admin-dashboard.html?section=customers&module=accounts','♧'],
 ['الطلبات والفواتير','مراجعة طلبات الموظفين','./admin-dashboard.html?section=employees&module=orders','▤'],
 ['صلاحيات الموقع','التحكم في وصول الموظفين','./admin-dashboard.html?section=employees&module=site_access','◇'],
