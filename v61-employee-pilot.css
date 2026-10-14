@@ -1,0 +1,48 @@
+/* BATCO V61.1 · experimental, scoped employee home */
+#batco61-pilot,.b61-return{font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif}
+#batco61-pilot{box-sizing:border-box;direction:rtl;max-width:1024px;margin:14px auto 6px;padding:0 16px;color:#223b30;animation:b61Appear .25s ease-out}
+#batco61-pilot *,#batco61-pilot *::before,#batco61-pilot *::after{box-sizing:border-box}
+#batco61-pilot button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#batco61-pilot button:focus-visible,.b61-return:focus-visible{outline:3px solid #82c8a1;outline-offset:2px}
+.b61-head{display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(115deg,#ecf6ef,#f8fbf8 68%,#fff);padding:22px 24px;border:1px solid #d8e9df;border-radius:20px 20px 0 0}
+.b61-eyebrow{display:block;color:#16845c;font-size:11px;font-weight:700;letter-spacing:0}
+.b61-greet{font-size:23px;line-height:1.5;font-weight:800;margin:3px 0 3px}
+.b61-head p{margin:0;color:#687e70;font-size:12px;line-height:1.8}
+.b61-classic{flex:0 0 auto;background:#fff;border:1px solid #cbded1;border-radius:11px;padding:11px 14px;color:#3e6951;font-size:11px!important;font-weight:700!important;min-height:43px}
+.b61-classic:hover{background:#eaf5ed}
+.b61-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;background:#fff;padding:15px 19px 9px;border-left:1px solid #e2eae5;border-right:1px solid #e2eae5}
+.b61-tiles>button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:right;background:#fafcfa;color:#3f6650;border:1px solid #e1eae4;border-radius:14px;min-height:94px;padding:13px 17px}
+.b61-tiles>button:hover{background:#f2f8f3;border-color:#c6e1ce}
+.b61-tiles>button.is-active{background:#eaf5ee;border-color:#b6dbc3;color:#0d6f4b}
+.b61-tiles>button span{font-size:18px;line-height:1.1;margin-bottom:3px}
+.b61-tiles>button b{font-size:13px;line-height:1.5}
+.b61-tiles>button small{font-size:10px;color:#849588}
+.b61-content{background:#fff;border-left:1px solid #e2eae5;border-right:1px solid #e2eae5;padding:11px 20px 17px;min-height:136px}
+.b61-list-head{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid #eff3f0;padding:4px 0 12px;margin-bottom:12px}
+.b61-list-head h3{margin:0;font-size:14px;font-weight:800;line-height:1.6}
+.b61-list-head small{font-size:10px;color:#8b9b90}
+.b61-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.b61-product{min-width:0;display:flex;align-items:center;gap:6px;border:1px solid #e6eee9;border-radius:13px;padding:8px;background:#fbfcfb}
+.b61-product-main{min-width:0;flex:1;text-align:right;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 5px;border:0;background:transparent;color:inherit}
+.b61-product-main:hover strong{color:#007f53}
+.b61-product-main .b61-sku{font-family:ui-monospace,Consolas,monospace;direction:ltr;font-size:10px;font-weight:750;color:#1a8060}
+.b61-product-main strong{display:block;max-width:100%;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b61-product-main small{font-size:10px;color:#76897b}
+.b61-product-actions{display:flex;align-items:center;gap:4px}
+.b61-product-actions button{border:1px solid #dce8df;border-radius:8px;background:#fff;color:#246d50;height:34px;min-width:34px;font-size:12px}
+.b61-product-actions .b61-star{font-size:18px;color:#ab7626}
+.b61-product-actions button:hover{background:#ecf7ef}
+.b61-empty{grid-column:1/-1;background:#fafcfb;border:1px dashed #cbdccf;text-align:center;border-radius:12px;color:#6c7e71;font-size:12px;line-height:2;padding:18px 14px;margin:0}
+.b61-diff{display:flex;flex-direction:column;align-items:flex-start;text-align:right;gap:5px;border-radius:12px;border:1px solid #e4ece5;padding:12px 14px;background:#fff;color:#294636}
+.b61-diff:hover{border-color:#abceb7;background:#f7fbf8}
+.b61-diff strong{font-size:12px;line-height:1.6}
+.b61-diff small{font-size:11px;color:#7b8c80}
+.b61-diff-tag{font-size:10px;border-radius:6px;padding:3px 7px;background:#eaf5ed;color:#15734f}
+.b61-diff-tag.empty,.b61-diff-tag.down{background:#fff4e9;color:#9c5c19}
+.b61-notice{font-size:11px;color:#217a55;min-height:17px;line-height:1.7;margin:9px 0 0}
+.b61-footnote{background:#fbfcfb;border:1px solid #e2eae5;border-top:0;border-radius:0 0 20px 20px;padding:12px 21px;margin:0;color:#819185;font-size:10px;line-height:1.7}
+.b61-return{display:inline-flex;margin:8px 9px;border:1px solid #cbded1;border-radius:10px;padding:8px 12px;background:#eff8f1;color:#126c49;font:700 11px/1.7 system-ui;cursor:pointer}
+@keyframes b61Appear{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:760px){#batco61-pilot{padding:0 11px;margin-top:12px}.b61-head{padding:19px 16px;align-items:flex-start}.b61-greet{font-size:20px}.b61-classic{font-size:10px!important;max-width:150px;min-width:0;white-space:normal}.b61-tiles{gap:7px;padding:12px 11px 6px}.b61-tiles>button{min-height:83px;padding:10px}.b61-tiles>button b{font-size:11px}.b61-content{padding:12px}.b61-list{grid-template-columns:1fr}.b61-product{padding:9px}.b61-footnote{padding:11px 13px}}
+@media(max-width:390px){.b61-head{display:block}.b61-classic{margin-top:12px;max-width:none}.b61-tiles>button{padding:9px 7px}.b61-tiles>button b{font-size:10px}.b61-tiles>button small{font-size:9px}}
+@media(prefers-reduced-motion:reduce){#batco61-pilot{animation:none!important}}
