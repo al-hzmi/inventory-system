@@ -53,7 +53,7 @@ async function fetchData(){
   ]);
   const seen=new Set();employees=[{id:'admin_mohanad',name:'حساب الإدارة — تجربة شخصية'}];
   for(const doc of collection.docs){
-   const d=doc.data()||{},id=String(d.employeeId||doc.id).trim(),name=String(d.canonicalName||d.name||d.displayName||id).trim();
+   const d=doc.data()||{},id=String(doc.id).trim(),name=String(d.canonicalName||d.name||d.displayName||id).trim();
    if(!id||seen.has(id)||isTest(name)||isTest(id)||d.status==='suspended'||d.status==='disabled')continue;
    seen.add(id);employees.push({id,name});
   }
