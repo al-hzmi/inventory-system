@@ -159,7 +159,7 @@ function showReturnButton(){
  const area=document.getElementById('searchInput');if(!area||document.getElementById('b61-return'))return;
  const btn=el('button','b61-return','إظهار مساحة العمل التجريبية');btn.id='b61-return';btn.type='button';
  btn.addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:false});btn.remove();active=true;paint()});
- area.parentElement?.append(btn);
+ const anchor=area.closest('.sticky')||area.parentElement;if(anchor?.parentElement)anchor.parentElement.insertBefore(btn,anchor.nextSibling);
 }
 function enable(id){
  if(active&&currentId===id)return;
