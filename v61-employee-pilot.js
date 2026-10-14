@@ -1,8 +1,9 @@
 /* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
 (function(){
 'use strict';
-const DOC='employee_home_pilot_v1',VERSION='61.1';
-const allowlisted=(data,id)=>Boolean(data?.enabled===true&&Array.isArray(data.allowedEmployeeIds)&&data.allowedEmployeeIds.map(String).includes(String(id)));
+const DOC='employee_site_access',VERSION='62.0';
+const CONFIG_FIELD='employeeHomePilot';
+const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
 let unsubscribe=null,currentId='',active=false,panel=null,bootTimer=null,searchTimer=null,refreshCount=0;
 let inventory={jeddah:{},riyadh:{}},prefs={recent:[],favorites:[]},diffs=null,tab='recent';
@@ -13,6 +14,7 @@ const fmt=x=>Number.isFinite(Number(x))?new Intl.NumberFormat('ar-SA',{maximumFr
 const branchName=b=>b==='riyadh'?'الرياض':'جدة';
 const el=(tag,cl,txt)=>{const e=document.createElement(tag);if(cl)e.className=cl;if(txt!==undefined)e.textContent=String(txt);return e};
 const user=()=>{try{const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(),id=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(),p=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null'),admin=name==='مهند'&&p?.role==='admin'&&Boolean(p?.photoId),auth=localStorage.getItem('inventory_employee_auth_version_v2')==='2';if(!name)return null;if(admin)return{id:'admin_mohanad',name};if(id&&auth&&p?.role==='employee'&&String(p.employeeId||'')===id&&p?.photoId)return{id,name};return null}catch{return null}};
+const isAdminPreview=()=>{try{return new URLSearchParams(location.search).get('pilotPreview')==='1'&&user()?.id==='admin_mohanad'&&Boolean(localStorage.getItem('inventory_admin_token_v2'))}catch{return false}};
 function decode(text){
  const out={};const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/);
  for(const line of lines.slice(1)){
@@ -177,6 +179,8 @@ function init(){
  const identity=user();
  if(!identity){setTimeout(init,2000);return}
  currentId=identity.id;
+ // Self-test requires verified manager identity but does not alter employee rollout settings.
+ if(isAdminPreview()){enable(identity.id);waitUI(identity.id);return}
  let attempt=0;
  bootTimer=setInterval(()=>{
   if(window.firebase?.apps?.length){clearInterval(bootTimer);try{
@@ -184,7 +188,7 @@ function init(){
     const data=snap.exists?snap.data():null;
     const allowed=allowlisted(data,identity.id);
     if(allowed){enable(identity.id);waitUI(identity.id)}else{close();document.getElementById('b61-return')?.remove()}
-   },()=>{close();document.getElementById('b61-return')?.remove()});
+   },(error)=>{console.warn('[BATCO pilot] Could not read employee settings',error?.code||error?.message||'unknown');close();document.getElementById('b61-return')?.remove()});
   }catch{close()} }
   else if(++attempt>120){clearInterval(bootTimer)}
  },350);
