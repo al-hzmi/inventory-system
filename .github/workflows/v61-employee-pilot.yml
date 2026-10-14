@@ -12,6 +12,7 @@ on:
       - 'v61-employee-pilot-admin.js'
       - 'v61-employee-pilot-admin.css'
       - 'tests/v61-employee-pilot.mjs'
+      - 'tests/v61-pilot-dom.mjs'
       - '.github/workflows/v61-employee-pilot.yml'
   workflow_dispatch:
 permissions:
@@ -30,6 +31,8 @@ jobs:
           node --check v61-employee-pilot.js
           node --check v61-employee-pilot-admin.js
           node tests/v61-employee-pilot.mjs
+          npm install --no-save --no-package-lock --ignore-scripts jsdom@24.1.3
+          node tests/v61-pilot-dom.mjs
           git diff --check
   production:
     runs-on: ubuntu-latest
