@@ -57,7 +57,7 @@ assert.ok(pilot.includes("batco61:product-open"),'Explicit search result clicks 
 assert.ok(runtime.includes("window.dispatchEvent(new CustomEvent('batco61:product-open'"),'Existing search should emit only a read-only product-open signal');
 assert.ok(pilot.includes("document.getElementById('searchInput')"),'Do not replace the existing search engine');
 assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="changes"'),'Missing pilot panels');
-assert.ok(pilot.includes('الواجهة الكلاسيكية'),'Return to old interface must always exist');
+assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('إظهار مساحة العمل التجريبية'),'Return and reenter controls must both exist');
 assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:390px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
 assert.ok(html.includes('v61-employee-pilot.js?v=61.1')&&html.includes('v61-employee-pilot.css?v=61.1'),'User-facing loader not configured');
