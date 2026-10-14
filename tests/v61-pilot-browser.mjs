@@ -7,7 +7,7 @@ const origin='https://inventory-pilot-e2e.test';
 const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
 const warehouseJeddah=src('data/jeddah.tsv');
 const warehouseRiyadh=src('data/riyadh.tsv');
-const allowConfig={enabled:true,allowedEmployeeIds:['employee-real-001']};
+const allowConfig={mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['employee-real-001']}};
 
 function employeeFixture(){
 return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
@@ -32,7 +32,7 @@ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><me
  'window.firebase={firestore:{FieldValue:{increment:()=>1,serverTimestamp:()=>({seconds:123})}}};'+
  'window.db={collection(name){'+
  'if(name==="employee_accounts")return{limit(){return{get:async()=>({docs:[{id:"employee-real-001",data:()=>({canonicalName:"موظف حقيقي",employeeId:"wrong-legacy-id"})}]})}}};'+
- 'if(name==="system_controls")return{doc(){return{get:async()=>({exists:false}),set:async data=>window.__saves.push(data)}}};'+
+ 'if(name==="system_controls")return{doc(id){return{get:async()=>id==="employee_site_access"&&window.__saves.length?{exists:true,data:()=>window.__saves.at(-1)}:{exists:false},set:async data=>window.__saves.push(data)}}};'+
  'if(name==="security_admin_logs")return{add:async()=>({id:"log"})};throw Error("Unexpected Firestore collection "+name)}};'+
  'window.confirm=()=>true;</script><script src="./v61-employee-pilot-admin.js"></script></body></html>';
 }
@@ -78,7 +78,7 @@ async function checkViewport(width,height){
   assert.equal(await page.locator('#batco61-pilot').count(),0);
   await page.locator('#b61-return').click();
   await page.locator('#batco61-pilot').waitFor();
-  await page.evaluate(()=>{window.__pilotConfig={enabled:false,allowedEmployeeIds:['employee-real-001']};window.__pilotNotify({exists:true,data:()=>window.__pilotConfig})});
+  await page.evaluate(()=>{window.__pilotConfig={mode:'open',employeeHomePilot:{enabled:false,allowedEmployeeIds:['employee-real-001']}};window.__pilotNotify({exists:true,data:()=>window.__pilotConfig})});
   assert.equal(await page.locator('#batco61-pilot').count(),0,'Kill switch must remove workspace');
   assert.equal(await page.locator('#b61-return').count(),0,'Kill switch must remove reentry');
   assert.deepEqual(errors,[],'Browser exceptions: '+errors.join(' | '));
@@ -101,12 +101,12 @@ async function checkAdmin(){
   await page.locator('#b61a-save').click();
   await page.waitForFunction(()=>window.__saves?.length===1);
   const saved=await page.evaluate(()=>window.__saves[0]);
-  assert.equal(saved.enabled,true);
-  assert.deepEqual(saved.allowedEmployeeIds,['employee-real-001']);
+  assert.equal(saved.employeeHomePilot.enabled,true);
+  assert.deepEqual(saved.employeeHomePilot.allowedEmployeeIds,['employee-real-001']);
   await page.locator('#b61a-master').uncheck();
   await page.locator('#b61a-save').click();
   await page.waitForFunction(()=>window.__saves?.length===2);
-  assert.equal(await page.evaluate(()=>window.__saves[1].enabled),false,'Off must revoke everyone');
+  assert.equal(await page.evaluate(()=>window.__saves[1].employeeHomePilot.enabled),false,'Off must revoke everyone');
   assert.deepEqual(errors,[],'Admin exceptions: '+errors.join(' | '));
   console.log('V61_ADMIN_MOBILE_PASS: exact employee, rollout and emergency stop');
  }finally{await ctx.close()}
