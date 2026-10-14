@@ -21,7 +21,7 @@ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><me
  'localStorage.setItem("inventory_employee_auth_version_v2","2");'+
  'localStorage.setItem("inventory_login_photo_proof_v2",JSON.stringify({role:"employee",employeeId:"employee-real-001",photoId:"test-proof"}));'+
  'window.__pilotConfig='+JSON.stringify(allowConfig)+';'+
- 'window.firebase={apps:[{}],firestore:()=>({collection:()=>({doc:()=>({onSnapshot(fn){window.__pilotNotify=fn;fn({exists:true,data:()=>window.__pilotConfig});return ()=>{}})})})})};'+
+ 'window.firebase={apps:[{}],firestore:()=>({collection:()=>({doc:()=>({onSnapshot(fn){window.__pilotNotify=fn;fn({exists:true,data:()=>window.__pilotConfig});return ()=>{};}})})})};'+
  '</script><script src="./v61-employee-pilot.js"></script></body></html>';
 }
 function adminFixture(){
