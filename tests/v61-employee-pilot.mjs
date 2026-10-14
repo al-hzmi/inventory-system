@@ -23,9 +23,11 @@ const ctx={
 ctx.window.addEventListener=(event,callback)=>{listeners['window:'+event]=callback};
 vm.runInNewContext(pilot,ctx,{filename:'v61-employee-pilot.js'});
 const api=ctx.window.BatcoPilot;
-assert.equal(api.version,'61.1');
+assert.equal(api.version,'62.0');
 const gate=(v,id)=>api.allowlisted(v,id);
 assert.equal(gate(undefined,'1001'),false,'No config is disabled');
+assert.equal(gate({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['1001']}},'1001'),true,'Existing employee-site control includes scoped pilot allowlist');
+assert.equal(gate({mode:'open',employeeHomePilot:{enabled:false,allowedEmployeeIds:['1001']}},'1001'),false,'Shared site settings honor the pilot kill switch');
 assert.equal(gate({enabled:false,allowedEmployeeIds:['1001']},'1001'),false,'Master kill switch must win');
 assert.equal(gate({enabled:true,allowedEmployeeIds:[]},'1001'),false,'Empty allowlist must exclude everyone');
 assert.equal(gate({enabled:true,allowedEmployeeIds:['1002']},'1001'),false,'Unselected employee must be excluded');
@@ -60,15 +62,20 @@ assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="chang
 assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('إظهار مساحة العمل التجريبية'),'Return and reenter controls must both exist');
 assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:390px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
-assert.ok(html.includes('v61-employee-pilot.js?v=61.1')&&html.includes('v61-employee-pilot.css?v=61.1'),'User-facing loader not configured');
-assert.ok(admin.includes("doc(DOC).set(")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
+assert.ok(html.includes('v61-employee-pilot.js?v=62.0')&&html.includes('v61-employee-pilot.css?v=61.1'),'User-facing loader not configured');
+assert.ok(admin.includes("const ref=db.collection(COL).doc(DOC)")&&admin.includes("[CONFIG_FIELD]:{")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
 assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
 assert.ok(admin.includes("if(typeof isAdmin!=='function'||!isAdmin()"),'Admin controls must respect existing admin gate');
 assert.ok(admin.includes('if(enabled&&!selected.size)'),'Do not enable pilot with an empty allowlist');
 assert.ok(adminCss.includes('@media(max-width:550px)'),'Admin needs mobile mode');
-assert.ok(center.includes('v61-employee-pilot-admin.js?v=61.1')&&center.includes('v61-employee-pilot-admin.css?v=61.1'),'Admin scripts not mounted');
+assert.ok(center.includes('v61-employee-pilot-admin.js?v=62.0')&&center.includes('v61-employee-pilot-admin.css?v=61.1'),'Admin scripts not mounted');
 assert.ok(home.includes('./control-center.html?pilot=1'),'Direct access from admin home missing');
+assert.ok(read('admin-home.html').includes('v62-pilot-entry'),'Persistent pilot launch must remain on executive admin homepage even during async reload');
+assert.ok(read('admin-home.html').includes('pilotPreview=1'),'Manager must be able to preview without staff rollout');
+assert.ok(pilot.includes("DOC='employee_site_access'"),'Pilot reads existing Firestore document instead of unreadable new config');
+assert.ok(admin.includes("DOC='employee_site_access'"),'Pilot admin writes to same existing employee-site document');
+assert.ok(pilot.includes('if(isAdminPreview())'),'Manager self-preview must bypass employee allowlist');
 
 const fakeDoc={events:[],readyState:'loading',addEventListener(name,callback){this.events.push(name)}};
 const noAdmin={document:fakeDoc,window:{location:{search:''}},location:{search:''},URLSearchParams,console,isAdmin:()=>false,db:{}};
