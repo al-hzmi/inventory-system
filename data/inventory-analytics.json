@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T14:42:42.746764Z",
+  "generatedAt": "2026-10-14T14:31:11.678364Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
     "jeddah": {
-      "skuCount": 860,
-      "inStock": 860,
-      "totalQty": 8746.254242
+      "skuCount": 862,
+      "inStock": 862,
+      "totalQty": 8678.254242
     },
     "riyadh": {
       "skuCount": 595,
@@ -16,6 +16,74 @@
     }
   },
   "events": [
+    {
+      "id": "5b611db6067c",
+      "commit": "5b611db6067cc92bb1e1cab6e99679c63b97f475",
+      "timestamp": "2026-10-14T17:30:48+03:00",
+      "message": "admin: import data/jeddah.tsv and update inventory timestamp",
+      "paths": [
+        "data/jeddah.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "229",
+          "name": "مرطمان 7 لتر ملون",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 0,
+          "after": 5,
+          "delta": 5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "472",
+          "name": "عربية نظافة",
+          "unit": "حبة",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 643,
+          "after": 571,
+          "delta": -72,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28640",
+          "name": "فازات حجري 17cm",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 0,
+          "after": 1,
+          "delta": 1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28643",
+          "name": "فازات شمعدان حجري",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 3,
+          "after": 1,
+          "delta": -2,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "0517776c18e2",
       "commit": "0517776c18e2de86fad95ef720d937b12651252e",
