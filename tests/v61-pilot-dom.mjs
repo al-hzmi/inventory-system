@@ -21,7 +21,7 @@ w.firebase={
    doc:()=>({
     onSnapshot(fn){
      notify=fn;
-     fn({exists:true,data:()=>({enabled:true,allowedEmployeeIds:['101049']})});
+     fn({exists:true,data:()=>({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['101049']}})});
      return ()=>{};
     }
    })
@@ -51,7 +51,7 @@ assert.equal(w.document.getElementById('batco61-pilot'),null,'Classic button rem
 assert.ok(w.document.getElementById('b61-return'),'Classic mode must provide a reenter control');
 w.document.getElementById('b61-return').click();
 assert.ok(w.document.getElementById('batco61-pilot'),'Pilot can be reentered immediately');
-notify({exists:true,data:()=>({enabled:false,allowedEmployeeIds:['101049']})});
+notify({exists:true,data:()=>({mode:'open',employeeHomePilot:{enabled:false,allowedEmployeeIds:['101049']}})});
 assert.equal(w.document.getElementById('batco61-pilot'),null,'Emergency disable must remove pilot');
 assert.equal(w.document.getElementById('b61-return'),null,'Emergency disable must also remove reentry button');
 assert.ok(w.document.getElementById('searchInput'),'Disabling pilot must not affect original search');
@@ -60,13 +60,14 @@ w.close();
 const adminDom=new JSDOM('<!doctype html><html lang="ar"><body><div class="app"><header class="top"><div class="topin">Original control center</div></header></div></body></html>',{url:url+'control-center.html?pilot=1',runScripts:'outside-only',pretendToBeVisual:true});
 const a=adminDom.window;
 const saved=[];
+let sharedPilot=null;
 const employee={id:'employee-real-001',data:()=>({employeeId:'101049',canonicalName:'موظف حقيقي'})};
 a.confirm=()=>true;
 a.firebase={firestore:{FieldValue:{increment:()=>1,serverTimestamp:()=>({seconds:12345})}}};
 a.isAdmin=()=>true;
 a.db={collection(name){
  if(name==='employee_accounts')return{limit(){return{get:async()=>({docs:[employee]})}}};
- if(name==='system_controls')return{doc(id){assert.equal(id,'employee_home_pilot_v1');return{get:async()=>({exists:false}),set:async data=>{saved.push(data)}}}};
+ if(name==='system_controls')return{doc(id){if(id==='employee_home_pilot_v1')return{get:async()=>({exists:false})};assert.equal(id,'employee_site_access');return{get:async()=>({exists:sharedPilot!==null,data:()=>({employeeHomePilot:sharedPilot})}),set:async data=>{sharedPilot=data.employeeHomePilot;saved.push(data)}}}};
  if(name==='security_admin_logs')return{add:async()=>({id:'audit'})};
  throw Error('Unexpected collection '+name);
 }};
@@ -85,13 +86,13 @@ assert.equal(master.checked,true);
 a.document.querySelector('#b61a-save').click();
 await wait(40);
 assert.equal(saved.length,1);
-assert.equal(saved[0].enabled,true);
-assert.deepEqual(Array.from(saved[0].allowedEmployeeIds),['employee-real-001'],'Only selected Firestore document ID should be activated, not legacy staff code');
+assert.equal(saved[0].employeeHomePilot.enabled,true);
+assert.deepEqual(Array.from(saved[0].employeeHomePilot.allowedEmployeeIds),['employee-real-001'],'Only selected Firestore document ID should be activated, not legacy staff code');
 master.click();
 a.document.querySelector('#b61a-save').click();
 await wait(40);
 assert.equal(saved.length,2);
-assert.equal(saved[1].enabled,false,'Admin emergency stop must disable everybody');
+assert.equal(saved[1].employeeHomePilot.enabled,false,'Admin emergency stop must disable everybody');
 a.document.querySelector('#b61a-close').click();
 a.document.querySelector('.app').innerHTML='<header><div class="topin">Rerender</div></header>';
 await wait(15);
