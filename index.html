@@ -264,7 +264,7 @@
     html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.1"></scr'+'ipt><script src="./v56-39-site-identity.js?v=56.39"></scr'+'ipt></body>');
     // V61 employee pilot: isolated and disabled unless the admin allowlist opts in.
     html=html.replace('</head>','<link rel="stylesheet" href="./v61-employee-pilot.css?v=61.1"></head>');
-    html=html.replace('</body>','<scr'+'ipt src="./v61-employee-pilot.js?v=61.1"></scr'+'ipt></body>');
+    html=html.replace('</body>','<scr'+'ipt src="./v61-employee-pilot.js?v=62.0"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V40 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
