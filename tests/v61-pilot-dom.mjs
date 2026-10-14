@@ -98,4 +98,17 @@ a.document.querySelector('.app').innerHTML='<header><div class="topin">Rerender<
 await wait(15);
 assert.ok(a.document.querySelector('#b61a-launch'),'Live control-center rerender must preserve pilot controls');
 adminDom.window.close();
+
+const previewDom=new JSDOM('<!doctype html><html lang="ar"><body><main><div class="sticky"><input id="searchInput"></div><section id="original">البحث الأصلي</section></main></body></html>',{url:url+'index.html?employee=1&pilotPreview=1',runScripts:'outside-only',pretendToBeVisual:true});
+const pw=previewDom.window;
+pw.localStorage.setItem('inventory_user_name_v2','مهند');
+pw.localStorage.setItem('inventory_admin_token_v2','manager-preview-session');
+pw.localStorage.setItem('inventory_login_photo_proof_v2',JSON.stringify({role:'admin',photoId:'verified-photo'}));
+pw.fetch=async path=>({ok:true,text:async()=>stock(path.includes('riyadh')?'riyadh':'jeddah')});
+pw.eval(js);pw.document.dispatchEvent(new pw.Event('DOMContentLoaded'));
+await wait(530);
+assert.ok(pw.document.getElementById('batco61-pilot'),'Verified manager preview must work before any Firebase allowlist is active');
+assert.ok(pw.document.getElementById('searchInput'),'Manager preview must retain the original search');
+previewDom.window.close();
+
 console.log('V61_DOM_PASS: verified employee appears, original search preserved, recent/favorites, revert/reenter, stop-switch, admin selection and persistence');
