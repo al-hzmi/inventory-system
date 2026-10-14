@@ -2,6 +2,7 @@
 (function(){
 'use strict';
 const DOC='employee_home_pilot_v1',VERSION='61.1';
+const allowlisted=(data,id)=>Boolean(data?.enabled===true&&Array.isArray(data.allowedEmployeeIds)&&data.allowedEmployeeIds.map(String).includes(String(id)));
 const rootId='batco61-pilot';
 let unsubscribe=null,currentId='',active=false,panel=null,bootTimer=null,searchTimer=null,refreshCount=0;
 let inventory={jeddah:{},riyadh:{}},prefs={recent:[],favorites:[]},diffs=null,tab='recent';
@@ -40,11 +41,14 @@ async function loadInventory(id){
  prefs=safeRead(key(id)+'_prefs',{recent:[],favorites:[]});
  const next=[];
  for(const branch of ['jeddah','riyadh']){
-  const marker=key(id)+'_visit_'+branch,old=safeRead(key(id)+'_snap_'+branch,null);
-  if(sessionStorage.getItem(marker)==='1'){next.push(null);continue}
-  next.push(old?.stock?delta(old.stock,inventory[branch],branch):null);
+  const marker=key(id)+'_visit_'+branch,cache=marker+'_diff',old=safeRead(key(id)+'_snap_'+branch,null);
+  let visitAt=0;
+  try{visitAt=Number(sessionStorage.getItem(marker)||0)}catch{}
+  if(visitAt&&Date.now()-visitAt<30*60*1000){next.push(safeRead(cache,null));continue}
+  const diff=old?.stock?delta(old.stock,inventory[branch],branch):null;
+  next.push(diff);
   save(key(id)+'_snap_'+branch,{at:Date.now(),stock:inventory[branch]});
-  try{sessionStorage.setItem(marker,'1')}catch{}
+  try{sessionStorage.setItem(marker,String(Date.now()));sessionStorage.setItem(cache,JSON.stringify(diff))}catch{}
  }
  diffs=next.every(x=>x===null)?null:next.flatMap(x=>x||[]);
  show();
@@ -178,7 +182,7 @@ function init(){
   if(window.firebase?.apps?.length){clearInterval(bootTimer);try{
    unsubscribe=window.firebase.firestore().collection('system_controls').doc(DOC).onSnapshot(snap=>{
     const data=snap.exists?snap.data():null;
-    const allowed=Boolean(data?.enabled===true&&Array.isArray(data.allowedEmployeeIds)&&data.allowedEmployeeIds.map(String).includes(identity.id));
+    const allowed=allowlisted(data,identity.id);
     if(allowed){enable(identity.id);waitUI(identity.id)}else{close();document.getElementById('b61-return')?.remove()}
    },()=>{close();document.getElementById('b61-return')?.remove()});
   }catch{close()} }
@@ -187,5 +191,5 @@ function init(){
 }
 document.addEventListener('input',handleSearch,true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-window.BatcoPilot={decode,delta,version:VERSION}; // Read-only test helpers.
+window.BatcoPilot={decode,delta,allowlisted,version:VERSION}; // Read-only test helpers.
 })();
