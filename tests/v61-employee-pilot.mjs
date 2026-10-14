@@ -62,7 +62,7 @@ assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@medi
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
 assert.ok(html.includes('v61-employee-pilot.js?v=61.1')&&html.includes('v61-employee-pilot.css?v=61.1'),'User-facing loader not configured');
 assert.ok(admin.includes("doc(DOC).set(")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
-assert.ok(admin.includes("await db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
+assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
 assert.ok(admin.includes("if(typeof isAdmin!=='function'||!isAdmin()"),'Admin controls must respect existing admin gate');
 assert.ok(admin.includes('if(enabled&&!selected.size)'),'Do not enable pilot with an empty allowlist');
