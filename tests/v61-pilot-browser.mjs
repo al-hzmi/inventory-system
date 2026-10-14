@@ -14,7 +14,7 @@ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><me
  '<link rel="stylesheet" href="./v61-employee-pilot.css"></head><body style="margin:0;background:#f5f8f6">'+
  '<div id="application"><header class="sticky" style="position:sticky;top:0;z-index:5;background:white;padding:12px 16px;border-bottom:1px solid #ddd">'+
  '<div role="group" aria-label="اختيار المستودع"><button aria-pressed="true">جدة</button><button aria-pressed="false">الرياض</button></div>'+
- '<div style="max-width:1024px;margin:auto"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;padding:12px"></div></header>'+
+ '<div style="max-width:1024px;margin:auto"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;box-sizing:border-box;padding:12px"></div></header>'+
  '<section id="legacy-results" style="max-width:1024px;margin:18px auto;padding:12px">البحث الحالي يعمل دون تغيير</section></div>'+
  '<script>localStorage.setItem("inventory_user_name_v2","موظف تجريبي معتمد");'+
  'localStorage.setItem("inventory_employee_id_v2","employee-real-001");'+
@@ -65,6 +65,7 @@ async function checkViewport(width,height){
   assert.equal(await page.locator('#batco61-pilot [data-tab]').count(),3,'Expected three workspace tabs');
   assert.equal(await page.locator('#legacy-results').count(),1,'Original search must remain');
   const scrollWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
+  if(scrollWidth>width+5){const offenders=await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:String(e.className||'').slice(0,100),right:Math.round(e.getBoundingClientRect().right),scroll:e.scrollWidth})).filter(e=>e.right>innerWidth+5).slice(0,12));console.log('Overflow diagnostics',JSON.stringify(offenders))}
   assert.ok(scrollWidth<=width+5,'Viewport '+width+' overflows horizontally: '+scrollWidth);
   await page.evaluate(()=>window.dispatchEvent(new CustomEvent('batco61:product-open',{detail:{sku:'ARM_10015',warehouse:'jeddah'}})));
   await page.locator('.b61-product').first().waitFor({state:'visible',timeout:3000});
