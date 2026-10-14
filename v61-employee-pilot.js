@@ -146,7 +146,7 @@ function close(){
 function paint(){
  if(!active)return;const input=document.getElementById('searchInput');if(!input)return;
  if(panel?.isConnected)return;
- const region=input.closest('.max-w-\\[1024px\\]')||input.parentElement?.parentElement?.parentElement;
+ const region=input.closest('.sticky')||input.parentElement?.parentElement?.parentElement;
  if(!region?.parentElement)return;
  panel=el('section','b61-panel');panel.id=rootId;panel.setAttribute('aria-label','مساحة العمل التجريبية');
  panel.innerHTML='<div class="b61-head"><div><span class="b61-eyebrow">مساحة العمل · نسخة تجريبية</span><h2 class="b61-greet"></h2><p>آخر أصنافك والتحديثات المهمة في مكان واحد، والبحث الأصلي كما هو.</p></div><button type="button" class="b61-classic">العودة للواجهة الكلاسيكية</button></div><div class="b61-tiles"><button type="button" data-tab="recent"><span>↶</span><b>آخر الأصناف</b><small>رجوع سريع</small></button><button type="button" data-tab="favorite"><span>☆</span><b>المفضلة</b><small>أصنافك المعتادة</small></button><button type="button" data-tab="changes"><span>↗</span><b>وش تغيّر؟</b><small>من آخر زيارة</small></button></div><div class="b61-content"><div class="b61-list-head"><h3 class="b61-list-title"></h3><small>حفظ خاص بهذا الجهاز</small></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div><p class="b61-footnote">لن تتغير بيانات المخزون بسبب النسخة التجريبية. يمكنك العودة للواجهة الكلاسيكية بأي وقت.</p>';
