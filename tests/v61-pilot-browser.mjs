@@ -142,6 +142,23 @@ async function checkAdminHome(){
   assert.equal(await page.locator('#b61-admin-panel').count(),0);
   await page.locator('[data-b61a-open]').click();
   await page.locator('#b61-admin-panel').waitFor();
+  await page.locator('#b61a-close').click();
+  // Simulate a denied/offline Firestore read: display a retry action, not an infinite spinner.
+  await page.evaluate(()=>{
+   window.__workingPilotDb=window.db;
+   window.db={collection(name){
+    if(name==='employee_accounts')return window.__workingPilotDb.collection(name);
+    if(name==='system_controls')return{doc:()=>({get:async()=>{throw Error('SIMULATED_SETTINGS_UNAVAILABLE')}})};
+    return window.__workingPilotDb.collection(name);
+   }};
+  });
+  await page.locator('[data-b61a-open]').click();
+  await page.locator('#b61a-retry').waitFor({state:'visible'});
+  assert.equal(await page.locator('#b61a-master').isEnabled(),false,'Failed settings read must never enable an unverified toggle');
+  assert.ok((await page.locator('#b61a-message').innerText()).includes('SIMULATED_SETTINGS_UNAVAILABLE'),'Show actionable Firestore error');
+  await page.evaluate(()=>{window.db=window.__workingPilotDb});
+  await page.locator('#b61a-retry').click();
+  await page.waitForFunction(()=>document.getElementById('b61a-master')?.disabled===false);
   assert.deepEqual(errors,[],'In-page admin browser errors: '+errors.join(' | '));
   console.log('V63_ADMIN_HOME_PASS: direct guarded control, re-entry and mobile viewport');
  }finally{await ctx.close()}
