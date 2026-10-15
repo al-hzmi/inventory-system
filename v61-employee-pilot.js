@@ -1,7 +1,7 @@
 /* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
 (function(){
 'use strict';
-const DOC='employee_site_access',VERSION='62.0';
+const DOC='employee_site_access',VERSION='62.1';
 const CONFIG_FIELD='employeeHomePilot';
 const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
@@ -13,6 +13,14 @@ const key=(id)=>'batco_pilot61_'+String(id).replace(/[^a-zA-Z0-9_-]/g,'_');
 const fmt=x=>Number.isFinite(Number(x))?new Intl.NumberFormat('ar-SA',{maximumFractionDigits:5}).format(Number(x)):'—';
 const branchName=b=>b==='riyadh'?'الرياض':'جدة';
 const el=(tag,cl,txt)=>{const e=document.createElement(tag);if(cl)e.className=cl;if(txt!==undefined)e.textContent=String(txt);return e};
+const previewRequested=()=>{try{return new URLSearchParams(location.search).get('pilotPreview')==='1'}catch{return false}};
+function previewNotice(message,warning=false){
+ if(!previewRequested()||!document.body)return;
+ let node=document.getElementById('b61-preview-status');
+ if(!message){node?.remove();return}
+ if(!node){node=el('div','b61-preview-status');node.id='b61-preview-status';node.setAttribute('role','status');node.setAttribute('aria-live','polite');document.body.append(node)}
+ node.textContent=message;node.classList.toggle('is-warning',warning);
+}
 const user=()=>{try{const name=String(localStorage.getItem('inventory_user_name_v2')||'').trim(),id=String(localStorage.getItem('inventory_employee_id_v2')||'').trim(),p=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null'),admin=name==='مهند'&&p?.role==='admin'&&Boolean(p?.photoId),auth=localStorage.getItem('inventory_employee_auth_version_v2')==='2';if(!name)return null;if(admin)return{id:'admin_mohanad',name};if(id&&auth&&p?.role==='employee'&&String(p.employeeId||'')===id&&p?.photoId)return{id,name};return null}catch{return null}};
 const isAdminPreview=()=>{try{return new URLSearchParams(location.search).get('pilotPreview')==='1'&&user()?.id==='admin_mohanad'&&Boolean(localStorage.getItem('inventory_admin_token_v2'))}catch{return false}};
 function decode(text){
@@ -147,24 +155,25 @@ function close(){
 }
 function paint(){
  if(!active)return;const input=document.getElementById('searchInput');if(!input)return;
- if(panel?.isConnected)return;
+ if(panel?.isConnected){previewNotice(null);return}
  const region=input.closest('.sticky')||input.parentElement?.parentElement?.parentElement;
  if(!region?.parentElement)return;
  panel=el('section','b61-panel');panel.id=rootId;panel.setAttribute('aria-label','مساحة العمل التجريبية');
  panel.innerHTML='<div class="b61-head"><div><span class="b61-eyebrow">مساحة العمل · نسخة تجريبية</span><h2 class="b61-greet"></h2><p>آخر أصنافك والتحديثات المهمة في مكان واحد، والبحث الأصلي كما هو.</p></div><button type="button" class="b61-classic">العودة للواجهة الكلاسيكية</button></div><div class="b61-tiles"><button type="button" data-tab="recent"><span>↶</span><b>آخر الأصناف</b><small>رجوع سريع</small></button><button type="button" data-tab="favorite"><span>☆</span><b>المفضلة</b><small>أصنافك المعتادة</small></button><button type="button" data-tab="changes"><span>↗</span><b>وش تغيّر؟</b><small>من آخر زيارة</small></button></div><div class="b61-content"><div class="b61-list-head"><h3 class="b61-list-title"></h3><small>حفظ خاص بهذا الجهاز</small></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div><p class="b61-footnote">لن تتغير بيانات المخزون بسبب النسخة التجريبية. يمكنك العودة للواجهة الكلاسيكية بأي وقت.</p>';
  region.parentElement.insertBefore(panel,region.nextSibling);
+ previewNotice(null);
  panel.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;show()}));
  panel.querySelector('.b61-classic').addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:true});close();showReturnButton()});
  show();
 }
 function showReturnButton(){
- const area=document.getElementById('searchInput');if(!area||document.getElementById('b61-return'))return;
+ const area=document.getElementById('searchInput');if(!area){previewNotice('جارٍ تجهيز البحث لإظهار زر العودة إلى التجربة…');return}if(document.getElementById('b61-return')){previewNotice(null);return}
  const btn=el('button','b61-return','إظهار مساحة العمل التجريبية');btn.id='b61-return';btn.type='button';
- btn.addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:false});btn.remove();active=true;paint()});
+ btn.addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:false});btn.remove();active=true;paint();loadInventory(currentId).catch(()=>toast('تعذّر تحميل الأصناف الآن؛ البحث الأساسي لا يزال يعمل.'))});
  const anchor=area.closest('.sticky')||area.parentElement;if(anchor?.parentElement)anchor.parentElement.insertBefore(btn,anchor.nextSibling);
 }
 function enable(id){
- if(active&&currentId===id)return;
+ if(active&&currentId===id){paint();return;}
  close();currentId=id;active=true;tab='recent';
  if(safeRead(key(id)+'_classic',{}).hidden){active=false;showReturnButton();return}
  paint();
@@ -172,15 +181,20 @@ function enable(id){
 }
 function waitUI(id){
  let attempts=0;const timer=setInterval(()=>{if(currentId!==id){clearInterval(timer);return}
-  if(document.getElementById('searchInput')){clearInterval(timer);paint()}else if(++attempts>80){clearInterval(timer)}
+  if(document.getElementById('searchInput')){
+   clearInterval(timer);
+   if(!active&&safeRead(key(id)+'_classic',{}).hidden)showReturnButton();else paint();
+  }else if(++attempts===16){previewNotice('ما زلنا ننتظر ظهور البحث في واجهة الموظفين…')}
+  else if(attempts>120){clearInterval(timer);previewNotice('تعذر العثور على البحث. تأكد من تسجيل الدخول للموظفين ثم حدّث الصفحة.',true)}
  },300);
 }
 function init(){
  const identity=user();
- if(!identity){setTimeout(init,2000);return}
+ if(!identity){previewNotice('للمعاينة، سجّل الدخول بحساب المدير أولًا من الواجهة الأصلية.',true);setTimeout(init,2000);return}
+ if(previewRequested()&&identity.id!=='admin_mohanad')previewNotice('المعاينة الخاصة بالمدير تحتاج الدخول بحساب الإدارة، وليس حساب الموظف.',true);
  currentId=identity.id;
  // Self-test requires verified manager identity but does not alter employee rollout settings.
- if(isAdminPreview()){enable(identity.id);waitUI(identity.id);return}
+ if(isAdminPreview()){previewNotice('جارٍ تجهيز المعاينة الخاصة بالمدير…');enable(identity.id);waitUI(identity.id);return}
  let attempt=0;
  bootTimer=setInterval(()=>{
   if(window.firebase?.apps?.length){clearInterval(bootTimer);try{
