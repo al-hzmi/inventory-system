@@ -64,6 +64,11 @@ async function checkViewport(width,height){
   await page.locator('#batco61-pilot').waitFor({state:'visible',timeout:10000});
   assert.equal(await page.locator('#batco61-pilot [data-tab]').count(),3,'Expected three workspace tabs');
   assert.equal(await page.locator('#legacy-results').count(),1,'Original search must remain');
+  await page.locator('#searchInput').fill('ARM_10015');
+  assert.equal(await page.locator('#batco61-pilot').isVisible(),false,'Typing a product code must uncover the search results');
+  assert.equal(await page.locator('#legacy-results').isVisible(),true,'Search results must remain accessible');
+  await page.locator('#searchInput').fill('');
+  assert.equal(await page.locator('#batco61-pilot').isVisible(),true,'Clearing search must restore the personal tiles');
   const scrollWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
   if(scrollWidth>width+5){const offenders=await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:String(e.className||'').slice(0,100),right:Math.round(e.getBoundingClientRect().right),scroll:e.scrollWidth})).filter(e=>e.right>innerWidth+5).slice(0,12));console.log('Overflow diagnostics',JSON.stringify(offenders))}
   assert.ok(scrollWidth<=width+5,'Viewport '+width+' overflows horizontally: '+scrollWidth);
