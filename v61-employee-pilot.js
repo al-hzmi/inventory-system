@@ -1,7 +1,7 @@
 /* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
 (function(){
 'use strict';
-const DOC='employee_site_access',VERSION='62.1';
+const DOC='employee_site_access',VERSION='63.0';
 const CONFIG_FIELD='employeeHomePilot';
 const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
@@ -89,8 +89,16 @@ function remember(sku,branch){
  prefs.recent=[marker,...(prefs.recent||[]).filter(x=>x!==marker)].slice(0,12);
  save(key(currentId)+'_prefs',prefs);if(active)show();
 }
+function searchIsActive(){return Boolean(String(document.getElementById('searchInput')?.value||'').trim())}
+function syncSearchVisibility(){
+ const searching=searchIsActive();
+ panel?.classList.toggle('b61-search-suppressed',searching);
+ document.getElementById('b61-return')?.classList.toggle('b61-search-suppressed',searching);
+}
 function handleSearch(e){
- if(!active||e.target?.id!=='searchInput')return;
+ if(e.target?.id!=='searchInput')return;
+ syncSearchVisibility();
+ if(!active)return;
  clearTimeout(searchTimer);
  const query=String(e.target.value||'').trim(),branch=currentBranch();
  if(query.length<3)return;
@@ -155,12 +163,13 @@ function close(){
 }
 function paint(){
  if(!active)return;const input=document.getElementById('searchInput');if(!input)return;
- if(panel?.isConnected){previewNotice(null);return}
+ if(panel?.isConnected){syncSearchVisibility();previewNotice(null);return}
  const region=input.closest('.sticky')||input.parentElement?.parentElement?.parentElement;
  if(!region?.parentElement)return;
  panel=el('section','b61-panel');panel.id=rootId;panel.setAttribute('aria-label','مساحة العمل التجريبية');
  panel.innerHTML='<div class="b61-head"><div><span class="b61-eyebrow">مساحة العمل · نسخة تجريبية</span><h2 class="b61-greet"></h2><p>آخر أصنافك والتحديثات المهمة في مكان واحد، والبحث الأصلي كما هو.</p></div><button type="button" class="b61-classic">العودة للواجهة الكلاسيكية</button></div><div class="b61-tiles"><button type="button" data-tab="recent"><span>↶</span><b>آخر الأصناف</b><small>رجوع سريع</small></button><button type="button" data-tab="favorite"><span>☆</span><b>المفضلة</b><small>أصنافك المعتادة</small></button><button type="button" data-tab="changes"><span>↗</span><b>وش تغيّر؟</b><small>من آخر زيارة</small></button></div><div class="b61-content"><div class="b61-list-head"><h3 class="b61-list-title"></h3><small>حفظ خاص بهذا الجهاز</small></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div><p class="b61-footnote">لن تتغير بيانات المخزون بسبب النسخة التجريبية. يمكنك العودة للواجهة الكلاسيكية بأي وقت.</p>';
  region.parentElement.insertBefore(panel,region.nextSibling);
+ syncSearchVisibility();
  previewNotice(null);
  panel.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;show()}));
  panel.querySelector('.b61-classic').addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:true});close();showReturnButton()});
@@ -171,6 +180,7 @@ function showReturnButton(){
  const btn=el('button','b61-return','إظهار مساحة العمل التجريبية');btn.id='b61-return';btn.type='button';
  btn.addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:false});btn.remove();active=true;paint();loadInventory(currentId).catch(()=>toast('تعذّر تحميل الأصناف الآن؛ البحث الأساسي لا يزال يعمل.'))});
  const anchor=area.closest('.sticky')||area.parentElement;if(anchor?.parentElement)anchor.parentElement.insertBefore(btn,anchor.nextSibling);
+ syncSearchVisibility();
 }
 function enable(id){
  if(active&&currentId===id){paint();return;}
