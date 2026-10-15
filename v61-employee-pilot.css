@@ -1,4 +1,4 @@
-/* BATCO V62.1 · experimental, scoped employee home */
+/* BATCO V63 · experimental, scoped employee home */
 #batco61-pilot,.b61-return{font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif}
 #batco61-pilot{box-sizing:border-box;direction:rtl;max-width:1024px;margin:14px auto 6px;padding:0 16px;color:#223b30;animation:b61Appear .25s ease-out}
 #batco61-pilot *,#batco61-pilot *::before,#batco61-pilot *::after{box-sizing:border-box}
@@ -50,3 +50,6 @@
 /* Manager-only preview readiness, never shown in the ordinary employee flow. */
 .b61-preview-status{position:fixed;z-index:250;bottom:max(12px,env(safe-area-inset-bottom));inset-inline:12px;max-width:520px;margin-inline:auto;padding:12px 16px;background:#f0f9f3;border:1px solid #b8ddc5;border-radius:12px;box-shadow:0 8px 25px rgba(15,55,33,.12);color:#285b42;font:600 12px/1.8 "IBM Plex Sans Arabic",system-ui,sans-serif;direction:rtl;text-align:center;pointer-events:none}
 .b61-preview-status.is-warning{background:#fff8ee;border-color:#ead1a4;color:#8a531c}
+
+/* Search is always primary: hiding the pilot frees the entire results viewport. */
+#batco61-pilot.b61-search-suppressed,.b61-return.b61-search-suppressed{display:none!important}
