@@ -1,4 +1,4 @@
-/* V61.1 — inherited admin gate, isolated rollout workspace */
+/* V63 — inherited admin gate, isolated rollout workspace */
 .b61a-launch{border:1px solid #c0ddc9;background:#edf8ef;color:#176f4d;border-radius:10px;padding:10px 14px;font-size:11px;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;min-height:42px;white-space:nowrap;cursor:pointer}
 .b61a-launch:hover{background:#dff2e5}
 .b61a-shell{max-width:1080px;min-height:100dvh;margin:0 auto;padding:34px 20px 110px;background:#f7faf7;direction:rtl;color:#193b2b;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
@@ -46,3 +46,11 @@
 
 /* Ensure the original control center is fully hidden while rollout controls are open. */
 .app[hidden]{display:none!important}
+
+/* In-page admin overlay: independent from the heavy standalone control center. */
+#b61-admin-panel.b61a-shell{position:fixed!important;inset:0!important;z-index:2147480000!important;width:100%!important;max-width:none!important;height:100dvh!important;min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-sizing:border-box;padding:32px max(14px,calc((100vw - 1080px)/2)) 90px;background:#f7faf7}
+#b61-admin-panel.b61a-shell>.b61a-header,#b61-admin-panel.b61a-shell>.b61a-card,#b61-admin-panel.b61a-shell>.b61a-footer{max-width:1080px;margin-inline:auto}
+#b61-admin-panel.b61a-shell>.b61a-card{margin-block:14px}
+#b61a-retry{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c1dcc8;background:#f0f9f2;color:#166b47;border-radius:10px;padding:9px 14px;font:700 12px "IBM Plex Sans Arabic",system-ui,sans-serif;min-height:42px;margin-block:6px;cursor:pointer}
+#b61a-retry[hidden]{display:none!important}
+@media(max-width:550px){#b61-admin-panel.b61a-shell{padding:14px 10px 80px}#b61-admin-panel.b61a-shell>.b61a-footer{bottom:4px}}
