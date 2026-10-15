@@ -55,7 +55,28 @@ notify({exists:true,data:()=>({mode:'open',employeeHomePilot:{enabled:false,allo
 assert.equal(w.document.getElementById('batco61-pilot'),null,'Emergency disable must remove pilot');
 assert.equal(w.document.getElementById('b61-return'),null,'Emergency disable must also remove reentry button');
 assert.ok(w.document.getElementById('searchInput'),'Disabling pilot must not affect original search');
+
 w.close();
+
+// Regression: the classic-mode reentry button must appear even if search mounts after preview initialization.
+const lateDom=new JSDOM('<!doctype html><html lang="ar"><body><main><div class="sticky"></div></main></body></html>',{url:url+'index.html?employee=1&pilotPreview=1',runScripts:'outside-only',pretendToBeVisual:true});
+const late=lateDom.window;
+late.localStorage.setItem('inventory_user_name_v2','مهند');
+late.localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');
+late.localStorage.setItem('inventory_login_photo_proof_v2',JSON.stringify({role:'admin',employeeId:'admin_mohanad',photoId:'proof'}));
+late.localStorage.setItem('batco_pilot61_admin_mohanad_classic',JSON.stringify({hidden:true}));
+late.fetch=async path=>({ok:true,text:async()=>stock(path.includes('riyadh')?'riyadh':'jeddah')});
+late.eval(js);
+late.document.dispatchEvent(new late.Event('DOMContentLoaded'));
+assert.ok(late.document.getElementById('b61-preview-status'),'Manager should see a readiness notice while search is not mounted');
+const lateInput=late.document.createElement('input');lateInput.id='searchInput';late.document.querySelector('.sticky').append(lateInput);
+await wait(470);
+assert.ok(late.document.getElementById('b61-return'),'Delayed React search must restore classic-mode reentry');
+late.document.getElementById('b61-return').click();
+assert.ok(late.document.getElementById('batco61-pilot'),'Manager can reopen the workspace');
+await wait(80);
+assert.equal(late.document.getElementById('b61-preview-status'),null,'Preview notice should clear once ready');
+late.close();
 
 const adminDom=new JSDOM('<!doctype html><html lang="ar"><body><div class="app"><header class="top"><div class="topin">Original control center</div></header></div></body></html>',{url:url+'control-center.html?pilot=1',runScripts:'outside-only',pretendToBeVisual:true});
 const a=adminDom.window;
