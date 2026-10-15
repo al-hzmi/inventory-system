@@ -1,4 +1,4 @@
-/* BATCO V61.1 · experimental, scoped employee home */
+/* BATCO V62.1 · experimental, scoped employee home */
 #batco61-pilot,.b61-return{font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif}
 #batco61-pilot{box-sizing:border-box;direction:rtl;max-width:1024px;margin:14px auto 6px;padding:0 16px;color:#223b30;animation:b61Appear .25s ease-out}
 #batco61-pilot *,#batco61-pilot *::before,#batco61-pilot *::after{box-sizing:border-box}
@@ -46,3 +46,7 @@
 @media(max-width:760px){#batco61-pilot{padding:0 11px;margin-top:12px}.b61-head{padding:19px 16px;align-items:flex-start}.b61-greet{font-size:20px}.b61-classic{font-size:10px!important;max-width:150px;min-width:0;white-space:normal}.b61-tiles{gap:7px;padding:12px 11px 6px}.b61-tiles>button{min-height:83px;padding:10px}.b61-tiles>button b{font-size:11px}.b61-content{padding:12px}.b61-list{grid-template-columns:1fr}.b61-product{padding:9px}.b61-footnote{padding:11px 13px}}
 @media(max-width:390px){.b61-head{display:block}.b61-classic{margin-top:12px;max-width:none}.b61-tiles>button{padding:9px 7px}.b61-tiles>button b{font-size:10px}.b61-tiles>button small{font-size:9px}}
 @media(prefers-reduced-motion:reduce){#batco61-pilot{animation:none!important}}
+
+/* Manager-only preview readiness, never shown in the ordinary employee flow. */
+.b61-preview-status{position:fixed;z-index:250;bottom:max(12px,env(safe-area-inset-bottom));inset-inline:12px;max-width:520px;margin-inline:auto;padding:12px 16px;background:#f0f9f3;border:1px solid #b8ddc5;border-radius:12px;box-shadow:0 8px 25px rgba(15,55,33,.12);color:#285b42;font:600 12px/1.8 "IBM Plex Sans Arabic",system-ui,sans-serif;direction:rtl;text-align:center;pointer-events:none}
+.b61-preview-status.is-warning{background:#fff8ee;border-color:#ead1a4;color:#8a531c}
