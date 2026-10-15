@@ -36,6 +36,12 @@ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><me
  'if(name==="security_admin_logs")return{add:async()=>({id:"log"})};throw Error("Unexpected Firestore collection "+name)}};'+
  'window.confirm=()=>true;</script><script src="./v61-employee-pilot-admin.js"></script></body></html>';
 }
+
+function adminHomeFixture(){
+ return adminFixture()
+  .replace('<div class="app"><header><div class="topin">لوحة التحكم الأصلية</div></header></div>','<div class="v62-pilot-entry"><button type="button" data-b61a-open>إدارة وتفعيل التجربة</button></div>')
+  .replace('window.isAdmin=()=>true;window.__saves=[];', 'window.__saves=[];const ADMIN_HASH="verified-admin-test-token";localStorage.setItem("inventory_user_name_v2","مهند");localStorage.setItem("inventory_admin_token_v2",ADMIN_HASH);localStorage.setItem("inventory_login_photo_proof_v2",JSON.stringify({role:"admin",employeeId:"admin_mohanad",photoId:"proof"}));');
+}
 async function routeFiles(page){
  await page.route(origin+'/**',async route=>{
   const url=new URL(route.request().url());
@@ -43,6 +49,7 @@ async function routeFiles(page){
   let body,contentType='text/html';
   if(path==='/index.html')body=employeeFixture();
   else if(path==='/control-center.html')body=adminFixture();
+   else if(path==='/admin-home.html')body=adminHomeFixture();
   else if(path==='/v61-employee-pilot.js'){body=src('v61-employee-pilot.js');contentType='application/javascript'}
   else if(path==='/v61-employee-pilot.css'){body=src('v61-employee-pilot.css');contentType='text/css'}
   else if(path==='/v61-employee-pilot-admin.js'){body=src('v61-employee-pilot-admin.js');contentType='application/javascript'}
@@ -116,8 +123,32 @@ async function checkAdmin(){
   console.log('V61_ADMIN_MOBILE_PASS: exact employee, rollout and emergency stop');
  }finally{await ctx.close()}
 }
+async function checkAdminHome(){
+ const ctx=await browser.newContext({viewport:{width:390,height:844},locale:'ar-SA',hasTouch:true});
+ const page=await ctx.newPage();
+ try{
+  await routeFiles(page);
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(origin+'/admin-home.html',{waitUntil:'load'});
+  assert.equal(await page.locator('#b61-admin-panel').count(),0,'The admin panel should not auto-open');
+  await page.locator('[data-b61a-open]').click();
+  await page.locator('#b61-admin-panel').waitFor({state:'visible'});
+  assert.equal(new URL(page.url()).pathname,'/admin-home.html','In-page controls must not navigate to control center');
+  await page.locator('#b61a-master').waitFor({state:'visible'});
+  assert.equal(await page.locator('#b61a-master').isEnabled(),true,'Firestore settings and employees loaded');
+  assert.equal(await page.locator('.b61a-account').count(),2,'Manager and real employee should be selectable');
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+5),'Manager overlay must not overflow mobile viewport');
+  await page.locator('#b61a-close').click();
+  assert.equal(await page.locator('#b61-admin-panel').count(),0);
+  await page.locator('[data-b61a-open]').click();
+  await page.locator('#b61-admin-panel').waitFor();
+  assert.deepEqual(errors,[],'In-page admin browser errors: '+errors.join(' | '));
+  console.log('V63_ADMIN_HOME_PASS: direct guarded control, re-entry and mobile viewport');
+ }finally{await ctx.close()}
+}
 try{
  for(const [w,h] of [[390,844],[820,1050],[1440,900]])await checkViewport(w,h);
  await checkAdmin();
- console.log('V61_BROWSER_E2E_PASS');
+ await checkAdminHome();
+ console.log('V63_BROWSER_E2E_PASS');
 }finally{await browser.close()}
