@@ -135,6 +135,7 @@ async function checkAdminHome(){
   await page.locator('#b61-admin-panel').waitFor({state:'visible'});
   assert.equal(new URL(page.url()).pathname,'/admin-home.html','In-page controls must not navigate to control center');
   await page.locator('#b61a-master').waitFor({state:'visible'});
+  await page.waitForFunction(()=>document.getElementById('b61a-master')?.disabled===false);
   assert.equal(await page.locator('#b61a-master').isEnabled(),true,'Firestore settings and employees loaded');
   assert.equal(await page.locator('.b61a-account').count(),2,'Manager and real employee should be selectable');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+5),'Manager overlay must not overflow mobile viewport');
