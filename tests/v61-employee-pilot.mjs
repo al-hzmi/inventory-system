@@ -23,7 +23,7 @@ const ctx={
 ctx.window.addEventListener=(event,callback)=>{listeners['window:'+event]=callback};
 vm.runInNewContext(pilot,ctx,{filename:'v61-employee-pilot.js'});
 const api=ctx.window.BatcoPilot;
-assert.equal(api.version,'62.1');
+assert.equal(api.version,'63.0');
 const gate=(v,id)=>api.allowlisted(v,id);
 assert.equal(gate(undefined,'1001'),false,'No config is disabled');
 assert.equal(gate({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['1001']}},'1001'),true,'Existing employee-site control includes scoped pilot allowlist');
@@ -62,15 +62,15 @@ assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="chang
 assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('إظهار مساحة العمل التجريبية'),'Return and reenter controls must both exist');
 assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:390px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
-assert.ok(html.includes('v61-employee-pilot.js?v=62.1')&&html.includes('v61-employee-pilot.css?v=62.1'),'User-facing loader not configured');
+assert.ok(html.includes('v61-employee-pilot.js?v=63.0')&&html.includes('v61-employee-pilot.css?v=63.0'),'User-facing loader not configured');
 assert.ok(admin.includes("const ref=db.collection(COL).doc(DOC)")&&admin.includes("[CONFIG_FIELD]:{")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
 assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
-assert.ok(admin.includes("if(typeof isAdmin!=='function'||!isAdmin()"),'Admin controls must respect existing admin gate');
-assert.ok(admin.includes('if(enabled&&!selected.size)'),'Do not enable pilot with an empty allowlist');
+assert.ok(admin.includes('pilotAdminAuthorized()'),'Admin controls must respect existing admin gate');
+assert.ok(admin.includes('if(enabled&&(!peopleReady||!selected.size))'),'Do not enable pilot with an empty allowlist');
 assert.ok(adminCss.includes('@media(max-width:550px)'),'Admin needs mobile mode');
-assert.ok(center.includes('v61-employee-pilot-admin.js?v=62.0')&&center.includes('v61-employee-pilot-admin.css?v=61.1'),'Admin scripts not mounted');
-assert.ok(home.includes('./control-center.html?pilot=1'),'Direct access from admin home missing');
+assert.ok(center.includes('v61-employee-pilot-admin.js?v=63.0')&&center.includes('v61-employee-pilot-admin.css?v=63.0'),'Admin scripts not mounted');
+assert.ok(home.includes('./admin-home.html?pilot=1'),'Direct access from admin home missing');
 assert.ok(read('admin-home.html').includes('v62-pilot-entry'),'Persistent pilot launch must remain on executive admin homepage even during async reload');
 assert.ok(read('admin-home.html').includes('pilotPreview=1'),'Manager must be able to preview without staff rollout');
 assert.ok(pilot.includes("DOC='employee_site_access'"),'Pilot reads existing Firestore document instead of unreadable new config');
@@ -78,6 +78,13 @@ assert.ok(admin.includes("DOC='employee_site_access'"),'Pilot admin writes to sa
 assert.ok(pilot.includes('if(isAdminPreview())'),'Manager self-preview must bypass employee allowlist');
 assert.ok(pilot.includes("if(!active&&safeRead(key(id)+'_classic',{}).hidden)showReturnButton();else paint()"),'Late-mounted search must restore classic-mode pilot link');
 assert.ok(pilot.includes('b61-preview-status'),'Manager preview must explain a delayed or unavailable UI');
+assert.ok(pilot.includes("panel?.classList.toggle('b61-search-suppressed',searching)")&&pilot.includes('syncSearchVisibility();'),'Any entered search must hide the workspace immediately');
+assert.ok(pilotCss.includes('#batco61-pilot.b61-search-suppressed'),'Search results must take priority without changing the original search component');
+assert.ok(admin.includes('withDeadline(')&&admin.includes('Promise.allSettled('),'Firestore reads must be bounded and independently diagnosed');
+assert.ok(admin.includes('data-b61a-open')&&admin.includes('window.BatcoPilotAdmin={open}'),'Admin home must open pilot in-page instead of redirecting to the heavy control center');
+assert.ok(read('admin-home.html').includes('data-b61a-open')&&read('admin-home.html').includes('v61-employee-pilot-admin.js?v=63.0'),'Executive dashboard must mount the admin pilot directly');
+assert.ok(adminCss.includes('position:fixed!important'),'Manager panel must overlay existing dashboard rather than depend on control-center rendering');
+
 
 const fakeDoc={events:[],readyState:'loading',addEventListener(name,callback){this.events.push(name)}};
 const noAdmin={document:fakeDoc,window:{location:{search:''}},location:{search:''},URLSearchParams,console,isAdmin:()=>false,db:{}};
