@@ -55,30 +55,56 @@ function renderPeople(){
 }
 function notice(msg,err=false){const target=$('#b61a-message');if(target){target.textContent=msg;target.classList.toggle('error',err)}}
 async function fetchData(){
+ if(loading||!$('#b61-admin-panel'))return;
+ loading=true;initialized=false;peopleReady=false;
+ $('#b61a-retry').hidden=true;
+ renderStatus();notice('جارٍ قراءة إعدادات التفعيل وحسابات الموظفين من قاعدة البيانات…');
  try{
-  const [collection,control,legacy]=await Promise.all([
-   db.collection('employee_accounts').limit(800).get(),
-   db.collection(COL).doc(DOC).get(),
-   db.collection(COL).doc(LEGACY_DOC).get().catch(()=>null)
+  const [peopleResult,settingsResult]=await Promise.allSettled([
+   withDeadline(db.collection('employee_accounts').limit(800).get(),8500,'حسابات الموظفين'),
+   withDeadline(db.collection(COL).doc(DOC).get({source:'server'}),8500,'إعدادات التفعيل')
   ]);
-  const seen=new Set();employees=[{id:'admin_mohanad',name:'حساب الإدارة — تجربة شخصية'}];
-  for(const doc of collection.docs){
-   const d=doc.data()||{},id=String(doc.id).trim(),name=String(d.canonicalName||d.name||d.displayName||id).trim();
-   if(!id||seen.has(id)||isTest(name)||isTest(id)||d.status==='suspended'||d.status==='disabled')continue;
-   seen.add(id);employees.push({id,name});
+  if(!$('#b61-admin-panel'))return;
+  employees=[{id:'admin_mohanad',name:'حساب الإدارة — تجربة شخصية'}];
+  if(peopleResult.status==='fulfilled'){
+   const seen=new Set(['admin_mohanad']);
+   for(const doc of peopleResult.value.docs||[]){
+    const d=doc.data()||{},id=String(doc.id).trim(),name=String(d.canonicalName||d.name||d.displayName||id).trim();
+    if(!id||seen.has(id)||isTest(name)||isTest(id)||d.status==='suspended'||d.status==='disabled')continue;
+    seen.add(id);employees.push({id,name});
+   }
+   peopleReady=true;
   }
   employees.sort((a,b)=>a.name.localeCompare(b.name,'ar',{numeric:true}));
-  const shared=control.exists?(control.data()?.[CONFIG_FIELD]||null):null;
-  const legacyData=legacy?.exists?(legacy.data()||{}):{};
-  const data=shared||legacyData;
-  enabled=data.enabled===true;selected=new Set((Array.isArray(data.allowedEmployeeIds)?data.allowedEmployeeIds:[]).map(String));
-  initialized=true;dirty=!shared&&legacy?.exists===true;
-  renderPeople();renderStatus();notice(dirty?'وُجد تفعيل سابق. اضغط «حفظ التفعيل» لنقله إلى إعدادات الموقع المعتمدة.':'جاهز. التغييرات لا تُطبق إلا بعد الضغط على حفظ التفعيل.');
- }catch(e){console.error('[Employee pilot admin]',e);notice('تعذر قراءة حسابات الموظفين أو إعدادات التجربة. تحقق من اتصال Firestore.',true)}
+  if(settingsResult.status==='fulfilled'){
+   const control=settingsResult.value;
+   const shared=control.exists?(control.data()?.[CONFIG_FIELD]||null):null;
+   let legacy=null;
+   if(!shared){
+    try{const old=await withDeadline(db.collection(COL).doc(LEGACY_DOC).get(),2500,'الإعدادات القديمة');if(old?.exists)legacy=old.data()||{}}catch(e){console.warn('[Pilot legacy settings optional]',e?.message||e)}
+   }
+   const data=shared||legacy||{};
+   enabled=data.enabled===true;
+   selected=new Set((Array.isArray(data.allowedEmployeeIds)?data.allowedEmployeeIds:[]).map(String));
+   initialized=true;dirty=!shared&&Boolean(legacy);
+  }
+  renderPeople();
+  const problems=[];
+  if(peopleResult.status==='rejected')problems.push('حسابات الموظفين: '+String(peopleResult.reason?.message||peopleResult.reason));
+  if(settingsResult.status==='rejected')problems.push('إعدادات التفعيل: '+String(settingsResult.reason?.message||settingsResult.reason));
+  if(problems.length){
+   notice('تعذر تحميل بعض البيانات. '+problems.join(' | ')+(initialized?' يمكنك إيقاف التفعيل الحالي، لكن إعادة تشغيله تتطلب تحميل الحسابات.':''),true);
+   $('#b61a-retry').hidden=false;
+  }else notice(dirty?'تم العثور على تفعيل قديم. احفظ لنقل الإعدادات إلى مستند التحكم المعتمد.':'الإعدادات جاهزة. اختر الحسابات ثم احفظ؛ لن تُطبق التغييرات قبل الحفظ.');
+ }catch(e){
+  console.error('[Employee pilot admin]',e);
+  notice('تعذر تجهيز اللوحة: '+String(e?.message||e),true);
+  $('#b61a-retry').hidden=false;
+ }finally{loading=false;if($('#b61-admin-panel'))renderStatus()}
 }
 async function saveControl(){
  if(busy||!initialized||!dirty)return;
- if(enabled&&!selected.size){notice('اختر موظفًا واحدًا على الأقل قبل تشغيل التجربة.',true);return}
+ if(enabled&&(!peopleReady||!selected.size)){notice('لا يمكن تشغيل التجربة قبل تحميل قائمة الموظفين واختيار حساب واحد على الأقل.',true);return}
  const next=state();
  if(!confirm((enabled?'تفعيل':'إيقاف')+' النسخة التجريبية '+(enabled?'لعدد '+selected.size+' حساب/حسابات فقط':'لجميع المستخدمين')+'؟'))return;
  busy=true;renderStatus();notice('جارٍ حفظ إعدادات التجربة…');
@@ -86,7 +112,7 @@ async function saveControl(){
   const ref=db.collection(COL).doc(DOC);
   await ref.set({[CONFIG_FIELD]:{
    enabled:next.enabled,allowedEmployeeIds:next.ids,revision:firebase.firestore.FieldValue.increment(1),
-   updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:'مهند',pilotVersion:'62.0'
+   updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:'مهند',pilotVersion:'63.0'
   }},{merge:true});
   // Do not report success unless the production-facing settings can be read back from Firestore.
   const stored=await ref.get({source:'server'});
