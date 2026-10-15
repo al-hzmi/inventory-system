@@ -39,7 +39,7 @@ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><me
 
 function adminHomeFixture(){
  return adminFixture()
-  .replace('<div class="app"><header><div class="topin">لوحة التحكم الأصلية</div></header></div>','<div class="v62-pilot-entry"><button type="button" data-b61a-open>إدارة وتفعيل التجربة</button></div>')
+  .replace('<div class="app"><header><div class="topin">لوحة التحكم الأصلية</div></header></div>','<div class="v62-pilot-entry"><a href="./control-center.html?pilot=1" data-b61a-open>إدارة وتفعيل التجربة</a></div>')
   .replace('window.isAdmin=()=>true;window.__saves=[];', 'window.__saves=[];const ADMIN_HASH="verified-admin-test-token";localStorage.setItem("inventory_user_name_v2","مهند");localStorage.setItem("inventory_admin_token_v2",ADMIN_HASH);localStorage.setItem("inventory_login_photo_proof_v2",JSON.stringify({role:"admin",employeeId:"admin_mohanad",photoId:"proof"}));');
 }
 async function routeFiles(page){
@@ -131,6 +131,7 @@ async function checkAdminHome(){
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin+'/admin-home.html',{waitUntil:'load'});
   assert.equal(await page.locator('#b61-admin-panel').count(),0,'The admin panel should not auto-open');
+  assert.ok((await page.locator('[data-b61a-open]').getAttribute('href')).includes('control-center.html?pilot=1'),'Admin entry needs a working fallback navigation if scripts fail');
   await page.locator('[data-b61a-open]').click();
   await page.locator('#b61-admin-panel').waitFor({state:'visible'});
   assert.equal(new URL(page.url()).pathname,'/admin-home.html','In-page controls must not navigate to control center');
