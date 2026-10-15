@@ -53,10 +53,11 @@ jobs:
             admin="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/control-center.html?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             asset="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v61-employee-pilot.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             home="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/admin-home.html?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
-            if grep -Fq 'v61-employee-pilot.js?v=62.1' <<<"$page" \
+            if grep -Fq 'v61-employee-pilot.js?v=63.0' <<<"$page" \
               && grep -Fq 'v61-employee-pilot-admin.js?v=62.0' <<<"$admin" \
               && grep -Fq "DOC='employee_site_access'" <<<"$asset" \
               && grep -Fq 'v62-pilot-entry' <<<"$home" \
+              && grep -Fq 'data-b61a-open' <<<"$home" \
               && grep -Fq 'pilotPreview=1' <<<"$home"; then
                 echo "PRODUCTION_V61_EMPLOYEE_PILOT_PASS"
                 exit 0
