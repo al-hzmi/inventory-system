@@ -2,7 +2,7 @@
    Never inject elements into the React-owned search field itself. */
 #batco61-pilot{
  --b65-ink:#1c1917;--b65-muted:#78716c;--b65-line:#e7e5e4;
- box-sizing:border-box;position:relative;z-index:34;direction:rtl;
+ box-sizing:border-box;position:relative;z-index:20;direction:rtl;
  width:min(100%,1024px);margin:0 auto;padding:0 16px;
  font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif;
  color:var(--b65-ink);background:#fff;
