@@ -142,6 +142,8 @@ body.batco-pilot-visual .batco-image-explainer{display:none}
 .b61-return{display:flex;align-items:center;max-width:1024px;margin:0 auto;padding:8px 16px;
  border:0;background:#fafaf9;color:#57534e;font:700 11px/1.8 "IBM Plex Sans Arabic",system-ui,sans-serif;cursor:pointer}
 
+/* Popup must also be visible in classic search before a warehouse is selected. */
+.batco-image-toggle{position:relative}
 /* Direct product favorites: same visual language in search and gallery, no extra screen. */
 body.batco-pilot-visual .batco-direct-favorite{
  display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -158,14 +160,14 @@ body.batco-pilot-visual .batco-direct-favorite.is-saved{
 body.batco-pilot-visual .batco-direct-favorite:hover:not(.is-saved){background:#f5f5f4;border-color:#a8a29e}
 body.batco-pilot-visual .batco-direct-favorite:focus-visible{outline:2px solid #292524;outline-offset:2px}
 body.batco-pilot-visual .batco-direct-favorite.is-compact{min-height:34px;padding:5px 8px;font-size:10px}
-body.batco-pilot-visual .batco-image-warehouse-toast{
+.batco-image-toggle .batco-image-warehouse-toast{
  position:absolute;z-index:100;top:calc(100% + 7px);left:0;
  max-width:min(85vw,250px);padding:8px 12px;border-radius:10px;
  background:#292524;color:#fff;box-shadow:0 8px 24px rgba(28,25,23,.18);
  font:600 11px/1.7 "IBM Plex Sans Arabic",system-ui,sans-serif;white-space:nowrap;
  pointer-events:none
 }
-body.batco-pilot-visual .batco-image-warehouse-toast::before{
+.batco-image-toggle .batco-image-warehouse-toast::before{
  content:"";position:absolute;left:16px;bottom:100%;
  border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #292524
 }
