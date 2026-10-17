@@ -14,7 +14,7 @@ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><me
  '<link rel="stylesheet" href="./v61-employee-pilot.css"><style>.bg-accentSoft{background:#fef3c7;color:#b45309}.bg-bg{background:#fff;color:#57534e}</style></head><body style="margin:0;background:#fff">'+
  '<div id="application"><header class="sticky" style="position:sticky;top:0;z-index:5;background:white;padding:12px 16px;border-bottom:1px solid #ddd">'+
  '<div role="group" aria-label="اختيار المستودع"><button aria-pressed="true">جدة</button><button aria-pressed="false">الرياض</button></div>'+
- '<div style="max-width:1024px;margin:auto"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;box-sizing:border-box;padding:12px"></div></header>'+
+ '<div class="batco-search-card" style="max-width:1024px;margin:auto"><div class="batco-search-card-head"><strong>مساحة العمل</strong><span>أصنافك في متناولك</span></div><div class="batco-search-row"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;box-sizing:border-box;padding:12px"></div><div id="batco-pilot-search-slot"></div></div></header>'+
  '<section id="legacy-results" style="max-width:1024px;margin:18px auto;padding:12px">البحث الحالي يعمل دون تغيير</section>'+'<div style="max-width:1024px;margin:auto;padding:0 16px"><section id="gallery-section" class="mt-40"><div><h2>المعرض الرقمي</h2><p>مستودع جدة</p></div><p>الأقسام</p><div class="mb-20"><div class="flex flex-wrap gap-8">'+'<button id="new-arrivals" class="font-bold bg-accentSoft text-accent" aria-pressed="false">جديدنا</button>'+'<button id="normal-category" class="font-medium bg-bg text-secondary" aria-pressed="true">البلاستيك</button>'+'<button id="missing-images" class="font-medium bg-accentSoft text-accent" aria-pressed="false">نواقص الصور</button>'+'</div></div><div class="max-w-[480px] mx-auto"><div><h3>اختر قسمًا</h3><p>اختر القسم</p></div></div></section>'+'<footer style="padding:10px">© 2026 Korvi</footer></div></div>'+
  '<script>localStorage.setItem("inventory_user_name_v2","موظف تجريبي معتمد");'+
  'localStorage.setItem("inventory_employee_id_v2","employee-real-001");'+
@@ -74,6 +74,12 @@ async function checkViewport(width,height){
   const toolbarHeight=await page.locator('.b65-tool-row').evaluate(el=>Math.round(el.getBoundingClientRect().height));
   assert.ok(toolbarHeight<=45,'Compact toolbar should not take over the page: '+toolbarHeight);
   assert.equal(await page.locator('#legacy-results').count(),1,'Original search must remain');
+  assert.equal(await page.locator('#batco61-pilot').evaluate(n=>n.parentElement?.id),'batco-pilot-search-slot','Shortcuts must be rendered inside the native search card');
+  assert.ok(await page.locator('.batco-search-card').evaluate(n=>n.contains(document.getElementById('searchInput'))),'React search must stay in the same card');
+  const cardView=await page.locator('.batco-search-card').evaluate(n=>({radius:getComputedStyle(n).borderRadius,border:getComputedStyle(n).borderTopWidth,background:getComputedStyle(n).backgroundImage}));
+  assert.equal(cardView.border,'1px','The integrated card must have a visible cohesive border');
+  assert.notEqual(cardView.radius,'0px','The integrated card should retain polished rounded corners');
+
   assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),true,'Opted-in workspace should own the visual integration');
   const theme=await page.evaluate(()=>({newArrivals:getComputedStyle(document.getElementById('new-arrivals')).backgroundColor,normal:getComputedStyle(document.getElementById('normal-category')).backgroundColor,missing:getComputedStyle(document.getElementById('missing-images')).backgroundColor}));
   assert.equal(theme.newArrivals,'rgb(245, 245, 244)','New arrivals should be monochrome');
