@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fafaf9">
+<title>تقييمات الموظفين | شركة بيت الأواني الطيبة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;color:#1c1917;background:#fafaf9}
+*,*:before,*:after{box-sizing:border-box}
+body{margin:0;background:#fafaf9;color:#1c1917}
+main{max-width:1100px;padding:26px 18px 60px;margin:auto}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}
+header small{font-size:12px;color:#78716c}
+h1{font-size:28px;line-height:1.6;margin:2px 0 4px}
+header p{font-size:12px;margin:0;color:#78716c;line-height:1.8}
+a{color:inherit}
+.back{display:inline-flex;justify-content:center;align-items:center;text-decoration:none;border:1px solid #e7e5e4;border-radius:11px;padding:11px 15px;background:#fff;min-height:44px;font-size:12px;font-weight:700;flex-shrink:0}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.stat{padding:19px;border:1px solid #e7e5e4;border-radius:16px;background:#fff}
+.stat small{display:block;font-size:11px;color:#78716c;margin-bottom:5px}
+.stat strong{display:block;font-size:24px;line-height:1.5}
+.stat .star{color:#44403c}
+.panel{border:1px solid #e7e5e4;border-radius:18px;background:#fff;padding:19px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.toolbar h2{font-size:17px;margin:0}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input,select,button{font-family:inherit}
+.filters input,.filters select{border:1px solid #e7e5e4;border-radius:10px;padding:10px 11px;background:#fff;color:#292524;font-size:12px;min-height:42px}
+.filters input{width:min(230px,100%)}
+.filters button{border:1px solid #d6d3d1;border-radius:10px;background:#fafaf9;padding:10px 12px;font-weight:700;font-size:11px;min-height:42px;cursor:pointer}
+.notice{margin:0 0 14px;font-size:12px;color:#78716c;line-height:1.8}
+.feedback-list{display:grid;gap:10px}
+.entry{padding:15px;border:1px solid #e7e5e4;border-radius:13px;background:#fff}
+.entry-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.entry-name{font-size:13px;font-weight:700}
+.entry-info{font-size:10px;color:#78716c;margin-top:3px}
+.entry-rating{direction:ltr;font-size:17px;letter-spacing:1px;color:#292524;white-space:nowrap}
+.entry-note{font-size:12px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere;margin:11px 0 0;color:#44403c}
+.entry-empty-note{font-size:11px;color:#a8a29e;margin:11px 0 0}
+.empty{border:1px dashed #dedbd7;border-radius:13px;background:#fafaf9;padding:24px;text-align:center;color:#78716c;font-size:12px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #292524;outline-offset:3px}
+@media(max-width:600px){
+ main{padding:19px 12px 45px}header{align-items:center}h1{font-size:22px}
+ .back{padding:9px 10px;font-size:10px}
+ .stats{gap:7px}.stat{padding:12px}.stat strong{font-size:19px}
+ .panel{padding:12px}.toolbar{align-items:stretch;flex-direction:column}
+ .filters input{flex:1;min-width:125px;width:auto}.filters select{min-width:90px}
+}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head><body>
+<main id="v70-admin-feedback">
+ <header>
+  <div><small>مركز الإدارة · آراء الموظفين</small><h1>تقييمات الموقع والتحديث</h1><p>ملاحظات الموظفين تساعد في تحديد أولويات التحسين.</p></div>
+  <a class="back" href="./admin-home.html">العودة للإدارة ←</a>
+ </header>
+ <div class="stats">
+  <div class="stat"><small>عدد التقييمات</small><strong id="b70-count">—</strong></div>
+  <div class="stat"><small>متوسط التقييم</small><strong id="b70-average">—</strong></div>
+  <div class="stat"><small>تقييمات 4–5 نجوم</small><strong id="b70-positive">—</strong></div>
+ </div>
+ <section class="panel" aria-labelledby="b70-list-title">
+  <div class="toolbar"><h2 id="b70-list-title">تقييمات الموظفين</h2>
+   <div class="filters">
+    <input id="b70-filter" type="search" placeholder="ابحث باسم الموظف أو ملاحظته" aria-label="البحث في التقييمات">
+    <select id="b70-rating-filter" aria-label="تصفية التقييم"><option value="all">كل التقييمات</option><option value="5">5 نجوم</option><option value="4">4 نجوم</option><option value="3">3 نجوم</option><option value="2">نجمتان</option><option value="1">نجمة</option></select>
+    <button id="b70-reload" type="button">تحديث</button>
+   </div>
+  </div>
+  <p class="notice" id="b70-admin-status" role="status" aria-live="polite">جارٍ تحميل التقييمات…</p>
+  <div class="feedback-list" id="b70-feedback-list"></div>
+ </section>
+</main>
+<script src="./v70-admin-feedback.js?v=70.0"></script>
+</body></html>
