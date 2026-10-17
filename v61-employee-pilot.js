@@ -1,7 +1,7 @@
 /* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
 (function(){
 'use strict';
-const DOC='employee_site_access',VERSION='66.0';
+const DOC='employee_site_access',VERSION='67.0';
 const CONFIG_FIELD='employeeHomePilot';
 const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
@@ -174,7 +174,7 @@ function paint(){
  const region=input.closest('.sticky')||input.parentElement?.parentElement?.parentElement;
  if(!searchSlot&&!region?.parentElement)return;
  panel=el('section','b65-search-tools');panel.id=rootId;panel.setAttribute('aria-label','أدوات البحث السريعة');
- panel.innerHTML='<div class="b65-tool-row"><div class="b65-actions" role="group" aria-label="اختصارات البحث"><button type="button" data-tab="recent" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">↶</span> الأخيرة</button><button type="button" data-tab="favorite" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">☆</span> المفضلة</button><button type="button" data-tab="changes" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">↗</span> التغيّرات</button></div><button type="button" class="b61-classic" title="الواجهة الكلاسيكية" aria-label="العودة للواجهة الكلاسيكية">×</button></div><div class="b65-popover" id="b65-popup" hidden><div class="b61-list-head"><h3 class="b61-list-title"></h3><button class="b65-dismiss" type="button" aria-label="إغلاق القائمة">×</button></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div>';
+ panel.innerHTML='<div class="b65-tool-row"><div class="b65-actions" role="group" aria-label="اختصارات البحث"><button type="button" data-tab="recent" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">↶</span><b>آخر الأصناف</b></button><button type="button" data-tab="favorite" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">☆</span><b>المفضلة</b></button><button type="button" data-tab="changes" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">↗</span><b>التغيّرات</b></button></div></div><div class="b65-popover" id="b65-popup" hidden><div class="b61-list-head"><h3 class="b61-list-title"></h3><button class="b65-dismiss" type="button" aria-label="إغلاق القائمة">إغلاق</button></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div>';
  if(searchSlot)searchSlot.replaceChildren(panel);
  else region.parentElement.insertBefore(panel,region.nextSibling);
  document.body?.classList.add('batco-pilot-visual');
@@ -183,7 +183,6 @@ function paint(){
   expanded=tab===requested?!expanded:true;tab=requested;show();
  }));
  panel.querySelector('.b65-dismiss').addEventListener('click',()=>{expanded=false;show()});
- panel.querySelector('.b61-classic').addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:true});close();showReturnButton()});
  syncSearchVisibility();show();previewNotice(null);
 }
 function showReturnButton(){
