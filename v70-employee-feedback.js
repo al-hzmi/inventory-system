@@ -3,7 +3,8 @@
 (function(){
 'use strict';
 const RELEASE='v70',COLLECTION='employee_experience_feedback',PREFIX='batco_employee_feedback_v70_';
-const INITIAL_DELAY=9000,RETRY_DELAY=3500,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=7000;
+// Faster first-visit prompt: ~4s after identity/server precheck; keep background-interaction protection.
+const INITIAL_DELAY=4000,RETRY_DELAY=800,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=1800;
 let identity=null,visit=0,dialog=null,waiting=false,sending=false,rating=0,visible=false,previousFocus=null;
 let checkTimer=null,firstReadyAt=0,lastInteraction=Date.now();
 for(const eventName of ['pointerdown','touchstart','keydown','wheel','scroll']){
@@ -91,10 +92,10 @@ function open(){
   '<div class="b70-stars" role="group" aria-label="التقييم من خمس نجوم">'+[1,2,3,4,5].map(n=>'<button class="b70-star" data-rating="'+n+'" type="button" aria-label="'+n+' من 5 نجوم" aria-pressed="false">'+starIcon+'</button>').join('')+'</div>'+
   '<div class="b70-rating-hint" aria-live="polite">اختر من نجمة إلى خمس نجوم</div>'+
   '<label class="b70-note-label" for="b70-note">ملاحظتك <span style="font-weight:400;color:#78716c">(اختياري)</span></label>'+
-  '<textarea id="b70-note" maxlength="500" placeholder="وش تحب نطوّر أو نحسّن؟"></textarea>'+
+  '<textarea id="b70-note" maxlength="500" placeholder="وش رأيك؟ وش تبي نطوّر أو نحسّن؟"></textarea>'+
   '<p class="b70-message" role="status" aria-live="polite"></p>'+
   '<div class="b70-controls"><button class="b70-send" type="button" disabled>إرسال التقييم</button><button class="b70-later" type="button">قيّم لاحقًا</button></div>'+
-  '<p class="b70-privacy">يظهر التقييم باسم حسابك لدى إدارة الموقع.</p></div>';
+  '</div>';
  overlay.addEventListener('click',event=>{if(event.target===overlay&&!sending)postpone()});
  overlay.querySelectorAll('.b70-star').forEach(button=>button.addEventListener('click',()=>{
   rating=Number(button.dataset.rating);overlay.querySelector('.b70-message').textContent='';paintStars();
@@ -125,7 +126,7 @@ function isBusy(){
 }
 async function shouldSkipServer(){
  try{
-  const doc=await limited(db().collection(COLLECTION).doc(docFor(identity.id)).get({source:'server'}),5500);
+  const doc=await limited(db().collection(COLLECTION).doc(docFor(identity.id)).get({source:'server'}),2200);
   if(doc.exists&&Number(doc.data()?.stars)>0){
    const state=readState();saveState({...state,visits:visit,submitted:true});
    return true;
