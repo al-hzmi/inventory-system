@@ -1,7 +1,7 @@
 /* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
 (function(){
 'use strict';
-const DOC='employee_site_access',VERSION='63.0';
+const DOC='employee_site_access',VERSION='64.0';
 const CONFIG_FIELD='employeeHomePilot';
 const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
@@ -155,20 +155,22 @@ function show(){
  }
  const source=tab==='recent'?prefs.recent:prefs.favorites;
  const nodes=(source||[]).map(card).filter(Boolean).slice(0,8);
- if(!nodes.length){list.append(el('p','b61-empty',tab==='favorite'?'افتح أحد الأصناف من «آخر الأصناف»، ثم اضغط النجمة لحفظه هنا.':'ابحث عن رقم صنف كامل؛ سيظهر في هذا القسم لتعود إليه بسرعة.'))}
+ if(!nodes.length){list.append(el('p','b61-empty',tab==='favorite'?'افتح أحد الأصناف من «آخر الأصناف»، ثم اضغط النجمة لحفظه هنا.':'ابحث عن صنف برقمه، وستجده هنا للرجوع إليه سريعًا.'))}
  else list.append(...nodes);
 }
 function close(){
  active=false;panel?.remove();panel=null;clearTimeout(searchTimer);diffs=null;
+ document.body?.classList.remove('batco-pilot-visual');
 }
 function paint(){
  if(!active)return;const input=document.getElementById('searchInput');if(!input)return;
- if(panel?.isConnected){syncSearchVisibility();previewNotice(null);return}
+ if(panel?.isConnected){document.body?.classList.add('batco-pilot-visual');syncSearchVisibility();previewNotice(null);return}
  const region=input.closest('.sticky')||input.parentElement?.parentElement?.parentElement;
  if(!region?.parentElement)return;
  panel=el('section','b61-panel');panel.id=rootId;panel.setAttribute('aria-label','مساحة العمل التجريبية');
- panel.innerHTML='<div class="b61-head"><div><span class="b61-eyebrow">مساحة العمل · نسخة تجريبية</span><h2 class="b61-greet"></h2><p>آخر أصنافك والتحديثات المهمة في مكان واحد، والبحث الأصلي كما هو.</p></div><button type="button" class="b61-classic">العودة للواجهة الكلاسيكية</button></div><div class="b61-tiles"><button type="button" data-tab="recent"><span>↶</span><b>آخر الأصناف</b><small>رجوع سريع</small></button><button type="button" data-tab="favorite"><span>☆</span><b>المفضلة</b><small>أصنافك المعتادة</small></button><button type="button" data-tab="changes"><span>↗</span><b>وش تغيّر؟</b><small>من آخر زيارة</small></button></div><div class="b61-content"><div class="b61-list-head"><h3 class="b61-list-title"></h3><small>حفظ خاص بهذا الجهاز</small></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div><p class="b61-footnote">لن تتغير بيانات المخزون بسبب النسخة التجريبية. يمكنك العودة للواجهة الكلاسيكية بأي وقت.</p>';
+ panel.innerHTML='<div class="b61-head"><div><span class="b61-eyebrow">مساحة العمل · نسخة تجريبية</span><h2 class="b61-greet"></h2><p>أصنافك المعتادة وآخر التحديثات، بجانب البحث المعتاد.</p></div><button type="button" class="b61-classic">العودة للواجهة الكلاسيكية</button></div><div class="b61-tiles"><button type="button" data-tab="recent"><span>↶</span><b>آخر الأصناف</b><small>رجوع سريع</small></button><button type="button" data-tab="favorite"><span>☆</span><b>المفضلة</b><small>أصنافك المعتادة</small></button><button type="button" data-tab="changes"><span>↗</span><b>وش تغيّر؟</b><small>من آخر زيارة</small></button></div><div class="b61-content"><div class="b61-list-head"><h3 class="b61-list-title"></h3><small>حفظ خاص بهذا الجهاز</small></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div><p class="b61-footnote">مساحة مساعدة للعرض فقط، دون تغيير بيانات المخزون أو طريقة البحث.</p>';
  region.parentElement.insertBefore(panel,region.nextSibling);
+ document.body?.classList.add('batco-pilot-visual');
  syncSearchVisibility();
  previewNotice(null);
  panel.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;show()}));
