@@ -73,6 +73,7 @@ jobs:
             feedback="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v70-employee-feedback.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             feedback_style="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v70-employee-feedback.css?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             feedback_admin="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/admin-feedback.html?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
+            feedback_admin_js="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v70-admin-feedback.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             if grep -Fq 'v61-employee-pilot.js?v=69.0' <<<"$page" \
               && grep -Fq 'v70-employee-feedback.js?v=70.0' <<<"$page" \
               && grep -Fq 'v70-employee-feedback.css?v=70.0' <<<"$page" \
@@ -80,6 +81,7 @@ jobs:
               && grep -Fq 'قيّم لاحقًا' <<<"$feedback" \
               && grep -Fq 'batco70-feedback-dialog' <<<"$feedback_style" \
               && grep -Fq 'تقييمات الموقع والتحديث' <<<"$feedback_admin" \
+              && grep -Fq "orderBy('submittedAt','desc')" <<<"$feedback_admin_js" \
               && grep -Fq 'v61-employee-pilot-admin.js?v=63.0' <<<"$admin" \
               && grep -Fq 'official:true' <<<"$asset" \
               && ! grep -Fq '.onSnapshot(' <<<"$asset" \
