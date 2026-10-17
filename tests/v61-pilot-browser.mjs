@@ -11,11 +11,11 @@ const allowConfig={mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeId
 
 function employeeFixture(){
 return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
- '<link rel="stylesheet" href="./v61-employee-pilot.css"></head><body style="margin:0;background:#f5f8f6">'+
+ '<link rel="stylesheet" href="./v61-employee-pilot.css"><style>.bg-accentSoft{background:#fef3c7;color:#b45309}.bg-bg{background:#fff;color:#57534e}</style></head><body style="margin:0;background:#fff">'+
  '<div id="application"><header class="sticky" style="position:sticky;top:0;z-index:5;background:white;padding:12px 16px;border-bottom:1px solid #ddd">'+
  '<div role="group" aria-label="اختيار المستودع"><button aria-pressed="true">جدة</button><button aria-pressed="false">الرياض</button></div>'+
  '<div style="max-width:1024px;margin:auto"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;box-sizing:border-box;padding:12px"></div></header>'+
- '<section id="legacy-results" style="max-width:1024px;margin:18px auto;padding:12px">البحث الحالي يعمل دون تغيير</section></div>'+
+ '<section id="legacy-results" style="max-width:1024px;margin:18px auto;padding:12px">البحث الحالي يعمل دون تغيير</section>'+'<div style="max-width:1024px;margin:auto;padding:0 16px"><section id="gallery-section" class="mt-40"><div><h2>المعرض الرقمي</h2><p>مستودع جدة</p></div><p>الأقسام</p><div class="mb-20"><div class="flex flex-wrap gap-8">'+'<button id="new-arrivals" class="font-bold bg-accentSoft text-accent" aria-pressed="false">جديدنا</button>'+'<button id="normal-category" class="font-medium bg-bg text-secondary" aria-pressed="true">البلاستيك</button>'+'<button id="missing-images" class="font-medium bg-accentSoft text-accent" aria-pressed="false">نواقص الصور</button>'+'</div></div><div class="max-w-[480px] mx-auto"><div><h3>اختر قسمًا</h3><p>اختر القسم</p></div></div></section>'+'<footer style="padding:10px">© 2026 Korvi</footer></div></div>'+
  '<script>localStorage.setItem("inventory_user_name_v2","موظف تجريبي معتمد");'+
  'localStorage.setItem("inventory_employee_id_v2","employee-real-001");'+
  'localStorage.setItem("inventory_employee_auth_version_v2","2");'+
@@ -71,6 +71,11 @@ async function checkViewport(width,height){
   await page.locator('#batco61-pilot').waitFor({state:'visible',timeout:10000});
   assert.equal(await page.locator('#batco61-pilot [data-tab]').count(),3,'Expected three workspace tabs');
   assert.equal(await page.locator('#legacy-results').count(),1,'Original search must remain');
+  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),true,'Opted-in workspace should own the visual integration');
+  const theme=await page.evaluate(()=>({newArrivals:getComputedStyle(document.getElementById('new-arrivals')).backgroundColor,normal:getComputedStyle(document.getElementById('normal-category')).backgroundColor,missing:getComputedStyle(document.getElementById('missing-images')).backgroundColor}));
+  assert.equal(theme.newArrivals,'rgb(245, 245, 244)','New arrivals should be monochrome');
+  assert.equal(theme.normal,'rgb(28, 25, 23)','Selected regular category should match BATCO black');
+  assert.equal(theme.missing,'rgb(254, 243, 199)','Admin-only missing images must retain original yellow styling');
   await page.locator('#searchInput').fill('ARM_10015');
   assert.equal(await page.locator('#batco61-pilot').isVisible(),false,'Typing a product code must uncover the search results');
   assert.equal(await page.locator('#legacy-results').isVisible(),true,'Search results must remain accessible');
@@ -88,11 +93,15 @@ async function checkViewport(width,height){
   assert.ok((await page.locator('.b61-list').innerText()).includes('أول زيارة'));
   await page.locator('.b61-classic').click();
   assert.equal(await page.locator('#batco61-pilot').count(),0);
+  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),false,'Classic mode must restore the original gallery theme');
+  assert.equal(await page.locator('#new-arrivals').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(254, 243, 199)','Classic return must restore new arrivals styling');
   await page.locator('#b61-return').click();
   await page.locator('#batco61-pilot').waitFor();
+  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),true,'Reopening pilot restores monochrome gallery');
   await page.evaluate(()=>{window.__pilotConfig={mode:'open',employeeHomePilot:{enabled:false,allowedEmployeeIds:['employee-real-001']}};window.__pilotNotify({exists:true,data:()=>window.__pilotConfig})});
   assert.equal(await page.locator('#batco61-pilot').count(),0,'Kill switch must remove workspace');
   assert.equal(await page.locator('#b61-return').count(),0,'Kill switch must remove reentry');
+  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),false,'Revocation must remove all visual overrides');
   assert.deepEqual(errors,[],'Browser exceptions: '+errors.join(' | '));
   console.log('V61_EMPLOYEE_VIEWPORT_PASS '+width+'x'+height);
  }finally{await context.close()}
