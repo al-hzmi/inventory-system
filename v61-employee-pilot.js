@@ -72,6 +72,8 @@ function selectBranch(branch){
  if(button){button.click();return true}return false;
 }
 function jumpTo(sku,branch){
+ // Product selection is a navigation action: dismiss the overlay before moving focus.
+ if(expanded){expanded=false;show()}
  if(!selectBranch(branch))return;
  setTimeout(()=>{
   const field=document.getElementById('searchInput');
