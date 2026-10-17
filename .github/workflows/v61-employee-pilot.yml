@@ -56,7 +56,7 @@ jobs:
             asset="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v61-employee-pilot.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             style="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v61-employee-pilot.css?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             home="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/admin-home.html?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
-            if grep -Fq 'v61-employee-pilot.js?v=67.0' <<<"$page" \
+            if grep -Fq 'v61-employee-pilot.js?v=68.0' <<<"$page" \
               && grep -Fq 'v61-employee-pilot-admin.js?v=63.0' <<<"$admin" \
               && grep -Fq "DOC='employee_site_access'" <<<"$asset" \
               && grep -Fq 'body.batco-pilot-visual #gallery-section' <<<"$style" \
