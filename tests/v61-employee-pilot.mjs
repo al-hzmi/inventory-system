@@ -23,7 +23,7 @@ const ctx={
 ctx.window.addEventListener=(event,callback)=>{listeners['window:'+event]=callback};
 vm.runInNewContext(pilot,ctx,{filename:'v61-employee-pilot.js'});
 const api=ctx.window.BatcoPilot;
-assert.equal(api.version,'64.0');
+assert.equal(api.version,'65.0');
 const gate=(v,id)=>api.allowlisted(v,id);
 assert.equal(gate(undefined,'1001'),false,'No config is disabled');
 assert.equal(gate({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['1001']}},'1001'),true,'Existing employee-site control includes scoped pilot allowlist');
@@ -59,10 +59,10 @@ assert.ok(pilot.includes("batco61:product-open"),'Explicit search result clicks 
 assert.ok(runtime.includes("window.dispatchEvent(new CustomEvent('batco61:product-open'"),'Existing search should emit only a read-only product-open signal');
 assert.ok(pilot.includes("document.getElementById('searchInput')"),'Do not replace the existing search engine');
 assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="changes"'),'Missing pilot panels');
-assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('إظهار مساحة العمل التجريبية'),'Return and reenter controls must both exist');
-assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:390px)'),'Mobile-responsive panels missing');
+assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('↶ اختصارات البحث'),'Return and reenter controls must both exist');
+assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:360px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
-assert.ok(html.includes('v61-employee-pilot.js?v=64.0')&&html.includes('v61-employee-pilot.css?v=64.0'),'User-facing loader not configured');
+assert.ok(html.includes('v61-employee-pilot.js?v=65.0')&&html.includes('v61-employee-pilot.css?v=65.0'),'User-facing loader not configured');
 assert.ok(admin.includes("const ref=db.collection(COL).doc(DOC)")&&admin.includes("[CONFIG_FIELD]:{")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
 assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
@@ -81,10 +81,17 @@ assert.ok(pilot.includes('b61-preview-status'),'Manager preview must explain a d
 assert.ok(pilot.includes("panel?.classList.toggle('b61-search-suppressed',searching)")&&pilot.includes('syncSearchVisibility();'),'Any entered search must hide the workspace immediately');
 assert.ok(pilotCss.includes('#batco61-pilot.b61-search-suppressed'),'Search results must take priority without changing the original search component');
 assert.ok(pilot.includes("document.body?.classList.add('batco-pilot-visual')")&&pilot.includes("document.body?.classList.remove('batco-pilot-visual')"),'Gallery polish must only apply to an active, allowlisted workspace');
-assert.ok(pilotCss.includes('body.batco-pilot-visual #gallery-section')&&pilotCss.includes('#batco61-pilot .b61-head'),'Workspace and gallery should share one scoped black-white visual language');
+assert.ok(pilotCss.includes('body.batco-pilot-visual #gallery-section')&&pilotCss.includes('#batco61-pilot .b65-tool-row'),'Workspace and gallery should share one scoped black-white visual language');
 assert.ok(pilotCss.includes('button:not([class*="accent"])')&&pilotCss.includes('button.font-bold'),'Only ordinary category chips and New Arrivals may receive monochrome overrides');
 assert.ok(!pilotCss.includes('button.font-medium[aria-pressed]'),'The admin-only missing image button must not be restyled');
 assert.ok(pilotCss.includes('#gallery-section+footer')&&pilotCss.includes('#gallery-section>div[class*="max-w-"]'),'Gallery empty state and footer alignment need continuity');
+assert.ok(runtime.includes('>بيت الأواني الطيبة</h1>')&&!runtime.includes('نظام الاستعلام والمبيعات الرقمي'),'Header must only show company name, without the redundant subtitle');
+assert.ok(pilot.includes('class="b65-tool-row"')&&pilot.includes('class="b65-popover"')&&pilot.includes('aria-expanded="false"'),'Quick tools must integrate into search with accessible on-demand menu');
+assert.ok(pilot.includes('if(!expanded)return')&&pilot.includes('if(searching&&expanded)'),'Quick menu must be collapsed by default and auto-close when searching');
+assert.ok(pilotCss.includes('.b65-popover[hidden]')&&pilotCss.includes('position:absolute'),'Popover should overlay instead of pushing results down');
+assert.ok(!pilot.includes('class="b61-head"')&&!pilot.includes('class="b61-tiles"'),'Old oversized dashboard should be removed');
+assert.ok(html.includes('rev=65.0'),'Bootloader must invalidate cached header template');
+
 assert.ok(admin.includes('withDeadline(')&&admin.includes('Promise.allSettled('),'Firestore reads must be bounded and independently diagnosed');
 assert.ok(admin.includes('data-b61a-open')&&admin.includes('window.BatcoPilotAdmin={open}'),'Admin home must open pilot in-page instead of redirecting to the heavy control center');
 assert.ok(read('admin-home.html').includes('data-b61a-open')&&read('admin-home.html').includes('v61-employee-pilot-admin.js?v=63.0'),'Executive dashboard must mount the admin pilot directly');
