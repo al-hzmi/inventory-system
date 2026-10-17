@@ -14,7 +14,7 @@ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><me
  '<link rel="stylesheet" href="./v61-employee-pilot.css"><style>.bg-accentSoft{background:#fef3c7;color:#b45309}.bg-bg{background:#fff;color:#57534e}</style></head><body style="margin:0;background:#fff">'+
  '<div id="application"><header class="sticky" style="position:sticky;top:0;z-index:5;background:white;padding:12px 16px;border-bottom:1px solid #ddd">'+
  '<div role="group" aria-label="اختيار المستودع"><button aria-pressed="true">جدة</button><button aria-pressed="false">الرياض</button></div>'+
- '<div class="batco-search-card" style="max-width:1024px;margin:auto"><div class="batco-search-card-head"><strong>مساحة العمل</strong><span>أصنافك في متناولك</span></div><div class="batco-search-row"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;box-sizing:border-box;padding:12px"></div><div id="batco-pilot-search-slot"></div></div></header>'+
+ '<div class="batco-search-card" style="max-width:1024px;margin:auto"><div class="batco-search-card-head"><strong>حيّاك الله، موظف</strong><span class="batco-search-card-eyebrow">مساحة العمل</span></div><div class="batco-search-row"><div style="flex:1;min-width:0"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;box-sizing:border-box;padding:12px"></div><label class="batco-image-toggle"><span class="batco-image-label"><span class="batco-image-label-text">صور الأصناف</span><small class="batco-image-label-detail">اضغط لإظهارها</small></span><input type="checkbox" role="switch" aria-label="إظهار صور الأصناف في نتائج البحث"><span aria-hidden="true">◯</span></label></div><div id="batco-pilot-search-slot"></div></div></header>'+
  '<section id="legacy-results" style="max-width:1024px;margin:18px auto;padding:12px">البحث الحالي يعمل دون تغيير</section>'+'<div style="max-width:1024px;margin:auto;padding:0 16px"><section id="gallery-section" class="mt-40"><div><h2>المعرض الرقمي</h2><p>مستودع جدة</p></div><p>الأقسام</p><div class="mb-20"><div class="flex flex-wrap gap-8">'+'<button id="new-arrivals" class="font-bold bg-accentSoft text-accent" aria-pressed="false">جديدنا</button>'+'<button id="normal-category" class="font-medium bg-bg text-secondary" aria-pressed="true">البلاستيك</button>'+'<button id="missing-images" class="font-medium bg-accentSoft text-accent" aria-pressed="false">نواقص الصور</button>'+'</div></div><div class="max-w-[480px] mx-auto"><div><h3>اختر قسمًا</h3><p>اختر القسم</p></div></div></section>'+'<footer style="padding:10px">© 2026 Korvi</footer></div></div>'+
  '<script>localStorage.setItem("inventory_user_name_v2","موظف تجريبي معتمد");'+
  'localStorage.setItem("inventory_employee_id_v2","employee-real-001");'+
@@ -71,8 +71,16 @@ async function checkViewport(width,height){
   await page.locator('#batco61-pilot').waitFor({state:'visible',timeout:10000});
   assert.equal(await page.locator('#batco61-pilot [data-tab]').count(),3,'Expected compact shortcuts');
   assert.equal(await page.locator('.b65-popover').isVisible(),false,'Expanded dashboard must not show by default');
-  const toolbarHeight=await page.locator('.b65-tool-row').evaluate(el=>Math.round(el.getBoundingClientRect().height));
-  assert.ok(toolbarHeight<=45,'Compact toolbar should not take over the page: '+toolbarHeight);
+  const actionHeights=await page.locator('.b65-actions button').evaluateAll(nodes=>nodes.map(n=>({height:Math.round(n.getBoundingClientRect().height),width:Math.round(n.getBoundingClientRect().width)})));
+  assert.ok(actionHeights.every(({height,width})=>height>=64&&width>=70),'Primary shortcuts need comfortable touch targets: '+JSON.stringify(actionHeights));
+  assert.equal(await page.locator('.b61-classic').count(),0,'No destructive X may hide shortcuts');
+  assert.equal(await page.locator('.batco-search-card-head strong').innerText(),'حيّاك الله، موظف','Welcome is immediately recognizable');
+  assert.ok(!(await page.locator('.batco-search-card-head').innerText()).includes('أصنافك في متناولك'),'Remove redundant copy');
+  assert.equal(await page.locator('.batco-image-label-text').innerText(),'صور الأصناف','Image display has a clear visible name');
+  assert.ok(await page.locator('.batco-image-toggle').evaluate(n=>getComputedStyle(n).display!=='none'&&n.getBoundingClientRect().height>=44),'Photo control should be comfortable to tap');
+  await page.locator('.batco-image-toggle input[type="checkbox"]').check();
+  assert.equal(await page.locator('.batco-image-toggle input[type="checkbox"]').isChecked(),true);
+  await page.locator('.batco-image-toggle input[type="checkbox"]').uncheck();
   assert.equal(await page.locator('#legacy-results').count(),1,'Original search must remain');
   assert.equal(await page.locator('#batco61-pilot').evaluate(n=>n.parentElement?.id),'batco-pilot-search-slot','Shortcuts must be rendered inside the native search card');
   assert.ok(await page.locator('.batco-search-card').evaluate(n=>n.contains(document.getElementById('searchInput'))),'React search must stay in the same card');
@@ -109,13 +117,9 @@ async function checkViewport(width,height){
   assert.equal(await page.locator('.b65-popover').isVisible(),true,'Users may re-open recent history');
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('.b65-popover').isVisible(),false,'Escape closes the shortcut panel');
-  await page.locator('.b61-classic').click();
-  assert.equal(await page.locator('#batco61-pilot').count(),0);
-  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),false,'Classic mode must restore the original gallery theme');
-  assert.equal(await page.locator('#new-arrivals').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(254, 243, 199)','Classic return must restore new arrivals styling');
-  await page.locator('#b61-return').click();
-  await page.locator('#batco61-pilot').waitFor();
-  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),true,'Reopening pilot restores monochrome gallery');
+  assert.equal(await page.locator('.b61-classic').count(),0,'The X removing shortcuts is gone');
+  await page.locator('[data-tab="favorite"]').click();
+  assert.equal(await page.locator('.b65-popover').isVisible(),true,'Large shortcut remains functional after Escape');
   await page.evaluate(()=>{window.__pilotConfig={mode:'open',employeeHomePilot:{enabled:false,allowedEmployeeIds:['employee-real-001']}};window.__pilotNotify({exists:true,data:()=>window.__pilotConfig})});
   assert.equal(await page.locator('#batco61-pilot').count(),0,'Kill switch must remove workspace');
   assert.equal(await page.locator('#b61-return').count(),0,'Kill switch must remove reentry');
