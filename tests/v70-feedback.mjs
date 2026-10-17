@@ -86,7 +86,7 @@ const docs=[
  {id:'v70_alpha',data:()=>({employeeId:'alpha',employeeName:'موظف ألف',stars:5,note:'واجهة ممتازة',release:'v70',submittedAt:{toMillis:()=>1760000012000}})},
  {id:'v70_beta',data:()=>({employeeId:'beta',employeeName:'موظف باء',stars:2,note:'<img src=x onerror=alert(1)>',release:'v70',submittedAt:{toMillis:()=>1760000010000}})}
 ];
-a.firebase={apps:[{}],firestore:()=>({collection(name){assert.equal(name,'employee_experience_feedback');return{limit(n){assert.equal(n,500);return{get:async()=>({docs,size:docs.length})}}}}})};
+a.firebase={apps:[{}],firestore:()=>({collection(name){assert.equal(name,'employee_experience_feedback');return{orderBy(field,direction){assert.equal(field,'submittedAt');assert.equal(direction,'desc');return{limit(n){assert.equal(n,500);return{get:async()=>({docs,size:docs.length})}}}}}}})};
 a.eval(adminSource);
 await wait(90);
 assert.equal(a.document.querySelectorAll('.entry').length,2);
