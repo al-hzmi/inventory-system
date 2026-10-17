@@ -160,18 +160,47 @@ body.batco-pilot-visual .batco-direct-favorite.is-saved{
 body.batco-pilot-visual .batco-direct-favorite:hover:not(.is-saved){background:#f5f5f4;border-color:#a8a29e}
 body.batco-pilot-visual .batco-direct-favorite:focus-visible{outline:2px solid #292524;outline-offset:2px}
 body.batco-pilot-visual .batco-direct-favorite.is-compact{min-height:34px;padding:5px 8px;font-size:10px}
-.batco-image-toggle .batco-image-warehouse-toast{
- position:absolute;z-index:100;top:calc(100% + 7px);left:0;
- max-width:min(85vw,250px);padding:8px 12px;border-radius:10px;
- background:#292524;color:#fff;box-shadow:0 8px 24px rgba(28,25,23,.18);
- font:600 11px/1.7 "IBM Plex Sans Arabic",system-ui,sans-serif;white-space:nowrap;
- pointer-events:none
+/* Inline, time-limited warehouse hint: stays in document flow and never covers actions. */
+.batco-search-card .batco-image-warehouse-toast{
+ position:static;display:table;width:auto;max-width:100%;z-index:auto;
+ margin:8px 0 0 auto;padding:7px 12px;
+ border:1px solid #d6d3d1;border-radius:9px;
+ background:#fafaf9;color:#44403c;box-shadow:none;
+ font:650 11px/1.6 "IBM Plex Sans Arabic",system-ui,sans-serif;
+ white-space:normal;pointer-events:none;direction:rtl;text-align:right
 }
-.batco-image-toggle .batco-image-warehouse-toast::before{
- content:"";position:absolute;left:16px;bottom:100%;
- border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #292524
+/* Separate administrator-only tools from day-to-day purchase and favorite actions. */
+body.batco-pilot-visual .batco-result-actions{display:flex;flex-direction:column;gap:10px;min-width:0;width:100%}
+body.batco-pilot-visual .batco-admin-action-row{display:flex;align-items:center;justify-content:flex-start;min-width:0;max-width:100%}
+body.batco-pilot-visual .batco-admin-action-row>button{max-width:100%;min-height:34px}
+body.batco-pilot-visual .batco-shopping-action-row{
+ display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;
+ width:100%;gap:10px;min-width:0
 }
-
+body.batco-pilot-visual .batco-cart-action{
+ min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center
+}
+body.batco-pilot-visual .batco-direct-favorite svg{
+ width:19px;height:19px;display:block;flex:0 0 19px;stroke-width:1.7
+}
+/* A small, fixed-size square star: the logo remains unobstructed. */
+body.batco-pilot-visual .batco-direct-favorite.is-icon-only{
+ width:38px;height:38px;min-width:38px;min-height:38px;max-width:38px;
+ padding:0;gap:0;border-radius:10px;flex-shrink:0
+}
+body.batco-pilot-visual .batco-direct-favorite.is-icon-only b{display:none!important}
+body.batco-pilot-visual .batco-gallery-favorite-anchor{
+ position:absolute;right:8px;left:auto;top:52px;z-index:25;
+ display:flex;align-items:center;justify-content:center
+}
+body.batco-pilot-visual .batco-gallery-favorite-anchor.without-zoom{top:8px}
+body.batco-pilot-visual .batco-gallery-favorite-anchor .batco-direct-favorite{
+ width:38px;height:38px;min-height:38px;min-width:38px;max-width:38px;padding:0
+}
+@media(max-width:390px){
+ body.batco-pilot-visual .batco-shopping-action-row{gap:7px}
+ body.batco-pilot-visual .batco-direct-favorite:not(.is-icon-only){padding:5px 8px;font-size:10px}
+}
 /* The gallery retains its original React components and filters.
    Only authenticated, opt-in workspace sessions receive these restrained refinements. */
 /* The gallery remains the original React component. These presentational rules apply
@@ -238,15 +267,6 @@ body.batco-pilot-visual #gallery-section+footer .developer-link{color:#78716c;fo
  #batco61-pilot .b65-actions button span{font-size:18px}
  #batco61-pilot .b61-list{grid-template-columns:1fr}
  body.batco-pilot-visual #gallery-section{margin-top:14px!important;padding-top:14px}
-}
-/* Avoid star/zoom overlap on narrow two-column gallery tiles.
-   Text is preserved on search cards and in the accessible button label. */
-@media(max-width:600px){
- body.batco-pilot-visual #gallery-section .batco-direct-favorite.is-compact{
-  width:39px;min-width:39px;height:39px;min-height:39px;padding:5px
- }
- body.batco-pilot-visual #gallery-section .batco-direct-favorite.is-compact b{display:none}
- body.batco-pilot-visual #gallery-section .batco-direct-favorite.is-compact span{font-size:22px}
 }
 @media(max-width:360px){
  #batco61-pilot .b65-actions button{min-height:64px;padding:8px 3px}
