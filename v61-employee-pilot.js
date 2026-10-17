@@ -49,6 +49,7 @@ async function loadInventory(id){
  if(!active||currentId!==id)return;
  inventory={jeddah:responses[0],riyadh:responses[1]};
  prefs=safeRead(key(id)+'_prefs',{recent:[],favorites:[]});
+ window.dispatchEvent(new Event('batco61:favorites-changed'));
  const next=[];
  for(const branch of ['jeddah','riyadh']){
   const marker=key(id)+'_visit_'+branch,cache=marker+'_diff',old=safeRead(key(id)+'_snap_'+branch,null);
