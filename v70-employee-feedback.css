@@ -54,7 +54,6 @@
 #batco70-feedback-dialog .b70-later{background:#fff;color:#44403c;border:1px solid #d6d3d1}
 #batco70-feedback-dialog .b70-later:hover{background:#fafaf9}
 #batco70-feedback-dialog .b70-controls button:focus-visible{outline:2px solid #292524;outline-offset:3px}
-#batco70-feedback-dialog .b70-privacy{margin:12px 0 0;font-size:10px;color:#78716c;line-height:1.8;text-align:center}
 @keyframes batco70-appear{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
 @media(max-width:390px){
  #batco70-feedback-dialog{padding:20px 16px 18px;border-radius:18px}
