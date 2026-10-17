@@ -1756,7 +1756,7 @@ const PilotFavoriteButton = memo(({item,warehouse,compact=false}) => {
     return <button type="button" data-pilot-favorite={item.id} aria-label={label+' — '+(item.name||item.id)}
                    aria-pressed={saved} title={label} onClick={toggle} onKeyDown={e=>e.stopPropagation()}
                    className={`batco-direct-favorite ${saved?'is-saved':''} ${compact?'is-compact':''}`}>
-        <span aria-hidden="true">{saved?'★':'☆'}</span><b>{saved?'محفوظ':'المفضلة'}</b>
+        <span aria-hidden="true">{saved?'★':'☆'}</span><b>{saved?'محفوظ':'أضف للمفضلة'}</b>
     </button>;
 });
 
@@ -4713,7 +4713,7 @@ const App = () => {
 
                         <label className="batco-image-toggle flex items-center gap-8 cursor-pointer flex-shrink-0" title="إظهار الصور بجانب الأصناف في نتائج البحث">
                             <span className="batco-image-label flex items-center">
-                                <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">عرض صور الأصناف</span>
+                                <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">صور نتائج البحث</span>
                             </span>
                             <input type="checkbox" role="switch" aria-label="عرض صور الأصناف مع نتائج البحث" aria-checked={showImageInSearch} className="sr-only" checked={showImageInSearch}
                                    onChange={(e) => { if(!warehouse){setImageWarehouseNotice(true);return;}setImageWarehouseNotice(false);setShowImageInSearch(e.target.checked); }} />
