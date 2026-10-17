@@ -1,4 +1,4 @@
-name: V61 Employee Pilot Quality Gate
+name: V69 Official Employee Workspace Quality Gate
 on:
   push:
     branches: [main]
@@ -9,6 +9,7 @@ on:
       - 'runtime/index-v37-source.txt'
       - 'control-center.html'
       - 'v57-admin-workspace.js'
+      - 'v46-admin-nav.js'
       - 'v61-employee-pilot.js'
       - 'v61-employee-pilot.css'
       - 'v61-employee-pilot-admin.js'
@@ -30,7 +31,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Pilot gating, inventory diffs, original search preservation, mobile UI
+      - name: Official access, native React JSX, favorites and responsive mobile UI
         run: |
           node --check v61-employee-pilot.js
           node --check v61-employee-pilot-admin.js
@@ -47,7 +48,7 @@ jobs:
     needs: regression
     timeout-minutes: 8
     steps:
-      - name: Confirm production publishes both opt-in pilot assets
+      - name: Confirm production publishes official V69 workspace and responsive fixes
         shell: bash
         run: |
           set -euo pipefail
@@ -58,24 +59,29 @@ jobs:
             asset="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v61-employee-pilot.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             style="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v61-employee-pilot.css?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             home="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/admin-home.html?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
-            if grep -Fq 'v61-employee-pilot.js?v=68.0' <<<"$page" \
+            nav="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v57-admin-workspace.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
+            if grep -Fq 'v61-employee-pilot.js?v=69.0' <<<"$page" \
               && grep -Fq 'v61-employee-pilot-admin.js?v=63.0' <<<"$admin" \
-              && grep -Fq "DOC='employee_site_access'" <<<"$asset" \
+              && grep -Fq 'official:true' <<<"$asset" \
+              && ! grep -Fq '.onSnapshot(' <<<"$asset" \
               && grep -Fq 'body.batco-pilot-visual #gallery-section' <<<"$style" \
               && grep -Fq '.b65-tool-row' <<<"$style" \
               && grep -Fq 'min-height:70px' <<<"$style" \
               && grep -Fq '.batco-image-toggle' <<<"$style" \
               && grep -Fq 'body.batco-pilot-visual .batco-search-card' <<<"$style" \
+              && grep -Fq '.batco-gallery-favorite-anchor' <<<"$style" \
+              && grep -Fq '.batco-admin-action-row' <<<"$style" \
+              && grep -Fq 'position:static;display:table' <<<"$style" \
               && grep -Fq '.b65-popover[hidden]' <<<"$style" \
               && grep -Fq 'button:not([class*="accent"])' <<<"$style" \
               && grep -Fq 'v62-pilot-entry' <<<"$home" \
-              && grep -Fq 'data-b61a-open' <<<"$home" \
-              && grep -Fq 'pilotPreview=1' <<<"$home"; then
-                echo "PRODUCTION_V61_EMPLOYEE_PILOT_PASS"
+              && grep -Fq 'showOfficialWorkspace()' <<<"$nav" \
+              && grep -Fq 'مساحة عمل الموظفين' <<<"$nav"; then
+                echo "PRODUCTION_V69_OFFICIAL_WORKSPACE_PASS"
                 exit 0
             fi
             echo "Waiting for production (attempt $attempt/24)"
             sleep 10
           done
-          echo "Production pilot assets not ready"
+          echo "Production official workspace assets not ready"
           exit 1
