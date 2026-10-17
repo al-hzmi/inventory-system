@@ -1756,7 +1756,7 @@ const PilotFavoriteButton = memo(({item,warehouse,compact=false,iconOnly=false})
     return <button type="button" data-pilot-favorite={item.id} aria-label={label+' — '+(item.name||item.id)}
                    aria-pressed={saved} title={label} onClick={toggle} onKeyDown={e=>e.stopPropagation()}
                    className={`batco-direct-favorite ${saved?'is-saved':''} ${compact?'is-compact':''} ${iconOnly?'is-icon-only':''}`}>
-        <span aria-hidden="true">{saved?'★':'☆'}</span>{!iconOnly&&<b>{saved?'محفوظ':'حفظ'}</b>}
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill={saved?'currentColor':'none'} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"><polygon points="12 2.6 15 8.3 21.3 9.2 16.6 13.8 17.7 20.2 12 17.2 6.3 20.2 7.4 13.8 2.7 9.2 9 8.3 12 2.6"/></svg>{!iconOnly&&<b>{saved?'محفوظ':'حفظ'}</b>}
     </button>;
 });
 
