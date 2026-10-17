@@ -16,6 +16,7 @@ on:
       - 'tests/v61-employee-pilot.mjs'
       - 'tests/v61-pilot-dom.mjs'
       - 'tests/v61-pilot-browser.mjs'
+      - 'tests/v68-core-ux.mjs'
       - '.github/workflows/v61-employee-pilot.yml'
   workflow_dispatch:
 permissions:
@@ -34,7 +35,8 @@ jobs:
           node --check v61-employee-pilot.js
           node --check v61-employee-pilot-admin.js
           node tests/v61-employee-pilot.mjs
-          npm install --no-save --no-package-lock --ignore-scripts jsdom@24.1.3 playwright@1.56.1
+          npm install --no-save --no-package-lock --ignore-scripts jsdom@24.1.3 playwright@1.56.1 @babel/parser@7.28.4
+          node tests/v68-core-ux.mjs
           node tests/v61-pilot-dom.mjs
           npx playwright install --with-deps chromium
           node tests/v61-pilot-browser.mjs
