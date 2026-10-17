@@ -4,7 +4,7 @@ import {JSDOM} from 'jsdom';
 
 const read=p=>fs.readFileSync(p,'utf8');
 const source=read('v70-employee-feedback.js').replace(
- 'const INITIAL_DELAY=9000,RETRY_DELAY=3500,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=7000;',
+ 'const INITIAL_DELAY=4000,RETRY_DELAY=800,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=1800;',
  'const INITIAL_DELAY=35,RETRY_DELAY=35,MAX_BUSY_WAIT=300,IDLE_THRESHOLD=20;'
 );
 const adminSource=read('v70-admin-feedback.js');
