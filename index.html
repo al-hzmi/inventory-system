@@ -265,8 +265,8 @@
     // V61 employee pilot: isolated and disabled unless the admin allowlist opts in.
     html=html.replace('</head>','<link rel="stylesheet" href="./v61-employee-pilot.css?v=69.0"></head>');
     html=html.replace('</body>','<scr'+'ipt src="./v61-employee-pilot.js?v=69.0"></scr'+'ipt></body>');
-    html=html.replace('</head>','<link rel="stylesheet" href="./v70-employee-feedback.css?v=70.0"></head>');
-    html=html.replace('</body>','<scr'+'ipt src="./v70-employee-feedback.js?v=70.0"></scr'+'ipt></body>');
+    html=html.replace('</head>','<link rel="stylesheet" href="./v70-employee-feedback.css?v=70.1"></head>');
+    html=html.replace('</body>','<scr'+'ipt src="./v70-employee-feedback.js?v=70.1"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V40 bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح النظام بأمان.</b><br>لم يتم تحميل نسخة ناقصة. حدّث الصفحة، وإذا استمرت المشكلة تواصل مع الإدارة.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
