@@ -23,7 +23,7 @@ const ctx={
 ctx.window.addEventListener=(event,callback)=>{listeners['window:'+event]=callback};
 vm.runInNewContext(pilot,ctx,{filename:'v61-employee-pilot.js'});
 const api=ctx.window.BatcoPilot;
-assert.equal(api.version,'67.0');
+assert.equal(api.version,'68.0');
 const gate=(v,id)=>api.allowlisted(v,id);
 assert.equal(gate(undefined,'1001'),false,'No config is disabled');
 assert.equal(gate({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['1001']}},'1001'),true,'Existing employee-site control includes scoped pilot allowlist');
@@ -62,7 +62,7 @@ assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="chang
 assert.ok(!pilot.includes('class="b61-classic"')&&pilot.includes('↶ اختصارات البحث'),'No destructive X in active employee workspace; preserve legacy reentry');
 assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:360px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
-assert.ok(html.includes('v61-employee-pilot.js?v=67.0')&&html.includes('v61-employee-pilot.css?v=67.0'),'User-facing loader not configured');
+assert.ok(html.includes('v61-employee-pilot.js?v=68.0')&&html.includes('v61-employee-pilot.css?v=68.0'),'User-facing loader not configured');
 assert.ok(admin.includes("const ref=db.collection(COL).doc(DOC)")&&admin.includes("[CONFIG_FIELD]:{")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
 assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
@@ -100,11 +100,19 @@ assert.ok(pilotCss.includes('min-height:70px')&&pilotCss.includes('grid-template
 assert.ok(pilot.includes('class="b65-dismiss"')&&pilot.includes('>إغلاق</button>'),'Details should close explicitly without an X symbol');
 assert.ok(runtime.includes('حيّاك الله، {String(sessionName||\'\').trim().split(/\\s+/)[0]}'),'Greeting uses verified application session rather than guessing employee identity');
 assert.ok(!runtime.includes('أصنافك في متناولك'),'Remove unnecessary header filler');
-assert.ok(runtime.includes('صور الأصناف</span>')&&runtime.includes('تظهر مع النتائج')&&runtime.includes('اضغط لإظهارها'),'Image option clearly names the feature and its state');
-assert.ok(runtime.includes('aria-label="إظهار صور الأصناف في نتائج البحث"')&&runtime.includes('onChange={(e) => setShowImageInSearch(e.target.checked)}'),'Image switch remains accessible and updates native React state');
+assert.ok(runtime.includes('عرض صور الأصناف</span>')&&!runtime.includes('batco-image-label-detail'),'Image option must be one clearly labeled line without a second-row hint');
+assert.ok(runtime.includes('aria-label="عرض صور الأصناف مع نتائج البحث"')&&runtime.includes('if(!warehouse){setImageWarehouseNotice(true);return;}')&&runtime.includes('setShowImageInSearch(e.target.checked)'),'Image switch shows select-warehouse tip instead of silently staying disabled');
 assert.ok(pilotCss.includes('.batco-image-toggle:focus-within')&&pilotCss.includes('.batco-image-toggle:has(input:checked)'),'Image toggle must provide focus and enabled feedback');
+assert.ok(runtime.includes('const PilotFavoriteButton = memo(')&&runtime.includes("new CustomEvent('batco61:favorite-toggle'"),'Product cards must provide direct favorite actions without history navigation');
+assert.equal((runtime.match(/<PilotFavoriteButton item=\{item\}/g)||[]).length,4,'Direct favorite must appear in full result, compact result, gallery image and gallery details');
+assert.ok(runtime.includes('data-pilot-favorite={item.id}')&&runtime.includes('e.preventDefault();e.stopPropagation();'),'Direct favorite action must not trigger gallery flipping or product selection');
+assert.ok(runtime.includes('setEnabled(Boolean(window.BatcoPilot?.isEnabled?.()))'),'Favorites must remain hidden for employees not enrolled in the pilot');
+assert.ok(pilot.includes("window.addEventListener('batco61:favorite-toggle'")&&pilot.includes("window.dispatchEvent(new CustomEvent('batco61:favorites-changed'"),'Favorites must persist and notify all visible cards immediately');
+assert.ok(pilot.includes('favoriteSnapshots')&&pilot.includes('prefs.favoriteSnapshots?.[marker]'),'Gallery-only/archived product favorites must be recallable');
+assert.ok(pilotCss.includes('.batco-direct-favorite')&&pilotCss.includes('.batco-image-warehouse-toast'),'Tap target and inline warehouse toast must be styled');
+assert.ok(pilotCss.includes('font-size:19px;line-height:1;flex-shrink:0'),'Shortcut icons must be slightly smaller but remain legible');
 
-assert.ok(html.includes('rev=67.0'),'Bootloader must invalidate cached header template');
+assert.ok(html.includes('rev=68.0'),'Bootloader must invalidate cached header template');
 
 assert.ok(admin.includes('withDeadline(')&&admin.includes('Promise.allSettled('),'Firestore reads must be bounded and independently diagnosed');
 assert.ok(admin.includes('data-b61a-open')&&admin.includes('window.BatcoPilotAdmin={open}'),'Admin home must open pilot in-page instead of redirecting to the heavy control center');
