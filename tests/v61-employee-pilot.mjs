@@ -23,7 +23,7 @@ const ctx={
 ctx.window.addEventListener=(event,callback)=>{listeners['window:'+event]=callback};
 vm.runInNewContext(pilot,ctx,{filename:'v61-employee-pilot.js'});
 const api=ctx.window.BatcoPilot;
-assert.equal(api.version,'63.0');
+assert.equal(api.version,'64.0');
 const gate=(v,id)=>api.allowlisted(v,id);
 assert.equal(gate(undefined,'1001'),false,'No config is disabled');
 assert.equal(gate({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['1001']}},'1001'),true,'Existing employee-site control includes scoped pilot allowlist');
@@ -62,7 +62,7 @@ assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="chang
 assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('إظهار مساحة العمل التجريبية'),'Return and reenter controls must both exist');
 assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:390px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
-assert.ok(html.includes('v61-employee-pilot.js?v=63.0')&&html.includes('v61-employee-pilot.css?v=63.0'),'User-facing loader not configured');
+assert.ok(html.includes('v61-employee-pilot.js?v=64.0')&&html.includes('v61-employee-pilot.css?v=64.0'),'User-facing loader not configured');
 assert.ok(admin.includes("const ref=db.collection(COL).doc(DOC)")&&admin.includes("[CONFIG_FIELD]:{")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
 assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
