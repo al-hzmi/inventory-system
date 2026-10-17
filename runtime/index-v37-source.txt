@@ -4664,7 +4664,7 @@ const App = () => {
                         </div>
 
                         <label className="batco-image-toggle flex items-center gap-8 cursor-pointer flex-shrink-0" title="إظهار صور الأصناف في نتائج البحث">
-                            <span className="batco-image-label flex flex-col">
+                            <span className="batco-image-label hidden sm:flex flex-col">
                                 <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">صور الأصناف</span>
                                 <small className="batco-image-label-detail text-[10px] text-muted whitespace-nowrap">{showImageInSearch ? 'تظهر مع النتائج' : 'اضغط لإظهارها'}</small>
                             </span>
