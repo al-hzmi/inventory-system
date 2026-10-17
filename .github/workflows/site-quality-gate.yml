@@ -38,7 +38,7 @@ jobs:
             'customer employee view identity patch': 'return {valid:Boolean(name)' in custboot and "EMPLOYEE_CUSTOMER_SESSION.name||'موظف'" in cust,
             'customer no employee guest prompt': '!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt' in cust,
             'employee telemetry isolation': cust.count("skipped:'employee_view'")>=2,
-            'customer SW v37 patch': "customer-sw.js?v=37.0" in custboot and "batco-customer-v37-0" in sw,
+            'customer SW V71 rebrand': "customer-sw.js?v=37.0" in custboot and "batco-customer-v71-brand" in sw,
             'SW no employee/admin document capture': 'isDocument && !isCustomerDocument' in sw,
             'checkout recovery': 'PENDING_CHECKOUT_SNAPSHOT_KEY' in cust and 'OrderSuccessScreen' in cust and 'whatsapp_share_opened' in cust,
             'guest progressive tracking': 'CUSTOMER_VISITOR_KEY' in cust and 'guest_name_captured' in cust and 'guest_enter' in cust,
