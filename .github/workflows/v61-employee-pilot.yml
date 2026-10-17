@@ -23,6 +23,7 @@ on:
       - 'v70-admin-feedback.js'
       - 'admin-feedback.html'
       - 'tests/v70-feedback.mjs'
+      - 'tests/v70-feedback-browser.mjs'
       - '.github/workflows/v61-employee-pilot.yml'
   workflow_dispatch:
 permissions:
@@ -49,6 +50,7 @@ jobs:
           node tests/v70-feedback.mjs
           npx playwright install --with-deps chromium
           node tests/v61-pilot-browser.mjs
+          node tests/v70-feedback-browser.mjs
           node -e "const c=require('./vercel.json');for(const p of ['/admin-home.html','/control-center.html','/index.html','/v61-employee-pilot.js','/v61-employee-pilot-admin.js','/v70-employee-feedback.js','/v70-employee-feedback.css','/v70-admin-feedback.js','/admin-feedback.html']){if(!c.headers.some(h=>h.source===p&&h.headers.some(x=>x.key==='Cache-Control'&&x.value.includes('no-store'))))process.exitCode=1;}"
           git diff --check
   production:
