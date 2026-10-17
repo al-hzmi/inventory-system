@@ -1,4 +1,4 @@
-name: V69 Official Employee Workspace Quality Gate
+name: V70 Official Workspace and Employee Feedback Quality Gate
 on:
   push:
     branches: [main]
@@ -18,6 +18,11 @@ on:
       - 'tests/v61-pilot-dom.mjs'
       - 'tests/v61-pilot-browser.mjs'
       - 'tests/v68-core-ux.mjs'
+      - 'v70-employee-feedback.js'
+      - 'v70-employee-feedback.css'
+      - 'v70-admin-feedback.js'
+      - 'admin-feedback.html'
+      - 'tests/v70-feedback.mjs'
       - '.github/workflows/v61-employee-pilot.yml'
   workflow_dispatch:
 permissions:
@@ -35,20 +40,23 @@ jobs:
         run: |
           node --check v61-employee-pilot.js
           node --check v61-employee-pilot-admin.js
+          node --check v70-employee-feedback.js
+          node --check v70-admin-feedback.js
           node tests/v61-employee-pilot.mjs
           npm install --no-save --no-package-lock --ignore-scripts jsdom@24.1.3 playwright@1.56.1 @babel/parser@7.28.4
           node tests/v68-core-ux.mjs
           node tests/v61-pilot-dom.mjs
+          node tests/v70-feedback.mjs
           npx playwright install --with-deps chromium
           node tests/v61-pilot-browser.mjs
-          node -e "const c=require('./vercel.json');for(const p of ['/admin-home.html','/control-center.html','/index.html','/v61-employee-pilot.js','/v61-employee-pilot-admin.js']){if(!c.headers.some(h=>h.source===p&&h.headers.some(x=>x.key==='Cache-Control'&&x.value.includes('no-store'))))process.exitCode=1;}"
+          node -e "const c=require('./vercel.json');for(const p of ['/admin-home.html','/control-center.html','/index.html','/v61-employee-pilot.js','/v61-employee-pilot-admin.js','/v70-employee-feedback.js','/v70-employee-feedback.css','/v70-admin-feedback.js','/admin-feedback.html']){if(!c.headers.some(h=>h.source===p&&h.headers.some(x=>x.key==='Cache-Control'&&x.value.includes('no-store'))))process.exitCode=1;}"
           git diff --check
   production:
     runs-on: ubuntu-latest
     needs: regression
     timeout-minutes: 8
     steps:
-      - name: Confirm production publishes official V69 workspace and responsive fixes
+      - name: Confirm production publishes V70 feedback and admin reports
         shell: bash
         run: |
           set -euo pipefail
@@ -60,7 +68,16 @@ jobs:
             style="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v61-employee-pilot.css?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             home="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/admin-home.html?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             nav="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v57-admin-workspace.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
+            feedback="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v70-employee-feedback.js?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
+            feedback_style="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/v70-employee-feedback.css?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
+            feedback_admin="$(curl -fsSL --connect-timeout 5 --max-time 15 "$domain/admin-feedback.html?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
             if grep -Fq 'v61-employee-pilot.js?v=69.0' <<<"$page" \
+              && grep -Fq 'v70-employee-feedback.js?v=70.0' <<<"$page" \
+              && grep -Fq 'v70-employee-feedback.css?v=70.0' <<<"$page" \
+              && grep -Fq 'batco70-feedback-backdrop' <<<"$feedback" \
+              && grep -Fq 'قيّم لاحقًا' <<<"$feedback" \
+              && grep -Fq 'batco70-feedback-dialog' <<<"$feedback_style" \
+              && grep -Fq 'تقييمات الموقع والتحديث' <<<"$feedback_admin" \
               && grep -Fq 'v61-employee-pilot-admin.js?v=63.0' <<<"$admin" \
               && grep -Fq 'official:true' <<<"$asset" \
               && ! grep -Fq '.onSnapshot(' <<<"$asset" \
@@ -76,8 +93,9 @@ jobs:
               && grep -Fq 'button:not([class*="accent"])' <<<"$style" \
               && grep -Fq 'v62-pilot-entry' <<<"$home" \
               && grep -Fq 'showOfficialWorkspace()' <<<"$nav" \
-              && grep -Fq 'مساحة عمل الموظفين' <<<"$nav"; then
-                echo "PRODUCTION_V69_OFFICIAL_WORKSPACE_PASS"
+              && grep -Fq 'مساحة عمل الموظفين' <<<"$nav" \
+              && grep -Fq 'admin-feedback.html' <<<"$nav"; then
+                echo "PRODUCTION_V70_EMPLOYEE_FEEDBACK_PASS"
                 exit 0
             fi
             echo "Waiting for production (attempt $attempt/24)"
