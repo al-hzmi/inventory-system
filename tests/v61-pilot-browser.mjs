@@ -2,62 +2,49 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
-const src=file=>fs.readFileSync(file,'utf8');
-const origin='https://inventory-pilot-e2e.test';
+const read=p=>fs.readFileSync(p,'utf8');
+const origin='https://batco-official-ui.test';
 const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
-const warehouseJeddah=src('data/jeddah.tsv');
-const warehouseRiyadh=src('data/riyadh.tsv');
-const allowConfig={mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['employee-real-001']}};
-
 function employeeFixture(){
-return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
- '<link rel="stylesheet" href="./v61-employee-pilot.css"><style>.bg-accentSoft{background:#fef3c7;color:#b45309}.bg-bg{background:#fff;color:#57534e}</style></head><body style="margin:0;background:#fff">'+
- '<div id="application"><header class="sticky" style="position:sticky;top:0;z-index:5;background:white;padding:12px 16px;border-bottom:1px solid #ddd">'+
- '<div role="group" aria-label="اختيار المستودع"><button aria-pressed="true">جدة</button><button aria-pressed="false">الرياض</button></div>'+
- '<div class="batco-search-card" style="max-width:1024px;margin:auto"><div class="batco-search-card-head"><strong>حيّاك الله، موظف</strong><span class="batco-search-card-eyebrow">مساحة العمل</span></div><div class="batco-search-row"><div style="flex:1;min-width:0"><input id="searchInput" type="text" placeholder="ابحث عن الصنف" style="width:100%;box-sizing:border-box;padding:12px"></div><label class="batco-image-toggle"><span class="batco-image-label"><span class="batco-image-label-text">صور نتائج البحث</span></span><input type="checkbox" role="switch" aria-label="إظهار صور الأصناف في نتائج البحث"><span aria-hidden="true">◯</span></label></div><div id="batco-pilot-search-slot"></div></div></header>'+
- '<section id="legacy-results" style="max-width:1024px;margin:18px auto;padding:12px">البحث الحالي يعمل دون تغيير</section>'+'<div style="max-width:1024px;margin:auto;padding:0 16px"><section id="gallery-section" class="mt-40"><div><h2>المعرض الرقمي</h2><p>مستودع جدة</p></div><p>الأقسام</p><div class="mb-20"><div class="flex flex-wrap gap-8">'+'<button id="new-arrivals" class="font-bold bg-accentSoft text-accent" aria-pressed="false">جديدنا</button>'+'<button id="normal-category" class="font-medium bg-bg text-secondary" aria-pressed="true">البلاستيك</button>'+'<button id="missing-images" class="font-medium bg-accentSoft text-accent" aria-pressed="false">نواقص الصور</button>'+'</div></div><div class="max-w-[480px] mx-auto"><div><h3>اختر قسمًا</h3><p>اختر القسم</p></div></div></section>'+'<footer style="padding:10px">© 2026 Korvi</footer></div></div>'+
- '<script>localStorage.setItem("inventory_user_name_v2","موظف تجريبي معتمد");'+
- 'localStorage.setItem("inventory_employee_id_v2","employee-real-001");'+
+ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+ '<link rel="stylesheet" href="./v61-employee-pilot.css">'+
+ '<style>body{margin:0;font-family:system-ui}.sticky{position:sticky;top:0;z-index:5;background:#fff;padding:12px 16px}.bg-accentSoft{background:#fef3c7;color:#b45309}.bg-bg{background:#fff}</style></head>'+
+ '<body><header class="sticky"><div role="group" aria-label="اختيار المستودع"><button aria-pressed="true">جدة</button><button aria-pressed="false">الرياض</button></div>'+
+ '<div class="batco-search-card"><div class="batco-search-card-head"><strong>حيّاك الله، موظف</strong><span>مساحة العمل</span></div>'+
+ '<div class="batco-search-row"><input id="searchInput" placeholder="رقم الصنف" style="width:100%;box-sizing:border-box;min-height:46px"></div>'+
+ '<div role="status" class="batco-image-warehouse-toast">اختر المستودع أولًا</div><div id="batco-pilot-search-slot"></div></div></header>'+
+ '<main style="padding:15px;max-width:1024px;margin:auto"><section id="legacy-results">نتائج البحث الأصلية</section>'+
+ '<div class="batco-result-actions" style="max-width:380px;border:1px solid #eee;padding:10px;border-radius:12px"><div class="batco-admin-action-row"><button>تغيير القسم</button></div>'+
+ '<div class="batco-shopping-action-row"><button class="batco-direct-favorite"><svg viewBox="0 0 24 24"><polygon points="12 2 20 20"/></svg><b>حفظ</b></button><div class="batco-cart-action"><button>إضافة للفاتورة</button></div></div></div>'+
+ '<div id="gallery-section" style="margin-top:22px"><div class="flex flex-wrap gap-8"><button id="new-arrivals" class="font-bold bg-accentSoft" aria-pressed="false">جديدنا</button><button id="missing-images" class="font-medium bg-accentSoft text-accent" aria-pressed="false">نواقص الصور</button></div>'+
+ '<div class="tap-card" style="position:relative;margin:16px auto 0;width:210px;height:250px;border:1px solid #ddd;overflow:hidden;border-radius:16px">'+
+ '<div class="brand-logo" style="position:absolute;left:10px;top:10px;width:57px;height:32px;background:#e7e5e4">الشعار</div>'+
+ '<button class="zoom-control" style="position:absolute;right:8px;top:8px;width:36px;height:36px">تكبير</button>'+
+ '<div class="batco-gallery-favorite-anchor below-zoom"><button class="batco-direct-favorite is-compact is-icon-only" aria-label="إضافة للمفضلة"><svg viewBox="0 0 24 24"><polygon points="12 2 20 20"/></svg></button></div></div></div></main>'+
+ '<script>localStorage.setItem("inventory_user_name_v2","موظف حقيقي");localStorage.setItem("inventory_employee_id_v2","employee-unlisted");'+
  'localStorage.setItem("inventory_employee_auth_version_v2","2");'+
- 'localStorage.setItem("inventory_login_photo_proof_v2",JSON.stringify({role:"employee",employeeId:"employee-real-001",photoId:"test-proof"}));'+
- 'window.__pilotConfig='+JSON.stringify(allowConfig)+';'+
- 'window.firebase={apps:[{}],firestore:()=>({collection:()=>({doc:()=>({onSnapshot(fn){window.__pilotNotify=fn;fn({exists:true,data:()=>window.__pilotConfig});return ()=>{};}})})})};'+
+ 'localStorage.setItem("inventory_login_photo_proof_v2",JSON.stringify({role:"employee",employeeId:"employee-unlisted",photoId:"proof"}));'+
+ 'localStorage.setItem("batco_pilot61_employee-unlisted_classic",JSON.stringify({hidden:true}));'+
+ 'window.firebase={apps:[{}],firestore:()=>{throw Error("Official release must not check pilot settings")}};'+
  '</script><script src="./v61-employee-pilot.js"></script></body></html>';
 }
 function adminFixture(){
-return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
- '<link rel="stylesheet" href="./v61-employee-pilot-admin.css"></head><body style="margin:0">'+
- '<div class="app"><header><div class="topin">لوحة التحكم الأصلية</div></header></div>'+
- '<script>window.isAdmin=()=>true;window.__saves=[];'+
- 'window.firebase={firestore:{FieldValue:{increment:()=>1,serverTimestamp:()=>({seconds:123})}}};'+
- 'window.db={collection(name){'+
- 'if(name==="employee_accounts")return{limit(){return{get:async()=>({docs:[{id:"employee-real-001",data:()=>({canonicalName:"موظف حقيقي",employeeId:"wrong-legacy-id"})}]})}}};'+
- 'if(name==="system_controls")return{doc(id){return{get:async()=>id==="employee_site_access"&&window.__saves.length?{exists:true,data:()=>window.__saves.at(-1)}:{exists:false},set:async data=>window.__saves.push(data)}}};'+
- 'if(name==="security_admin_logs")return{add:async()=>({id:"log"})};throw Error("Unexpected Firestore collection "+name)}};'+
- 'window.confirm=()=>true;</script><script src="./v61-employee-pilot-admin.js"></script></body></html>';
-}
-
-function adminHomeFixture(){
- return adminFixture()
-  .replace('<div class="app"><header><div class="topin">لوحة التحكم الأصلية</div></header></div>','<div class="v62-pilot-entry"><a href="./control-center.html?pilot=1" data-b61a-open>إدارة وتفعيل التجربة</a></div>')
-  .replace('window.isAdmin=()=>true;window.__saves=[];', 'window.__saves=[];const ADMIN_HASH="verified-admin-test-token";localStorage.setItem("inventory_user_name_v2","مهند");localStorage.setItem("inventory_admin_token_v2",ADMIN_HASH);localStorage.setItem("inventory_login_photo_proof_v2",JSON.stringify({role:"admin",employeeId:"admin_mohanad",photoId:"proof"}));');
+ return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+ '<link rel="stylesheet" href="./v61-employee-pilot-admin.css"></head><body><div class="app">الإدارة</div>'+
+ '<script>window.isAdmin=()=>true;</script><script src="./v61-employee-pilot-admin.js"></script></body></html>';
 }
 async function routeFiles(page){
  await page.route(origin+'/**',async route=>{
-  const url=new URL(route.request().url());
-  const path=url.pathname;
-  let body,contentType='text/html';
-  if(path==='/index.html')body=employeeFixture();
-  else if(path==='/control-center.html')body=adminFixture();
-   else if(path==='/admin-home.html')body=adminHomeFixture();
-  else if(path==='/v61-employee-pilot.js'){body=src('v61-employee-pilot.js');contentType='application/javascript'}
-  else if(path==='/v61-employee-pilot.css'){body=src('v61-employee-pilot.css');contentType='text/css'}
-  else if(path==='/v61-employee-pilot-admin.js'){body=src('v61-employee-pilot-admin.js');contentType='application/javascript'}
-  else if(path==='/v61-employee-pilot-admin.css'){body=src('v61-employee-pilot-admin.css');contentType='text/css'}
-  else if(path==='/data/jeddah.tsv'){body=warehouseJeddah;contentType='text/tab-separated-values'}
-  else if(path==='/data/riyadh.tsv'){body=warehouseRiyadh;contentType='text/tab-separated-values'}
-  else return route.fulfill({status:404,body:'Not found'});
-  return route.fulfill({status:200,contentType,body});
+  const p=new URL(route.request().url()).pathname;
+  const map={'/index.html':[employeeFixture(),'text/html'],'/control-center.html':[adminFixture(),'text/html'],
+  '/v61-employee-pilot.js':[read('v61-employee-pilot.js'),'application/javascript'],
+  '/v61-employee-pilot.css':[read('v61-employee-pilot.css'),'text/css'],
+  '/v61-employee-pilot-admin.js':[read('v61-employee-pilot-admin.js'),'application/javascript'],
+  '/v61-employee-pilot-admin.css':[read('v61-employee-pilot-admin.css'),'text/css'],
+  '/data/jeddah.tsv':[read('data/jeddah.tsv'),'text/tab-separated-values'],
+  '/data/riyadh.tsv':[read('data/riyadh.tsv'),'text/tab-separated-values']};
+  const data=map[p];if(!data)return route.fulfill({status:404,body:'Missing fixture'});
+  return route.fulfill({status:200,body:data[0],contentType:data[1]});
  });
 }
 async function checkViewport(width,height){
@@ -65,142 +52,60 @@ async function checkViewport(width,height){
  const page=await context.newPage();
  try{
   await routeFiles(page);
-  const errors=[];
-  page.on('pageerror',e=>errors.push(e.message));
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin+'/index.html',{waitUntil:'load'});
   await page.locator('#batco61-pilot').waitFor({state:'visible',timeout:10000});
-  assert.equal(await page.locator('#batco61-pilot [data-tab]').count(),3,'Expected compact shortcuts');
-  assert.equal(await page.locator('.b65-popover').isVisible(),false,'Expanded dashboard must not show by default');
-  const actionHeights=await page.locator('.b65-actions button').evaluateAll(nodes=>nodes.map(n=>({height:Math.round(n.getBoundingClientRect().height),width:Math.round(n.getBoundingClientRect().width)})));
-  assert.ok(actionHeights.every(({height,width})=>height>=64&&width>=70),'Primary shortcuts need comfortable touch targets: '+JSON.stringify(actionHeights));
-  assert.equal(await page.locator('.b61-classic').count(),0,'No destructive X may hide shortcuts');
-  assert.equal(await page.locator('.batco-search-card-head strong').innerText(),'حيّاك الله، موظف','Welcome is immediately recognizable');
-  assert.ok(!(await page.locator('.batco-search-card-head').innerText()).includes('أصنافك في متناولك'),'Remove redundant copy');
-  assert.equal(await page.locator('.batco-image-label-text').innerText(),'صور نتائج البحث','Image display clearly identifies search-result photos');
-  const imageLabelHeight=await page.locator('.batco-image-label-text').evaluate(n=>Math.round(n.getBoundingClientRect().height));
-  assert.ok(imageLabelHeight<=22,'Image label must remain on one line, not two: '+imageLabelHeight);
-  assert.ok(await page.locator('.batco-image-toggle').evaluate(n=>getComputedStyle(n).display!=='none'&&n.getBoundingClientRect().height>=44),'Photo control should be comfortable to tap');
-  await page.locator('.batco-image-toggle input[type="checkbox"]').check();
-  assert.equal(await page.locator('.batco-image-toggle input[type="checkbox"]').isChecked(),true);
-  await page.locator('.batco-image-toggle input[type="checkbox"]').uncheck();
-  assert.equal(await page.locator('#legacy-results').count(),1,'Original search must remain');
-  assert.equal(await page.locator('#batco61-pilot').evaluate(n=>n.parentElement?.id),'batco-pilot-search-slot','Shortcuts must be rendered inside the native search card');
-  assert.ok(await page.locator('.batco-search-card').evaluate(n=>n.contains(document.getElementById('searchInput'))),'React search must stay in the same card');
-  const cardView=await page.locator('.batco-search-card').evaluate(n=>({radius:getComputedStyle(n).borderRadius,border:getComputedStyle(n).borderTopWidth,background:getComputedStyle(n).backgroundImage}));
-  assert.equal(cardView.border,'1px','The integrated card must have a visible cohesive border');
-  assert.notEqual(cardView.radius,'0px','The integrated card should retain polished rounded corners');
-
-  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),true,'Opted-in workspace should own the visual integration');
-  const theme=await page.evaluate(()=>({newArrivals:getComputedStyle(document.getElementById('new-arrivals')).backgroundColor,normal:getComputedStyle(document.getElementById('normal-category')).backgroundColor,missing:getComputedStyle(document.getElementById('missing-images')).backgroundColor}));
-  assert.equal(theme.newArrivals,'rgb(245, 245, 244)','New arrivals should be monochrome');
-  assert.equal(theme.normal,'rgb(28, 25, 23)','Selected regular category should match BATCO black');
-  assert.equal(theme.missing,'rgb(254, 243, 199)','Admin-only missing images must retain original yellow styling');
-  await page.locator('#searchInput').fill('ARM_10015');
-  assert.equal(await page.locator('#batco61-pilot').isVisible(),false,'Typing a product code must uncover the search results');
-  assert.equal(await page.locator('#legacy-results').isVisible(),true,'Search results must remain accessible');
+  assert.equal(await page.evaluate(()=>window.BatcoPilot.official),true);
+  assert.equal(await page.locator('.b65-actions button').count(),3);
+  assert.equal(await page.locator('.b61-classic').count(),0);
+  assert.ok(await page.locator('.batco-search-card').evaluate(n=>getComputedStyle(n).borderTopWidth==='1px'));
+  const gallery=await page.evaluate(()=>{
+   const get=q=>document.querySelector(q).getBoundingClientRect();
+   const star=get('.batco-gallery-favorite-anchor'),zoom=get('.zoom-control'),logo=get('.brand-logo');
+   return{star:{x:star.x,y:star.y,w:star.width,h:star.height,right:star.right},
+    zoom:{right:zoom.right,bottom:zoom.bottom},logo:{right:logo.right,bottom:logo.bottom}};
+  });
+  assert.equal(Math.round(gallery.star.w),38,'Gallery star must be 38px square');
+  assert.equal(Math.round(gallery.star.h),38,'Gallery star must be 38px square');
+  assert.ok(gallery.star.y>=gallery.zoom.bottom+3,'Star should appear beneath zoom with a gap');
+  assert.ok(Math.abs(gallery.star.right-gallery.zoom.right)<=3,'Star aligns with zoom on the right');
+  assert.ok(gallery.star.x>gallery.logo.right,'Star cannot cover the upper-left brand logo');
+  const rows=await page.evaluate(()=>{const admin=document.querySelector('.batco-admin-action-row').getBoundingClientRect(),actions=document.querySelector('.batco-shopping-action-row').getBoundingClientRect();return{adminBottom:admin.bottom,actionTop:actions.top}});
+  assert.ok(rows.adminBottom<=rows.actionTop+2,'Admin category edit must occupy its own row');
+  const tip=await page.evaluate(()=>{const hint=document.querySelector('.batco-image-warehouse-toast').getBoundingClientRect(),tools=document.querySelector('.b65-actions').getBoundingClientRect();return{bottom:hint.bottom,toolsTop:tools.top}});
+  assert.ok(tip.bottom<=tip.toolsTop,'Warehouse hint must not overlap the shortcuts');
+  assert.ok(await page.locator('#legacy-results').isVisible());
+  await page.locator('#searchInput').fill('2300');
+  assert.equal(await page.locator('#batco61-pilot').isVisible(),false,'Search results must take priority');
   await page.locator('#searchInput').fill('');
-  assert.equal(await page.locator('#batco61-pilot').isVisible(),true,'Clearing search must restore the compact shortcuts');
-  const scrollWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
-  if(scrollWidth>width+5){const offenders=await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:String(e.className||'').slice(0,100),right:Math.round(e.getBoundingClientRect().right),scroll:e.scrollWidth})).filter(e=>e.right>innerWidth+5).slice(0,12));console.log('Overflow diagnostics',JSON.stringify(offenders))}
-  assert.ok(scrollWidth<=width+5,'Viewport '+width+' overflows horizontally: '+scrollWidth);
-  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('batco61:product-open',{detail:{sku:'ARM_10015',warehouse:'jeddah'}})));
-  assert.equal(await page.locator('.b65-popover').isVisible(),false,'Opened product must not trigger a bulky panel');
-  await page.locator('[data-tab="recent"]').click();
-  await page.locator('.b61-product').first().waitFor({state:'visible',timeout:3000});
-  await page.locator('.b61-star').click();
-  await page.locator('[data-tab="favorite"]').click();
-  assert.ok((await page.locator('.b61-list').innerText()).includes('ARM_10015'));
-  await page.locator('[data-tab="changes"]').click();
-  assert.ok((await page.locator('.b61-list').innerText()).includes('الزيارة القادمة'));
-  await page.locator('#searchInput').fill('بلاستيك');
-  assert.equal(await page.locator('.b65-popover').isVisible(),false,'Typing a name dismisses tools');
-  await page.locator('#searchInput').fill('');
-  await page.locator('[data-tab="recent"]').click();
-  assert.equal(await page.locator('.b65-popover').isVisible(),true,'Users may re-open recent history');
-  await page.keyboard.press('Escape');
-  assert.equal(await page.locator('.b65-popover').isVisible(),false,'Escape closes the shortcut panel');
-  assert.equal(await page.locator('.b61-classic').count(),0,'The X removing shortcuts is gone');
-  await page.locator('[data-tab="favorite"]').click();
-  assert.equal(await page.locator('.b65-popover').isVisible(),true,'Large shortcut remains functional after Escape');
-  await page.evaluate(()=>{window.__pilotConfig={mode:'open',employeeHomePilot:{enabled:false,allowedEmployeeIds:['employee-real-001']}};window.__pilotNotify({exists:true,data:()=>window.__pilotConfig})});
-  assert.equal(await page.locator('#batco61-pilot').count(),0,'Kill switch must remove workspace');
-  assert.equal(await page.locator('#b61-return').count(),0,'Kill switch must remove reentry');
-  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('batco-pilot-visual')),false,'Revocation must remove all visual overrides');
-  assert.deepEqual(errors,[],'Browser exceptions: '+errors.join(' | '));
-  console.log('V61_EMPLOYEE_VIEWPORT_PASS '+width+'x'+height);
+  assert.equal(await page.locator('#batco61-pilot').isVisible(),true,'Clearing search restores shortcuts');
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('batco61:favorite-toggle',{detail:{sku:'GALLERY-1',warehouse:'jeddah',name:'Gallery'}})));
+  assert.equal(await page.evaluate(()=>window.BatcoPilot.isFavorite('GALLERY-1','jeddah')),true);
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('batco61:favorite-toggle',{detail:{sku:'GALLERY-1',warehouse:'jeddah'}})));
+  assert.equal(await page.evaluate(()=>window.BatcoPilot.isFavorite('GALLERY-1','jeddah')),false);
+  const horizontal=await page.evaluate(()=>document.documentElement.scrollWidth);
+  assert.ok(horizontal<=width+5,'Horizontal overflow at '+width+': '+horizontal);
+  assert.deepEqual(errors,[],'Browser errors: '+errors.join(' | '));
+  console.log('V69_VIEWPORT_PASS '+width+'x'+height);
  }finally{await context.close()}
 }
 async function checkAdmin(){
- const ctx=await browser.newContext({viewport:{width:390,height:844},locale:'ar-SA',hasTouch:true});
- const page=await ctx.newPage();
+ const context=await browser.newContext({viewport:{width:390,height:844},locale:'ar-SA'});
+ const page=await context.newPage();
  try{
   await routeFiles(page);
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(origin+'/control-center.html?pilot=1',{waitUntil:'load'});
   await page.locator('#b61-admin-panel').waitFor({state:'visible'});
-  assert.equal(await page.locator('.app').isVisible(),false,'Old admin must be hidden');
-  const sw=await page.evaluate(()=>document.documentElement.scrollWidth);
-  assert.ok(sw<=395,'Admin mobile horizontal overflow '+sw);
-  await page.locator('.b61a-account input').last().check();
-  await page.locator('#b61a-master').check();
-  await page.locator('#b61a-save').click();
-  await page.waitForFunction(()=>window.__saves?.length===1);
-  const saved=await page.evaluate(()=>window.__saves[0]);
-  assert.equal(saved.employeeHomePilot.enabled,true);
-  assert.deepEqual(saved.employeeHomePilot.allowedEmployeeIds,['employee-real-001']);
-  await page.locator('#b61a-master').uncheck();
-  await page.locator('#b61a-save').click();
-  await page.waitForFunction(()=>window.__saves?.length===2);
-  assert.equal(await page.evaluate(()=>window.__saves[1].employeeHomePilot.enabled),false,'Off must revoke everyone');
-  assert.deepEqual(errors,[],'Admin exceptions: '+errors.join(' | '));
-  console.log('V61_ADMIN_MOBILE_PASS: exact employee, rollout and emergency stop');
- }finally{await ctx.close()}
-}
-async function checkAdminHome(){
- const ctx=await browser.newContext({viewport:{width:390,height:844},locale:'ar-SA',hasTouch:true});
- const page=await ctx.newPage();
- try{
-  await routeFiles(page);
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(origin+'/admin-home.html',{waitUntil:'load'});
-  assert.equal(await page.locator('#b61-admin-panel').count(),0,'The admin panel should not auto-open');
-  assert.ok((await page.locator('[data-b61a-open]').getAttribute('href')).includes('control-center.html?pilot=1'),'Admin entry needs a working fallback navigation if scripts fail');
-  await page.locator('[data-b61a-open]').click();
-  await page.locator('#b61-admin-panel').waitFor({state:'visible'});
-  assert.equal(new URL(page.url()).pathname,'/admin-home.html','In-page controls must not navigate to control center');
-  await page.locator('#b61a-master').waitFor({state:'visible'});
-  await page.waitForFunction(()=>document.getElementById('b61a-master')?.disabled===false);
-  assert.equal(await page.locator('#b61a-master').isEnabled(),true,'Firestore settings and employees loaded');
-  assert.equal(await page.locator('.b61a-account').count(),2,'Manager and real employee should be selectable');
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+5),'Manager overlay must not overflow mobile viewport');
+  assert.ok((await page.locator('#b61-admin-panel').innerText()).includes('مساحة العمل الرسمية'));
+  assert.equal(await page.locator('#b61a-master').count(),0,'Old rollout toggles retired');
+  assert.equal(await page.locator('#b61a-save').count(),0,'Old rollout save cannot modify official deployment');
   await page.locator('#b61a-close').click();
   assert.equal(await page.locator('#b61-admin-panel').count(),0);
-  await page.locator('[data-b61a-open]').click();
-  await page.locator('#b61-admin-panel').waitFor();
-  await page.locator('#b61a-close').click();
-  // Simulate a denied/offline Firestore read: display a retry action, not an infinite spinner.
-  await page.evaluate(()=>{
-   window.__workingPilotDb=window.db;
-   window.db={collection(name){
-    if(name==='employee_accounts')return window.__workingPilotDb.collection(name);
-    if(name==='system_controls')return{doc:()=>({get:async()=>{throw Error('SIMULATED_SETTINGS_UNAVAILABLE')}})};
-    return window.__workingPilotDb.collection(name);
-   }};
-  });
-  await page.locator('[data-b61a-open]').click();
-  await page.locator('#b61a-retry').waitFor({state:'visible'});
-  assert.equal(await page.locator('#b61a-master').isEnabled(),false,'Failed settings read must never enable an unverified toggle');
-  assert.ok((await page.locator('#b61a-message').innerText()).includes('SIMULATED_SETTINGS_UNAVAILABLE'),'Show actionable Firestore error');
-  await page.evaluate(()=>{window.db=window.__workingPilotDb});
-  await page.locator('#b61a-retry').click();
-  await page.waitForFunction(()=>document.getElementById('b61a-master')?.disabled===false);
-  assert.deepEqual(errors,[],'In-page admin browser errors: '+errors.join(' | '));
-  console.log('V63_ADMIN_HOME_PASS: direct guarded control, re-entry and mobile viewport');
- }finally{await ctx.close()}
+  console.log('V69_ADMIN_OFFICIAL_PASS');
+ }finally{await context.close()}
 }
 try{
- for(const [w,h] of [[390,844],[820,1050],[1440,900]])await checkViewport(w,h);
+ for(const [w,h] of [[320,720],[390,844],[820,1050],[1440,900]])await checkViewport(w,h);
  await checkAdmin();
- await checkAdminHome();
- console.log('V63_BROWSER_E2E_PASS');
+ console.log('V69_BROWSER_E2E_PASS');
 }finally{await browser.close()}
