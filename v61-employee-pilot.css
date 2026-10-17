@@ -47,7 +47,7 @@ body.batco-pilot-visual .batco-image-toggle:focus-within{outline:2px solid #1c19
 body.batco-pilot-visual .batco-image-toggle:has(input:checked){border-color:#a8a29e;background:#f5f5f4}
 body.batco-pilot-visual .batco-image-label{display:flex!important;text-align:right}
 body.batco-pilot-visual .batco-image-label-text{font-size:11px;line-height:1.45;color:#292524}
-body.batco-pilot-visual .batco-image-label-detail{font-size:10px;line-height:1.45;color:#78716c}
+body.batco-pilot-visual .batco-image-label-detail{font-size:10px;line-height:1.45;color:#6f6965}
 body.batco-pilot-visual .batco-image-explainer{display:none}
 @media(max-width:640px){
  body.batco-pilot-visual .batco-search-row{display:flex;flex-direction:column;align-items:stretch;gap:9px}
