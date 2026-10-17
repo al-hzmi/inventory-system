@@ -23,7 +23,7 @@ const ctx={
 ctx.window.addEventListener=(event,callback)=>{listeners['window:'+event]=callback};
 vm.runInNewContext(pilot,ctx,{filename:'v61-employee-pilot.js'});
 const api=ctx.window.BatcoPilot;
-assert.equal(api.version,'65.0');
+assert.equal(api.version,'66.0');
 const gate=(v,id)=>api.allowlisted(v,id);
 assert.equal(gate(undefined,'1001'),false,'No config is disabled');
 assert.equal(gate({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['1001']}},'1001'),true,'Existing employee-site control includes scoped pilot allowlist');
@@ -62,7 +62,7 @@ assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="chang
 assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('↶ اختصارات البحث'),'Return and reenter controls must both exist');
 assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:360px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
-assert.ok(html.includes('v61-employee-pilot.js?v=65.0')&&html.includes('v61-employee-pilot.css?v=65.0'),'User-facing loader not configured');
+assert.ok(html.includes('v61-employee-pilot.js?v=66.0')&&html.includes('v61-employee-pilot.css?v=66.0'),'User-facing loader not configured');
 assert.ok(admin.includes("const ref=db.collection(COL).doc(DOC)")&&admin.includes("[CONFIG_FIELD]:{")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
 assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
@@ -87,10 +87,15 @@ assert.ok(!pilotCss.includes('button.font-medium[aria-pressed]'),'The admin-only
 assert.ok(pilotCss.includes('#gallery-section+footer')&&pilotCss.includes('#gallery-section>div[class*="max-w-"]'),'Gallery empty state and footer alignment need continuity');
 assert.ok(runtime.includes('>بيت الأواني الطيبة</h1>')&&!runtime.includes('نظام الاستعلام والمبيعات الرقمي'),'Header must only show company name, without the redundant subtitle');
 assert.ok(pilot.includes('class="b65-tool-row"')&&pilot.includes('class="b65-popover"')&&pilot.includes('aria-expanded="false"'),'Quick tools must integrate into search with accessible on-demand menu');
+assert.ok(runtime.includes('className="batco-search-card"')&&runtime.includes('id="batco-pilot-search-slot"'),'Native React search must contain an explicit safe tools slot inside the unified card');
+assert.ok(pilot.includes('searchSlot.replaceChildren(panel)'),'Quick tools must mount inside the React-declared search card rather than below sticky navigation');
+assert.ok(pilotCss.includes('body.batco-pilot-visual .batco-search-card{')&&pilotCss.includes('body.batco-pilot-visual .batco-search-card #searchInput'),'The premium unified card must style the original React input');
+assert.ok(runtime.includes('>شركة بيت الأواني الطيبة</h1>'),'Company name should include the prefix شركة');
+assert.ok(!runtime.includes('نظام الاستعلام والمبيعات الرقمي'),'Redundant long subtitle must remain absent');
 assert.ok(pilot.includes('if(!expanded)return')&&pilot.includes('if(searching&&expanded)'),'Quick menu must be collapsed by default and auto-close when searching');
 assert.ok(pilotCss.includes('.b65-popover[hidden]')&&pilotCss.includes('position:absolute'),'Popover should overlay instead of pushing results down');
 assert.ok(!pilot.includes('class="b61-head"')&&!pilot.includes('class="b61-tiles"'),'Old oversized dashboard should be removed');
-assert.ok(html.includes('rev=65.0'),'Bootloader must invalidate cached header template');
+assert.ok(html.includes('rev=66.0'),'Bootloader must invalidate cached header template');
 
 assert.ok(admin.includes('withDeadline(')&&admin.includes('Promise.allSettled('),'Firestore reads must be bounded and independently diagnosed');
 assert.ok(admin.includes('data-b61a-open')&&admin.includes('window.BatcoPilotAdmin={open}'),'Admin home must open pilot in-page instead of redirecting to the heavy control center');
