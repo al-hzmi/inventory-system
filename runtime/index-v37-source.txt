@@ -4646,8 +4646,8 @@ const App = () => {
                     </div>
 
                     <div className="batco-search-card">
-                        <div className="batco-search-card-head" aria-hidden="true"><strong>مساحة العمل</strong><span>بحث أسرع، خطوات أقل</span></div>
-                    <div className="flex items-center gap-12">
+                        <div className="batco-search-card-head" aria-hidden="true"><strong>مساحة العمل</strong><span>أصنافك في متناولك</span></div>
+                    <div className="batco-search-row flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
                             <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input ref={searchInputRef} id="searchInput" type="text" autoComplete="off"
