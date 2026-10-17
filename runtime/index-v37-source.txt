@@ -1729,7 +1729,7 @@ const Lightbox = ({ fileName, title, onClose }) => {
 // بطاقات العرض
 // ============================================================
 // Read-only bridge between product cards and the opted-in employee favorites.
-const PilotFavoriteButton = memo(({item,warehouse,compact=false}) => {
+const PilotFavoriteButton = memo(({item,warehouse,compact=false,iconOnly=false}) => {
     const [enabled,setEnabled]=useState(()=>Boolean(window.BatcoPilot?.isEnabled?.()));
     const [saved,setSaved]=useState(()=>Boolean(window.BatcoPilot?.isFavorite?.(item.id,warehouse)));
     useEffect(()=>{
@@ -1755,8 +1755,8 @@ const PilotFavoriteButton = memo(({item,warehouse,compact=false}) => {
     };
     return <button type="button" data-pilot-favorite={item.id} aria-label={label+' — '+(item.name||item.id)}
                    aria-pressed={saved} title={label} onClick={toggle} onKeyDown={e=>e.stopPropagation()}
-                   className={`batco-direct-favorite ${saved?'is-saved':''} ${compact?'is-compact':''}`}>
-        <span aria-hidden="true">{saved?'★':'☆'}</span><b>{saved?'محفوظ':'أضف للمفضلة'}</b>
+                   className={`batco-direct-favorite ${saved?'is-saved':''} ${compact?'is-compact':''} ${iconOnly?'is-icon-only':''}`}>
+        <span aria-hidden="true">{saved?'★':'☆'}</span>{!iconOnly&&<b>{saved?'محفوظ':'حفظ'}</b>}
     </button>;
 });
 
@@ -1805,19 +1805,23 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
             </div>
         </div>
 
-        <div className="border-t border-border pt-16 mt-8 flex items-center justify-between gap-10">
-            <div className="flex items-center gap-6 flex-wrap min-w-0">
-            {isAdmin && !item.isDepletedArchive ? (
-                <button onClick={() => onAdminCategoryEdit && onAdminCategoryEdit(item)}
-                        className="h-[34px] px-12 rounded-8 bg-accentSoft text-accent border border-accent/15 text-[11px] font-bold flex items-center gap-6 hover:bg-accent hover:text-white transition-colors">
-                    <Icon.Grid className="w-14 h-14" />
-                    تغيير القسم
-                    <span className="text-[9px] opacity-70 max-w-[110px] truncate">{currentCategory || 'غير مصنف'}</span>
-                </button>
-            ) : null}
-            <PilotFavoriteButton item={item} warehouse={warehouse}/>
+        <div className="batco-result-actions border-t border-border pt-12 mt-8">
+            {isAdmin && !item.isDepletedArchive && (
+                <div className="batco-admin-action-row">
+                    <button onClick={() => onAdminCategoryEdit && onAdminCategoryEdit(item)}
+                            className="h-[34px] px-12 rounded-8 bg-accentSoft text-accent border border-accent/15 text-[11px] font-bold flex items-center gap-6 hover:bg-accent hover:text-white transition-colors">
+                        <Icon.Grid className="w-14 h-14" />
+                        تغيير القسم
+                        <span className="text-[9px] opacity-70 max-w-[110px] truncate">{currentCategory || 'غير مصنف'}</span>
+                    </button>
+                </div>
+            )}
+            <div className="batco-shopping-action-row">
+                <PilotFavoriteButton item={item} warehouse={warehouse}/>
+                <div className="batco-cart-action">
+                    {item.qty <= 0 ? <span className="h-[34px] px-10 rounded-full bg-dangerSoft text-danger text-[11px] font-bold inline-flex items-center">نفد من المخزون</span> : <OrderQuantityControl item={item} cart={cart} setCart={setCart} />}
+                </div>
             </div>
-            {item.qty <= 0 ? <span className="h-[34px] px-10 rounded-full bg-dangerSoft text-danger text-[11px] font-bold inline-flex items-center">نفد من المخزون</span> : <OrderQuantityControl item={item} cart={cart} setCart={setCart} />}
         </div>
     </div>
 ));
@@ -1841,17 +1845,21 @@ const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart,
             {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} size="sm" /></div>}
         </div>
         
-        <div className="border-t border-border pt-12 flex items-center justify-between gap-8">
-            <div className="flex items-center gap-5 flex-wrap min-w-0">
-            {isAdmin && !item.isDepletedArchive ? (
-                <button onClick={(e) => { e.stopPropagation(); onAdminCategoryEdit && onAdminCategoryEdit(item); }}
-                        className="h-[30px] px-9 rounded-8 bg-accentSoft text-accent border border-accent/10 text-[10px] font-bold flex items-center gap-5 flex-shrink-0">
-                    <Icon.Grid className="w-12 h-12" /> تغيير القسم
-                </button>
-            ) : null}
-            <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
+        <div className="batco-result-actions border-t border-border pt-12">
+            {isAdmin && !item.isDepletedArchive && (
+                <div className="batco-admin-action-row">
+                    <button onClick={(e) => { e.stopPropagation(); onAdminCategoryEdit && onAdminCategoryEdit(item); }}
+                            className="h-[32px] px-9 rounded-8 bg-accentSoft text-accent border border-accent/10 text-[10px] font-bold flex items-center gap-5">
+                        <Icon.Grid className="w-12 h-12" /> تغيير القسم
+                    </button>
+                </div>
+            )}
+            <div className="batco-shopping-action-row">
+                <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
+                <div className="batco-cart-action" onClick={e=>e.stopPropagation()}>
+                    {item.qty <= 0 ? <span className="h-[30px] px-9 rounded-full bg-dangerSoft text-danger text-[10px] font-bold inline-flex items-center">نفد من المخزون</span> : <OrderQuantityControl item={item} cart={cart} setCart={setCart} />}
+                </div>
             </div>
-            {item.qty <= 0 ? <span className="h-[30px] px-9 rounded-full bg-dangerSoft text-danger text-[10px] font-bold inline-flex items-center">نفد من المخزون</span> : <OrderQuantityControl item={item} cart={cart} setCart={setCart} />}
         </div>
     </div>
 ));
@@ -2034,7 +2042,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                     <div className="flex flex-wrap justify-between items-center gap-8 border-b border-border pb-8">
                         <span className="text-[12px] font-semibold text-accent">بطاقة المنتج</span>
                         <div className="flex flex-wrap items-center gap-6">
-                            <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
+                            <PilotFavoriteButton item={item} warehouse={warehouse} compact iconOnly/>
                             {isAdmin && <button onClick={(e)=>{e.stopPropagation();onAdminCategoryEdit&&onAdminCategoryEdit(item);}} className="h-32 px-8 rounded-8 bg-accentSoft text-accent text-[10px] font-bold border border-accent/10">تغيير القسم</button>}
                             <span className="text-[10px] text-muted">نقرتان للعودة</span>
                         </div>
@@ -2075,8 +2083,8 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                 </div>
             ) : (
                 <React.Fragment>
-                    <div className="absolute top-8 left-8 z-[2]">
-                        <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
+                    <div className={`batco-gallery-favorite-anchor ${showImage?'below-zoom':'without-zoom'}`}>
+                        <PilotFavoriteButton item={item} warehouse={warehouse} compact iconOnly/>
                     </div>
                     {showImage && (
                         <div className="relative w-full bg-surface">
@@ -4720,10 +4728,10 @@ const App = () => {
                             <div aria-hidden="true" className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-border'}`}>
                                 <div className={`absolute top-2 left-2 w-22 h-22 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
                             </div>
-                            {imageWarehouseNotice && <span role="status" aria-live="polite" className="batco-image-warehouse-toast">اختر المستودع أولًا</span>}
-                        </label>
+                            </label>
                     </div>
 
+                        {imageWarehouseNotice && <div role="status" aria-live="polite" className="batco-image-warehouse-toast">اختر المستودع أولًا</div>}
                         <div id="batco-pilot-search-slot" aria-label="اختصارات البحث" />
                     </div>
 
