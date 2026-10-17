@@ -1,25 +1,25 @@
-/* V66: integrated premium search card with optional quick tools.
+/* V67: welcoming, tap-friendly integrated search card.
    Never inject elements into the React-owned search field itself. */
-/* V66: one physical card for the original React search and opted-in quick tools.
+/* V67: one cohesive card for the original React search and opted-in quick tools.
    React retains full control of the input, scanner, stock selection and image toggle. */
 .batco-search-card{display:contents}
 .batco-search-card-head{display:none}
 #batco-pilot-search-slot:empty{display:none}
 body.batco-pilot-visual .batco-search-card{
  display:block;position:relative;border:1px solid #dedbd7;border-radius:17px;
- background:linear-gradient(145deg,#fafaf9 0%,#fff 72%);
- box-shadow:0 5px 22px rgba(28,25,23,.055),0 1px 3px rgba(28,25,23,.035);
- padding:13px 13px 7px;
+ background:linear-gradient(150deg,#fafaf9 0%,#fff 76%);
+ box-shadow:0 6px 24px rgba(28,25,23,.07),0 1px 3px rgba(28,25,23,.035);
+ padding:15px 15px 11px;
 }
 body.batco-pilot-visual .batco-search-card-head{
- display:flex;align-items:center;justify-content:space-between;gap:10px;
- padding:0 3px 10px;font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif
+ display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+ padding:0 3px 13px;font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif
 }
 body.batco-pilot-visual .batco-search-card-head strong{
- font-size:12px;font-weight:800;color:#292524;line-height:1.7
+ font-size:21px;font-weight:800;color:#1c1917;line-height:1.55
 }
 body.batco-pilot-visual .batco-search-card-head span{
- font-size:10px;font-weight:450;color:#928c86;line-height:1.7
+ font-size:10px;font-weight:650;color:#78716c;line-height:1.7
 }
 body.batco-pilot-visual .batco-search-card #searchInput{
  background:#fff;border-color:#d6d3d1;border-radius:12px;
@@ -32,14 +32,32 @@ body.batco-pilot-visual .batco-search-card .batco-search-card-head+.batco-search
  position:relative;z-index:1
 }
 body.batco-pilot-visual .batco-search-card #batco-pilot-search-slot{
- margin-top:7px;padding-top:6px;border-top:1px solid #eceae7
+ margin-top:12px;padding-top:11px;border-top:1px solid #eceae7
 }
 body.batco-pilot-visual .batco-search-card:has(#batco61-pilot.b61-search-suppressed) #batco-pilot-search-slot{
  display:none
 }
+/* Make the image mode explain its result without adding another help paragraph. */
+body.batco-pilot-visual .batco-image-toggle{
+ min-height:48px;padding:7px 10px;border:1px solid #e7e5e4;border-radius:12px;
+ background:#fff;gap:10px;transition:background .15s,border-color .15s
+}
+body.batco-pilot-visual .batco-image-toggle:hover{background:#fafaf9;border-color:#c9c4be}
+body.batco-pilot-visual .batco-image-toggle:focus-within{outline:2px solid #1c1917;outline-offset:2px}
+body.batco-pilot-visual .batco-image-toggle:has(input:checked){border-color:#a8a29e;background:#f5f5f4}
+body.batco-pilot-visual .batco-image-label{display:flex!important;text-align:right}
+body.batco-pilot-visual .batco-image-label-text{font-size:11px;line-height:1.45;color:#292524}
+body.batco-pilot-visual .batco-image-label-detail{font-size:10px;line-height:1.45;color:#78716c}
+body.batco-pilot-visual .batco-image-explainer{display:none}
+@media(max-width:640px){
+ body.batco-pilot-visual .batco-search-row{display:flex;flex-direction:column;align-items:stretch;gap:9px}
+ body.batco-pilot-visual .batco-image-toggle{align-self:stretch;justify-content:space-between;min-height:44px}
+ body.batco-pilot-visual .batco-search-row>div:first-child{width:100%}
+}
 @media(max-width:760px){
- body.batco-pilot-visual .batco-search-card{border-radius:15px;padding:11px 10px 6px}
- body.batco-pilot-visual .batco-search-card-head{padding:0 3px 8px}
+ body.batco-pilot-visual .batco-search-card{border-radius:17px;padding:13px 11px 11px}
+ body.batco-pilot-visual .batco-search-card-head{padding:0 3px 11px}
+ body.batco-pilot-visual .batco-search-card-head strong{font-size:19px}
  body.batco-pilot-visual .batco-search-card-head span{font-size:9px}
 }
 
@@ -53,25 +71,30 @@ body.batco-pilot-visual .batco-search-card:has(#batco61-pilot.b61-search-suppres
 #batco61-pilot *,#batco61-pilot *::before,#batco61-pilot *::after{box-sizing:border-box}
 #batco61-pilot button{font-family:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #batco61-pilot button:focus-visible,.b61-return:focus-visible{outline:2px solid #1c1917;outline-offset:2px}
-#batco61-pilot .b65-tool-row{
- display:flex;align-items:center;justify-content:space-between;gap:8px;
- min-height:40px;padding:3px 0 1px;border-bottom:0;
+#batco61-pilot .b65-tool-row{display:block;margin:0;padding:0}
+#batco61-pilot .b65-actions{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;
+ width:100%;min-width:0;gap:9px
 }
-#batco61-pilot .b65-actions{display:flex;align-items:center;min-width:0;gap:4px;flex-wrap:nowrap}
 #batco61-pilot .b65-actions button{
- display:inline-flex;align-items:center;justify-content:center;gap:5px;
- min-height:32px;padding:4px 9px;border:1px solid transparent;border-radius:9px;
- background:transparent;color:#57534e;font-size:11px;font-weight:650;white-space:nowrap
+ display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+ min-width:0;min-height:70px;padding:10px 6px;
+ border:1px solid #e7e5e4;border-radius:13px;background:#fff;color:#44403c;
+ font-size:12px;font-weight:750;line-height:1.35;
+ transition:background .15s,border-color .15s,color .15s,transform .15s
 }
-#batco61-pilot .b65-actions button:hover{background:#f5f5f4}
-#batco61-pilot .b65-actions button.is-active{color:#1c1917;background:#f5f5f4;border-color:#e7e5e4}
-#batco61-pilot .b65-actions button span{font-size:15px;line-height:1}
-#batco61-pilot .b61-classic,#batco61-pilot .b65-dismiss{
- display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
- width:30px;height:30px;border-radius:8px;border:1px solid transparent;
- background:transparent;color:#78716c;font-size:18px;line-height:1
+#batco61-pilot .b65-actions button b{font-size:12px;font-weight:750;white-space:nowrap}
+#batco61-pilot .b65-actions button span{font-size:22px;line-height:1;flex-shrink:0}
+#batco61-pilot .b65-actions button:hover{background:#f5f5f4;border-color:#c9c5c1}
+#batco61-pilot .b65-actions button:active{transform:scale(.98)}
+#batco61-pilot .b65-actions button.is-active{color:#fff;background:#1c1917;border-color:#1c1917}
+#batco61-pilot .b65-dismiss{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:36px;padding:5px 11px;border-radius:9px;
+ border:1px solid #e7e5e4;background:#fafaf9;color:#57534e;
+ font-size:11px;font-weight:700
 }
-#batco61-pilot .b61-classic:hover,#batco61-pilot .b65-dismiss:hover{background:#f5f5f4;color:#1c1917}
+#batco61-pilot .b65-dismiss:hover{background:#f5f5f4;color:#1c1917}
 #batco61-pilot .b65-popover{
  position:absolute;top:calc(100% + 4px);inset-inline:0;z-index:49;
  max-height:min(48vh,340px);overflow:auto;overscroll-behavior:contain;
@@ -100,7 +123,7 @@ body.batco-pilot-visual .batco-search-card:has(#batco61-pilot.b61-search-suppres
 #batco61-pilot .b61-product-main small{font-size:10px;color:#78716c}
 #batco61-pilot .b61-product-actions{display:flex;flex-shrink:0;gap:3px}
 #batco61-pilot .b61-product-actions button{
- min-width:29px;min-height:30px;padding:3px;border:1px solid #e7e5e4;
+ min-width:38px;min-height:38px;padding:4px;border:1px solid #e7e5e4;
  border-radius:7px;background:#fafaf9;color:#1c1917;font-size:11px
 }
 #batco61-pilot .b61-product-actions .b61-star{font-size:17px}
@@ -178,14 +201,17 @@ body.batco-pilot-visual #gallery-section+footer .developer-link{color:#78716c;fo
 @media(max-width:760px){
  #batco61-pilot{padding:0}
  #batco61-pilot .b65-popover{inset-inline:0}
- #batco61-pilot .b65-tool-row{min-height:38px}
- #batco61-pilot .b65-actions{gap:1px}
- #batco61-pilot .b65-actions button{padding:4px 7px;font-size:10px;gap:4px}
+ #batco61-pilot .b65-actions{gap:7px}
+ #batco61-pilot .b65-actions button{min-height:68px;padding:9px 5px;gap:5px}
+ #batco61-pilot .b65-actions button b{font-size:11px}
+ #batco61-pilot .b65-actions button span{font-size:20px}
  #batco61-pilot .b61-list{grid-template-columns:1fr}
  body.batco-pilot-visual #gallery-section{margin-top:14px!important;padding-top:14px}
 }
 @media(max-width:360px){
- #batco61-pilot .b65-actions button{padding:4px 5px;font-size:10px}
- #batco61-pilot .b65-actions button span{font-size:13px}
+ #batco61-pilot .b65-actions button{min-height:64px;padding:8px 3px}
+ #batco61-pilot .b65-actions button b{font-size:10px}
+ #batco61-pilot .b65-actions button span{font-size:19px}
+ body.batco-pilot-visual .batco-search-card-head strong{font-size:18px}
 }
 @media(prefers-reduced-motion:reduce){#batco61-pilot *{animation:none!important}}
