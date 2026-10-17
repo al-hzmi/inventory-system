@@ -1728,7 +1728,39 @@ const Lightbox = ({ fileName, title, onClose }) => {
 // ============================================================
 // بطاقات العرض
 // ============================================================
-const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty, cart, setCart, isAdmin = false, currentCategory = null, onAdminCategoryEdit }) => (
+// Read-only bridge between product cards and the opted-in employee favorites.
+const PilotFavoriteButton = memo(({item,warehouse,compact=false}) => {
+    const [enabled,setEnabled]=useState(()=>Boolean(window.BatcoPilot?.isEnabled?.()));
+    const [saved,setSaved]=useState(()=>Boolean(window.BatcoPilot?.isFavorite?.(item.id,warehouse)));
+    useEffect(()=>{
+        const sync=()=>{
+            setEnabled(Boolean(window.BatcoPilot?.isEnabled?.()));
+            setSaved(Boolean(window.BatcoPilot?.isFavorite?.(item.id,warehouse)));
+        };
+        sync();
+        window.addEventListener('batco61:state',sync);
+        window.addEventListener('batco61:favorites-changed',sync);
+        return ()=>{
+            window.removeEventListener('batco61:state',sync);
+            window.removeEventListener('batco61:favorites-changed',sync);
+        };
+    },[item.id,warehouse]);
+    if(!enabled||!warehouse)return null;
+    const label=saved?'إزالة من المفضلة':'إضافة للمفضلة';
+    const toggle=e=>{
+        e.preventDefault();e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('batco61:favorite-toggle',{detail:{
+            sku:item.id,warehouse,name:item.name,unit:item.unit,qty:item.qty,pack:item.pack
+        }}));
+    };
+    return <button type="button" data-pilot-favorite={item.id} aria-label={label+' — '+(item.name||item.id)}
+                   aria-pressed={saved} title={label} onClick={toggle} onKeyDown={e=>e.stopPropagation()}
+                   className={`batco-direct-favorite ${saved?'is-saved':''} ${compact?'is-compact':''}`}>
+        <span aria-hidden="true">{saved?'★':'☆'}</span><b>{saved?'محفوظ':'المفضلة'}</b>
+    </button>;
+});
+
+const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hideQty, cart, setCart, warehouse, isAdmin = false, currentCategory = null, onAdminCategoryEdit }) => (
     <div className="animate-card w-full border border-border rounded-16 shadow-card p-16 sm:p-20 bg-bg flex flex-col gap-16">
         {showImage && imageFileName && (
             <div className="w-full flex justify-center border-b border-border pb-16">
@@ -1774,6 +1806,7 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
         </div>
 
         <div className="border-t border-border pt-16 mt-8 flex items-center justify-between gap-10">
+            <div className="flex items-center gap-6 flex-wrap min-w-0">
             {isAdmin && !item.isDepletedArchive ? (
                 <button onClick={() => onAdminCategoryEdit && onAdminCategoryEdit(item)}
                         className="h-[34px] px-12 rounded-8 bg-accentSoft text-accent border border-accent/15 text-[11px] font-bold flex items-center gap-6 hover:bg-accent hover:text-white transition-colors">
@@ -1781,13 +1814,15 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
                     تغيير القسم
                     <span className="text-[9px] opacity-70 max-w-[110px] truncate">{currentCategory || 'غير مصنف'}</span>
                 </button>
-            ) : <span />}
+            ) : null}
+            <PilotFavoriteButton item={item} warehouse={warehouse}/>
+            </div>
             {item.qty <= 0 ? <span className="h-[34px] px-10 rounded-full bg-dangerSoft text-danger text-[11px] font-bold inline-flex items-center">نفد من المخزون</span> : <OrderQuantityControl item={item} cart={cart} setCart={setCart} />}
         </div>
     </div>
 ));
 
-const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart, setCart, onSelect, isAdmin = false, currentCategory = null, onAdminCategoryEdit }) => (
+const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart, setCart, warehouse, onSelect, isAdmin = false, currentCategory = null, onAdminCategoryEdit }) => (
     <div role="button" tabIndex={0}
          onClick={() => onSelect && onSelect(item)}
          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onSelect) { e.preventDefault(); onSelect(item); } }}
@@ -1807,12 +1842,15 @@ const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart,
         </div>
         
         <div className="border-t border-border pt-12 flex items-center justify-between gap-8">
+            <div className="flex items-center gap-5 flex-wrap min-w-0">
             {isAdmin && !item.isDepletedArchive ? (
                 <button onClick={(e) => { e.stopPropagation(); onAdminCategoryEdit && onAdminCategoryEdit(item); }}
                         className="h-[30px] px-9 rounded-8 bg-accentSoft text-accent border border-accent/10 text-[10px] font-bold flex items-center gap-5 flex-shrink-0">
                     <Icon.Grid className="w-12 h-12" /> تغيير القسم
                 </button>
-            ) : <span />}
+            ) : null}
+            <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
+            </div>
             {item.qty <= 0 ? <span className="h-[30px] px-9 rounded-full bg-dangerSoft text-danger text-[10px] font-bold inline-flex items-center">نفد من المخزون</span> : <OrderQuantityControl item={item} cart={cart} setCart={setCart} />}
         </div>
     </div>
@@ -1978,7 +2016,7 @@ const NewArrivalsAdminPanel = memo(({ catalogItems, newArrivalIds, onChange }) =
     );
 });
 
-const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, onZoom, warehouseName, cart, setCart, isAdmin, currentCategory, onAdminCategoryEdit }) => {
+const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, onZoom, warehouseName, warehouse, cart, setCart, isAdmin, currentCategory, onAdminCategoryEdit }) => {
     const isDetails  = view === CARD_VIEW.DETAILS;
     const isQuantity = view === CARD_VIEW.QUANTITY;
 
@@ -1996,6 +2034,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                     <div className="flex justify-between items-center gap-8 border-b border-border pb-8">
                         <span className="text-[12px] font-semibold text-accent">بطاقة المنتج</span>
                         <div className="flex items-center gap-6">
+                            <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
                             {isAdmin && <button onClick={(e)=>{e.stopPropagation();onAdminCategoryEdit&&onAdminCategoryEdit(item);}} className="h-32 px-8 rounded-8 bg-accentSoft text-accent text-[10px] font-bold border border-accent/10">تغيير القسم</button>}
                             <span className="text-[10px] text-muted">نقرتان للعودة</span>
                         </div>
@@ -2036,6 +2075,9 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                 </div>
             ) : (
                 <React.Fragment>
+                    <div className="absolute top-8 left-8 z-[2]">
+                        <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
+                    </div>
                     {showImage && (
                         <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
@@ -4208,6 +4250,12 @@ const App = () => {
     const [warehouse, setWarehouse] = useState(null);
     const [query, setQuery] = useState('');
     const [showImageInSearch, setShowImageInSearch] = useState(false);
+    const [imageWarehouseNotice, setImageWarehouseNotice] = useState(false);
+    useEffect(()=>{
+        if(!imageWarehouseNotice)return;
+        const timer=setTimeout(()=>setImageWarehouseNotice(false),2400);
+        return ()=>clearTimeout(timer);
+    },[imageWarehouseNotice]);
     const [showScanner, setShowScanner] = useState(false);
     const [selectedSearchItem, setSelectedSearchItem] = useState(null);
     
@@ -4663,16 +4711,16 @@ const App = () => {
                             )}
                         </div>
 
-                        <label className="batco-image-toggle flex items-center gap-8 cursor-pointer flex-shrink-0" title="إظهار صور الأصناف في نتائج البحث">
-                            <span className="batco-image-label hidden sm:flex flex-col">
-                                <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">صور الأصناف</span>
-                                <small className="batco-image-label-detail text-[10px] text-muted whitespace-nowrap">{showImageInSearch ? 'تظهر مع النتائج' : 'اضغط لإظهارها'}</small>
+                        <label className="batco-image-toggle flex items-center gap-8 cursor-pointer flex-shrink-0" title="إظهار الصور بجانب الأصناف في نتائج البحث">
+                            <span className="batco-image-label flex items-center">
+                                <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">عرض صور الأصناف</span>
                             </span>
-                            <input type="checkbox" role="switch" aria-label="إظهار صور الأصناف في نتائج البحث" aria-checked={showImageInSearch} className="sr-only" checked={showImageInSearch}
-                                   onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                            <div aria-hidden="true" className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
+                            <input type="checkbox" role="switch" aria-label="عرض صور الأصناف مع نتائج البحث" aria-checked={showImageInSearch} className="sr-only" checked={showImageInSearch}
+                                   onChange={(e) => { if(!warehouse){setImageWarehouseNotice(true);return;}setImageWarehouseNotice(false);setShowImageInSearch(e.target.checked); }} />
+                            <div aria-hidden="true" className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-border'}`}>
                                 <div className={`absolute top-2 left-2 w-22 h-22 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
                             </div>
+                            {imageWarehouseNotice && <span role="status" aria-live="polite" className="batco-image-warehouse-toast">اختر المستودع أولًا</span>}
                         </label>
                     </div>
 
@@ -4703,14 +4751,14 @@ const App = () => {
                                 </button>
                                 <FullResultCard item={selectedSearchItem} warehouseName={selectedSearchItem.isDepletedArchive ? 'أرشيف سابق' : activeWarehouseName}
                                     showImage={showImageInSearch && hasImageForItem(imagesList, selectedSearchItem)}
-                                    imageFileName={imageForItem(imagesList, selectedSearchItem)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart}
+                                    imageFileName={imageForItem(imagesList, selectedSearchItem)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse}
                                     isAdmin={isAdmin} currentCategory={currentCategoryById[selectedSearchItem.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                             </React.Fragment>
                         ) : (
                             <React.Fragment>
-                                {search.exact && <FullResultCard item={search.exact} warehouseName={search.exact.isDepletedArchive ? 'أرشيف سابق' : activeWarehouseName} showImage={showImageInSearch && hasImageForItem(imagesList, search.exact)} imageFileName={imageForItem(imagesList, search.exact)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} isAdmin={isAdmin} currentCategory={currentCategoryById[search.exact.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />}
+                                {search.exact && <FullResultCard item={search.exact} warehouseName={search.exact.isDepletedArchive ? 'أرشيف سابق' : activeWarehouseName} showImage={showImageInSearch && hasImageForItem(imagesList, search.exact)} imageFileName={imageForItem(imagesList, search.exact)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} isAdmin={isAdmin} currentCategory={currentCategoryById[search.exact.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />}
                                 {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
-                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
+                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                                 ))}
                                 {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — اضغط على أي نتيجة لفتح بطاقتها كاملة</p>}
                             </React.Fragment>
@@ -4791,7 +4839,7 @@ const App = () => {
                                             <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16" : "flex flex-col gap-16 max-w-[520px] mx-auto"}>
                                                 {visibleItems.map(item => (
                                                     <GalleryCard key={item.uid} item={item} imageFileName={imageForItem(imagesList, item)} showImage={!isMissingImagesView} isGrid={galleryView === 'grid'}
-                                                        view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} warehouseName={activeWarehouseName} cart={cart} setCart={setCart}
+                                                        view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} warehouseName={activeWarehouseName} warehouse={warehouse} cart={cart} setCart={setCart}
                                                         isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                                                 ))}
                                             </div>
