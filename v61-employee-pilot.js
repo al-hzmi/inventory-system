@@ -1,11 +1,11 @@
-/* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
+/* BATCO V69: standard inventory workspace for all verified employee and manager sessions. */
 (function(){
 'use strict';
-const DOC='employee_site_access',VERSION='68.0';
+const DOC='employee_site_access',VERSION='69.0';
 const CONFIG_FIELD='employeeHomePilot';
 const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
-let unsubscribe=null,currentId='',active=false,panel=null,bootTimer=null,searchTimer=null,refreshCount=0;
+let currentId='',active=false,panel=null,searchTimer=null;
 let inventory={jeddah:{},riyadh:{}},prefs={recent:[],favorites:[]},diffs=null,tab='recent',expanded=false;
 const safeRead=(key,fallback)=>{try{const a=JSON.parse(localStorage.getItem(key)||'null');return a&&typeof a==='object'?a:fallback}catch{return fallback}};
 const save=(key,obj)=>{try{localStorage.setItem(key,JSON.stringify(obj))}catch{}};
@@ -207,39 +207,38 @@ function showReturnButton(){
  syncSearchVisibility();
 }
 function enable(id){
- if(active&&currentId===id){paint();return;}
+ if(active&&currentId===id){paint();return}
  close();currentId=id;active=true;tab='recent';expanded=false;
- if(safeRead(key(id)+'_classic',{}).hidden){active=false;showReturnButton();return}
+ // Official release ignores historical "hide pilot" preferences.
+ // Existing per-account favorite/recent keys are retained to preserve saved products.
  paint();
- loadInventory(id).catch(()=>{if(panel){panel.querySelector('.b61-list').replaceChildren(el('p','b61-empty','تعذر تحميل الملخص الآن؛ البحث الأساسي يعمل كالمعتاد.'))}});
+ loadInventory(id).catch(()=>{
+  if(panel){const list=panel.querySelector('.b61-list');if(list)list.replaceChildren(el('p','b61-empty','تعذر تحميل الملخص الآن؛ البحث الأساسي يعمل كالمعتاد.'))}
+ });
 }
 function waitUI(id){
  let attempts=0;const timer=setInterval(()=>{if(currentId!==id){clearInterval(timer);return}
   if(document.getElementById('searchInput')){
    clearInterval(timer);
-   if(!active&&safeRead(key(id)+'_classic',{}).hidden)showReturnButton();else paint();
+   paint();
   }else if(++attempts===16){previewNotice('ما زلنا ننتظر ظهور البحث في واجهة الموظفين…')}
   else if(attempts>120){clearInterval(timer);previewNotice('تعذر العثور على البحث. تأكد من تسجيل الدخول للموظفين ثم حدّث الصفحة.',true)}
  },300);
 }
 function init(){
  const identity=user();
- if(!identity){previewNotice('للمعاينة، سجّل الدخول بحساب المدير أولًا من الواجهة الأصلية.',true);setTimeout(init,2000);return}
- if(previewRequested()&&identity.id!=='admin_mohanad')previewNotice('المعاينة الخاصة بالمدير تحتاج الدخول بحساب الإدارة، وليس حساب الموظف.',true);
+ if(!identity){
+  // Do not show official workspace on the signed-out screen.
+  if(previewRequested())previewNotice('سجّل الدخول أولًا لعرض مساحة العمل.',true);
+  setTimeout(init,2000);
+  return;
+ }
  currentId=identity.id;
- // Self-test requires verified manager identity but does not alter employee rollout settings.
- if(isAdminPreview()){previewNotice('جارٍ تجهيز المعاينة الخاصة بالمدير…');enable(identity.id);waitUI(identity.id);return}
- let attempt=0;
- bootTimer=setInterval(()=>{
-  if(window.firebase?.apps?.length){clearInterval(bootTimer);try{
-   unsubscribe=window.firebase.firestore().collection('system_controls').doc(DOC).onSnapshot(snap=>{
-    const data=snap.exists?snap.data():null;
-    const allowed=allowlisted(data,identity.id);
-    if(allowed){enable(identity.id);waitUI(identity.id)}else{close();document.getElementById('b61-return')?.remove()}
-   },(error)=>{console.warn('[BATCO pilot] Could not read employee settings',error?.code||error?.message||'unknown');close();document.getElementById('b61-return')?.remove()});
-  }catch{close()} }
-  else if(++attempt>120){clearInterval(bootTimer)}
- },350);
+ // Official access is tied to verified employee/manager sign-in; no pilot allowlist
+ // or Firebase rollout switch is required. Product data remains read-only.
+ if(previewRequested())previewNotice('جارٍ تجهيز مساحة العمل…');
+ enable(identity.id);
+ waitUI(identity.id);
 }
 window.addEventListener('batco61:favorite-toggle',event=>{
  if(!active||!currentId)return;
@@ -262,5 +261,5 @@ document.addEventListener('pointerdown',e=>{
 },true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&expanded){expanded=false;show();document.getElementById('searchInput')?.focus({preventScroll:true})}},true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-window.BatcoPilot={decode,delta,allowlisted,version:VERSION,isEnabled:()=>active,isFavorite:(sku,branch)=>active&&(prefs.favorites||[]).includes(String(branch)+'|'+String(sku))}; // Read-only state for React buttons.
+window.BatcoPilot={decode,delta,allowlisted,version:VERSION,official:true,isEnabled:()=>active,isFavorite:(sku,branch)=>active&&(prefs.favorites||[]).includes(String(branch)+'|'+String(sku))}; // Read-only helpers and official workspace state.
 })();
