@@ -10,7 +10,7 @@ const sections=[
 ]},
 {n:'02',title:'الموظفون والعملاء',desc:'الحسابات والطلبات وصلاحيات الوصول.',links:[
 ['الموظفون والجلسات','الحضور والحسابات النشطة','./admin-dashboard.html?section=employees&module=live','♙'],
-['التجربة الجديدة للموظفين','تفعيل التصميم لحسابات محددة فقط','./admin-home.html?pilot=1','◎'],
+['مساحة عمل الموظفين','الواجهة الرسمية لجميع الحسابات','./index.html?employee=1','◎'],
 ['إدارة العملاء','حسابات العملاء والشركات','./admin-dashboard.html?section=customers&module=accounts','♧'],
 ['الطلبات والفواتير','مراجعة طلبات الموظفين','./admin-dashboard.html?section=employees&module=orders','▤'],
 ['صلاحيات الموقع','التحكم في وصول الموظفين','./admin-dashboard.html?section=employees&module=site_access','◇'],
@@ -44,7 +44,39 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 function renderWorkspace(){const home=document.getElementById('home');if(!home||home.querySelector('#v57-workspace'))return;const head=home.querySelector('.v52-page-head');if(!head)return;const box=document.createElement('section');box.className='v57-workspace';box.id='v57-workspace';box.setAttribute('aria-label','مركز العمليات الإدارية');box.innerHTML='<div class="v57-brief"><div><h2>مركز العمليات</h2><p>كل وظائف الإدارة اليومية، مرتبة حسب العمل بدل البحث بين الصفحات.</p></div><span class="v57-brief-tag">الوصول المباشر للمهام</span></div><div class="v57-groups">'+sections.map(g=>'<section class="v57-group"><div class="v57-group-head"><span class="v57-group-number">'+g.n+'</span><div><h3>'+esc(g.title)+'</h3><p>'+esc(g.desc)+'</p></div></div><div class="v57-actions">'+g.links.map(a=>'<a class="v57-action'+(a[4]?' featured':'')+'" href="'+a[2]+'"><span class="v57-action-icon" aria-hidden="true">'+icon(a[3])+'</span><span class="v57-action-label"><strong>'+esc(a[0])+'</strong><small>'+esc(a[1])+'</small></span><span class="v57-action-arrow" aria-hidden="true">←</span></a>').join('')+'</div></section>').join('')+'</div><div class="v57-data-head"><h2>مؤشرات الأداء</h2><p>قراءة تحليلية للمبيعات والمخزون، منفصلة عن أدوات الإدارة اليومية.</p></div>';head.after(box);const oldQuick=home.querySelector('.v54-quick');if(oldQuick){oldQuick.style.display='none';const title=oldQuick.previousElementSibling;if(title?.classList.contains('v54-section-title'))title.style.display='none';}}
 function ensureFallback(){const home=document.getElementById('home');if(!home||home.querySelector('.v52-page-head'))return;home.innerHTML='<div class="v52-page-head"><div><div class="v52-eyebrow">الإدارة التنفيذية</div><h1 class="v52-page-title">مركز إدارة الأعمال</h1><p class="v52-page-sub">أدوات المخزون والموظفين والعملاء متاحة. يجري تحميل مؤشرات التشغيل في الخلفية.</p></div></div>';renderWorkspace();const note=document.createElement('p');note.className='v57-fallback-note';note.textContent='إذا لم تظهر الإحصائيات، تحقق من اتصال البيانات؛ يمكنك متابعة استخدام روابط الإدارة.';home.append(note)}
 function mobileImport(){const sheet=document.getElementById('v52-more-sheet'),grid=sheet?.querySelector('.v52-sheet-grid');if(!grid||grid.querySelector('[data-v57-import]'))return;const a=document.createElement('a');a.className='v52-item v51-item';a.href='./admin-inventory-import.html';a.dataset.v57Import='true';a.innerHTML='<span aria-hidden="true">⇪</span><span>استيراد Excel</span>';grid.prepend(a);}
-function mobilePilot(){const sheet=document.getElementById('v52-more-sheet'),grid=sheet?.querySelector('.v52-sheet-grid');if(!grid||grid.querySelector('[data-v62-pilot]'))return;const a=document.createElement('a');a.className='v52-item v51-item';a.href='./admin-home.html?pilot=1';a.dataset.v62Pilot='true';a.innerHTML='<span aria-hidden="true">◎</span><span>تجربة الموظفين</span>';grid.prepend(a);}
-function init(){const home=document.getElementById('home');if(home){renderWorkspace();const observer=new MutationObserver(()=>{if(!home.querySelector('#v57-workspace'))renderWorkspace()});observer.observe(home,{childList:true});}mobileImport();mobilePilot();setTimeout(()=>{mobileImport();mobilePilot()},200);setTimeout(()=>{mobileImport();mobilePilot()},1000);setTimeout(ensureFallback,2000)}
+function mobilePilot(){const sheet=document.getElementById('v52-more-sheet'),grid=sheet?.querySelector('.v52-sheet-grid');if(!grid||grid.querySelector('[data-v62-pilot]'))return;const a=document.createElement('a');a.className='v52-item v51-item';a.href='./index.html?employee=1';a.dataset.v62Pilot='true';a.innerHTML='<span aria-hidden="true">◎</span><span>واجهة الموظفين</span>';grid.prepend(a);}
+function showOfficialWorkspace(){
+ const banner=document.querySelector('.v62-pilot-entry');
+ if(banner){
+  banner.setAttribute('aria-label','مساحة عمل الموظفين الرسمية');
+  const eyebrow=banner.querySelector('.v62-pilot-eyebrow'),title=banner.querySelector('.v62-pilot-copy strong'),description=banner.querySelector('.v62-pilot-copy small');
+  if(eyebrow)eyebrow.textContent='نسخة رسمية · لجميع الموظفين';
+  if(title)title.textContent='مساحة العمل الرسمية';
+  if(description)description.textContent='البحث والمفضلة وآخر الأصناف في واجهة واحدة؛ متاحة تلقائيًا لكل موظف مسجل.';
+  banner.querySelectorAll('.v62-pilot-buttons a').forEach((a,i)=>{
+   if(i>0){a.remove();return}
+   a.textContent='فتح واجهة الموظفين';
+   a.href='./index.html?employee=1';
+   a.removeAttribute('data-b61a-open');
+  });
+ }
+ document.querySelectorAll('a[href*="pilot=1"]').forEach(a=>{
+  a.href='./index.html?employee=1';
+  a.removeAttribute('data-b61a-open');
+  if(a.textContent.includes('تجربة'))a.textContent='مساحة عمل الموظفين';
+ });
+ if(!document.getElementById('v69-official-admin-style')){
+  const css=document.createElement('style');css.id='v69-official-admin-style';
+  css.textContent='.v62-pilot-entry{background:linear-gradient(120deg,#fafaf9,#fff)!important;border-color:#e7e5e4!important}.v62-pilot-eyebrow{color:#57534e!important}.v62-pilot-admin{background:#292524!important;border-color:#292524!important;color:#fff!important}';
+  document.head.append(css);
+ }
+}
+document.addEventListener('click',event=>{
+ const link=event.target?.closest?.('[data-b61a-open],a[href*="pilot=1"]');
+ if(!link)return;
+ event.preventDefault();event.stopImmediatePropagation();
+ location.assign('./index.html?employee=1');
+},true);
+function init(){showOfficialWorkspace();const home=document.getElementById('home');if(home){renderWorkspace();const observer=new MutationObserver(()=>{if(!home.querySelector('#v57-workspace'))renderWorkspace()});observer.observe(home,{childList:true});}mobileImport();mobilePilot();setTimeout(()=>{mobileImport();mobilePilot();showOfficialWorkspace()},200);setTimeout(()=>{mobileImport();mobilePilot();showOfficialWorkspace()},1000);setTimeout(ensureFallback,2000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
