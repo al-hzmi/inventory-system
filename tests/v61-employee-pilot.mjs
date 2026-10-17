@@ -80,6 +80,11 @@ assert.ok(pilot.includes("if(!active&&safeRead(key(id)+'_classic',{}).hidden)sho
 assert.ok(pilot.includes('b61-preview-status'),'Manager preview must explain a delayed or unavailable UI');
 assert.ok(pilot.includes("panel?.classList.toggle('b61-search-suppressed',searching)")&&pilot.includes('syncSearchVisibility();'),'Any entered search must hide the workspace immediately');
 assert.ok(pilotCss.includes('#batco61-pilot.b61-search-suppressed'),'Search results must take priority without changing the original search component');
+assert.ok(pilot.includes("document.body?.classList.add('batco-pilot-visual')")&&pilot.includes("document.body?.classList.remove('batco-pilot-visual')"),'Gallery polish must only apply to an active, allowlisted workspace');
+assert.ok(pilotCss.includes('body.batco-pilot-visual #gallery-section')&&pilotCss.includes('#batco61-pilot .b61-head'),'Workspace and gallery should share one scoped black-white visual language');
+assert.ok(pilotCss.includes('button:not([class*="accent"])')&&pilotCss.includes('button.font-bold'),'Only ordinary category chips and New Arrivals may receive monochrome overrides');
+assert.ok(!pilotCss.includes('button.font-medium[aria-pressed]'),'The admin-only missing image button must not be restyled');
+assert.ok(pilotCss.includes('#gallery-section+footer')&&pilotCss.includes('#gallery-section>div[class*="max-w-"]'),'Gallery empty state and footer alignment need continuity');
 assert.ok(admin.includes('withDeadline(')&&admin.includes('Promise.allSettled('),'Firestore reads must be bounded and independently diagnosed');
 assert.ok(admin.includes('data-b61a-open')&&admin.includes('window.BatcoPilotAdmin={open}'),'Admin home must open pilot in-page instead of redirecting to the heavy control center');
 assert.ok(read('admin-home.html').includes('data-b61a-open')&&read('admin-home.html').includes('v61-employee-pilot-admin.js?v=63.0'),'Executive dashboard must mount the admin pilot directly');
