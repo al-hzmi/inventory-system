@@ -6,13 +6,12 @@
 <title>بوابة عملاء بيت الأواني الطيبة</title>
 <meta name="description" content="المعرض الرقمي وطلبات العملاء - شركة بيت الأواني الطيبة">
 <meta name="theme-color" content="#FFFFFF">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://unpkg.com" crossorigin> <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin> <link rel="preconnect" href="https://www.gstatic.com" crossorigin> <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
-<link rel="icon" href="./icons/icon-512.png" sizes="512x512" type="image/png">
-<link rel="shortcut icon" href="./icons/icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml">
+<link rel="shortcut icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0">
 <link rel="manifest" href="./customer-manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -21,7 +20,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
 <script>
   tailwind.config = {
     theme: { extend: {
@@ -125,7 +124,7 @@
 </style>
 </head>
 <body>
-<div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./icons/icon-512.png" onerror="this.onerror=null;this.src='./icons/icon-192.png'" alt="بيت الأواني الطيبة"></div><div id="root"></div>
+<div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./assets/batco-app-icon.svg" alt="BATCO"></div><div id="root"></div>
 <script>
 window.__customerInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window.__customerInstallPrompt = e; window.dispatchEvent(new Event('customerinstallready')); });
@@ -520,7 +519,7 @@ function AccessChoice({onNew,onExisting,onBrowse,registrationEnabled=true,loginE
       <div className="ui-panel-head">
         <div className="ui-brand-mark"><Icon name="shop" className="w-7 h-7"/></div>
         <div className="ui-eyebrow">بوابة العملاء</div>
-        <h1 className="ui-title">بيت الأواني الطيبة</h1>
+        <h1 className="batco-brand-logo-heading"><img src="./assets/batco-logo.svg" alt="شركة بيت الأواني الطيبة" width="900" height="353" className="batco-brand-logo is-login" /></h1>
         <p className="ui-subtitle">تصفح المنتجات، جهّز طلبك، ووزّعه على فروعك بسهولة.</p>
       </div>
       <div className="ui-panel-body">
