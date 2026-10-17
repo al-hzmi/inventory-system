@@ -2031,9 +2031,9 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
 
             {isDetails ? (
                 <div className="animate-flip w-full p-16 flex flex-col gap-10">
-                    <div className="flex justify-between items-center gap-8 border-b border-border pb-8">
+                    <div className="flex flex-wrap justify-between items-center gap-8 border-b border-border pb-8">
                         <span className="text-[12px] font-semibold text-accent">بطاقة المنتج</span>
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-wrap items-center gap-6">
                             <PilotFavoriteButton item={item} warehouse={warehouse} compact/>
                             {isAdmin && <button onClick={(e)=>{e.stopPropagation();onAdminCategoryEdit&&onAdminCategoryEdit(item);}} className="h-32 px-8 rounded-8 bg-accentSoft text-accent text-[10px] font-bold border border-accent/10">تغيير القسم</button>}
                             <span className="text-[10px] text-muted">نقرتان للعودة</span>
