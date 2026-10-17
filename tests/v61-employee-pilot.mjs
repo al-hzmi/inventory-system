@@ -20,7 +20,7 @@ assert.ok(pilot.includes("enable(identity.id);")&&pilot.includes("waitUI(identit
 assert.ok(!pilot.includes('.onSnapshot(')&&!pilot.includes('if(allowed){enable(identity.id)'), 'Remote pilot allowlist must not control public release');
 assert.ok(!pilot.includes("if(safeRead(key(id)+'_classic',{}).hidden)"),'Old hidden preferences must not suppress official UI');
 assert.ok(pilot.includes("batco_pilot61_"),'Legacy favorites must remain after release');
-assert.ok(loader.includes('rev=69.0')&&loader.includes('v61-employee-pilot.js?v=69.0')&&loader.includes('v61-employee-pilot.css?v=69.0'),'Official loader must bust cached files');
+assert.ok(loader.includes('rev=71.0')&&loader.includes('v61-employee-pilot.js?v=69.0')&&loader.includes('v61-employee-pilot.css?v=69.0'),'Official loader must bust cached files');
 assert.ok(runtime.includes('className={`batco-gallery-favorite-anchor')&&runtime.includes("showImage?'below-zoom':'without-zoom'"),'Gallery star goes to the right below zoom');
 assert.ok(css.includes('.batco-gallery-favorite-anchor{')&&css.includes('right:8px;left:auto;top:52px'),'Star must avoid top-left logo');
 assert.ok(css.includes('.batco-direct-favorite.is-icon-only')&&css.includes('width:38px;height:38px'),'Gallery favorite must be square');
@@ -30,7 +30,7 @@ assert.ok(runtime.includes('className="batco-shopping-action-row"')&&css.include
 assert.ok(runtime.includes('className="batco-image-warehouse-toast">اختر المستودع أولًا')&&css.includes('position:static;display:table'),'Warehouse hint stays in flow');
 assert.equal((runtime.match(/<PilotFavoriteButton item=\{item\}/g)||[]).length,4,'Search/gallery direct favorite actions remain');
 assert.ok(runtime.includes("e.preventDefault();e.stopPropagation();"),'Favorite cannot flip gallery card');
-assert.ok(runtime.includes('صور نتائج البحث</span>'),'Image control retains one-line label');
+assert.ok(runtime.includes('عرض صور الأصناف</span>'),'Image control retains one-line label');
 assert.ok(css.includes('button:not([class*="accent"])')&&!css.includes('button.font-medium[aria-pressed]'),'Admin-only missing-image chip must be unchanged');
 assert.ok(admin.includes('official:true')&&!admin.includes('allowedEmployeeIds:next.ids'),'Retired admin controls must not change pilot settings');
 assert.ok(nav.includes('showOfficialWorkspace()')&&nav.includes("removeAttribute('data-b61a-open')"),'Legacy admin banner must resolve to official workspace');
