@@ -111,7 +111,7 @@
 /* ===== Brand boot screen ===== */
 #app-loader{position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .28s ease,visibility .28s ease}
 #app-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
-#app-loader img{width:92px;height:92px;object-fit:contain;filter:drop-shadow(0 8px 22px rgba(28,25,23,.08));animation:brandBoot 1.45s ease-in-out infinite}
+#app-loader img{width:min(59vw,218px);height:auto;aspect-ratio:900/353;object-fit:contain;filter:none;animation:none}
 @keyframes brandBoot{0%,100%{opacity:.72;transform:scale(.985)}50%{opacity:1;transform:scale(1.025)}}
 @media(prefers-reduced-motion:reduce){#app-loader img{animation:none}}
 
@@ -124,7 +124,7 @@
 </style>
 </head>
 <body>
-<div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./assets/batco-app-icon.svg" alt="BATCO"></div><div id="root"></div>
+<div id="app-loader" aria-label="تحميل بوابة BATCO"><img class="batco-splash-wordmark" src="./assets/batco-logo.svg?v=72.0" width="900" height="353" alt="BATCO"></div><div id="root"></div>
 <script>
 window.__customerInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window.__customerInstallPrompt = e; window.dispatchEvent(new Event('customerinstallready')); });
