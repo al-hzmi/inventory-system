@@ -4646,7 +4646,7 @@ const App = () => {
                     </div>
 
                     <div className="batco-search-card">
-                        <div className="batco-search-card-head" aria-hidden="true"><strong>مساحة العمل</strong><span>أصنافك في متناولك</span></div>
+                        <div className="batco-search-card-head"><strong>حيّاك الله، {String(sessionName||'').trim().split(/\s+/)[0]}</strong><span className="batco-search-card-eyebrow">مساحة العمل</span></div>
                     <div className="batco-search-row flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
                             <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -4663,11 +4663,14 @@ const App = () => {
                             )}
                         </div>
 
-                        <label className="flex items-center gap-8 cursor-pointer flex-shrink-0">
-                            <span className="hidden sm:inline text-[12px] text-secondary whitespace-nowrap">عرض مع الصورة</span>
-                            <input type="checkbox" className="sr-only" checked={showImageInSearch}
+                        <label className="batco-image-toggle flex items-center gap-8 cursor-pointer flex-shrink-0" title="إظهار صور الأصناف في نتائج البحث">
+                            <span className="batco-image-label flex flex-col">
+                                <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">صور الأصناف</span>
+                                <small className="batco-image-label-detail text-[10px] text-muted whitespace-nowrap">{showImageInSearch ? 'تظهر مع النتائج' : 'اضغط لإظهارها'}</small>
+                            </span>
+                            <input type="checkbox" role="switch" aria-label="إظهار صور الأصناف في نتائج البحث" aria-checked={showImageInSearch} className="sr-only" checked={showImageInSearch}
                                    onChange={(e) => setShowImageInSearch(e.target.checked)} disabled={!warehouse} />
-                            <div className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-accent' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
+                            <div aria-hidden="true" className={`w-44 h-26 rounded-full transition-colors relative flex-shrink-0 ${showImageInSearch ? 'bg-primary' : 'bg-border'} ${!warehouse ? 'opacity-50' : ''}`}>
                                 <div className={`absolute top-2 left-2 w-22 h-22 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
                             </div>
                         </label>
@@ -4676,7 +4679,7 @@ const App = () => {
                         <div id="batco-pilot-search-slot" aria-label="اختصارات البحث" />
                     </div>
 
-                    {warehouse && showImageInSearch && <p className="text-[11px] text-accent">المتوفر يظهر أولاً دائمًا، وبعده المنتهي عند وجود تطابق — والصورة قابلة للحفظ مباشرة.</p>}
+                    {warehouse && showImageInSearch && <p className="batco-image-explainer text-[11px] text-accent">المتوفر يظهر أولاً دائمًا، وبعده المنتهي عند وجود تطابق — والصورة قابلة للحفظ مباشرة.</p>}
                 </div>
             </div>
 
