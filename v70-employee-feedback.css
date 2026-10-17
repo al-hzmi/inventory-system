@@ -1,0 +1,66 @@
+/* V70 official employee feedback — monochrome, unobtrusive, touch-friendly. */
+#batco70-feedback-backdrop{
+ position:fixed;inset:0;z-index:3000;display:flex;justify-content:center;align-items:center;
+ padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));
+ background:rgba(28,25,23,.36);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+ overscroll-behavior:contain;direction:rtl
+}
+#batco70-feedback-backdrop[hidden]{display:none!important}
+#batco70-feedback-backdrop *{box-sizing:border-box}
+#batco70-feedback-dialog{
+ width:100%;max-width:410px;max-height:calc(100dvh - 40px);overflow-y:auto;
+ padding:25px 24px 22px;border:1px solid #e7e5e4;border-radius:22px;
+ background:#fff;box-shadow:0 22px 65px rgba(28,25,23,.19);
+ color:#1c1917;font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif;
+ text-align:right;animation:batco70-appear .19s ease-out
+}
+#batco70-feedback-dialog .b70-eyebrow{margin:0 0 5px;font-size:11px;color:#78716c;font-weight:700}
+#batco70-feedback-dialog h2{margin:0;font-size:21px;font-weight:800;line-height:1.6}
+#batco70-feedback-dialog .b70-subtitle{margin:7px 0 14px;font-size:12px;color:#57534e;line-height:1.9}
+#batco70-feedback-dialog .b70-stars{
+ direction:ltr;display:flex;justify-content:center;align-items:center;gap:6px;margin:4px 0 3px
+}
+#batco70-feedback-dialog .b70-star{
+ display:flex;justify-content:center;align-items:center;
+ width:50px;height:50px;border:1px solid transparent;background:transparent;
+ border-radius:12px;color:#bcb6af;cursor:pointer;padding:8px;touch-action:manipulation;
+ transition:color .15s,transform .15s,background .15s
+}
+#batco70-feedback-dialog .b70-star:hover{background:#fafaf9}
+#batco70-feedback-dialog .b70-star:focus-visible{outline:2px solid #292524;outline-offset:2px}
+#batco70-feedback-dialog .b70-star[aria-pressed="true"]{color:#292524}
+#batco70-feedback-dialog .b70-star svg{width:31px;height:31px;display:block;stroke-width:1.65}
+#batco70-feedback-dialog .b70-star:active{transform:scale(.93)}
+#batco70-feedback-dialog .b70-rating-hint{
+ min-height:22px;text-align:center;font-size:11px;line-height:1.8;color:#78716c;margin-bottom:10px
+}
+#batco70-feedback-dialog label.b70-note-label{display:block;font-size:12px;font-weight:700;margin-bottom:7px;color:#44403c}
+#batco70-feedback-dialog textarea{
+ width:100%;min-height:80px;max-height:150px;resize:vertical;
+ border:1px solid #e7e5e4;border-radius:12px;padding:11px 12px;
+ background:#fafaf9;color:#1c1917;font:400 12px/1.8 inherit;
+ font-family:inherit;outline:none
+}
+#batco70-feedback-dialog textarea:focus{border-color:#78716c;box-shadow:0 0 0 3px rgba(120,113,108,.1)}
+#batco70-feedback-dialog textarea::placeholder{color:#9b948d}
+#batco70-feedback-dialog .b70-message{min-height:21px;font-size:11px;color:#a23b35;margin:6px 0;line-height:1.7}
+#batco70-feedback-dialog .b70-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#batco70-feedback-dialog .b70-controls button{
+ min-height:46px;padding:9px 10px;border-radius:12px;font:700 12px/1.6 inherit;
+ font-family:inherit;cursor:pointer;touch-action:manipulation
+}
+#batco70-feedback-dialog .b70-send{background:#292524;color:#fff;border:1px solid #292524}
+#batco70-feedback-dialog .b70-send:disabled{opacity:.48;cursor:not-allowed}
+#batco70-feedback-dialog .b70-later{background:#fff;color:#44403c;border:1px solid #d6d3d1}
+#batco70-feedback-dialog .b70-later:hover{background:#fafaf9}
+#batco70-feedback-dialog .b70-controls button:focus-visible{outline:2px solid #292524;outline-offset:3px}
+#batco70-feedback-dialog .b70-privacy{margin:12px 0 0;font-size:10px;color:#78716c;line-height:1.8;text-align:center}
+@keyframes batco70-appear{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+@media(max-width:390px){
+ #batco70-feedback-dialog{padding:20px 16px 18px;border-radius:18px}
+ #batco70-feedback-dialog h2{font-size:19px}
+ #batco70-feedback-dialog .b70-stars{gap:0}
+ #batco70-feedback-dialog .b70-star{width:46px;height:48px;padding:7px}
+ #batco70-feedback-dialog .b70-controls{gap:7px}
+}
+@media(prefers-reduced-motion:reduce){#batco70-feedback-dialog{animation:none!important}}
