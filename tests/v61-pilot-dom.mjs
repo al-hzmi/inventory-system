@@ -68,6 +68,18 @@ w.document.getElementById('searchInput').value='';
 w.document.getElementById('searchInput').dispatchEvent(new w.Event('input',{bubbles:true}));
 const pref=JSON.parse(w.localStorage.getItem('batco_pilot61_101049_prefs'));
 assert.ok(pref.favorites.includes('jeddah|'+firstSku));
+let favoriteSignals=0;w.addEventListener('batco61:favorites-changed',()=>favoriteSignals++);
+const direct='GALLERY_ONLY_001';
+w.dispatchEvent(new w.CustomEvent('batco61:favorite-toggle',{detail:{sku:direct,warehouse:'jeddah',name:'صنف من المعرض',unit:'كرتون',qty:3,pack:'12'}}));
+assert.equal(w.BatcoPilot.isFavorite(direct,'jeddah'),true,'Gallery-only product can be saved in a single click without search history');
+assert.equal(w.document.querySelector('[data-tab="favorite"]').getAttribute('aria-expanded'),'false','Saving from gallery does not force a navigation or popover');
+w.document.querySelector('[data-tab="favorite"]').click();
+assert.ok(w.document.querySelector('.b61-list').textContent.includes('GALLERY_ONLY_001'),'Gallery-only product immediately appears in favorites list');
+w.dispatchEvent(new w.CustomEvent('batco61:favorite-toggle',{detail:{sku:direct,warehouse:'jeddah',name:'صنف من المعرض'}}));
+assert.equal(w.BatcoPilot.isFavorite(direct,'jeddah'),false,'A second click removes the product from favorites');
+assert.ok(favoriteSignals>=2,'Favorite updates must notify React cards');
+w.document.querySelector('[data-tab="favorite"]').click();
+
 assert.equal(w.document.querySelector('.b61-classic'),null,'No X may remove staff shortcuts');
 assert.equal(panel.querySelector('.b65-actions').querySelectorAll('button').length,3,'Three spacious tools remain visible');
 assert.ok(panel.querySelector('[data-tab="recent"]').textContent.includes('آخر الأصناف'),'Staff can identify history without guessing');
