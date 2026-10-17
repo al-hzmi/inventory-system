@@ -8,12 +8,12 @@
 <style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:82px;height:82px;object-fit:contain}.v37box p{font-size:12px;color:#78716c;margin:12px 0 0}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style>
 </head>
 <body>
-<div id="v37boot"><div class="v37box"><img src="./icons/icon-192.png" alt="بيت الأواني الطيبة"><p>جاري فتح النظام...</p></div></div>
+<div id="v37boot"><div class="v37box"><img src="./assets/batco-app-icon.svg" alt="BATCO"><p>جاري فتح النظام...</p></div></div>
 <script>
 (async function(){
   // V44_QA_BOOTSTRAP: automated browsers must never pollute production presence or logs.
   window.__V44_QA=Boolean(['127.0.0.1','localhost'].includes(location.hostname)||navigator.webdriver===true||/[?&](?:qa|test)=1(?:&|$)/.test(location.search));
-  const CORE='./runtime/index-v37-source.txt?v=56.16&rev=69.0';
+  const CORE='./runtime/index-v37-source.txt?v=56.16&rev=71.0';
   const TRANSFER_KEY='batco_employee_customer_cart_transfer_v1';
   const TRANSFER_BACKUP_KEY='batco_employee_customer_cart_transfer_backup_v1';
   const TRANSFER_APPLIED_PREFIX='batco_employee_customer_cart_transfer_applied_v1_';
@@ -28,7 +28,15 @@
       u.searchParams.set('employee','1');u.searchParams.delete('chooser');history.replaceState(null,'',u.pathname+u.search+u.hash);
     }
   }
-  if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.update().catch(()=>{}))).catch(()=>{});
+  // Service-worker updates run off the critical loading path, at most once per 6 hours.
+  if('serviceWorker' in navigator)setTimeout(()=>{
+    try{
+      const key='batco_sw_checked_v71',last=Number(localStorage.getItem(key)||0);
+      if(Date.now()-last<21600000)return;
+      localStorage.setItem(key,String(Date.now()));
+      navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(reg=>reg.update().catch(()=>{}))).catch(()=>{});
+    }catch{}
+  },6500);
 
   const toEnglishDigits40=str=>String(str||'').replace(/[٠-٩۰-۹]/g,d=>{
     const a='٠١٢٣٤٥٦٧٨٩',e='۰۱۲۳۴۵۶۷۸۹',i=a.indexOf(d);
@@ -263,6 +271,7 @@
     if(onboardHaroon&&!employeeName){html=html.replace('</body>','<div style="position:fixed;z-index:999999;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(92vw,520px);background:#1c1917;color:#fff;border-radius:18px;padding:15px 18px;text-align:center;font:700 14px/1.8 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.24)"><b>هارون — دخول الموظفين</b><br><span style="font-weight:500;color:#e7e5e4">أكمل دخولك من قسم الموظفين، أنشئ رمز الدخول ثم نفّذ تصوير التحقق مرة واحدة.</span></div></body>');}
     html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.1"></scr'+'ipt><script src="./v56-39-site-identity.js?v=56.39"></scr'+'ipt></body>');
     // V61 employee pilot: isolated and disabled unless the admin allowlist opts in.
+    html=html.replace('</head>','<link rel="stylesheet" href="./v71-brand.css?v=71.0"></head>');
     html=html.replace('</head>','<link rel="stylesheet" href="./v61-employee-pilot.css?v=69.0"></head>');
     html=html.replace('</body>','<scr'+'ipt src="./v61-employee-pilot.js?v=69.0"></scr'+'ipt></body>');
     html=html.replace('</head>','<link rel="stylesheet" href="./v70-employee-feedback.css?v=70.1"></head>');
