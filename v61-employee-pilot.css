@@ -1,9 +1,52 @@
-/* V65: lightweight tools attached visually to the original search bar.
+/* V66: integrated premium search card with optional quick tools.
    Never inject elements into the React-owned search field itself. */
+/* V66: one physical card for the original React search and opted-in quick tools.
+   React retains full control of the input, scanner, stock selection and image toggle. */
+.batco-search-card{display:contents}
+.batco-search-card-head{display:none}
+#batco-pilot-search-slot:empty{display:none}
+body.batco-pilot-visual .batco-search-card{
+ display:block;position:relative;border:1px solid #dedbd7;border-radius:17px;
+ background:linear-gradient(145deg,#fafaf9 0%,#fff 72%);
+ box-shadow:0 5px 22px rgba(28,25,23,.055),0 1px 3px rgba(28,25,23,.035);
+ padding:13px 13px 7px;
+}
+body.batco-pilot-visual .batco-search-card-head{
+ display:flex;align-items:center;justify-content:space-between;gap:10px;
+ padding:0 3px 10px;font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif
+}
+body.batco-pilot-visual .batco-search-card-head strong{
+ font-size:12px;font-weight:800;color:#292524;line-height:1.7
+}
+body.batco-pilot-visual .batco-search-card-head span{
+ font-size:10px;font-weight:450;color:#928c86;line-height:1.7
+}
+body.batco-pilot-visual .batco-search-card #searchInput{
+ background:#fff;border-color:#d6d3d1;border-radius:12px;
+ box-shadow:0 1px 3px rgba(28,25,23,.035)
+}
+body.batco-pilot-visual .batco-search-card #searchInput:focus{
+ border-color:#57534e;box-shadow:0 0 0 3px rgba(87,83,78,.10)
+}
+body.batco-pilot-visual .batco-search-card .batco-search-card-head+.batco-search-row{
+ position:relative;z-index:1
+}
+body.batco-pilot-visual .batco-search-card #batco-pilot-search-slot{
+ margin-top:7px;padding-top:6px;border-top:1px solid #eceae7
+}
+body.batco-pilot-visual .batco-search-card:has(#batco61-pilot.b61-search-suppressed) #batco-pilot-search-slot{
+ display:none
+}
+@media(max-width:760px){
+ body.batco-pilot-visual .batco-search-card{border-radius:15px;padding:11px 10px 6px}
+ body.batco-pilot-visual .batco-search-card-head{padding:0 3px 8px}
+ body.batco-pilot-visual .batco-search-card-head span{font-size:9px}
+}
+
 #batco61-pilot{
  --b65-ink:#1c1917;--b65-muted:#78716c;--b65-line:#e7e5e4;
  box-sizing:border-box;position:relative;z-index:20;direction:rtl;
- width:min(100%,1024px);margin:0 auto;padding:0 16px;
+ width:100%;margin:0;padding:0;
  font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif;
  color:var(--b65-ink);background:#fff;
 }
@@ -12,7 +55,7 @@
 #batco61-pilot button:focus-visible,.b61-return:focus-visible{outline:2px solid #1c1917;outline-offset:2px}
 #batco61-pilot .b65-tool-row{
  display:flex;align-items:center;justify-content:space-between;gap:8px;
- min-height:40px;padding:3px 0 5px;border-bottom:1px solid var(--b65-line);
+ min-height:40px;padding:3px 0 1px;border-bottom:0;
 }
 #batco61-pilot .b65-actions{display:flex;align-items:center;min-width:0;gap:4px;flex-wrap:nowrap}
 #batco61-pilot .b65-actions button{
@@ -30,8 +73,8 @@
 }
 #batco61-pilot .b61-classic:hover,#batco61-pilot .b65-dismiss:hover{background:#f5f5f4;color:#1c1917}
 #batco61-pilot .b65-popover{
- position:absolute;top:calc(100% + 2px);inset-inline:16px;z-index:49;
- max-height:min(50vh,360px);overflow:auto;overscroll-behavior:contain;
+ position:absolute;top:calc(100% + 4px);inset-inline:0;z-index:49;
+ max-height:min(48vh,340px);overflow:auto;overscroll-behavior:contain;
  border:1px solid #e7e5e4;border-radius:12px;padding:12px;background:#fff;
  box-shadow:0 8px 30px rgba(28,25,23,.12);
 }
@@ -133,8 +176,8 @@ body.batco-pilot-visual #gallery-section+footer .developer-link{color:#78716c;fo
 .b61-preview-status.is-warning{background:#fff8ee;border-color:#ead1a4;color:#8a531c}
 #batco61-pilot.b61-search-suppressed,.b61-return.b61-search-suppressed{display:none!important}
 @media(max-width:760px){
- #batco61-pilot{padding:0 12px}
- #batco61-pilot .b65-popover{inset-inline:12px}
+ #batco61-pilot{padding:0}
+ #batco61-pilot .b65-popover{inset-inline:0}
  #batco61-pilot .b65-tool-row{min-height:38px}
  #batco61-pilot .b65-actions{gap:1px}
  #batco61-pilot .b65-actions button{padding:4px 7px;font-size:10px;gap:4px}
