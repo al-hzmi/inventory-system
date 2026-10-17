@@ -10,13 +10,13 @@
     <meta property="og:title" content="شركة بيت الأواني الطيبة">
     <meta property="og:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
+    <meta property="og:image" content="https://inventory-system-coral-nu.vercel.app/icons/icon-512.png?v=71.0">
     <meta property="og:url" content="https://inventory-system-coral-nu.vercel.app">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="شركة بيت الأواني الطيبة">
     <meta name="twitter:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
-    <meta name="twitter:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
+    <meta name="twitter:image" content="https://inventory-system-coral-nu.vercel.app/icons/icon-512.png?v=71.0">
 
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -1608,18 +1608,13 @@ const ProductImage = ({ fileName, alt, className }) => {
         }
     }, [imageUrl, fileName]);
 
-    useEffect(() => {
-        if (!imageUrl || preparedFile) return;
-        const timer = setTimeout(() => { prepareShareFile(); }, 120);
-        return () => clearTimeout(timer);
-    }, [imageUrl, preparedFile, prepareShareFile]);
-
+    // Images remain browser-lazy-loaded; only construct share File when sharing is requested.
+    // The old effect fetched every mounted image twice and held extra Blobs in memory.
     if (!fileName) return null;
 
     const openActions = (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         setShowActions(true);
-        if (!preparedFile && !preparing) prepareShareFile();
     };
 
     const handleDownload = async () => {
@@ -1673,7 +1668,6 @@ const ProductImage = ({ fileName, alt, className }) => {
                 className={className}
                 style={{ cursor:'pointer' }}
                 onClick={openActions}
-                onLoad={() => { if (!preparedFile && !preparing) prepareShareFile(); }}
                 onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
             />
 
