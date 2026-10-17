@@ -100,7 +100,7 @@ assert.ok(pilotCss.includes('min-height:70px')&&pilotCss.includes('grid-template
 assert.ok(pilot.includes('class="b65-dismiss"')&&pilot.includes('>إغلاق</button>'),'Details should close explicitly without an X symbol');
 assert.ok(runtime.includes('حيّاك الله، {String(sessionName||\'\').trim().split(/\\s+/)[0]}'),'Greeting uses verified application session rather than guessing employee identity');
 assert.ok(!runtime.includes('أصنافك في متناولك'),'Remove unnecessary header filler');
-assert.ok(runtime.includes('عرض صور الأصناف</span>')&&!runtime.includes('batco-image-label-detail'),'Image option must be one clearly labeled line without a second-row hint');
+assert.ok(runtime.includes('صور نتائج البحث</span>')&&!runtime.includes('batco-image-label-detail'),'Image option must be one clearly labeled line without a second-row hint');
 assert.ok(runtime.includes('aria-label="عرض صور الأصناف مع نتائج البحث"')&&runtime.includes('if(!warehouse){setImageWarehouseNotice(true);return;}')&&runtime.includes('setShowImageInSearch(e.target.checked)'),'Image switch shows select-warehouse tip instead of silently staying disabled');
 assert.ok(pilotCss.includes('.batco-image-toggle:focus-within')&&pilotCss.includes('.batco-image-toggle:has(input:checked)'),'Image toggle must provide focus and enabled feedback');
 assert.ok(runtime.includes('const PilotFavoriteButton = memo(')&&runtime.includes("new CustomEvent('batco61:favorite-toggle'"),'Product cards must provide direct favorite actions without history navigation');
@@ -111,6 +111,7 @@ assert.ok(pilot.includes("window.addEventListener('batco61:favorite-toggle'")&&p
 assert.ok(pilot.includes('favoriteSnapshots')&&pilot.includes('prefs.favoriteSnapshots?.[marker]'),'Gallery-only/archived product favorites must be recallable');
 assert.ok(pilotCss.includes('.batco-direct-favorite')&&pilotCss.includes('.batco-image-warehouse-toast'),'Tap target and inline warehouse toast must be styled');
 assert.ok(pilotCss.includes('font-size:19px;line-height:1;flex-shrink:0'),'Shortcut icons must be slightly smaller but remain legible');
+assert.ok(runtime.includes("saved?'محفوظ':'أضف للمفضلة'"),'One-click action should say add-to-favorites clearly');
 
 assert.ok(html.includes('rev=68.0'),'Bootloader must invalidate cached header template');
 
