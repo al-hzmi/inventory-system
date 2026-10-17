@@ -239,6 +239,15 @@ body.batco-pilot-visual #gallery-section+footer .developer-link{color:#78716c;fo
  #batco61-pilot .b61-list{grid-template-columns:1fr}
  body.batco-pilot-visual #gallery-section{margin-top:14px!important;padding-top:14px}
 }
+/* Avoid star/zoom overlap on narrow two-column gallery tiles.
+   Text is preserved on search cards and in the accessible button label. */
+@media(max-width:600px){
+ body.batco-pilot-visual #gallery-section .batco-direct-favorite.is-compact{
+  width:39px;min-width:39px;height:39px;min-height:39px;padding:5px
+ }
+ body.batco-pilot-visual #gallery-section .batco-direct-favorite.is-compact b{display:none}
+ body.batco-pilot-visual #gallery-section .batco-direct-favorite.is-compact span{font-size:22px}
+}
 @media(max-width:360px){
  #batco61-pilot .b65-actions button{min-height:64px;padding:8px 3px}
  #batco61-pilot .b65-actions button b{font-size:10px}
