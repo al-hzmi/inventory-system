@@ -1,12 +1,12 @@
 /* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
 (function(){
 'use strict';
-const DOC='employee_site_access',VERSION='64.0';
+const DOC='employee_site_access',VERSION='65.0';
 const CONFIG_FIELD='employeeHomePilot';
 const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
 let unsubscribe=null,currentId='',active=false,panel=null,bootTimer=null,searchTimer=null,refreshCount=0;
-let inventory={jeddah:{},riyadh:{}},prefs={recent:[],favorites:[]},diffs=null,tab='recent';
+let inventory={jeddah:{},riyadh:{}},prefs={recent:[],favorites:[]},diffs=null,tab='recent',expanded=false;
 const safeRead=(key,fallback)=>{try{const a=JSON.parse(localStorage.getItem(key)||'null');return a&&typeof a==='object'?a:fallback}catch{return fallback}};
 const save=(key,obj)=>{try{localStorage.setItem(key,JSON.stringify(obj))}catch{}};
 const key=(id)=>'batco_pilot61_'+String(id).replace(/[^a-zA-Z0-9_-]/g,'_');
@@ -92,6 +92,7 @@ function remember(sku,branch){
 function searchIsActive(){return Boolean(String(document.getElementById('searchInput')?.value||'').trim())}
 function syncSearchVisibility(){
  const searching=searchIsActive();
+ if(searching&&expanded){expanded=false;if(panel)show()}
  panel?.classList.toggle('b61-search-suppressed',searching);
  document.getElementById('b61-return')?.classList.toggle('b61-search-suppressed',searching);
 }
@@ -136,15 +137,16 @@ function card(marker){
 }
 function show(){
  if(!panel||!active)return;
- const name=user()?.name||'';
- panel.querySelector('.b61-greet').textContent='حيّاك الله، '+name.split(' ')[0];
- panel.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('is-active',b.dataset.tab===tab);b.setAttribute('aria-pressed',String(b.dataset.tab===tab))});
+ const popup=panel.querySelector('.b65-popover');
+ if(popup)popup.hidden=!expanded;
+ panel.querySelectorAll('[data-tab]').forEach(b=>{const selected=expanded&&b.dataset.tab===tab;b.classList.toggle('is-active',selected);b.setAttribute('aria-pressed',String(selected));b.setAttribute('aria-expanded',String(selected))});
+ if(!expanded)return;
  const title=panel.querySelector('.b61-list-title');
  title.textContent=tab==='recent'?'آخر الأصناف التي بحثت عنها':tab==='favorite'?'الأصناف المفضلة':'وش تغيّر من آخر زيارة؟';
  const list=panel.querySelector('.b61-list');list.replaceChildren();
  if(tab==='changes'){
-  if(diffs===null){list.append(el('p','b61-empty','هذه أول زيارة. سنقارن أرصدة المخزون في زيارتك القادمة من هذا الجهاز.'));return}
-  if(!diffs.length){list.append(el('p','b61-empty','لا توجد فروقات منذ الزيارة السابقة.'));return}
+  if(diffs===null){list.append(el('p','b61-empty','تظهر التغيّرات من الزيارة القادمة.'));return}
+  if(!diffs.length){list.append(el('p','b61-empty','لا توجد تغيّرات.'));return}
   for(const x of diffs.slice(0,12)){
    const button=el('button','b61-diff');
    const tags={new:'صنف جديد',empty:'نفد',back:'عاد للتوفر',down:'انخفض',up:'زاد'};
@@ -155,38 +157,41 @@ function show(){
  }
  const source=tab==='recent'?prefs.recent:prefs.favorites;
  const nodes=(source||[]).map(card).filter(Boolean).slice(0,8);
- if(!nodes.length){list.append(el('p','b61-empty',tab==='favorite'?'افتح أحد الأصناف من «آخر الأصناف»، ثم اضغط النجمة لحفظه هنا.':'ابحث عن صنف برقمه، وستجده هنا للرجوع إليه سريعًا.'))}
+ if(!nodes.length){list.append(el('p','b61-empty',tab==='favorite'?'احفظ صنفًا بالنجمة من «الأخيرة».':'تظهر هنا الأصناف التي تبحث عنها.'))}
  else list.append(...nodes);
 }
 function close(){
- active=false;panel?.remove();panel=null;clearTimeout(searchTimer);diffs=null;
+ active=false;expanded=false;panel?.remove();panel=null;clearTimeout(searchTimer);diffs=null;
  document.body?.classList.remove('batco-pilot-visual');
 }
 function paint(){
- if(!active)return;const input=document.getElementById('searchInput');if(!input)return;
+ if(!active)return;
+ const input=document.getElementById('searchInput');if(!input)return;
  if(panel?.isConnected){document.body?.classList.add('batco-pilot-visual');syncSearchVisibility();previewNotice(null);return}
  const region=input.closest('.sticky')||input.parentElement?.parentElement?.parentElement;
  if(!region?.parentElement)return;
- panel=el('section','b61-panel');panel.id=rootId;panel.setAttribute('aria-label','مساحة العمل التجريبية');
- panel.innerHTML='<div class="b61-head"><div><span class="b61-eyebrow">مساحة العمل · نسخة تجريبية</span><h2 class="b61-greet"></h2><p>أصنافك المعتادة وآخر التحديثات، بجانب البحث المعتاد.</p></div><button type="button" class="b61-classic">العودة للواجهة الكلاسيكية</button></div><div class="b61-tiles"><button type="button" data-tab="recent"><span>↶</span><b>آخر الأصناف</b><small>رجوع سريع</small></button><button type="button" data-tab="favorite"><span>☆</span><b>المفضلة</b><small>أصنافك المعتادة</small></button><button type="button" data-tab="changes"><span>↗</span><b>وش تغيّر؟</b><small>من آخر زيارة</small></button></div><div class="b61-content"><div class="b61-list-head"><h3 class="b61-list-title"></h3><small>حفظ خاص بهذا الجهاز</small></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div><p class="b61-footnote">مساحة مساعدة للعرض فقط، دون تغيير بيانات المخزون أو طريقة البحث.</p>';
+ panel=el('section','b65-search-tools');panel.id=rootId;panel.setAttribute('aria-label','أدوات البحث السريعة');
+ panel.innerHTML='<div class="b65-tool-row"><div class="b65-actions" role="group" aria-label="اختصارات البحث"><button type="button" data-tab="recent" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">↶</span> الأخيرة</button><button type="button" data-tab="favorite" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">☆</span> المفضلة</button><button type="button" data-tab="changes" aria-controls="b65-popup" aria-expanded="false"><span aria-hidden="true">↗</span> التغيّرات</button></div><button type="button" class="b61-classic" title="الواجهة الكلاسيكية" aria-label="العودة للواجهة الكلاسيكية">×</button></div><div class="b65-popover" id="b65-popup" hidden><div class="b61-list-head"><h3 class="b61-list-title"></h3><button class="b65-dismiss" type="button" aria-label="إغلاق القائمة">×</button></div><div class="b61-list"></div><p class="b61-notice" role="status"></p></div>';
  region.parentElement.insertBefore(panel,region.nextSibling);
  document.body?.classList.add('batco-pilot-visual');
- syncSearchVisibility();
- previewNotice(null);
- panel.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;show()}));
+ panel.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{
+  const requested=button.dataset.tab;
+  expanded=tab===requested?!expanded:true;tab=requested;show();
+ }));
+ panel.querySelector('.b65-dismiss').addEventListener('click',()=>{expanded=false;show()});
  panel.querySelector('.b61-classic').addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:true});close();showReturnButton()});
- show();
+ syncSearchVisibility();show();previewNotice(null);
 }
 function showReturnButton(){
  const area=document.getElementById('searchInput');if(!area){previewNotice('جارٍ تجهيز البحث لإظهار زر العودة إلى التجربة…');return}if(document.getElementById('b61-return')){previewNotice(null);return}
- const btn=el('button','b61-return','إظهار مساحة العمل التجريبية');btn.id='b61-return';btn.type='button';
+ const btn=el('button','b61-return','↶ اختصارات البحث');btn.id='b61-return';btn.type='button';
  btn.addEventListener('click',()=>{save(key(currentId)+'_classic',{hidden:false});btn.remove();active=true;paint();loadInventory(currentId).catch(()=>toast('تعذّر تحميل الأصناف الآن؛ البحث الأساسي لا يزال يعمل.'))});
  const anchor=area.closest('.sticky')||area.parentElement;if(anchor?.parentElement)anchor.parentElement.insertBefore(btn,anchor.nextSibling);
  syncSearchVisibility();
 }
 function enable(id){
  if(active&&currentId===id){paint();return;}
- close();currentId=id;active=true;tab='recent';
+ close();currentId=id;active=true;tab='recent';expanded=false;
  if(safeRead(key(id)+'_classic',{}).hidden){active=false;showReturnButton();return}
  paint();
  loadInventory(id).catch(()=>{if(panel){panel.querySelector('.b61-list').replaceChildren(el('p','b61-empty','تعذر تحميل الملخص الآن؛ البحث الأساسي يعمل كالمعتاد.'))}});
@@ -226,6 +231,10 @@ window.addEventListener('batco61:product-open',event=>{
  remember(sku,branch);
 });
 document.addEventListener('input',handleSearch,true);
+document.addEventListener('pointerdown',e=>{
+ if(expanded&&panel&&!panel.contains(e.target)){expanded=false;show()}
+},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&expanded){expanded=false;show();document.getElementById('searchInput')?.focus({preventScroll:true})}},true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 window.BatcoPilot={decode,delta,allowlisted,version:VERSION}; // Read-only test helpers.
 })();
