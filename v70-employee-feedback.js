@@ -3,9 +3,12 @@
 (function(){
 'use strict';
 const RELEASE='v70',COLLECTION='employee_experience_feedback',PREFIX='batco_employee_feedback_v70_';
-const INITIAL_DELAY=9000,RETRY_DELAY=3500,MAX_BUSY_WAIT=60000;
+const INITIAL_DELAY=9000,RETRY_DELAY=3500,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=7000;
 let identity=null,visit=0,dialog=null,waiting=false,sending=false,rating=0,visible=false,previousFocus=null;
-let checkTimer=null,firstReadyAt=0;
+let checkTimer=null,firstReadyAt=0,lastInteraction=Date.now();
+for(const eventName of ['pointerdown','touchstart','keydown','wheel','scroll']){
+ document.addEventListener(eventName,()=>{lastInteraction=Date.now()},true);
+}
 const safeJson=(s,fallback)=>{try{const d=JSON.parse(s||'null');return d&&typeof d==='object'?d:fallback}catch{return fallback}};
 const getIdentity=()=>{
  try{
@@ -111,6 +114,7 @@ function open(){
 }
 function isBusy(){
  if(document.visibilityState==='hidden')return true;
+ if(Date.now()-lastInteraction<IDLE_THRESHOLD)return true;
  const field=document.getElementById('searchInput');
  if(!field)return true;
  if(String(field.value||'').trim())return true;
