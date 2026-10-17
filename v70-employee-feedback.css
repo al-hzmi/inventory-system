@@ -38,8 +38,8 @@
 #batco70-feedback-dialog textarea{
  width:100%;min-height:80px;max-height:150px;resize:vertical;
  border:1px solid #e7e5e4;border-radius:12px;padding:11px 12px;
- background:#fafaf9;color:#1c1917;font:400 12px/1.8 inherit;
- font-family:inherit;outline:none
+ background:#fafaf9;color:#1c1917;font-size:12px;line-height:1.8;
+ font-family:inherit;font-weight:400;outline:none
 }
 #batco70-feedback-dialog textarea:focus{border-color:#78716c;box-shadow:0 0 0 3px rgba(120,113,108,.1)}
 #batco70-feedback-dialog textarea::placeholder{color:#9b948d}
