@@ -66,7 +66,7 @@ async function load(){
  try{
   if(!window.firebase?.firestore)throw Error('تعذر تحميل قاعدة البيانات');
   if(!firebase.apps.length)firebase.initializeApp(config);
-  const snap=await firebase.firestore().collection(COLLECTION).limit(MAX_RECORDS).get({source:'server'});
+  const snap=await firebase.firestore().collection(COLLECTION).orderBy('submittedAt','desc').limit(MAX_RECORDS).get({source:'server'});
   rows=snap.docs.map(doc=>({id:doc.id,...doc.data()}))
    .filter(x=>Number.isInteger(Number(x.stars))&&Number(x.stars)>=1&&Number(x.stars)<=5)
    .map(x=>({...x,stars:Number(x.stars)}))
