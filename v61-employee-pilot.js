@@ -1,7 +1,7 @@
 /* BATCO V61.1: opt-in employee pilot, independent from the existing search and ordering UI. */
 (function(){
 'use strict';
-const DOC='employee_site_access',VERSION='67.0';
+const DOC='employee_site_access',VERSION='68.0';
 const CONFIG_FIELD='employeeHomePilot';
 const allowlisted=(data,id)=>{const cfg=data?.[CONFIG_FIELD]||data;return Boolean(cfg?.enabled===true&&Array.isArray(cfg.allowedEmployeeIds)&&cfg.allowedEmployeeIds.map(String).includes(String(id)))};
 const rootId='batco61-pilot';
@@ -115,10 +115,21 @@ function handleSearch(e){
   if(item)remember(item.sku,branch);
  },750);
 }
-function favorite(marker){
+function favorite(marker,snapshot=null){
+ if(!active||!currentId)return;
  prefs.favorites=Array.isArray(prefs.favorites)?prefs.favorites:[];
- prefs.favorites=prefs.favorites.includes(marker)?prefs.favorites.filter(x=>x!==marker):[marker,...prefs.favorites].slice(0,24);
- save(key(currentId)+'_prefs',prefs);show();
+ const wasSaved=prefs.favorites.includes(marker);
+ prefs.favorites=wasSaved?prefs.favorites.filter(x=>x!==marker):[marker,...prefs.favorites].slice(0,24);
+ prefs.favoriteSnapshots=prefs.favoriteSnapshots&&typeof prefs.favoriteSnapshots==='object'?prefs.favoriteSnapshots:{};
+ if(snapshot&&!wasSaved&&!inventory[marker.split('|')[0]]?.[marker.split('|')[1]]){
+  prefs.favoriteSnapshots[marker]=snapshot;
+ }
+ for(const stored of Object.keys(prefs.favoriteSnapshots)){
+  if(!prefs.favorites.includes(stored))delete prefs.favoriteSnapshots[stored];
+ }
+ save(key(currentId)+'_prefs',prefs);
+ show();
+ window.dispatchEvent(new CustomEvent('batco61:favorites-changed',{detail:{marker,saved:!wasSaved}}));
 }
 async function copyProduct(item,branch){
  const content=item.sku+' — '+item.name+'\nمخزون '+branchName(branch)+'\nالكمية المتوفرة: '+fmt(item.qty)+' '+item.unit+'\nالشد: '+item.pack;
@@ -126,7 +137,7 @@ async function copyProduct(item,branch){
 }
 function toast(msg){const target=panel?.querySelector('.b61-notice');if(target)target.textContent=msg}
 function card(marker){
- const [branch,sku]=marker.split('|'),p=inventory[branch]?.[sku];if(!p)return null;
+ const [branch,sku]=marker.split('|'),p=inventory[branch]?.[sku]||prefs.favoriteSnapshots?.[marker];if(!p)return null;
  const row=el('article','b61-product');
  const open=el('button','b61-product-main');
  open.type='button';open.append(el('span','b61-sku',p.sku),el('strong','',p.name),el('small','',branchName(branch)+' · '+fmt(p.qty)+' '+p.unit));
@@ -165,11 +176,12 @@ function show(){
 function close(){
  active=false;expanded=false;panel?.remove();panel=null;clearTimeout(searchTimer);diffs=null;
  document.body?.classList.remove('batco-pilot-visual');
+ window.dispatchEvent(new Event('batco61:state'));
 }
 function paint(){
  if(!active)return;
  const input=document.getElementById('searchInput');if(!input)return;
- if(panel?.isConnected){document.body?.classList.add('batco-pilot-visual');syncSearchVisibility();previewNotice(null);return}
+ if(panel?.isConnected){document.body?.classList.add('batco-pilot-visual');syncSearchVisibility();previewNotice(null);window.dispatchEvent(new Event('batco61:state'));return}
  const searchSlot=document.getElementById('batco-pilot-search-slot');
  const region=input.closest('.sticky')||input.parentElement?.parentElement?.parentElement;
  if(!searchSlot&&!region?.parentElement)return;
@@ -178,6 +190,7 @@ function paint(){
  if(searchSlot)searchSlot.replaceChildren(panel);
  else region.parentElement.insertBefore(panel,region.nextSibling);
  document.body?.classList.add('batco-pilot-visual');
+ window.dispatchEvent(new Event('batco61:state'));
  panel.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{
   const requested=button.dataset.tab;
   expanded=tab===requested?!expanded:true;tab=requested;show();
@@ -227,6 +240,15 @@ function init(){
   else if(++attempt>120){clearInterval(bootTimer)}
  },350);
 }
+window.addEventListener('batco61:favorite-toggle',event=>{
+ if(!active||!currentId)return;
+ const d=event.detail||{},sku=String(d.sku||'').trim(),branch=String(d.warehouse||'').trim();
+ if(!sku||!['jeddah','riyadh'].includes(branch))return;
+ const marker=branch+'|'+sku;
+ // Archived/temporary catalog entries can still be saved without mutating the stock dataset.
+ const fallback={sku,name:String(d.name||sku),unit:String(d.unit||''),qty:Number(d.qty)||0,pack:String(d.pack||'')};
+ favorite(marker,fallback);
+});
 window.addEventListener('batco61:product-open',event=>{
  if(!active||!currentId)return;
  const sku=String(event.detail?.sku||'').trim(),branch=String(event.detail?.warehouse||'');
@@ -239,5 +261,5 @@ document.addEventListener('pointerdown',e=>{
 },true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&expanded){expanded=false;show();document.getElementById('searchInput')?.focus({preventScroll:true})}},true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-window.BatcoPilot={decode,delta,allowlisted,version:VERSION}; // Read-only test helpers.
+window.BatcoPilot={decode,delta,allowlisted,version:VERSION,isEnabled:()=>active,isFavorite:(sku,branch)=>active&&(prefs.favorites||[]).includes(String(branch)+'|'+String(sku))}; // Read-only state for React buttons.
 })();
