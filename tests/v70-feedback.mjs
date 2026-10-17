@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 
 const read=p=>fs.readFileSync(p,'utf8');
+const live=read('v70-employee-feedback.js');
+assert.ok(live.includes('INITIAL_DELAY=4000,RETRY_DELAY=800')&&live.includes('IDLE_THRESHOLD=1800'),'Idle staff must get first feedback invitation within about 6–8 seconds');
+assert.ok(live.includes('وش رأيك؟ وش تبي نطوّر أو نحسّن؟'),'Optional feedback placeholder must use the approved Saudi wording');
+assert.ok(!live.includes('يظهر التقييم باسم حسابك لدى إدارة الموقع.'),'Removed modal footer must not return');
+
 const source=read('v70-employee-feedback.js').replace(
  'const INITIAL_DELAY=4000,RETRY_DELAY=800,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=1800;',
  'const INITIAL_DELAY=35,RETRY_DELAY=35,MAX_BUSY_WAIT=300,IDLE_THRESHOLD=20;'
