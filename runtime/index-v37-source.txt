@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>بيت الأواني الطيبة</title>
+    <title>شركة بيت الأواني الطيبة</title>
     <meta name="description" content="نظام البحث عن مخزون شركة بيت الأواني الطيبة">
 
-    <meta property="og:title" content="بيت الأواني الطيبة">
+    <meta property="og:title" content="شركة بيت الأواني الطيبة">
     <meta property="og:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
     <meta property="og:url" content="https://inventory-system-coral-nu.vercel.app">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="بيت الأواني الطيبة">
+    <meta name="twitter:title" content="شركة بيت الأواني الطيبة">
     <meta name="twitter:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
     <meta name="twitter:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
 
@@ -166,7 +166,7 @@ const EntryChooser = () => {
             <div className="w-full max-w-[440px]">
                 <div className="flex flex-col items-center text-center mb-28">
                     <img src="./icons/icon-512.png" onError={(e)=>{e.currentTarget.src='./icons/icon-192.png'}} alt="بيت الأواني الطيبة" className="w-[88px] h-[88px] object-contain mb-16 drop-shadow-sm" />
-                    <h1 className="text-[27px] sm:text-[30px] font-bold text-primary tracking-tight">بيت الأواني الطيبة</h1>
+                    <h1 className="text-[27px] sm:text-[30px] font-bold text-primary tracking-tight">شركة بيت الأواني الطيبة</h1>
                     <p className="text-[13px] text-muted mt-6">حدد نوع الدخول للمتابعة</p>
                 </div>
 
@@ -2947,7 +2947,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
     };
 
     return <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans"><div className="animate-card w-full max-w-[400px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32 flex flex-col items-center">
-        <div className="text-center mb-24 w-full"><h1 className="text-[22px] font-bold text-primary leading-tight">بيت الأواني الطيبة</h1><p className="text-[13px] text-secondary mt-4">دخول الموظفين</p></div>
+        <div className="text-center mb-24 w-full"><h1 className="text-[22px] font-bold text-primary leading-tight">شركة بيت الأواني الطيبة</h1><p className="text-[13px] text-secondary mt-4">دخول الموظفين</p></div>
 
         {step === 'name' && <div className="w-full">
             {customerPortalReleased && <div className="grid grid-cols-2 gap-4 bg-surface border border-border rounded-12 p-4 mb-16"><div className="h-40 rounded-10 bg-primary text-bg flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>الموظفون</div><a href="./customer.html" className="h-40 rounded-10 bg-bg text-secondary border border-border flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>العملاء</a></div>}
@@ -4565,7 +4565,7 @@ const App = () => {
             
             <div className="max-w-[1024px] mx-auto px-16">
                 <header className="text-center pt-20 pb-16 flex flex-col items-center gap-4">
-                    <h1 className="text-[22px] sm:text-[26px] md:text-[28px] font-bold text-primary leading-tight">بيت الأواني الطيبة</h1>
+                    <h1 className="text-[22px] sm:text-[26px] md:text-[28px] font-bold text-primary leading-tight">شركة بيت الأواني الطيبة</h1>
                     <p className="text-[11px] text-muted">تحديث المخزون: <span className="numeric">{lastUpdate}</span></p>
                 </header>
             </div>
@@ -4645,6 +4645,8 @@ const App = () => {
                         </div>
                     </div>
 
+                    <div className="batco-search-card">
+                        <div className="batco-search-card-head" aria-hidden="true"><strong>مساحة العمل</strong><span>بحث أسرع، خطوات أقل</span></div>
                     <div className="flex items-center gap-12">
                         <div className="relative flex-1 min-w-0">
                             <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -4669,6 +4671,9 @@ const App = () => {
                                 <div className={`absolute top-2 left-2 w-22 h-22 bg-bg rounded-full shadow-card transition-transform ${showImageInSearch ? 'translate-x-18' : ''}`}></div>
                             </div>
                         </label>
+                    </div>
+
+                        <div id="batco-pilot-search-slot" aria-label="اختصارات البحث" />
                     </div>
 
                     {warehouse && showImageInSearch && <p className="text-[11px] text-accent">المتوفر يظهر أولاً دائمًا، وبعده المنتهي عند وجود تطابق — والصورة قابلة للحفظ مباشرة.</p>}
