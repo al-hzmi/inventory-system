@@ -18,6 +18,12 @@
       "purpose": "any"
     },
     {
+      "src": "/icons/icon-512.png?v=71.0",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/assets/batco-app-icon.svg?v=71.0",
       "sizes": "any",
       "type": "image/svg+xml",
