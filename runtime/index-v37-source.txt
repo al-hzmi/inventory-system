@@ -18,6 +18,9 @@
     <meta name="twitter:description" content="البحث الفوري عن الأصناف والكميات داخل مستودعات شركة بيت الأواني الطيبة">
     <meta name="twitter:image" content="https://inventory-system-coral-nu.vercel.app/share-image.png">
 
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
@@ -27,9 +30,9 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -88,10 +91,9 @@
     </style>
 
     <meta name="theme-color" content="#FFFFFF">
-    <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
-    <link rel="icon" href="./icons/icon-512.png" sizes="512x512" type="image/png">
-    <link rel="shortcut icon" href="./icons/icon-192.png" type="image/png">
-    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml">
+    <link rel="shortcut icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0">
     <link rel="manifest" href="./manifest.json">
 
     <script src="https://cdn.jsdelivr.net/npm/dayjs/dayjs.min.js"></script>
@@ -149,7 +151,7 @@
     </script>
 </head>
 <body class="min-h-screen bg-bg">
-    <div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./icons/icon-512.png" onerror="this.onerror=null;this.src='./icons/icon-192.png'" alt="بيت الأواني الطيبة"></div><div id="root"></div>
+    <div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./assets/batco-app-icon.svg" alt="BATCO"></div><div id="root"></div>
 
 <script type="text/babel">
 
@@ -165,8 +167,8 @@ const EntryChooser = () => {
         <div className="min-h-screen bg-bg flex items-center justify-center px-20 py-32 font-sans">
             <div className="w-full max-w-[440px]">
                 <div className="flex flex-col items-center text-center mb-28">
-                    <img src="./icons/icon-512.png" onError={(e)=>{e.currentTarget.src='./icons/icon-192.png'}} alt="بيت الأواني الطيبة" className="w-[88px] h-[88px] object-contain mb-16 drop-shadow-sm" />
-                    <h1 className="text-[27px] sm:text-[30px] font-bold text-primary tracking-tight">شركة بيت الأواني الطيبة</h1>
+                    
+                    <h1 className="batco-brand-logo-heading"><img src="./assets/batco-logo.svg" alt="شركة بيت الأواني الطيبة" className="batco-brand-logo is-entrance" width="900" height="353" /></h1>
                     <p className="text-[13px] text-muted mt-6">حدد نوع الدخول للمتابعة</p>
                 </div>
 
@@ -680,7 +682,11 @@ const fetchText = async (url) => {
         const res = await fetch(url); 
         if (!res.ok) throw new Error(`HTTP ${res.status}`); 
         const text = await res.text();
-        localStorage.setItem(cacheKey, text);
+        // Cache maintenance must not block rendering or turn a successful fetch
+        // into an offline failure when mobile storage is full.
+        const store = () => { try { if (localStorage.getItem(cacheKey) !== text) localStorage.setItem(cacheKey,text); } catch(_){} };
+        if (window.requestIdleCallback) window.requestIdleCallback(store,{timeout:2500});
+        else setTimeout(store,50);
         return text;
     } catch (err) { 
         console.warn(`[Offline] يتم جلب النسخة المخبأة لـ ${url}`); 
@@ -696,7 +702,10 @@ const fetchJson = async (url) => {
         const res = await fetch(url); 
         if (!res.ok) throw new Error(`HTTP ${res.status}`); 
         const data = await res.json();
-        localStorage.setItem(cacheKey, JSON.stringify(data));
+        const serialized = JSON.stringify(data);
+        const store = () => { try { if(localStorage.getItem(cacheKey)!==serialized) localStorage.setItem(cacheKey,serialized); } catch(_){} };
+        if (window.requestIdleCallback) window.requestIdleCallback(store,{timeout:2500});
+        else setTimeout(store,50);
         return data;
     } catch (err) { 
         console.warn(`[Offline] يتم جلب النسخة المخبأة لـ ${url}`); 
@@ -2997,7 +3006,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
     };
 
     return <div className="min-h-screen bg-surface flex items-center justify-center p-16 font-sans"><div className="animate-card w-full max-w-[400px] bg-bg border border-border rounded-20 shadow-lift p-24 sm:p-32 flex flex-col items-center">
-        <div className="text-center mb-24 w-full"><h1 className="text-[22px] font-bold text-primary leading-tight">شركة بيت الأواني الطيبة</h1><p className="text-[13px] text-secondary mt-4">دخول الموظفين</p></div>
+        <div className="text-center mb-24 w-full"><h1 className="batco-brand-logo-heading"><img src="./assets/batco-logo.svg" alt="شركة بيت الأواني الطيبة" className="batco-brand-logo is-login" width="900" height="353" /></h1><p className="text-[13px] text-secondary mt-4">دخول الموظفين</p></div>
 
         {step === 'name' && <div className="w-full">
             {customerPortalReleased && <div className="grid grid-cols-2 gap-4 bg-surface border border-border rounded-12 p-4 mb-16"><div className="h-40 rounded-10 bg-primary text-bg flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>الموظفون</div><a href="./customer.html" className="h-40 rounded-10 bg-bg text-secondary border border-border flex items-center justify-center gap-6 text-[12px] font-bold"><Icon.Users className="w-14 h-14"/>العملاء</a></div>}
@@ -4345,7 +4354,7 @@ const App = () => {
         refreshBindings().catch(err => console.warn('[V56.32 image bindings poll]', err));
         const timer = setInterval(() => {
             if (document.visibilityState === 'visible') refreshBindings().catch(err => console.warn('[V56.32 image bindings poll]', err));
-        }, 15000);
+        }, 45000);
         return () => { alive = false; clearInterval(timer); };
     }, [rawImagesList, databases, depletedCatalog]);
 
@@ -4621,7 +4630,7 @@ const App = () => {
             
             <div className="max-w-[1024px] mx-auto px-16">
                 <header className="text-center pt-20 pb-16 flex flex-col items-center gap-4">
-                    <h1 className="text-[22px] sm:text-[26px] md:text-[28px] font-bold text-primary leading-tight">شركة بيت الأواني الطيبة</h1>
+                    <h1 className="batco-brand-logo-heading"><img src="./assets/batco-logo.svg" alt="شركة بيت الأواني الطيبة" className="batco-brand-logo is-header" width="900" height="353" /></h1>
                     <p className="text-[11px] text-muted">تحديث المخزون: <span className="numeric">{lastUpdate}</span></p>
                 </header>
             </div>
@@ -4721,7 +4730,7 @@ const App = () => {
 
                         <label className="batco-image-toggle flex items-center gap-8 cursor-pointer flex-shrink-0" title="إظهار الصور بجانب الأصناف في نتائج البحث">
                             <span className="batco-image-label flex items-center">
-                                <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">صور نتائج البحث</span>
+                                <span className="batco-image-label-text text-[12px] font-semibold text-secondary whitespace-nowrap">عرض صور الأصناف</span>
                             </span>
                             <input type="checkbox" role="switch" aria-label="عرض صور الأصناف مع نتائج البحث" aria-checked={showImageInSearch} className="sr-only" checked={showImageInSearch}
                                    onChange={(e) => { if(!warehouse){setImageWarehouseNotice(true);return;}setImageWarehouseNotice(false);setShowImageInSearch(e.target.checked); }} />
@@ -4908,7 +4917,7 @@ const EmployeeBootstrap = () => {
     const admin = Boolean(token) && PROTECTED_ACCOUNTS[normalizeText(name)] === token;
     const employeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
     if (control.__loading) {
-        return <div className="min-h-screen bg-bg flex items-center justify-center px-20 font-sans"><div className="text-center"><img src="./icons/icon-192.png" className="w-64 h-64 object-contain mx-auto opacity-80"/><div className="text-[12px] text-muted mt-12">جاري التحقق من صلاحية الدخول...</div></div></div>;
+        return <div className="min-h-screen bg-bg flex items-center justify-center px-20 font-sans"><div className="text-center"><img src="./assets/batco-app-icon.svg" alt="BATCO" width="64" height="64" className="w-64 h-64 object-contain mx-auto opacity-80"/><div className="text-[12px] text-muted mt-12">جاري التحقق من صلاحية الدخول...</div></div></div>;
     }
     if (name && !employeeSiteAccessAllowed(control,{name,employeeId,isAdmin:admin})) {
         return <EmployeeSiteBlocked control={control} onSwitchAccount={()=>{
