@@ -1,4 +1,4 @@
-const CACHE = 'batco-customer-v37-0';
+const CACHE = 'batco-customer-v71-brand';
 const CUSTOMER_PAGE = './customer.html';
 
 self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
