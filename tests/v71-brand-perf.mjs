@@ -16,8 +16,9 @@ assert.equal((core.match(/<img src="\.\/assets\/batco-logo\.svg"/g)||[]).length,
 assert.ok(customer.includes('<img src="./assets/batco-logo.svg"'),'Customer login uses same BATCO wordmark');
 assert.ok(core.includes('>عرض صور الأصناف</span>'),'Photo switch must be labeled عرض صور الأصناف');
 assert.ok(!core.includes('>صور نتائج البحث</span>'),'Old misleading toggle must be removed');
-assert.ok(employeeBoot.includes('v71-brand.css?v=71.0')&&customerBoot.includes('v71-brand.css?v=71.0'),'Shared brand stylesheet must be loaded by both portals');
-assert.ok(employeeBoot.includes('rev=71.0'),'New official core must bust previous browser cache');
+assert.ok(employeeBoot.includes('v71-brand.css?v=72.0')&&customerBoot.includes('v71-brand.css?v=72.0'),'Shared V72 brand stylesheet must be loaded by both portals');
+assert.ok(employeeBoot.includes('rev=72.0'),'V72 employee core must invalidate old splash');
+assert.ok(customerBoot.includes("runtime/customer-v37-source.txt?v=56.33&rev=72.0"),'V72 customer boot must invalidate old splash');
 assert.ok(employeeBoot.includes('const hit=await cache.match(CORE)'),'Repeat opens should use cached, revisioned UI shell');
 assert.ok(employeeBoot.includes("cache:'no-cache'")&&employeeBoot.includes('setTimeout(()=>fetch(CORE'),'UI cache must revalidate in the background');
 assert.ok(!core.includes('setTimeout(() => { prepareShareFile(); }, 120)'),'Gallery must not prefetch sharing blobs for all images');
@@ -36,10 +37,28 @@ for(const m of [manifest,guestManifest]){
  assert.ok(m.icons.some(i=>i.purpose.includes('maskable')),'Installable maskable mark');
 }
 assert.ok(style.includes('.batco-brand-logo-heading')&&style.includes('@media(max-width:430px)'),'Responsive mobile and desktop logo');
+// V72 product-level visual regression: both phases of the loading transition
+// show the same non-square wordmark without a caption on iPhone and Android.
+for(const [name,boot] of [['employee',employeeBoot],['customer',customerBoot]]){
+ assert.ok(boot.includes('id="v37boot"')&&boot.includes('class="batco-splash-wordmark"'),'Missing immediate '+name+' splash wordmark');
+ assert.ok(boot.includes('src="./assets/batco-logo.svg?v=72.0"'),'Wrong '+name+' initial splash artwork');
+ assert.ok(boot.includes('.v37box img{width:min(59vw,218px)'),'Wrong '+name+' first-frame dimensions');
+ assert.ok(!boot.includes('<p>جاري فتح النظام...')&&!boot.includes('<p>جاري فتح بوابة العملاء...'),'The '+name+' splash must not show opening caption');
+}
+for(const [name,source] of [['employee',core],['customer',customer]]){
+ assert.ok(source.includes('id="app-loader"')&&source.includes('class="batco-splash-wordmark"'),'Missing matching '+name+' in-app splash');
+ assert.ok(source.includes('#app-loader img{width:min(59vw,218px)'),'Wrong '+name+' in-app loader dimensions');
+ assert.ok(source.includes('src="./assets/batco-logo.svg?v=72.0"'),'Wrong '+name+' in-app splash artwork');
+ assert.ok(!source.includes('<img src="./assets/batco-app-icon.svg" alt="BATCO"'),'Old square '+name+' splash remains');
+}
+assert.ok(!core.includes('جاري التحقق من صلاحية الدخول...</div>'),'Permission-check waiting screen must use the uncluttered logo');
+assert.ok(style.includes('.batco-brand-logo.is-header{width:clamp(180px,48vw,242px)}'),'Header logo should be smaller on desktop');
+assert.ok(style.includes('.batco-brand-logo.is-header{width:min(56vw,215px)}'),'Header logo should be smaller on mobile');
+
 const pages=['index.html','customer.html','admin-home.html','admin-dashboard.html','admin-feedback.html','admin-image-export.html','admin-inventory-import.html','admin-stocktake-shell.html','admin-stocktake.html','accountant-stocktake.html','command-center.html','control-center.html','health-center.html','identities.html','image-distribution.html','inventory-analytics.html','security-center.html','stocktake-accountant.html','stocktake.html'];
 for(const page of pages){
  const html=read(page);
- assert.ok(html.includes('assets/batco-app-icon.svg')||page==='index.html','Missing BATCO icon for '+page);
- assert.ok(html.includes('v71-brand.css?v=71.0'),'Missing brand stylesheet for '+page);
+ assert.ok(html.includes('assets/batco-app-icon.svg')||html.includes('assets/batco-logo.svg')||page==='index.html','Missing BATCO identity for '+page);
+ assert.ok(html.includes(page==='index.html'||page==='customer.html'?'v71-brand.css?v=72.0':'v71-brand.css?v=71.0'),'Missing active brand stylesheet for '+page);
 }
-console.log('V71_BRAND_AND_SPEED_STATIC_PASS: approved logos, all 19 entry pages, PWA, lazy photos, cache and nonblocking libraries');
+console.log('V72_BRAND_AND_SPLASH_PASS: lighter header wordmark and consistent text-free employee/customer splash');
