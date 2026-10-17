@@ -5,7 +5,7 @@ import {chromium} from 'playwright';
 const load=p=>fs.readFileSync(p,'utf8');
 const base='https://v70-feedback-ui.test';
 const js=load('v70-employee-feedback.js').replace(
- 'const INITIAL_DELAY=9000,RETRY_DELAY=3500,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=7000;',
+ 'const INITIAL_DELAY=4000,RETRY_DELAY=800,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=1800;',
  'const INITIAL_DELAY=50,RETRY_DELAY=50,MAX_BUSY_WAIT=1000,IDLE_THRESHOLD=25;'
 );
 const css=load('v70-employee-feedback.css');
