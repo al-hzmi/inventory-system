@@ -22,6 +22,6 @@ assert.equal((src.match(/warehouse=\{warehouse\}/g)||[]).length>=7,true,'Search 
 assert.ok(src.includes('if(!warehouse){setImageWarehouseNotice(true);return;}'),'Switch must explain an unselected warehouse');
 assert.ok(src.includes('role="status" aria-live="polite" className="batco-image-warehouse-toast"'),'Warehouse notice must be announced to assistive tech');
 assert.ok(!src.includes('disabled={!warehouse} />'),'Search photos must be clickable even before a warehouse is chosen');
-assert.ok(src.includes('صور نتائج البحث</span>'),'One-line switch wording must explain images appear in search results');
+assert.ok(src.includes('عرض صور الأصناف</span>'),'One-line switch wording must explain images appear in search results');
 
 console.log('V68_CORE_JSX_PASS: native React JSX parsed, search and gallery direct favorites, warehouse tip, accessibility');
