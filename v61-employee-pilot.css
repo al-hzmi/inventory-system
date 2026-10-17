@@ -1,55 +1,201 @@
-/* BATCO V63 · experimental, scoped employee home */
-#batco61-pilot,.b61-return{font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif}
-#batco61-pilot{box-sizing:border-box;direction:rtl;max-width:1024px;margin:14px auto 6px;padding:0 16px;color:#223b30;animation:b61Appear .25s ease-out}
+/* BATCO V64: integrated monochrome pilot. Applied only to an opted-in employee session. */
+#batco61-pilot{
+  --b64-ink:#1c1917;--b64-secondary:#57534e;--b64-muted:#78716c;
+  --b64-line:#e7e5e4;--b64-soft:#fafaf9;--b64-subtle:#f5f5f4;
+  box-sizing:border-box;direction:rtl;width:100%;max-width:1024px;
+  margin:12px auto 0;padding:0 16px;color:var(--b64-ink);
+  font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",system-ui,sans-serif;
+  animation:b61Appear .2s ease-out;
+}
 #batco61-pilot *,#batco61-pilot *::before,#batco61-pilot *::after{box-sizing:border-box}
-#batco61-pilot button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-#batco61-pilot button:focus-visible,.b61-return:focus-visible{outline:3px solid #82c8a1;outline-offset:2px}
-.b61-head{display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(115deg,#ecf6ef,#f8fbf8 68%,#fff);padding:22px 24px;border:1px solid #d8e9df;border-radius:20px 20px 0 0}
-.b61-eyebrow{display:block;color:#16845c;font-size:11px;font-weight:700;letter-spacing:0}
-.b61-greet{font-size:23px;line-height:1.5;font-weight:800;margin:3px 0 3px}
-.b61-head p{margin:0;color:#687e70;font-size:12px;line-height:1.8}
-.b61-classic{flex:0 0 auto;background:#fff;border:1px solid #cbded1;border-radius:11px;padding:11px 14px;color:#3e6951;font-size:11px!important;font-weight:700!important;min-height:43px}
-.b61-classic:hover{background:#eaf5ed}
-.b61-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;background:#fff;padding:15px 19px 9px;border-left:1px solid #e2eae5;border-right:1px solid #e2eae5}
-.b61-tiles>button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:right;background:#fafcfa;color:#3f6650;border:1px solid #e1eae4;border-radius:14px;min-height:94px;padding:13px 17px}
-.b61-tiles>button:hover{background:#f2f8f3;border-color:#c6e1ce}
-.b61-tiles>button.is-active{background:#eaf5ee;border-color:#b6dbc3;color:#0d6f4b}
-.b61-tiles>button span{font-size:18px;line-height:1.1;margin-bottom:3px}
-.b61-tiles>button b{font-size:13px;line-height:1.5}
-.b61-tiles>button small{font-size:10px;color:#849588}
-.b61-content{background:#fff;border-left:1px solid #e2eae5;border-right:1px solid #e2eae5;padding:11px 20px 17px;min-height:136px}
-.b61-list-head{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid #eff3f0;padding:4px 0 12px;margin-bottom:12px}
-.b61-list-head h3{margin:0;font-size:14px;font-weight:800;line-height:1.6}
-.b61-list-head small{font-size:10px;color:#8b9b90}
-.b61-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.b61-product{min-width:0;display:flex;align-items:center;gap:6px;border:1px solid #e6eee9;border-radius:13px;padding:8px;background:#fbfcfb}
-.b61-product-main{min-width:0;flex:1;text-align:right;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 5px;border:0;background:transparent;color:inherit}
-.b61-product-main:hover strong{color:#007f53}
-.b61-product-main .b61-sku{font-family:ui-monospace,Consolas,monospace;direction:ltr;font-size:10px;font-weight:750;color:#1a8060}
-.b61-product-main strong{display:block;max-width:100%;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.b61-product-main small{font-size:10px;color:#76897b}
-.b61-product-actions{display:flex;align-items:center;gap:4px}
-.b61-product-actions button{border:1px solid #dce8df;border-radius:8px;background:#fff;color:#246d50;height:34px;min-width:34px;font-size:12px}
-.b61-product-actions .b61-star{font-size:18px;color:#ab7626}
-.b61-product-actions button:hover{background:#ecf7ef}
-.b61-empty{grid-column:1/-1;background:#fafcfb;border:1px dashed #cbdccf;text-align:center;border-radius:12px;color:#6c7e71;font-size:12px;line-height:2;padding:18px 14px;margin:0}
-.b61-diff{display:flex;flex-direction:column;align-items:flex-start;text-align:right;gap:5px;border-radius:12px;border:1px solid #e4ece5;padding:12px 14px;background:#fff;color:#294636}
-.b61-diff:hover{border-color:#abceb7;background:#f7fbf8}
-.b61-diff strong{font-size:12px;line-height:1.6}
-.b61-diff small{font-size:11px;color:#7b8c80}
-.b61-diff-tag{font-size:10px;border-radius:6px;padding:3px 7px;background:#eaf5ed;color:#15734f}
-.b61-diff-tag.empty,.b61-diff-tag.down{background:#fff4e9;color:#9c5c19}
-.b61-notice{font-size:11px;color:#217a55;min-height:17px;line-height:1.7;margin:9px 0 0}
-.b61-footnote{background:#fbfcfb;border:1px solid #e2eae5;border-top:0;border-radius:0 0 20px 20px;padding:12px 21px;margin:0;color:#819185;font-size:10px;line-height:1.7}
-.b61-return{display:inline-flex;margin:8px 9px;border:1px solid #cbded1;border-radius:10px;padding:8px 12px;background:#eff8f1;color:#126c49;font:700 11px/1.7 system-ui;cursor:pointer}
+#batco61-pilot button{font-family:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#batco61-pilot button:focus-visible,.b61-return:focus-visible{
+  outline:2px solid #292524;outline-offset:3px
+}
+#batco61-pilot .b61-head{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:17px 20px 16px;background:var(--b64-soft);
+  border:1px solid var(--b64-line);border-bottom:0;border-radius:18px 18px 0 0
+}
+#batco61-pilot .b61-head>div{min-width:0;flex:1}
+#batco61-pilot .b61-eyebrow{display:block;color:var(--b64-secondary);font-size:10px;font-weight:700;line-height:1.8}
+#batco61-pilot .b61-greet{margin:2px 0 3px;font-size:20px;line-height:1.6;font-weight:750;color:var(--b64-ink)}
+#batco61-pilot .b61-head p{margin:0;color:var(--b64-secondary);font-size:11px;line-height:1.85}
+#batco61-pilot .b61-classic{
+  flex:0 0 auto;min-height:38px;padding:8px 13px;border-radius:10px;
+  border:1px solid #d6d3d1;background:#fff;color:#44403c;
+  font-size:10px;font-weight:700;line-height:1.6
+}
+#batco61-pilot .b61-classic:hover{background:var(--b64-subtle)}
+#batco61-pilot .b61-tiles{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;
+  padding:13px 17px 8px;border-inline:1px solid var(--b64-line);background:#fff
+}
+#batco61-pilot .b61-tiles>button{
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  min-width:0;min-height:77px;gap:1px;padding:11px 13px;text-align:right;
+  border:1px solid var(--b64-line);border-radius:13px;background:#fff;color:var(--b64-ink);
+  transition:background .15s,border-color .15s,box-shadow .15s
+}
+#batco61-pilot .b61-tiles>button:hover{background:var(--b64-soft);border-color:#c9c5c1}
+#batco61-pilot .b61-tiles>button.is-active{
+  border-color:#a8a29e;background:var(--b64-subtle);color:var(--b64-ink);
+  box-shadow:inset 0 0 0 1px #e7e5e4
+}
+#batco61-pilot .b61-tiles>button span{font-size:16px;line-height:1.1;margin-bottom:3px;color:#57534e}
+#batco61-pilot .b61-tiles>button b{font-size:12px;line-height:1.5;font-weight:750}
+#batco61-pilot .b61-tiles>button small{font-size:10px;line-height:1.55;color:var(--b64-muted)}
+#batco61-pilot .b61-content{
+  border-inline:1px solid var(--b64-line);background:#fff;
+  padding:9px 17px 15px;min-height:0
+}
+#batco61-pilot .b61-list-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:5px 0 10px;margin-bottom:10px;border-bottom:1px solid #f0eeec
+}
+#batco61-pilot .b61-list-head h3{margin:0;font-size:13px;font-weight:750;line-height:1.6}
+#batco61-pilot .b61-list-head small{font-size:10px;color:var(--b64-muted)}
+#batco61-pilot .b61-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#batco61-pilot .b61-product{
+  display:flex;align-items:center;min-width:0;gap:7px;
+  border:1px solid var(--b64-line);border-radius:11px;background:#fff;padding:8px
+}
+#batco61-pilot .b61-product-main{
+  display:flex;flex:1;min-width:0;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:3px 4px;text-align:right;border:0;background:transparent;color:inherit
+}
+#batco61-pilot .b61-product-main:hover strong{color:#000;text-decoration:underline;text-underline-offset:3px}
+#batco61-pilot .b61-product-main .b61-sku{
+  font:700 11px/1.5 ui-monospace,Consolas,monospace;direction:ltr;color:var(--b64-ink)
+}
+#batco61-pilot .b61-product-main strong{
+  display:block;max-width:100%;font-size:12px;line-height:1.5;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#batco61-pilot .b61-product-main small{font-size:10px;color:var(--b64-muted)}
+#batco61-pilot .b61-product-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+#batco61-pilot .b61-product-actions button{
+  min-width:34px;height:34px;padding:4px 7px;border-radius:9px;
+  border:1px solid var(--b64-line);background:var(--b64-soft);color:var(--b64-ink);font-size:11px
+}
+#batco61-pilot .b61-product-actions .b61-star{font-size:17px;color:var(--b64-ink)}
+#batco61-pilot .b61-product-actions button:hover{background:var(--b64-subtle)}
+#batco61-pilot .b61-empty{
+  grid-column:1/-1;margin:0;padding:15px 13px;border-radius:11px;
+  border:1px solid var(--b64-line);background:var(--b64-soft);
+  color:var(--b64-secondary);font-size:11px;line-height:1.9;text-align:center
+}
+#batco61-pilot .b61-diff{
+  display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+  border:1px solid var(--b64-line);border-radius:11px;background:#fff;color:var(--b64-ink);
+  padding:11px 13px;text-align:right
+}
+#batco61-pilot .b61-diff:hover{background:var(--b64-soft);border-color:#c9c5c1}
+#batco61-pilot .b61-diff strong{font-size:12px;line-height:1.7}
+#batco61-pilot .b61-diff small{font-size:10px;color:var(--b64-secondary)}
+#batco61-pilot .b61-diff-tag{
+  display:inline-block;padding:3px 8px;border-radius:7px;
+  border:1px solid var(--b64-line);background:var(--b64-subtle);
+  color:var(--b64-secondary);font-size:10px
+}
+#batco61-pilot .b61-diff-tag.empty,#batco61-pilot .b61-diff-tag.down{
+  color:#292524;border-color:#d6d3d1;background:#eeece9
+}
+#batco61-pilot .b61-notice{
+  min-height:0;margin:7px 0 0;color:var(--b64-secondary);
+  font-size:11px;line-height:1.6
+}
+#batco61-pilot .b61-notice:empty{display:none}
+#batco61-pilot .b61-footnote{
+  margin:0;padding:10px 17px;border:1px solid var(--b64-line);border-top:0;
+  border-radius:0 0 18px 18px;background:var(--b64-soft);
+  color:var(--b64-muted);font-size:10px;line-height:1.8
+}
+.b61-return{
+  display:inline-flex;margin:8px 16px 0;padding:8px 12px;min-height:38px;align-items:center;
+  border:1px solid #d6d3d1;border-radius:10px;background:#fafaf9;
+  color:#292524;font:700 11px/1.7 "IBM Plex Sans Arabic",system-ui,sans-serif;cursor:pointer
+}
+.b61-return:hover{background:#f5f5f4}
 @keyframes b61Appear{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:760px){#batco61-pilot{padding:0 11px;margin-top:12px}.b61-head{padding:19px 16px;align-items:flex-start}.b61-greet{font-size:20px}.b61-classic{font-size:10px!important;max-width:150px;min-width:0;white-space:normal}.b61-tiles{gap:7px;padding:12px 11px 6px}.b61-tiles>button{min-height:83px;padding:10px}.b61-tiles>button b{font-size:11px}.b61-content{padding:12px}.b61-list{grid-template-columns:1fr}.b61-product{padding:9px}.b61-footnote{padding:11px 13px}}
-@media(max-width:390px){.b61-head{display:block}.b61-classic{margin-top:12px;max-width:none}.b61-tiles>button{padding:9px 7px}.b61-tiles>button b{font-size:10px}.b61-tiles>button small{font-size:9px}}
-@media(prefers-reduced-motion:reduce){#batco61-pilot{animation:none!important}}
 
-/* Manager-only preview readiness, never shown in the ordinary employee flow. */
-.b61-preview-status{position:fixed;z-index:250;bottom:max(12px,env(safe-area-inset-bottom));inset-inline:12px;max-width:520px;margin-inline:auto;padding:12px 16px;background:#f0f9f3;border:1px solid #b8ddc5;border-radius:12px;box-shadow:0 8px 25px rgba(15,55,33,.12);color:#285b42;font:600 12px/1.8 "IBM Plex Sans Arabic",system-ui,sans-serif;direction:rtl;text-align:center;pointer-events:none}
+/* The gallery remains the original React component. These presentational rules apply
+   only while the opt-in workspace is active; the underlying filters and click handlers are unchanged. */
+body.batco-pilot-visual #gallery-section{margin-top:18px!important;padding-top:15px;border-top:1px solid #e7e5e4}
+body.batco-pilot-visual #gallery-section>div:first-child{margin-bottom:14px}
+body.batco-pilot-visual #gallery-section>div:first-child h2{font-size:19px;line-height:1.55;letter-spacing:0}
+body.batco-pilot-visual #gallery-section>div:first-child p{color:#78716c;font-size:11px}
+body.batco-pilot-visual #gallery-section>p{font-size:11px;color:#78716c;margin-bottom:10px}
+body.batco-pilot-visual #gallery-section>.mb-20{margin-bottom:15px}
+body.batco-pilot-visual #gallery-section .flex.flex-wrap.gap-8{gap:8px}
+body.batco-pilot-visual #gallery-section .flex.flex-wrap.gap-8>button:not([class*="accent"]){
+  padding:8px 13px;border-radius:999px;border:1px solid #e7e5e4;
+  background:#fff;color:#44403c;font-size:12px;font-weight:600;line-height:1.5;
+  min-height:38px
+}
+body.batco-pilot-visual #gallery-section .flex.flex-wrap.gap-8>button:not([class*="accent"])[aria-pressed="true"]{
+  background:#1c1917;color:#fff;border-color:#1c1917
+}
+body.batco-pilot-visual #gallery-section .flex.flex-wrap.gap-8>button:not([class*="accent"]):hover{
+  border-color:#a8a29e
+}
+/* "جديدنا" alone is re-skinned. The private "نواقص الصور" button
+   uses font-medium/accent and is deliberately excluded from every rule below. */
+body.batco-pilot-visual #gallery-section .flex.flex-wrap.gap-8>button.font-bold{
+  padding:8px 13px;min-height:38px;border-radius:999px;border:1px solid #d6d3d1;
+  background:#f5f5f4;color:#292524;font-size:12px;font-weight:700;line-height:1.5
+}
+body.batco-pilot-visual #gallery-section .flex.flex-wrap.gap-8>button.font-bold[aria-pressed="true"]{
+  background:#1c1917;color:#fff;border-color:#1c1917
+}
+body.batco-pilot-visual #gallery-section .flex.flex-wrap.gap-8>button.font-bold:hover{border-color:#a8a29e}
+body.batco-pilot-visual #gallery-section>div[class*="max-w-"][class*="mx-auto"]>div{
+  padding:20px 17px!important;border-radius:18px;background:#fafaf9;border-color:#e7e5e4;
+  gap:9px
+}
+body.batco-pilot-visual #gallery-section>div[class*="max-w-"][class*="mx-auto"]>div>div:first-child{
+  width:40px;height:40px;color:#78716c
+}
+body.batco-pilot-visual #gallery-section>div[class*="max-w-"][class*="mx-auto"] h3{font-size:14px}
+body.batco-pilot-visual #gallery-section>div[class*="max-w-"][class*="mx-auto"] p{font-size:12px;line-height:1.8}
+body.batco-pilot-visual #gallery-section+footer{
+  margin-top:32px!important;padding-top:18px!important;padding-bottom:20px!important;
+  border-color:#e7e5e4
+}
+body.batco-pilot-visual #gallery-section+footer .developer-link{color:#78716c;font-size:10px}
+.b61-preview-status{
+  position:fixed;z-index:250;bottom:max(12px,env(safe-area-inset-bottom));
+  inset-inline:12px;max-width:520px;margin-inline:auto;padding:12px 16px;
+  border:1px solid #d6d3d1;border-radius:12px;background:#fafaf9;color:#44403c;
+  box-shadow:0 8px 25px rgba(28,25,23,.1);
+  font:600 12px/1.8 "IBM Plex Sans Arabic",system-ui,sans-serif;
+  direction:rtl;text-align:center;pointer-events:none
+}
 .b61-preview-status.is-warning{background:#fff8ee;border-color:#ead1a4;color:#8a531c}
-
-/* Search is always primary: hiding the pilot frees the entire results viewport. */
+/* Search must never be obstructed, regardless of the chosen visual theme. */
 #batco61-pilot.b61-search-suppressed,.b61-return.b61-search-suppressed{display:none!important}
+@media(max-width:760px){
+  #batco61-pilot{padding:0 16px;margin-top:10px}
+  #batco61-pilot .b61-head{padding:15px 14px;gap:10px;align-items:flex-start}
+  #batco61-pilot .b61-greet{font-size:18px}
+  #batco61-pilot .b61-head p{font-size:10px}
+  #batco61-pilot .b61-classic{max-width:135px;min-width:0;font-size:10px;white-space:normal}
+  #batco61-pilot .b61-tiles{gap:7px;padding:10px 11px 6px}
+  #batco61-pilot .b61-tiles>button{min-height:70px;padding:9px}
+  #batco61-pilot .b61-tiles>button b{font-size:11px}
+  #batco61-pilot .b61-tiles>button small{font-size:9px}
+  #batco61-pilot .b61-content{padding:8px 11px 12px}
+  #batco61-pilot .b61-list{grid-template-columns:1fr}
+  #batco61-pilot .b61-footnote{padding:9px 12px}
+  body.batco-pilot-visual #gallery-section{margin-top:14px!important;padding-top:14px}
+}
+@media(max-width:390px){
+  #batco61-pilot .b61-head{flex-wrap:wrap}
+  #batco61-pilot .b61-classic{min-height:34px;max-width:none;padding:7px 11px}
+  #batco61-pilot .b61-tiles>button{padding:8px 6px}
+  #batco61-pilot .b61-tiles>button b{font-size:10px}
+  #batco61-pilot .b61-tiles>button small{font-size:9px}
+  #batco61-pilot .b61-list-head{align-items:flex-start}
+  #batco61-pilot .b61-list-head small{max-width:94px;text-align:left}
+}
+@media(prefers-reduced-motion:reduce){#batco61-pilot{animation:none!important}}
