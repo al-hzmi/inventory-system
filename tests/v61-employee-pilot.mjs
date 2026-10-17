@@ -23,7 +23,7 @@ const ctx={
 ctx.window.addEventListener=(event,callback)=>{listeners['window:'+event]=callback};
 vm.runInNewContext(pilot,ctx,{filename:'v61-employee-pilot.js'});
 const api=ctx.window.BatcoPilot;
-assert.equal(api.version,'66.0');
+assert.equal(api.version,'67.0');
 const gate=(v,id)=>api.allowlisted(v,id);
 assert.equal(gate(undefined,'1001'),false,'No config is disabled');
 assert.equal(gate({mode:'open',employeeHomePilot:{enabled:true,allowedEmployeeIds:['1001']}},'1001'),true,'Existing employee-site control includes scoped pilot allowlist');
@@ -59,10 +59,10 @@ assert.ok(pilot.includes("batco61:product-open"),'Explicit search result clicks 
 assert.ok(runtime.includes("window.dispatchEvent(new CustomEvent('batco61:product-open'"),'Existing search should emit only a read-only product-open signal');
 assert.ok(pilot.includes("document.getElementById('searchInput')"),'Do not replace the existing search engine');
 assert.ok(pilot.includes('data-tab="favorite"')&&pilot.includes('data-tab="changes"'),'Missing pilot panels');
-assert.ok(pilot.includes('العودة للواجهة الكلاسيكية')&&pilot.includes('↶ اختصارات البحث'),'Return and reenter controls must both exist');
+assert.ok(!pilot.includes('class="b61-classic"')&&pilot.includes('↶ اختصارات البحث'),'No destructive X in active employee workspace; preserve legacy reentry');
 assert.ok(pilotCss.includes('@media(max-width:760px)')&&pilotCss.includes('@media(max-width:360px)'),'Mobile-responsive panels missing');
 assert.ok(!pilot.includes('firebase.firestore().collection(\'orders\')'),'Pilot must never write orders');
-assert.ok(html.includes('v61-employee-pilot.js?v=66.0')&&html.includes('v61-employee-pilot.css?v=66.0'),'User-facing loader not configured');
+assert.ok(html.includes('v61-employee-pilot.js?v=67.0')&&html.includes('v61-employee-pilot.css?v=67.0'),'User-facing loader not configured');
 assert.ok(admin.includes("const ref=db.collection(COL).doc(DOC)")&&admin.includes("[CONFIG_FIELD]:{")&&admin.includes("enabled:next.enabled,allowedEmployeeIds:next.ids"),'Admin must control one targeted allowlist document');
 assert.ok(admin.includes("db.collection('employee_accounts').limit(800).get()"),'Selector must originate from real employee accounts');
 assert.ok(admin.includes("new MutationObserver(refreshShortcut)")&&admin.includes("observer.observe(app,{childList:true})"),'Realtime re-render must not remove launch button');
@@ -95,7 +95,16 @@ assert.ok(!runtime.includes('نظام الاستعلام والمبيعات ال
 assert.ok(pilot.includes('if(!expanded)return')&&pilot.includes('if(searching&&expanded)'),'Quick menu must be collapsed by default and auto-close when searching');
 assert.ok(pilotCss.includes('.b65-popover[hidden]')&&pilotCss.includes('position:absolute'),'Popover should overlay instead of pushing results down');
 assert.ok(!pilot.includes('class="b61-head"')&&!pilot.includes('class="b61-tiles"'),'Old oversized dashboard should be removed');
-assert.ok(html.includes('rev=66.0'),'Bootloader must invalidate cached header template');
+assert.ok(pilot.includes('آخر الأصناف</b>')&&pilot.includes('المفضلة</b>')&&pilot.includes('التغيّرات</b>'),'Large labeled shortcuts must avoid ambiguous icon-only controls');
+assert.ok(pilotCss.includes('min-height:70px')&&pilotCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))'),'Main actions require appropriately sized touch targets');
+assert.ok(pilot.includes('class="b65-dismiss"')&&pilot.includes('>إغلاق</button>'),'Details should close explicitly without an X symbol');
+assert.ok(runtime.includes('حيّاك الله، {String(sessionName||\'\').trim().split(/\\s+/)[0]}'),'Greeting uses verified application session rather than guessing employee identity');
+assert.ok(!runtime.includes('أصنافك في متناولك'),'Remove unnecessary header filler');
+assert.ok(runtime.includes('صور الأصناف</span>')&&runtime.includes('تظهر مع النتائج')&&runtime.includes('اضغط لإظهارها'),'Image option clearly names the feature and its state');
+assert.ok(runtime.includes('aria-label="إظهار صور الأصناف في نتائج البحث"')&&runtime.includes('onChange={(e) => setShowImageInSearch(e.target.checked)}'),'Image switch remains accessible and updates native React state');
+assert.ok(pilotCss.includes('.batco-image-toggle:focus-within')&&pilotCss.includes('.batco-image-toggle:has(input:checked)'),'Image toggle must provide focus and enabled feedback');
+
+assert.ok(html.includes('rev=67.0'),'Bootloader must invalidate cached header template');
 
 assert.ok(admin.includes('withDeadline(')&&admin.includes('Promise.allSettled('),'Firestore reads must be bounded and independently diagnosed');
 assert.ok(admin.includes('data-b61a-open')&&admin.includes('window.BatcoPilotAdmin={open}'),'Admin home must open pilot in-page instead of redirecting to the heavy control center');
