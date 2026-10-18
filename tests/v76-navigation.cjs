@@ -47,7 +47,7 @@ let pending;
 (async()=>{
  listeners.message({data:{type:'BATCO_PREFETCH_SHELL',paths:['/admin-home.html','/admin-dashboard.html','/api/secret','/data/jeddah.tsv']},waitUntil:p=>{pending=p}});
  await pending;
- const shells=stores.get('batco-navigation-shell-v76');
+ const shells=stores.get([...stores.keys()].find(k=>k.startsWith('batco-navigation-shell-')));
  assert.ok(shells?.has('/admin-home.html'));
  assert.ok(shells?.has('/admin-dashboard.html'));
  assert.ok(!shells.has('/api/secret'));

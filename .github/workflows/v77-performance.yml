@@ -1,0 +1,26 @@
+name: V77 performance and compatibility
+on:
+  push:
+    branches: [codex/performance-v77]
+  pull_request:
+    paths: ['admin-dashboard.html', 'scripts/build-performance.cjs', 'sw.js', 'package*.json', 'tests/v77-*', 'vercel.json']
+permissions:
+  contents: read
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/v76-navigation.cjs && node tests/v77-static-cache.cjs
+      - run: node tests/v77-performance.cjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: performance-v77
+          path: qa-v77
+          retention-days: 7
