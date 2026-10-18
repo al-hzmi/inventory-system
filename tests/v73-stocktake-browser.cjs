@@ -28,7 +28,7 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  async function pageFor(file,width=390){
   const ctx=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1});
   await ctx.addInitScript(f=>{window.__fixture=f;localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');localStorage.setItem('inventory_employee_id_v2','admin_mohanad');localStorage.setItem('inventory_employee_auth_version_v2','2')},fixture());
-  await ctx.route('**/*',async route=>{const url=new URL(route.request().url());if(['fonts.googleapis.com','fonts.gstatic.com'].includes(url.hostname))return route.continue();if(url.hostname==='localhost'){const p=path.join(root,url.pathname);if(fs.existsSync(p)&&fs.statSync(p).isFile())return route.fulfill({body:fs.readFileSync(p),contentType:p.endsWith('.html')?'text/html':p.endsWith('.css')?'text/css':'application/javascript'});return route.fulfill({status:404,body:''})}if(url.pathname.includes('firebase-app-compat'))return route.fulfill({body:fakeFirebase,contentType:'application/javascript'});return route.fulfill({body:'',contentType:'application/javascript'})});
+  await ctx.route('**/*',async route=>{const url=new URL(route.request().url());if(['fonts.googleapis.com','fonts.gstatic.com'].includes(url.hostname))return route.continue();if(url.hostname==='localhost'){const p=path.join(root,url.pathname);if(fs.existsSync(p)&&fs.statSync(p).isFile())return route.fulfill({body:fs.readFileSync(p),contentType:p.endsWith('.html')?'text/html':p.endsWith('.css')?'text/css':p.endsWith('.svg')?'image/svg+xml':'application/javascript'});return route.fulfill({status:404,body:''})}if(url.pathname.includes('firebase-app-compat'))return route.fulfill({body:fakeFirebase,contentType:'application/javascript'});return route.fulfill({body:'',contentType:'application/javascript'})});
   const page=await ctx.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://localhost/'+file);await page.waitForTimeout(350);if(errors.length){await page.screenshot({path:path.join(out,'error-'+file+'.png'),fullPage:true});throw new Error(file+': '+errors.join('; '))}return {page,ctx,errors};
  }
  const {page,ctx,errors}=await pageFor('stocktake.html');
@@ -36,6 +36,7 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  assert.match(await page.locator('.welcomeRoster').innerText(),/مهند/);
  assert.match(await page.locator('.welcomeRoster').innerText(),/محمد أحمد/);
  assert.equal(await page.locator('.welcomeBrand img').getAttribute('src'),'./assets/batco-logo.svg');
+ assert.equal(await page.locator('.welcomeBrand img').evaluate(img=>img.complete&&img.naturalWidth>0),true);
  await page.screenshot({path:path.join(out,'welcome-mobile.png'),fullPage:true});
  await page.locator('#startStocktake').click();assert.equal(await page.evaluate(()=>__writes.length),0);
  await page.locator('#search').fill('١٠٢');assert.equal(await page.locator('.skuSuggestion').count(),18);
