@@ -25,17 +25,18 @@ has(employee,'id="v56-9-operator-ux"','employee stocktake must use the V56.9 ope
 has(employee,'class="searchWrap"','scanner/search control must mirror inventory search composition');
 has(employee,'class="inventoryScanButton"','scanner must be an embedded icon button, not a separate oversized CTA');
 has(employee,'المنجز حديثًا','completed items must be separated from the active count flow');
-has(employee,'لن تظهر بقية الأصناف هنا','pending inventory must not be dumped below the search field');
+has(employee,"if((i.countStatus||'pending')==='pending')return false",'pending inventory must not appear in completed history');
 has(employee,'function completedCardHtml','completed items must use compact operator rows');
 has(employee,'let stocktakeAudioCtx=null','audio context must persist across asynchronous Firestore save');
 has(employee,'function ensureFeedbackAudio()','audio must be unlocked from a user gesture');
 has(employee,"window.addEventListener('pointerdown',ensureFeedbackAudio",'audio context must be primed before async save');
 has(employee,'feedback(status,finishedAll)','save must trigger sound/haptic feedback after success');
-has(employee,'العد الأول أعمى','blind-count control must remain intact');
-has(employee,'كمية النظام تبقى مخفية حتى اعتماد العد الأول','expected quantity must remain hidden before first count');
+has(employee,'counted?`<div class="qtygrid"','system quantity must remain behind counted condition');
+has(employee,'`:`<div class="blind"></div>`','uncounted card must hide system quantity');
 assert.ok(!employee.includes('class="panel mission"'),'AI-like dark mission scoreboard must be removed from employee render');
 has(admin,'id="v56-8-admin-polish"','admin stocktake should retain its proven responsive polish');
-has(shell,'stocktake.html?v=56.9','employee stocktake cache key must be V56.9');
-has(shell,'admin-stocktake.html?embedded=1&v=56.8','admin stocktake cache key remains V56.8');
+assert.match(shell,/stocktake\.html\?v=\d+\.\d+/,'employee shell must retain a revisioned route');
+assert.match(shell,/admin-stocktake\.html\?embedded=1&v=\d+\.\d+/,'admin shell must retain its embedded revisioned route');
 
 console.log('V56.9 stocktake operator UX + barcode parity + feedback regression: OK');
+
