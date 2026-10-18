@@ -28,10 +28,23 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  async function pageFor(file,width=390){
   const ctx=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1});
   await ctx.addInitScript(f=>{window.__fixture=f;localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');localStorage.setItem('inventory_employee_id_v2','admin_mohanad');localStorage.setItem('inventory_employee_auth_version_v2','2')},fixture());
-  await ctx.route('**/*',async route=>{const url=new URL(route.request().url());if(['fonts.googleapis.com','fonts.gstatic.com'].includes(url.hostname))return route.continue();if(url.hostname==='localhost'){const p=path.join(root,url.pathname);if(fs.existsSync(p)&&fs.statSync(p).isFile())return route.fulfill({body:fs.readFileSync(p),contentType:p.endsWith('.html')?'text/html':p.endsWith('.css')?'text/css':'application/javascript'});return route.fulfill({status:404,body:''})}if(url.pathname.includes('firebase-app-compat'))return route.fulfill({body:fakeFirebase,contentType:'application/javascript'});return route.fulfill({body:'',contentType:'application/javascript'})});
+  await ctx.route('**/*',async route=>{const url=new URL(route.request().url());if(['fonts.googleapis.com','fonts.gstatic.com'].includes(url.hostname))return route.continue();if(url.hostname==='localhost'){const p=path.join(root,url.pathname);if(fs.existsSync(p)&&fs.statSync(p).isFile())return route.fulfill({body:fs.readFileSync(p),contentType:p.endsWith('.html')?'text/html':p.endsWith('.css')?'text/css':p.endsWith('.svg')?'image/svg+xml':'application/javascript'});return route.fulfill({status:404,body:''})}if(url.pathname.includes('firebase-app-compat'))return route.fulfill({body:fakeFirebase,contentType:'application/javascript'});return route.fulfill({body:'',contentType:'application/javascript'})});
   const page=await ctx.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://localhost/'+file);await page.waitForTimeout(350);if(errors.length){await page.screenshot({path:path.join(out,'error-'+file+'.png'),fullPage:true});throw new Error(file+': '+errors.join('; '))}return {page,ctx,errors};
  }
  const {page,ctx,errors}=await pageFor('stocktake.html');
+ assert.equal(await page.locator('#search').count(),0);
+ assert.match(await page.locator('.welcomeRoster').innerText(),/مهند/);
+ assert.match(await page.locator('.welcomeRoster').innerText(),/محمد أحمد/);
+ assert.equal(await page.locator('.welcomeBrand img').getAttribute('src'),'./assets/batco-logo.svg');
+ assert.equal(await page.locator('.welcomeBrand img').evaluate(img=>img.complete&&img.naturalWidth>0),true);
+ await page.screenshot({path:path.join(out,'welcome-mobile.png'),fullPage:true});
+ await page.locator('#startStocktake').click();assert.equal(await page.evaluate(()=>__writes.length),0);
+ await page.locator('#search').fill('١٠٢');assert.equal(await page.locator('.skuSuggestion').count(),18);
+ await page.screenshot({path:path.join(out,'suggestions-mobile.png'),fullPage:true});
+ await page.locator('[data-open="item10"]').click();assert.equal(await page.locator('#actual_item10').count(),1);
+ await page.locator('#backBtn').click();assert.equal(await page.locator('#startStocktake').count(),1);await page.locator('#startStocktake').click();
+ await page.locator('#search').fill('99999');assert.match(await page.locator('.searchEmpty').innerText(),/لا توجد نتائج/);
+
  await page.locator('#search').fill('10210');await page.waitForTimeout(100);
  assert.equal(await page.locator('.activeResult .qtygrid').count(),0);await page.locator('#actual_item10').fill('١٢٫٧٥');
  await page.evaluate(()=>__emit());assert.equal(await page.locator('#actual_item10').inputValue(),'١٢٫٧٥');
@@ -45,9 +58,10 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  // Explicit server rejection retains recovery draft and never reports completion.
  await page.locator('#search').fill('10211');await page.waitForTimeout(80);await page.locator('#actual_item11').fill('5.5');await page.evaluate(()=>__reject=true);await page.locator('[data-save="item11"]').click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>draftStore.get('campaign1:team1:item11:qty').value),'5.5');assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item11').countStatus),'pending');
  await page.evaluate(()=>{state.campaign.status='closed';render()});assert.equal(await page.locator('[data-save="item11"]').isDisabled(),true);assert.equal(await page.evaluate(()=>canEditItem(state.items[0])),false);assert.equal(await page.evaluate(()=>{const item=state.items[0];state.campaign=null;return canEditItem(item)}),false);
+ await page.evaluate(()=>{state.campaign=__store.stocktake_campaigns.campaign1;state.enteredScope='';state.items=[];state.itemsLoaded=true;itemCacheOnly=false;render()});assert.equal(await page.locator('#startStocktake').isDisabled(),true);assert.match(await page.locator('.welcomeReadiness').innerText(),/لم تُسند أصناف/);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual(errors,[]);await ctx.close();
  for(const file of ['stocktake.html','admin-stocktake.html','stocktake-accountant.html','accountant-stocktake.html'])for(const width of [390,1440]){
-  const {page:p,ctx:c,errors:e}=await pageFor(file,width);if(file==='stocktake.html'){await p.locator('#search').fill('10203');await p.waitForTimeout(70)}
+  const {page:p,ctx:c,errors:e}=await pageFor(file,width);if(file==='stocktake.html'){if(width===1440){const box=await p.locator('.stocktakeWelcome').boundingBox();assert.ok(box.width>650);assert.ok(Math.abs(box.x+box.width/2-width/2)<2)}await p.screenshot({path:path.join(out,'welcome-'+width+'.png'),fullPage:true});await p.locator('#startStocktake').click();await p.locator('#search').fill('10203');await p.waitForTimeout(70)}
   if(file==='admin-stocktake.html'){
    await p.locator('#followupAccess summary').click();await p.locator('[data-accountant-member="e1"]').check();await p.evaluate(()=>__emit());assert.equal(await p.locator('[data-accountant-member="e1"]').isChecked(),true);assert.equal(await p.locator('#followupAccess').getAttribute('open'),'');await p.locator('#followupAccess summary').click();
    await p.evaluate(()=>{state.campaign.status='draft';__store.stocktake_campaigns.campaign1.status='draft';window.prompt=()=>state.teams[0].name});const before=await p.evaluate(()=>__writes.length);await p.evaluate(()=>deleteTeam('team1'));assert.equal(await p.evaluate(()=>__writes.length),before);assert.match(await p.locator('#toast').innerText(),/الحذف مرفوض/);
@@ -56,3 +70,4 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  }
  await browser.close();console.log('PASS: Arabic/decimal draft preservation, blank rejection, offline enqueue and server acknowledgment, rejected-write recovery, closed read-only, protected deletion, live access controls, 8 responsive views.');
 })().catch(e=>{console.error(e);process.exit(1)});
+

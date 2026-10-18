@@ -1,5 +1,5 @@
 /* Cache only the stocktake shell. Never cache API, identity or Firestore traffic. */
-const STOCKTAKE_CACHE='stocktake-shell-v73';
+const STOCKTAKE_CACHE='stocktake-shell-v74';
 const PAGES=['/stocktake.html','/admin-stocktake.html','/stocktake-accountant.html','/accountant-stocktake.html'];
 const ASSETS=['/stocktake-core.js','/stocktake-workspace.css','/stocktake-workbook.js','/v71-brand.css','/v56-39-site-identity.js','/assets/batco-logo.svg','/assets/batco-app-icon.svg'];
 const VENDORS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'];
@@ -20,4 +20,5 @@ self.addEventListener('fetch',event=>{
    return Promise.race([network.catch(()=>cached),new Promise(resolve=>setTimeout(()=>resolve(cached),2500))]);
  })());
 });
+
 

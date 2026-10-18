@@ -1,7 +1,7 @@
 name: V73 stocktake quality
 on:
   push:
-    branches: [codex/stocktake-workspace-v73]
+    branches: [codex/stocktake-workspace-v73, codex/stocktake-welcome-v74]
   pull_request:
     paths:
       - '*stocktake*'
