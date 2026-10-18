@@ -42,6 +42,11 @@ const setPreview=identity=>{try{if(identity===NATIONAL_IDENTITY)sessionStorage.s
 const clearPreview=()=>{try{sessionStorage.removeItem(PREVIEW_KEY)}catch{}applyCurrent('preview-clear')};
 const getState=()=>({version:VERSION,visualRevision:VISUAL_REVISION,live:{...liveState},preview:readPreview(),effective:wanted()});
 window.__BATCO_SITE_IDENTITY={version:VERSION,visualRevision:VISUAL_REVISION,apply,setPreview,clearPreview,getState,control:{collection:CONTROL_COLLECTION,doc:CONTROL_DOC},supported:[DEFAULT_IDENTITY,NATIONAL_IDENTITY]};
+/* Fast navigation is independent of Firebase identity and never stores its data. */
+if(!document.querySelector('script[data-batco-fast-nav]')){
+ const n=document.createElement('script');n.src='./batco-fast-nav.js?v=76.0';n.defer=true;
+ n.dataset.batcoFastNav='1';document.head.appendChild(n);
+}
 bootstrapCache();subscribe();
 window.addEventListener('storage',event=>{if(event.key===CACHE_KEY&&!readPreview()){liveState=normalize(safeJson(event.newValue||'null'));applyCurrent('storage')}});
 })();
