@@ -35,6 +35,8 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  assert.equal(await page.locator('#search').count(),0);
  assert.match(await page.locator('.welcomeRoster').innerText(),/مهند/);
  assert.match(await page.locator('.welcomeRoster').innerText(),/محمد أحمد/);
+ assert.equal(await page.locator('.welcomeRoster dt').first().innerText(),'عضو اللجنة');
+ assert.equal(await page.locator('.welcomeRoster dt').nth(1).innerText(),'المساعد');
  assert.equal(await page.locator('.welcomeBrand img').getAttribute('src'),'./assets/batco-logo.svg');
  assert.equal(await page.locator('.welcomeBrand img').evaluate(img=>img.complete&&img.naturalWidth>0),true);
  await page.screenshot({path:path.join(out,'welcome-mobile.png'),fullPage:true});
@@ -46,26 +48,40 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  await page.locator('#search').fill('99999');assert.match(await page.locator('.searchEmpty').innerText(),/لا توجد نتائج/);
 
  await page.locator('#search').fill('10210');await page.waitForTimeout(100);
- assert.equal(await page.locator('.activeResult .qtygrid').count(),0);await page.locator('#actual_item10').fill('١٢٫٧٥');
+ assert.equal(await page.locator('.activeResult .qtygrid').count(),0);
+ assert.equal(await page.locator('#actual_item10').getAttribute('placeholder'),'كمية هذا الصنف');
+ const hintSize=await page.locator('#actual_item10').evaluate(el=>parseFloat(getComputedStyle(el,'::placeholder').fontSize));
+ assert.ok(hintSize<=18,'count field placeholder must fit cleanly on iPhone');
+ await page.locator('#actual_item10').fill('١٢٫٧٥');
  await page.evaluate(()=>__emit());assert.equal(await page.locator('#actual_item10').inputValue(),'١٢٫٧٥');
  await page.locator('#actual_item10').fill('');await page.locator('[data-save="item10"]').click();assert.equal(await page.evaluate(()=>__writes.length),0);
  await page.locator('#actual_item10').fill('١٢٫٧٥');await page.screenshot({path:path.join(out,'floor-mobile.png'),fullPage:true});
  await page.evaluate(()=>{__offline=true;Object.defineProperty(navigator,'onLine',{get:()=>false,configurable:true});window.dispatchEvent(new Event('offline'))});
- await page.locator('[data-save="item10"]').click();await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>state.activeEditId),'');assert.equal(await page.evaluate(()=>state.items.find(x=>x.id==='item10').actualQty),12.75);assert.equal(await page.evaluate(()=>__writes.length),1);assert.equal(await page.evaluate(()=>__writes[0].length),2);
+ const beforeSurplus=await page.evaluate(()=>__writes.length);
+ await page.locator('[data-save="item10"]').click();
+ await page.locator('#surplusModal.open').waitFor();
+ assert.match(await page.locator('#surplusDifference').innerText(),/0.25/);
+ assert.equal(await page.evaluate(()=>__writes.length),beforeSurplus,'surplus must not write before approval');
+ await page.locator('#surplusCancel').click();
+ assert.equal(await page.evaluate(()=>__writes.length),beforeSurplus,'cancel must not write');
+ assert.equal(await page.locator('#actual_item10').inputValue(),'١٢٫٧٥','cancel must retain quantity');
+ await page.locator('[data-save="item10"]').click();
+ await page.locator('#surplusConfirm').click();
+ await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>state.activeEditId),'');assert.equal(await page.evaluate(()=>state.items.find(x=>x.id==='item10').actualQty),12.75);assert.equal(await page.evaluate(()=>__writes.length),1);assert.equal(await page.evaluate(()=>__writes[0].length),2);
  assert.match(await page.locator('.syncStatus').innerText(),/بانتظار المزامنة/);
  await page.evaluate(()=>{__offline=false;Object.defineProperty(navigator,'onLine',{get:()=>true,configurable:true});__deferred.splice(0).forEach(fn=>fn())});
  await page.waitForTimeout(50);assert.equal(await page.evaluate(()=>draftStore.get('campaign1:team1:item10:qty')),null);
  // A new team sees all items without assignment; its contribution adds to, never replaces, team1.
  await page.evaluate(()=>{__store.stocktake_teams.team2={id:'team2',campaignId:'campaign1',name:'الجهة الثانية',scope:'يسار',memberEmployeeIds:['admin_mohanad'],memberEmployeeNames:['مهند']};__emit();pickTeam('team2')});await page.waitForTimeout(80);
  assert.equal(await page.evaluate(()=>state.items.length),18);await page.locator('#startStocktake').click();await page.locator('#search').fill('10210');await page.waitForTimeout(80);
- assert.equal(await page.locator('#actual_item10').inputValue(),'');await page.locator('#actual_item10').fill('2.25');await page.locator('[data-save="item10"]').click();await page.waitForTimeout(100);
+ assert.equal(await page.locator('#actual_item10').inputValue(),'');await page.locator('#actual_item10').fill('2.25');await page.locator('[data-save="item10"]').click();await page.locator('#surplusModal.open').waitFor();assert.match(await page.locator('#surplusTotal').innerText(),/15/);await page.locator('#surplusConfirm').click();await page.waitForTimeout(100);
  assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item10').actualQty),15);
- await page.locator('#search').fill('10210');await page.waitForTimeout(80);assert.equal(await page.locator('#actual_item10').inputValue(),'2.25');await page.locator('#actual_item10').fill('3.25');await page.locator('[data-save="item10"]').click();await page.waitForTimeout(100);
+ await page.locator('#search').fill('10210');await page.waitForTimeout(80);assert.equal(await page.locator('#actual_item10').inputValue(),'2.25');await page.locator('#actual_item10').fill('3.25');await page.locator('[data-save="item10"]').click();await page.locator('#surplusModal.open').waitFor();await page.locator('#surplusConfirm').click();await page.waitForTimeout(100);
  assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item10').actualQty),16);
- await page.locator('#search').fill('10210');await page.waitForTimeout(80);await page.locator('[data-found="item10"]').click();await page.locator('#foundQty').fill('1.5');assert.match(await page.locator('#foundPreview').innerText(),/17.5/);await page.locator('#foundSave').click();await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item10').actualQty),17.5);
+ await page.locator('#search').fill('10210');await page.waitForTimeout(80);await page.locator('[data-found="item10"]').click();await page.locator('#foundQty').fill('1.5');assert.match(await page.locator('#foundPreview').innerText(),/17.5/);await page.locator('#foundSave').click();await page.locator('#surplusModal.open').waitFor();assert.match(await page.locator('#surplusTotal').innerText(),/17.5/);await page.locator('#surplusConfirm').click();await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item10').actualQty),17.5);
  await page.evaluate(()=>pickTeam('team1'));await page.waitForTimeout(80);await page.locator('#startStocktake').click();
  // Explicit server rejection retains recovery draft and never reports completion.
- await page.locator('#search').fill('10211');await page.waitForTimeout(80);await page.locator('#actual_item11').fill('5.5');await page.evaluate(()=>__reject=true);await page.locator('[data-save="item11"]').click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>draftStore.get('campaign1:team1:item11:qty').value),'5.5');assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item11').countStatus),'pending');
+ await page.locator('#search').fill('10211');await page.waitForTimeout(80);await page.locator('#actual_item11').fill('5.5');await page.evaluate(()=>__reject=true);await page.locator('[data-save="item11"]').click();await page.waitForTimeout(80);assert.equal(await page.locator('#surplusModal.open').count(),0,'shortage must not show a surplus confirmation');assert.equal(await page.evaluate(()=>draftStore.get('campaign1:team1:item11:qty').value),'5.5');assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item11').countStatus),'pending');
  await page.evaluate(()=>{state.campaign.status='closed';render()});assert.equal(await page.locator('[data-save="item11"]').isDisabled(),true);assert.equal(await page.evaluate(()=>canEditItem(state.items[0])),false);assert.equal(await page.evaluate(()=>{const item=state.items[0];state.campaign=null;return canEditItem(item)}),false);
  await page.evaluate(()=>{state.campaign=__store.stocktake_campaigns.campaign1;state.enteredScope='';state.items=[];state.itemsLoaded=true;itemCacheOnly=false;render()});assert.equal(await page.locator('#startStocktake').isDisabled(),true);assert.match(await page.locator('.welcomeReadiness').innerText(),/لقطة مخزون الحملة/);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual(errors,[]);await ctx.close();
