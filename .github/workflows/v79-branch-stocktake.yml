@@ -1,0 +1,23 @@
+name: V79 branch stocktake quality
+on:
+  push:
+    branches: [feature/v79-branch-stocktake, main]
+    paths: ['branch-stocktake*', 'admin-stocktake.html', 'admin-stocktake-shell.html', 'sw.js', 'batco-fast-nav.js', 'tests/v79-*', '.github/workflows/v79-branch-stocktake.yml']
+  pull_request:
+    paths: ['branch-stocktake*', 'admin-stocktake.html', 'admin-stocktake-shell.html', 'sw.js', 'batco-fast-nav.js', 'tests/v79-*', '.github/workflows/v79-branch-stocktake.yml']
+permissions:
+  contents: read
+jobs:
+  branch-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: node tests/v79-branch-stocktake.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v79-branch-browser.cjs
+      - run: BROWSER=webkit node tests/v79-branch-browser.cjs
+      - run: node tests/v78-boot-service-worker.cjs
