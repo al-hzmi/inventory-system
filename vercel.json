@@ -205,6 +205,17 @@
           "value": "nosniff"
         }
       ]
+    },
+    {
+      "source": "/assets/build/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
-  ]
+  ],
+  "buildCommand": "node scripts/build-performance.cjs",
+  "installCommand": "npm ci --ignore-scripts"
 }
