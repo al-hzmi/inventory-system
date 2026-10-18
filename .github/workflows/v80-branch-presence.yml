@@ -21,4 +21,6 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/v80-branch-presence-browser.cjs
       - run: BROWSER=webkit node tests/v80-branch-presence-browser.cjs
+      - run: node tests/v80-branch-admin-browser.cjs
+      - run: BROWSER=webkit node tests/v80-branch-admin-browser.cjs
       - run: npm run build
