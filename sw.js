@@ -1,13 +1,13 @@
 /* Cache only the stocktake shell. Never cache API, identity or Firestore traffic. */
-const STOCKTAKE_CACHE='stocktake-shell-v80';
-const RESOURCE_CACHE='batco-static-resources-v80';
-const NAV_CACHE='batco-navigation-shell-v80';
-const PAGES=['/branch-presence.html','/branch-stocktake.html','/stocktake.html','/admin-stocktake.html','/stocktake-accountant.html','/accountant-stocktake.html'];
-const ASSETS=['/branch-presence-core.js','/branch-presence.js','/branch-presence-main-launcher.js','/branch-presence-admin.css','/branch-presence-admin.js','/branch-presence-entry.js','/branch-presence.css','/branch-stocktake-core.js','/branch-stocktake.js','/branch-stocktake.css','/stocktake-core.js','/stocktake-workspace.css','/stocktake-workbook.js','/v71-brand.css','/v56-39-site-identity.js','/assets/batco-logo.svg','/assets/batco-app-icon.svg'];
+const STOCKTAKE_CACHE='stocktake-shell-v81';
+const RESOURCE_CACHE='batco-static-resources-v81';
+const NAV_CACHE='batco-navigation-shell-v81';
+const PAGES=['/admin-branch-presence.html','/branch-presence.html','/branch-stocktake.html','/stocktake.html','/admin-stocktake.html','/stocktake-accountant.html','/accountant-stocktake.html'];
+const ASSETS=['/branch-presence-core.js','/branch-presence.js','/branch-presence-main-launcher.js','/branch-presence-page.css','/branch-presence-admin.css','/branch-presence-admin.js','/branch-presence-entry.js','/branch-presence.css','/branch-stocktake-core.js','/branch-stocktake.js','/branch-stocktake.css','/stocktake-core.js','/stocktake-workspace.css','/stocktake-workbook.js','/v71-brand.css','/v56-39-site-identity.js','/assets/batco-logo.svg','/assets/batco-app-icon.svg'];
 const VENDORS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'];
 // Static HTML shells only. Never cache Firestore traffic, account data, or inventory quantities.
 const NAV_PAGES=new Set([
- '/index.html','/customer.html','/admin-home.html','/admin-dashboard.html','/branch-stocktake.html','/branch-presence.html',
+ '/index.html','/customer.html','/admin-home.html','/admin-dashboard.html','/admin-branch-presence.html','/branch-stocktake.html','/branch-presence.html',
  '/control-center.html','/admin-stocktake-shell.html','/admin-stocktake.html',
  '/stocktake.html','/stocktake-accountant.html','/accountant-stocktake.html',
  '/inventory-analytics.html','/image-distribution.html','/admin-inventory-import.html',
