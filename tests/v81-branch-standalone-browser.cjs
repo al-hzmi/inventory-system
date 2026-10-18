@@ -77,7 +77,14 @@ const browserType=process.env.BROWSER==='webkit'?webkit:chromium;
  await page.locator('#bpBranch').fill('معرض جدة');
  await page.locator('#bpEmployees input[value="B5NLc3hSrt8yhZ0F8GLH"]').check();
  await page.locator('#bpStart').click();
- await page.waitForFunction(()=>Object.keys(window.__v81.sessions).length===1);
+ await page.waitForTimeout(600);
+ const attempt=await page.evaluate(()=>({
+   online:navigator.onLine,error:document.querySelector('#bpError')?.textContent||'',
+   control:window.__v81.control,sessions:Object.keys(window.__v81.sessions),
+   selected:[...document.querySelectorAll('#bpEmployees input:checked')].map(x=>x.value),
+   busy:document.querySelector('#branchPresencePanel')?.classList.contains('bp-busy')
+ }));
+ if(!attempt.sessions.length)throw Error('Branch activation diagnostics: '+JSON.stringify(attempt)+'; script errors: '+JSON.stringify(errors));
  const assignment=await page.evaluate(()=>Object.values(window.__v81.sessions)[0].assignedEmployeeIds);
  assert.equal(assignment.join(','),'B5NLc3hSrt8yhZ0F8GLH','Firestore keeps employee IDs while UI shows human names');
  assert.deepEqual(errors,[],'no JS exceptions on dedicated settings page');
