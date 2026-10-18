@@ -1,0 +1,31 @@
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#fafafa;color:#151515;font:14px/1.75 -apple-system,BlinkMacSystemFont,"IBM Plex Sans Arabic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!important}
+.branchPage{width:min(850px,calc(100% - 26px));margin:auto;padding:18px 0 36px}
+.branchHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #e8e8e8;border-radius:16px;padding:10px 17px;margin-bottom:17px}
+.branchBrand{display:flex;gap:14px;align-items:center;min-width:0}
+.branchBrand img{height:52px;width:114px;object-fit:contain}
+.branchBrand small{color:#777;font-size:11px;font-weight:600}.branchBrand h1{font-size:21px;line-height:1.4;margin:0;font-weight:800;letter-spacing:-.3px}
+.branchBack{flex-shrink:0;color:#151515;text-decoration:none;font-size:12px;font-weight:750;border:1px solid #dedede;border-radius:10px;padding:10px 13px;background:white}
+.branchBack:hover{background:#f6f6f6}
+.branchMain>.branchLoading{padding:22px;background:#fff;border:1px solid #eee;border-radius:14px;text-align:center}
+.branchMain .bp-admin{margin:0;border-radius:17px;padding:20px 23px;box-shadow:0 3px 20px #00000004}
+.branchMain .bp-admin .bp-bar{display:block}
+.branchMain .bp-admin .bp-bar strong{font-size:22px;letter-spacing:-.3px}
+.branchMain .bp-admin .bp-bar p{font-size:12px;line-height:1.9;margin-top:5px}
+.branchMain .bp-admin .bp-body{padding-top:16px;margin-top:17px}
+.branchMain .bp-admin .bp-open{display:none!important}
+.branchMain .bp-admin .bp-people{padding-top:9px;margin-top:14px;border-top:1px solid #eee}
+.branchMain .bp-admin .bp-people>strong{display:block;font-size:18px;line-height:1.5;margin:0 0 3px}
+.branchMain .bp-admin .bp-people>p{font-size:13px;color:#777}
+.branchMain .bp-admin .bp-members{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.branchMain .bp-admin .bp-members label{font-size:13px;min-height:50px;padding:10px 13px;overflow-wrap:anywhere}
+.branchMain .bp-admin .bp-actions{margin-top:22px}
+.branchMain .bp-admin .bp-actions>.btn{min-height:49px;padding:10px 15px;border-radius:11px;background:#fff;color:#111;border:1px solid #d9d9d9;font-weight:700}
+.branchMain .bp-admin .bp-actions>.btn.primary{background:#111;color:#fff;border-color:#111}
+.branchMain .bp-admin .bp-actions>.btn.bad{color:#9e2b2b}
+.branchMain .bp-admin .bp-people .bp-unnamed{color:#777;cursor:not-allowed;opacity:.76}
+.branchMain .bp-admin .bp-summary{min-height:49px;border-radius:12px}
+.branchMain .bp-admin .bp-note{padding-top:5px;line-height:1.9;font-size:12px}
+.branchFooter{text-align:center;padding:18px 8px 4px;color:#8b8b8b;font-size:11px}
+@media(max-width:650px){.branchPage{width:calc(100% - 18px);padding-top:9px}.branchHeader{padding:9px 10px;border-radius:13px}.branchBrand{gap:7px}.branchBrand img{width:85px;height:42px}.branchBrand h1{font-size:17px}.branchBack{font-size:11px;padding:8px;white-space:nowrap}.branchMain .bp-admin{padding:16px 13px}.branchMain .bp-admin .bp-bar strong{font-size:19px}.branchMain .bp-admin .bp-members{grid-template-columns:1fr}.branchMain .bp-admin .bp-actions>.btn{width:100%}}
