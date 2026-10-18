@@ -1,7 +1,18 @@
 name: V73 stocktake quality
 on:
   push:
-    branches: [codex/stocktake-workspace-v73, codex/stocktake-welcome-v74, codex/stocktake-shared-v75]
+    branches: [main, codex/stocktake-workspace-v73, codex/stocktake-welcome-v74, codex/stocktake-shared-v75]
+    paths:
+      - 'stocktake.html'
+      - 'stocktake-core.js'
+      - 'stocktake-workspace.css'
+      - 'stocktake-workbook.js'
+      - 'stocktake-accountant.html'
+      - 'accountant-stocktake.html'
+      - 'admin-stocktake.html'
+      - 'sw.js'
+      - 'tests/v73-*'
+      - '.github/workflows/v73-stocktake-quality.yml'
   pull_request:
     paths:
       - '*stocktake*'
