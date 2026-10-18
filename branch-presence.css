@@ -1,0 +1,51 @@
+:root{--ink:#121212;--muted:#737373;--line:#e5e5e5;--soft:#f8f8f8;--green:#166a46}
+*{box-sizing:border-box}html,body{margin:0;background:#f8f8f8;color:var(--ink);font:15px/1.7 -apple-system,BlinkMacSystemFont,"IBM Plex Sans Arabic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}button,input{font:inherit;min-width:0}button{cursor:pointer}input,button{outline-offset:3px}
+.bp-worker{max-width:800px;margin:auto;padding:10px 14px 48px}
+.workerHead{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 15px;border-bottom:1px solid var(--line);background:#fff0}
+.workerHead img{object-fit:contain;width:108px;height:48px}.workerHead a{font-size:12px;color:#333;text-decoration:none;border:1px solid #e4e4e4;border-radius:10px;background:white;padding:9px 12px}
+.workerStatus{margin:22px 1px 16px}.eyebrow{color:#777;font-size:12px;font-weight:700}
+h1,h2,h3,p{margin:0}h1{font-size:24px;line-height:1.5;letter-spacing:-.4px}.workerStatus p{color:var(--muted);font-size:13px}
+.workerProgress{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:15px 0}
+.workerProgress>div{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px}
+.workerProgress span{display:block;color:#777;font-size:11px}.workerProgress b{display:block;font-size:25px;font-weight:850;line-height:1.4}
+.workerProgress b.syncGood{font-size:12px;margin-top:9px;color:var(--green)}.workerProgress b.syncWait{color:#8a5b10}
+.scanCard{background:white;border:1px solid #e7e7e7;border-radius:22px;padding:22px;box-shadow:0 2px 16px rgba(0,0,0,.025)}
+.scanCard h2{font-size:21px}.scanCard>p{font-size:13px;color:#666;margin-top:3px}
+#workerForm{display:grid;grid-template-columns:1fr auto;gap:9px;margin:19px 0 10px}
+#workerInput{height:65px;padding:12px 15px;border:2px solid #161616;border-radius:13px;background:#fefefe;font-size:21px;font-weight:750;direction:ltr;text-align:center;letter-spacing:1px}
+#workerInput::-webkit-search-cancel-button{-webkit-appearance:none}.darkBtn{background:#111;color:white;border:1px solid #111;border-radius:13px;padding:10px 17px;min-height:55px;font-size:13px;font-weight:800}
+.scanFeedback{padding:14px;border-radius:12px;background:#f7f7f7;color:#444;text-align:center;font-size:14px;font-weight:750;min-height:56px;margin:10px 0}
+.scanFeedback.good{background:#edf9f2;color:#12613c}.scanFeedback.duplicate{background:#f6f6f6;color:#222}.scanFeedback.error{background:#fff4f4;color:#a32424}
+.cameraBtn{width:100%;padding:12px;border:1px solid #ddd;border-radius:11px;background:white;font-weight:700;color:#252525;min-height:44px}
+.cameraArea{margin-top:13px;background:#111;border-radius:13px;padding:10px;text-align:center}
+#cameraReader{max-width:480px;margin:auto;background:#000;min-height:180px}
+#workerCloseCamera{border-radius:9px;border:0;background:#eee;color:#111;padding:9px 18px;margin:10px 0 2px}
+.recent{margin:20px 0;background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px}
+.recent h3{font-size:15px;margin-bottom:8px}.recent p{color:#888;font-size:12px}
+.recentRow{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #eee;padding:9px 0}
+.recentRow b{direction:ltr;text-align:right;unicode-bidi:isolate;font-size:13px}
+.recentRow span{color:#666;font-size:12px;text-align:left;overflow:hidden;text-overflow:ellipsis}
+.footerNote{text-align:center;font-size:11px;color:#777;margin:20px auto;max-width:550px}
+.suggestions{border:1px solid #eee;border-radius:13px;margin-top:-5px;margin-bottom:10px;overflow:hidden}
+.suggestions button{border:0;border-bottom:1px solid #eee;background:#fff;width:100%;text-align:right;padding:12px;display:flex;justify-content:space-between;gap:9px;font-size:12px}
+.suggestions button:last-child{border-bottom:0}.suggestions button b{direction:ltr}
+.srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.bp-admin{margin:10px 0;border:1px solid #dedede;border-radius:14px;background:#fff;padding:13px 16px;color:#161616}
+.bp-admin button,.bp-admin input,.bp-admin select{font:inherit}
+.bp-admin .bp-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bp-bar strong{font-size:15px}.bp-bar p,.bp-people p{color:#666;font-size:11px;margin:3px 0}
+.bp-label{font-size:10px;color:#444;background:#f2f2f2;border:1px solid #e4e4e4;border-radius:99px;padding:4px 8px;margin:0 6px}
+.bp-open{font-weight:800;background:#111!important;color:#fff!important;border-color:#111!important;white-space:nowrap}
+.bp-body{border-top:1px solid #eee;margin-top:13px;padding-top:13px}
+.bp-summary{padding:12px;border-radius:10px;background:#f7f7f7;font-size:12px;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.bp-summary b{font-size:13px}.bp-summary span{color:#666}.bp-summary .bp-state{border:1px solid #ddd;border-radius:99px;padding:3px 8px;color:#111}
+.bp-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bp-fields label{font-size:12px;font-weight:750;display:grid;gap:5px}
+.bp-fields .input,.bp-fields .select{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#111;min-height:42px}
+.bp-people{margin-top:14px}.bp-members{display:flex;gap:8px;flex-wrap:wrap;padding:9px 0}
+.bp-members label{border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;padding:8px 10px;display:flex;align-items:center;gap:7px;font-size:12px}
+.bp-members input{accent-color:#111;width:17px;height:17px}.bp-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.bp-actions>.btn{min-height:39px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.bp-admin .bp-note{color:#777;font-size:11px;margin:8px 0}.bp-error{color:#ab2424;font-size:12px;margin-top:10px}
+.bp-busy{opacity:.74;pointer-events:none}
+@media(max-width:600px){.bp-worker{padding:8px 9px 26px}.workerStatus{margin-top:14px}h1{font-size:21px}.scanCard{padding:15px;border-radius:16px}.scanCard h2{font-size:19px}.scanCard>p{font-size:12px}#workerForm{grid-template-columns:1fr}#workerInput{height:64px}.darkBtn{min-height:45px}.workerProgress>div{padding:10px}.workerProgress b{font-size:23px}.bp-admin{margin:8px 0;padding:11px}.bp-label{display:block;width:max-content;margin:3px 0}.bp-bar strong{font-size:13px}.bp-fields{grid-template-columns:1fr}.bp-actions>.btn{flex:1}.bp-open{font-size:11px!important;padding:8px!important}}
