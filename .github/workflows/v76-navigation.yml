@@ -1,0 +1,33 @@
+name: V76 navigation and offline shell
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'batco-fast-nav.js'
+      - 'sw.js'
+      - 'index.html'
+      - 'admin-home.html'
+      - 'admin-dashboard.html'
+      - 'customer.html'
+      - 'v56-39-site-identity.js'
+      - 'tests/v76-navigation.cjs'
+      - '.github/workflows/v76-navigation.yml'
+permissions:
+  contents: read
+jobs:
+  safe-navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate navigation prefetch and offline isolation
+        run: |
+          node --check batco-fast-nav.js
+          node --check sw.js
+          node tests/v76-navigation.cjs
+          node tests/v73-stocktake-sw.cjs
