@@ -53,6 +53,16 @@ const fixture='رقم الصنف\tاسم الصنف\tالوحدة\tالكمية 
  await page.reload();
  await page.waitForFunction(()=>document.querySelector('#sessionName')?.textContent==='معرض جدة');
  assert.equal(await page.locator('[data-filter="missing"]').click().then(()=>page.locator('.item').count()),1);
+ page.on('dialog',dialog=>dialog.accept());
+ await page.locator('[data-filter="all"]').click();
+ await page.locator('#bulkAbsent').click();
+ let afterBulk=await page.evaluate(()=>JSON.parse(localStorage.getItem('batco_branch_audit_v79_qa-branch-employee')).sessions[0]);
+ assert.equal(Object.keys(afterBulk.entries).length,3,'bulk confirmation records pending SKU only');
+ assert.equal(await page.locator('[data-filter="missing"]').click().then(()=>page.locator('.item').count()),2);
+ await page.locator('#undoBulk').click();
+ let afterUndo=await page.evaluate(()=>JSON.parse(localStorage.getItem('batco_branch_audit_v79_qa-branch-employee')).sessions[0]);
+ assert.equal(Object.keys(afterUndo.entries).length,2,'undo preserves hand-counted items');
+ assert.equal(await page.locator('.item').count(),1,'undo restores previous missing list');
  await page.locator('#switchSession').click();
  assert.equal(await page.locator('.historyButton').count(),1);
  assert.deepEqual(errors,[]);
