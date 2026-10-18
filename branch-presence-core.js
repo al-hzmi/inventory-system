@@ -32,6 +32,11 @@ function resolve(input,products){
  if(compactMatches.length>1)return {item:null,reason:'ambiguous'};
  // Scan guns often emit EAN digits wrapping the product code. Only accept an unambiguous full SKU digit suffix.
  const digitsOnly=ascii(q).replace(/\D/g,'');
+ if(/^\d{4,}$/.test(q)){
+  const suffix=products.filter(p=>String(p.sku||'').replace(/\D/g,'')===digitsOnly);
+  if(suffix.length===1)return {item:suffix[0],reason:'unique-number'};
+  if(suffix.length>1)return {item:null,reason:'ambiguous'};
+ }
  if(digitsOnly.length>=8){
   const matches=products.filter(p=>{
    const itemDigits=String(p.sku||'').replace(/\D/g,'');
