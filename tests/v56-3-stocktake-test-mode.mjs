@@ -23,7 +23,7 @@ has(admin,'لا يغيّر المخزون الحقيقي','test UI must state th
 has(admin,"if(cp.isTest)return '<div",'test campaigns must bypass Excel upload');
 has(admin,"test_campaign_created:'إنشاء تجربة جرد'",'test creation must be auditable');
 has(admin,'activeStocktakeCampaign','test mode must detect an already-active real stocktake');
-has(admin,"state.campaign.isTest&&otherActive&&otherActive.id!==state.campaign.id",'test activation must not replace another active stocktake');
+has(admin,"otherActive&&otherActive.id!==state.campaign.id",'neither real nor test activation may replace another active stocktake');
 has(admin,"cp.isTest?'إنهاء التجربة'",'test campaign close action must not look like accountant settlement');
 
 const fn=admin.match(/async function createTestCampaign\(\)\{[\s\S]*?\nfunction openCampaignModal\(\)\{/);
@@ -42,3 +42,4 @@ for(const [name,text] of [['jeddah',jed],['riyadh',ruh]]){
 }
 
 console.log('V56.12 full-inventory stocktake test regression: OK');
+
