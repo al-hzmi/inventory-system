@@ -30,7 +30,7 @@ const browserType=process.env.BROWSER==='webkit'?webkit:chromium;
   const db={
    enablePersistence:async()=>{},
    collection(name){
-    if(name==='system_controls')return {doc:()=>({onSnapshot(cb){watchers.control.push(cb);queueMicrotask(()=>cb(snapshot('branch_presence_feature',control)));return()=>{}},async set(data){Object.assign(control,data);fire()}})};
+    if(name==='system_controls')return {doc:()=>({id:'branch_presence_feature',onSnapshot(cb){watchers.control.push(cb);queueMicrotask(()=>cb(snapshot('branch_presence_feature',control)));return()=>{}},async set(data){Object.assign(control,data);fire()}})};
     if(name==='employee_accounts')return {onSnapshot(cb){queueMicrotask(()=>cb({docs:accountRows.map(r=>({id:r.id,data:()=>r}))}));return()=>{}}};
     if(name==='users')return {onSnapshot(cb){queueMicrotask(()=>cb({docs:users.map((r,i)=>({id:'profile'+i,data:()=>r}))}));return()=>{}}};
      if(name==='branch_presence_sessions')return {
