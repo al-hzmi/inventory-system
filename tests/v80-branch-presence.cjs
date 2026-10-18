@@ -16,7 +16,7 @@ assert.equal(C.resolve('ARM10004',p).item.sku,'ARM_10004');
 assert.equal(C.resolve('89000010004987',p).item.sku,'ARM_10004');
 assert.equal(C.resolve('89000010005987',p).item.sku,'ARM_10005');
 assert.equal(C.resolve('invalid',p).reason,'unknown');
-assert.equal(C.resolve('some-10004-10005-long-code',p).reason,'unknown');
+assert.equal(C.resolve('some-10004-10005-long-code',p).reason,'ambiguous');
 assert.equal(C.summary(p,new Set(),false).notObserved,2,'unscanned are not a confirmed shortage before close');
 assert.equal(C.summary(p,new Set(['ARM_10004']),true).notObserved,1);
 assert.equal(C.summary(p,new Set(['ARM_10004','ARM_10004']),true).observed,1);
