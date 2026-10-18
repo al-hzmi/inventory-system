@@ -9,12 +9,13 @@
 </style>
 <link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.0"></head>
 <body>
-<div class="context"><b>إدارة الجرد <span>المخزون الحالي · الفريق · الفروقات · التصدير</span></b><span style="display:flex;gap:8px;align-items:center"><a class="action" href="./branch-stocktake.html" style="background:#111;color:#fff;border-color:#111">جرد الفروع</a><a class="action" href="./stocktake.html?v=56.11">واجهة الموظف</a></span></div>
+<div class="context"><b>إدارة الجرد <span>المخزون الحالي · الفريق · الفروقات · التصدير</span></b><span style="display:flex;gap:8px;align-items:center"><button type="button" id="openBranchFromShell" class="action" style="background:#111;color:#fff;border-color:#111">جرد الفرع</button><a class="action" href="./stocktake.html?v=56.11">واجهة الموظف</a></span></div>
 <iframe id="stocktakeFrame" class="frame" src="./admin-stocktake.html?embedded=1&v=56.11" title="إدارة الجرد"></iframe>
 <script>
 const f=document.getElementById('stocktakeFrame');
 function normalizeFrame(){try{const d=f.contentDocument;if(!d)return;const top=d.querySelector('.top');if(top)top.style.display='none';const wrap=d.querySelector('.wrap');if(wrap){wrap.style.maxWidth='1460px';wrap.style.paddingTop='0'}d.documentElement.style.background='#fafaf9';d.body.style.background='#fafaf9'}catch(e){console.warn('[stocktake shell]',e)}}
 f.addEventListener('load',()=>{normalizeFrame();setTimeout(normalizeFrame,300);setTimeout(normalizeFrame,1200)});
+document.getElementById('openBranchFromShell').onclick=()=>{if(f.contentWindow?.openBranchPresenceAdmin)f.contentWindow.openBranchPresenceAdmin();else f.src='./admin-stocktake.html?embedded=1#branch-presence'};
 </script>
 <script src="./v46-admin-nav.js?v=56.53"></script>
 </body></html>
