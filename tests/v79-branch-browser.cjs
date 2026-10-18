@@ -24,7 +24,7 @@ const fixture='رقم الصنف\tاسم الصنف\tالوحدة\tالكمية 
  await page.goto('http://localhost/branch-stocktake.html');
  await page.locator('#branchName').fill('معرض جدة');
  await page.locator('#newForm button[type="submit"]').click();
- await page.locator('#sessionName').getByText('معرض جدة').waitFor();
+ await page.waitForFunction(()=>document.querySelector('#sessionName')?.textContent==='معرض جدة');
  assert.match(await page.locator('#summary').innerText(),/لم تُفحص/);
  let report=await page.evaluate(()=>{const t=JSON.parse(localStorage.getItem('batco_branch_audit_v79_qa-branch-employee'));return t.sessions[0]});
  assert.equal(Object.keys(report.entries).length,0);
@@ -51,7 +51,7 @@ const fixture='رقم الصنف\tاسم الصنف\tالوحدة\tالكمية 
  assert.ok(!csv.includes('ARM_10005'));
  online=false;
  await page.reload();
- await page.locator('#sessionName').getByText('معرض جدة').waitFor();
+ await page.waitForFunction(()=>document.querySelector('#sessionName')?.textContent==='معرض جدة');
  assert.equal(await page.locator('[data-filter="missing"]').click().then(()=>page.locator('.item').count()),1);
  await page.locator('#switchSession').click();
  assert.equal(await page.locator('.historyButton').count(),1);
