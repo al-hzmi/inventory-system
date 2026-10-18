@@ -8,7 +8,7 @@ const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disab
 function employeeFixture(){
  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
  '<link rel="stylesheet" href="./v61-employee-pilot.css">'+
- '<style>body{margin:0;font-family:system-ui}.sticky{position:sticky;top:0;z-index:5;background:#fff;padding:12px 16px}.bg-accentSoft{background:#fef3c7;color:#b45309}.bg-bg{background:#fff}</style></head>'+
+ '<style>*,*::before,*::after{box-sizing:border-box}body{margin:0;font-family:system-ui}.sticky{position:sticky;top:0;z-index:5;background:#fff;padding:12px 16px}.bg-accentSoft{background:#fef3c7;color:#b45309}.bg-bg{background:#fff}</style></head>'+
  '<body><header class="sticky"><div role="group" aria-label="اختيار المستودع"><button aria-pressed="true">جدة</button><button aria-pressed="false">الرياض</button></div>'+
  '<div class="batco-search-card"><div class="batco-search-card-head"><strong>حيّاك الله، موظف</strong><span>مساحة العمل</span></div>'+
  '<div class="batco-search-row"><input id="searchInput" placeholder="رقم الصنف" style="width:100%;box-sizing:border-box;min-height:46px"></div>'+

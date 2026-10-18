@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>شركة بيت الأواني الطيبة</title>
 <meta name="theme-color" content="#FFFFFF">
-<script defer data-batco-fast-nav src="./batco-fast-nav.js?v=76.0"></script>
+<script defer data-batco-fast-nav src="./batco-fast-nav.js?v=78.0"></script>
 <style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:min(59vw,218px);max-width:100%;height:auto;aspect-ratio:900/353;object-fit:contain;display:block;margin:auto}@media(max-width:600px){.v37box img.batco-splash-wordmark{width:min(43vw,178px)}}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style>
 </head>
 <body>
@@ -59,7 +59,7 @@
   };
   const fetchTransferText40=async path=>{
     try{
-      const r=await fetch(path,{cache:'no-store'});
+      const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),8000);let r;try{r=await fetch(path,{cache:'no-store',signal:controller.signal})}finally{clearTimeout(timer)}
       if(!r.ok)throw new Error('HTTP_'+r.status);
       const text=await r.text();
       try{localStorage.setItem('b2b_cache_'+path,text)}catch{}
@@ -271,10 +271,7 @@
     if(!html.includes(showCartMarker))throw new Error('V40_SHOW_CART_MARKER');
     html=html.replace(showCartMarker,showCartPatch);
 
-    const warehouseMarker='const [warehouse, setWarehouse] = useState(null);';
-    const warehousePatch="const [warehouse, setWarehouse] = useState(() => { try { const value=sessionStorage.getItem('batco_employee_transfer_warehouse_v1')||''; if(value)sessionStorage.removeItem('batco_employee_transfer_warehouse_v1'); return (value==='jeddah'||value==='riyadh')?value:null; } catch { return null; } });";
-    if(!html.includes(warehouseMarker))throw new Error('V40_WAREHOUSE_MARKER');
-    html=html.replace(warehouseMarker,warehousePatch);
+    if(!html.includes("const [transferredWarehouse]"))throw new Error('V40_WAREHOUSE_MARKER');
 
     const notesMarker='const [notes, setNotes] = useState("");';
     const notesPatch="const [notes, setNotes] = useState(() => { try { const value=sessionStorage.getItem('batco_employee_transfer_notes_v1')||''; if(value)sessionStorage.removeItem('batco_employee_transfer_notes_v1'); return value; } catch { return ''; } });";
@@ -297,8 +294,8 @@
     html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.1"></scr'+'ipt><script src="./v56-39-site-identity.js?v=56.39"></scr'+'ipt></body>');
     // V61 employee pilot: isolated and disabled unless the admin allowlist opts in.
     html=html.replace('</head>','<link rel="stylesheet" href="./v71-brand.css?v=72.1"></head>');
-    html=html.replace('</head>','<link rel="stylesheet" href="./v61-employee-pilot.css?v=69.0"></head>');
-    html=html.replace('</body>','<scr'+'ipt src="./v61-employee-pilot.js?v=69.0"></scr'+'ipt></body>');
+    html=html.replace('</head>','<link rel="stylesheet" href="./v61-employee-pilot.css?v=78.0"></head>');
+    html=html.replace('</body>','<scr'+'ipt src="./v61-employee-pilot.js?v=78.0"></scr'+'ipt></body>');
     html=html.replace('</head>','<link rel="stylesheet" href="./v70-employee-feedback.css?v=70.1"></head>');
     html=html.replace('</body>','<scr'+'ipt src="./v70-employee-feedback.js?v=70.1"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();

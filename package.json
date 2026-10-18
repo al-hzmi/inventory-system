@@ -1,14 +1,17 @@
 {
   "name": "batco-inventory-build",
   "private": true,
-  "version": "77.0.0",
+  "version": "78.0.0",
   "scripts": {
     "build": "node scripts/build-performance.cjs"
   },
   "devDependencies": {
     "@babel/standalone": "7.26.9",
+    "dayjs": "1.11.13",
     "playwright": "1.51.1",
+    "postcss": "8.5.6",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "tailwindcss": "3.4.17"
   }
 }
