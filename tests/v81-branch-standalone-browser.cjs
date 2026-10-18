@@ -33,9 +33,16 @@ const browserType=process.env.BROWSER==='webkit'?webkit:chromium;
     if(name==='system_controls')return {doc:()=>({onSnapshot(cb){watchers.control.push(cb);queueMicrotask(()=>cb(snapshot('branch_presence_feature',control)));return()=>{}},async set(data){Object.assign(control,data);fire()}})};
     if(name==='employee_accounts')return {onSnapshot(cb){queueMicrotask(()=>cb({docs:accountRows.map(r=>({id:r.id,data:()=>r}))}));return()=>{}}};
     if(name==='users')return {onSnapshot(cb){queueMicrotask(()=>cb({docs:users.map((r,i)=>({id:'profile'+i,data:()=>r}))}));return()=>{}}};
-    if(name==='branch_presence_sessions')return {
-      doc(id){const key=id||'session'+(++seq);return {id:key,onSnapshot(cb){watchers.session.push(cb);queueMicrotask(()=>cb(snapshot(key,sessions[key])));return()=>{}},collection(){return{onSnapshot(cb){queueMicrotask(()=>cb({docs:[]}));return()=>{}}}}}};
-    };
+     if(name==='branch_presence_sessions')return {
+       doc(id){
+         const key=id||'session'+(++seq);
+         return {
+           id:key,
+           onSnapshot(cb){watchers.session.push(cb);queueMicrotask(()=>cb(snapshot(key,sessions[key])));return()=>{}},
+           collection(){return {onSnapshot(cb){queueMicrotask(()=>cb({docs:[]}));return()=>{}}};}
+         };
+       }
+     };
     throw Error('unexpected collection '+name)
    },
    batch(){const actions=[];return{set(ref,data){actions.push({ref,data})},async commit(){for(const {ref,data} of actions){if(ref.id==='branch_presence_feature')Object.assign(control,data);else sessions[ref.id]={...(sessions[ref.id]||{}),...data}}fire()}}}
