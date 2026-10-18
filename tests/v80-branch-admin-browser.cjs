@@ -41,6 +41,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
        if(name==='system_controls')return {doc:()=>mkDoc('control','branch_presence_feature')};
        if(name==='branch_presence_sessions')return {doc:id=>mkDoc('session',id||'session_'+(++counter))};
        if(name==='employee_accounts')return {onSnapshot(cb){queueMicrotask(()=>cb({docs:[{id:'qa80',data:()=>({name:'موظف الاختبار',status:'active'})},{id:'qa81',data:()=>({name:'موظف آخر',status:'active'})}]}));return()=>{}}};
+       if(name==='users')return {onSnapshot(cb){queueMicrotask(()=>cb({docs:[]}));return()=>{}}};
        throw Error('unexpected collection '+name);
      },
      batch(){const changes=[];return {
