@@ -13,7 +13,7 @@ const fixture='رقم الصنف\tاسم الصنف\tالوحدة\tالكمية 
  });
  let online=true;
  await context.route('**/*',async route=>{
-   const request=route.request(),url=new URL(request.url),file=path.join(process.cwd(),decodeURI(url.pathname).replace(/^\//,''));
+   const request=route.request(),url=new URL(request.url()),file=path.join(process.cwd(),decodeURI(url.pathname).replace(/^\//,''));
    if(url.pathname==='/data/jeddah.tsv'){if(!online)return route.abort();return route.fulfill({body:fixture,contentType:'text/tab-separated-values'})}
    if(url.hostname!=='localhost'||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.abort();
    const ext=path.extname(file),mime=ext==='.html'?'text/html':ext==='.js'?'application/javascript':ext==='.css'?'text/css':'image/svg+xml';
