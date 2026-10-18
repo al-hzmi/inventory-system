@@ -65,7 +65,7 @@ const browserType=process.env.BROWSER==='webkit'?webkit:chromium;
  assert.match(await page.locator('#workerFeedback').innerText(),/غير معروف/);
  await page.locator('#workerInput').fill('١٠٠٠٥');
  await page.locator('#workerInput').press('Enter');
- // Bare suffix is intentionally not matched ambiguously. Provide the SKU manually.
+ // The unique numeric suffix is accepted, and the full SKU must deduplicate it.
  await page.locator('#workerInput').fill('arm_10005');
  await page.locator('#workerInput').press('Enter');
  await page.waitForFunction(()=>Object.keys(window.__branchMock.docs).length===2);
