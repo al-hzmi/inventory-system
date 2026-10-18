@@ -3,7 +3,7 @@
   'use strict';
   if (window.__BATCO_FAST_NAV) return;
   const ROUTES = new Set([
-    'index.html','customer.html','admin-home.html','admin-dashboard.html',
+    'index.html','customer.html','admin-home.html','admin-dashboard.html','branch-stocktake.html',
     'control-center.html','admin-stocktake-shell.html','admin-stocktake.html',
     'stocktake.html','stocktake-accountant.html','accountant-stocktake.html',
     'inventory-analytics.html','image-distribution.html','admin-inventory-import.html',
