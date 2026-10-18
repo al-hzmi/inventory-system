@@ -44,7 +44,7 @@ const self = {
 vm.runInNewContext(sw,{self,caches:c,fetch:mockFetch,URL,Response,Promise,setTimeout,console});
 assert.equal(typeof listeners.fetch,'function');
 let pending;
-await (async()=>{
+(async()=>{
  listeners.message({data:{type:'BATCO_PREFETCH_SHELL',paths:['/admin-home.html','/admin-dashboard.html','/api/secret','/data/jeddah.tsv']},waitUntil:p=>{pending=p}});
  await pending;
  const shells=stores.get('batco-navigation-shell-v76');
@@ -64,7 +64,8 @@ await (async()=>{
  response=null;
  listeners.fetch({request:{method:'POST',mode:'cors',url:'https://batco.example/api/secret'},respondWith:p=>response=p,waitUntil:()=>{}});
  assert.equal(response,null,'writes must bypass cache');
-})();
+})().then(()=>{
 assert.ok(nav.includes('e.defaultPrevented'),'cancelled links may not display a false transition');
 assert.ok(nav.includes('window.addEventListener(\'pageshow\', removeTransition)'),'restored tabs must remove transition');
 console.log('PASS: unified horizontal BATCO splash, static shell prefetch, offline page load, no API/quantity caching, safe navigation handling');
+}).catch(error=>{console.error(error);process.exitCode=1});
