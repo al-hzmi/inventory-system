@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:min(59vw,218px);max-width:100%;height:auto;aspect-ratio:900/353;object-fit:contain;display:block;margin:auto}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:min(59vw,218px);max-width:100%;height:auto;aspect-ratio:900/353;object-fit:contain;display:block;margin:auto}@media(max-width:600px){.v37box img.batco-splash-wordmark{width:min(43vw,178px)}}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script></head>
 <body><div id="v37boot"><div class="v37box"><img class="batco-splash-wordmark" src="./assets/batco-logo.svg?v=72.0" width="900" height="353" alt="BATCO — شركة بيت الأواني الطيبة"></div></div>
 <script>
 (async function(){
@@ -35,7 +35,7 @@
     try{localStorage.setItem('batco_employee_onboarding_target_v1',routeVisitorId)}catch{}return true;
   }catch(error){console.warn('[V56.18] central employee route unavailable',error);return false}};
   if(await centralEmployeeRoute()){redirectHarounToEmployee();return;}
-  const CORE='./runtime/customer-v37-source.txt?v=56.33&rev=72.0';
+  const CORE='./runtime/customer-v37-source.txt?v=56.33&rev=72.1';
   const replaceBetween=(src,start,end,replacement,label)=>{const a=src.indexOf(start);if(a<0)throw new Error(label+'_START');const b=src.indexOf(end,a+start.length);if(b<0)throw new Error(label+'_END');return src.slice(0,a)+replacement+src.slice(b)};
   const loadCore=async()=>{try{const r=await fetch(CORE,{cache:'no-store'});if(!r.ok)throw new Error('CORE_HTTP_'+r.status);const text=await r.text();try{const c=await caches.open('batco-v37-core');await c.put(CORE,new Response(text,{headers:{'Content-Type':'text/plain;charset=utf-8'}}))}catch{}return text}catch(e){try{const hit=await caches.match(CORE);if(hit)return await hit.text()}catch{}throw e}};
   try{
@@ -256,7 +256,7 @@
 
     if(!html.includes('cart-image-gallery')||!html.includes('عرض صور الأصناف')||!html.includes("nav.length===3?'grid-cols-3'")||!html.includes('CUSTOMER_DEVICE_ACCOUNT_LINK_KEY')||!html.includes('persistCustomerDeviceAccountLink(next)')||!html.includes('deviceAccount:')||!html.includes("String(guestName||safeProfile.name||'').trim()&&!showGuestNamePrompt&&<InstallNudge/>"))throw new Error('V43_OUTPUT_CHECK');
     if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt')||!html.includes('handoffEmployeeCustomerCart(cartItems,branches)')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('نقل ومتابعة الاعتماد')||!html.includes('setShowGuestNamePrompt(true),5000')||!html.includes("skipped:'guest_name_pending'")||!html.includes('سجل اسمك للمتابعة'))throw new Error('V41_CUSTOMER_OUTPUT_CHECK');
-    html=html.replace('</head>','<link rel="stylesheet" href="./v71-brand.css?v=72.0"></head>');
+    html=html.replace('</head>','<link rel="stylesheet" href="./v71-brand.css?v=72.1"></head>');
     html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.0"></scr'+'ipt><script src="./v56-39-site-identity.js?v=56.39"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V41 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}

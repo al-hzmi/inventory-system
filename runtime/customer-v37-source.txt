@@ -112,6 +112,7 @@
 #app-loader{position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .28s ease,visibility .28s ease}
 #app-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 #app-loader img{width:min(59vw,218px);height:auto;aspect-ratio:900/353;object-fit:contain;filter:none;animation:none}
+@media(max-width:600px){#app-loader img.batco-splash-wordmark{width:min(43vw,178px)}}
 @keyframes brandBoot{0%,100%{opacity:.72;transform:scale(.985)}50%{opacity:1;transform:scale(1.025)}}
 @media(prefers-reduced-motion:reduce){#app-loader img{animation:none}}
 

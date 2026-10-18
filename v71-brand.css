@@ -29,7 +29,7 @@
  filter:none;
  animation:none;
 }
-@media(max-width:430px){
+@media(max-width:600px){
  #v37boot .v37box img.batco-splash-wordmark,
- #app-loader img.batco-splash-wordmark {width:min(59vw,218px)}
+ #app-loader img.batco-splash-wordmark {width:min(43vw,178px)}
 }
