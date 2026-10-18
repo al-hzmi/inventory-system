@@ -23,7 +23,10 @@ has(employee,'navigator.vibrate','count feedback must include vibration');
 has(employee,'AudioContext','count feedback must include sound');
 has(employee,'ملاحظة على الصنف','optional note flow required');
 has(employee,'quantity_found_later','found-later quantity must be auditable');
-has(employee,'+ كمية عُثر عليها','found-later correction control required');
+has(employee,'data-entry=','single quantity entry/edit action must be available');
+has(employee,'manual_revision','revisions must be recorded using the same counting action');
+has(employee,'window.confirm(message)','later changes require explicit confirmation');
+assert.ok(!employee.includes('data-found='),'obsolete found-quantity button must be absent');
 has(employee,"action:wasCounted?'count_revised':'count_created'",'first count and revisions must be distinguishable');
 
 // Flexible team model and admin root control.
