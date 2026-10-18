@@ -1,6 +1,6 @@
 from pathlib import Path
 import openpyxl
-p=Path(__file__).resolve().parents[2]/'qa'
+p=Path(__file__).resolve().parents[1]/'qa-v73'
 s=openpyxl.load_workbook(p/'all.xlsx').worksheets[0]
 rows={s.cell(r,3).value:r for r in range(7,s.max_row+1)}
 r=rows['00123']; pending=rows['00002']

@@ -3,6 +3,7 @@
   'use strict';
   const digits = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
   function quantity(value) {
+    if (typeof value === 'number') return Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER ? value : NaN;
     const raw = String(value ?? '').trim().replace(/[٠-٩۰-۹]/g, d => String(digits.indexOf(d) % 10)).replace(/٫/g, '.');
     // Blank, exponent, malformed separators and partial decimals are not zero.
     if (!/^(?:\d+|\d{1,3}(?:[,٬]\d{3})+)(?:\.\d+)?$/.test(raw)) return NaN;

@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');
 const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
-const root=path.resolve(__dirname,'..'),out=path.resolve(root,'../qa');fs.mkdirSync(out,{recursive:true});
+const root=path.resolve(__dirname,'..'),out=path.resolve(root,'qa-v73');fs.mkdirSync(out,{recursive:true});
 function fixture(){
  const cp={id:'campaign1',name:'جرد مستودع جدة — أكتوبر 2026',warehouse:'جدة',stocktakeDate:'2026-10-18',status:'active',sourceMode:'current_inventory',inventorySnapshotStatus:'ready'};
  const team={id:'team1',campaignId:cp.id,name:'فريق الجرد الرئيسي',scope:'المستودع الرئيسي · القسم الأول',memberEmployeeIds:['admin_mohanad'],memberEmployeeNames:['مهند'],extraMemberNames:['محمد أحمد']};
@@ -8,6 +8,7 @@ function fixture(){
  return {cp,team,items};
 }
 const fakeFirebase=String.raw`
+(()=>{
 window.__listeners=[];window.__writes=[];window.__deferred=[];window.__reject=false;window.__cache=false;window.__offline=false;
 const f=window.__fixture,store={stocktake_campaigns:{[f.cp.id]:f.cp},stocktake_teams:{[f.team.id]:f.team},stocktake_items:Object.fromEntries(f.items.map(i=>[i.id,i])),employee_accounts:{admin_mohanad:{canonicalName:'مهند'},e1:{canonicalName:'محمد أحمد'}},system_controls:{stocktake_feature:{enabled:true,accessMode:'all',activeCampaignId:f.cp.id},stocktake_accountant_access:{enabled:true,accessMode:'all',campaignId:f.cp.id}},stocktake_audit:{}};
 let serial=0;
@@ -20,14 +21,15 @@ window.__emit=emit;window.__store=store;
 function query(c,field,value){return {doc:id=>ref(c,id||'op'+(++serial)),where:(field,op,value)=>query(c,field,value),limit:()=>query(c,field,value),onSnapshot:(opt,cb)=>listen({c,field,value},typeof opt==='function'?opt:cb),get:async()=>snap({c,field,value}),add:async data=>{const r=ref(c,'op'+(++serial));await r.set(data);return r}}}
 const db={enablePersistence:()=>Promise.resolve(),collection:c=>query(c),batch:()=>{const ops=[];return {set:(ref,data)=>ops.push({ref,data}),update:(ref,data)=>ops.push({ref,data,update:true}),delete:ref=>ops.push({ref,remove:true}),commit:()=>{__writes.push(ops);if(__reject)return Promise.reject(new Error('permission-denied'));for(const o of ops){const c=o.ref.collection,id=o.ref.id;store[c]??={};if(o.remove){delete store[c][id];continue}const previous=store[c][id]||{},data={...o.data};for(const k in data)if(data[k]?.increment)data[k]=(Number(previous[k])||0)+data[k].increment;store[c][id]={...previous,...data,_pending:true}}setTimeout(emit,0);return new Promise(resolve=>{const finish=()=>{for(const o of ops)if(store[o.ref.collection]?.[o.ref.id])store[o.ref.collection][o.ref.id]._pending=false;emit();resolve()};if(__offline)__deferred.push(finish);else setTimeout(finish,30)})}}}};
 function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({seconds:1792280000}),increment:n=>({increment:n})};window.firebase={apps:[{}],initializeApp(){},firestore};
+})();
 `;
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  async function pageFor(file,width=390){
   const ctx=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1});
   await ctx.addInitScript(f=>{window.__fixture=f;localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');localStorage.setItem('inventory_employee_id_v2','admin_mohanad');localStorage.setItem('inventory_employee_auth_version_v2','2')},fixture());
-  await ctx.route('**/*',async route=>{const url=new URL(route.request().url());if(url.hostname==='localhost'){const p=path.join(root,url.pathname);if(fs.existsSync(p)&&fs.statSync(p).isFile())return route.fulfill({body:fs.readFileSync(p),contentType:p.endsWith('.html')?'text/html':p.endsWith('.css')?'text/css':'application/javascript'});return route.fulfill({status:404,body:''})}if(url.pathname.includes('firebase-app-compat'))return route.fulfill({body:fakeFirebase,contentType:'application/javascript'});return route.fulfill({body:'',contentType:'application/javascript'})});
-  const page=await ctx.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://localhost/'+file);await page.waitForTimeout(250);return {page,ctx,errors};
+  await ctx.route('**/*',async route=>{const url=new URL(route.request().url());if(['fonts.googleapis.com','fonts.gstatic.com'].includes(url.hostname))return route.continue();if(url.hostname==='localhost'){const p=path.join(root,url.pathname);if(fs.existsSync(p)&&fs.statSync(p).isFile())return route.fulfill({body:fs.readFileSync(p),contentType:p.endsWith('.html')?'text/html':p.endsWith('.css')?'text/css':'application/javascript'});return route.fulfill({status:404,body:''})}if(url.pathname.includes('firebase-app-compat'))return route.fulfill({body:fakeFirebase,contentType:'application/javascript'});return route.fulfill({body:'',contentType:'application/javascript'})});
+  const page=await ctx.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://localhost/'+file);await page.waitForTimeout(350);if(errors.length){await page.screenshot({path:path.join(out,'error-'+file+'.png'),fullPage:true});throw new Error(file+': '+errors.join('; '))}return {page,ctx,errors};
  }
  const {page,ctx,errors}=await pageFor('stocktake.html');
  await page.locator('#search').fill('10210');await page.waitForTimeout(100);

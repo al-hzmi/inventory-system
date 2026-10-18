@@ -35,5 +35,5 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: stocktake-v73-qa
-          path: ../qa
+          path: qa-v73
           retention-days: 7
