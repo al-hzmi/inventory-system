@@ -15,9 +15,9 @@ if(!doc.getElementById('batco-brand-footer-style')){
   '.batco-site-footer-copy small{font-size:10px;color:#858585}',
   'body:has(nav.fixed.bottom-0)>.batco-site-footer .batco-site-footer-inner{padding-bottom:calc(105px + env(safe-area-inset-bottom))}',
   '.batco-customer-header-brand{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0}',
-  '.batco-customer-header-logo{display:block;width:clamp(88px,22vw,132px);height:auto;max-height:56px;object-fit:contain;flex:none}',
+  '.batco-customer-header-logo{display:block;width:clamp(122px,32vw,164px);height:auto;max-height:64px;object-fit:contain;flex:none}',
   '.batco-customer-header-brand>div{padding-inline-start:12px;border-inline-start:1px solid #e8e8e8;min-width:0}',
-  '@media(max-width:500px){.batco-site-footer-inner{min-height:88px;padding:14px 12px 18px;gap:10px}.batco-site-footer-logo{width:102px}.batco-customer-header-logo{width:90px}.batco-customer-header-brand{gap:7px}.batco-customer-header-brand>div{padding-inline-start:7px}}',
+  '@media(max-width:500px){.batco-site-footer-inner{min-height:88px;padding:14px 12px 18px;gap:10px}.batco-site-footer-logo{width:102px}.batco-customer-header-logo{width:min(41vw,155px)}.batco-customer-header-brand{gap:7px}.batco-customer-header-brand>div{padding-inline-start:7px}}',
   '@media print{.batco-site-footer{display:none!important}}'
  ].join('');
  (doc.head||doc.documentElement).appendChild(style);
