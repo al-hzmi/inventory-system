@@ -4,15 +4,18 @@
 const C=window.BranchPresenceCore;
 const el=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const $db=typeof db!=='undefined'?db:null;
+const $db=window.branchPresenceDb||(typeof db!=='undefined'?db:null);
 if(!$db||!C)return;
 const controls=$db.collection('system_controls').doc('branch_presence_feature');
 const sessions=$db.collection('branch_presence_sessions');
 const ts=()=>firebase.firestore.FieldValue.serverTimestamp();
 const fmt=n=>new Intl.NumberFormat('ar-SA').format(n||0);
 const badge=(s)=>String(s||'').length?String(s):'—';
-let control={enabled:false,sessionId:''},session=null,employees=[],seen=new Set(),unsubSession=null,unsubSeen=null,unsubEmployees=null,busy=false,expanded=location.hash==='#branch-presence';
-const wrap=document.querySelector('.wrap')||document.body;
+let control={enabled:false,sessionId:''},session=null,employees=[],seen=new Set(),unsubSession=null,unsubSeen=null,unsubEmployees=null,busy=false;
+const standalone=document.body.dataset.branchPresenceAdmin==='1';
+let expanded=standalone||location.hash==='#branch-presence';
+let employeeNamesById=new Map();
+const wrap=document.getElementById('branchPresenceMount')||document.querySelector('.wrap')||document.body;
 const host=document.createElement('section');
 host.id='branchPresencePanel';host.className='bp-admin';
 host.innerHTML='<div class="bp-bar"><div><strong>جرد الفرع السريع <span class="bp-label">باركود · بدون كميات</span></strong><p>فعّل الجرد وحدد الموظفين، وبعدها تُسجّل الأصناف بمجرد تمرير الباركود.</p></div><button type="button" id="bpExpand" class="btn bp-open" aria-expanded="false">إعداد جرد الفرع</button></div>'+
@@ -21,17 +24,36 @@ host.innerHTML='<div class="bp-bar"><div><strong>جرد الفرع السريع 
 '<div class="bp-people"><strong>من سيجرد الفرع؟</strong><p>اختر حساب الموظف المكلف، ويمكن اختيار أكثر من موظف.</p><div id="bpEmployees" class="bp-members"></div></div>'+
 '<div id="bpActionBar" class="bp-actions"><button id="bpStart" class="btn primary" type="button">تفعيل جرد الفرع</button><button id="bpPause" class="btn" type="button" hidden>إيقاف مؤقت</button><button id="bpResume" class="btn" type="button" hidden>استئناف</button><button id="bpFinish" class="btn bad" type="button" hidden>إنهاء الجرد وإظهار النواقص</button><a id="bpOpen" class="btn" href="./branch-presence.html" target="_blank" rel="noopener">فتح صفحة المسح</a><button id="bpExport" class="btn" type="button" hidden>تقرير النواقص Excel</button></div>'+
 '<p class="bp-note">الجرد يسجّل وجود الصنف مرة واحدة، بدون إدخال أي كمية. قبل إنهاء الجرد، الأصناف غير الممسوحة «لم تُرصد بعد» وليست نواقص مؤكدة.</p><p id="bpError" class="bp-error" role="alert" hidden></p></div>';
-const top=wrap.querySelector('.top');if(top)top.after(host);else wrap.prepend(host);
-const renderExpansion=()=>{el('bpBody').hidden=!expanded;el('bpExpand').setAttribute('aria-expanded',String(expanded));el('bpExpand').textContent=expanded?'إخفاء إعدادات الفرع':'إعداد جرد الفرع'};
+const top=wrap.querySelector('.top');if(standalone)wrap.replaceChildren(host);else if(top)top.after(host);else wrap.prepend(host);
+const renderExpansion=()=>{el('bpBody').hidden=!expanded;el('bpExpand').hidden=standalone;el('bpExpand').setAttribute('aria-expanded',String(expanded));el('bpExpand').textContent=expanded?'إخفاء إعدادات الفرع':'إعداد جرد الفرع'};
 el('bpExpand').onclick=()=>{expanded=!expanded;renderExpansion();if(expanded)renderEmployees()};
 window.openBranchPresenceAdmin=()=>{expanded=true;renderExpansion();host.scrollIntoView({behavior:'smooth',block:'start'});renderEmployees()};
 function error(msg){const e=el('bpError');e.hidden=!msg;e.textContent=msg||'';if(msg)console.warn('[branch presence]',msg)}
+function cleanEmployeeName(value){
+ const name=String(value??'').trim();
+ if(!name||name.length<2||name.length>100)return '';
+ // Firestore's opaque account IDs are never displayed as people.
+ if(/^[A-Za-z0-9_-]{16,}$/.test(name))return '';
+ return name;
+}
+function resolveEmployeeName(record){
+ const candidates=[
+  record?.canonicalName,record?.fullName,record?.name,record?.employeeName,record?.displayName,
+  ...(Array.isArray(record?.aliases)?record.aliases:[]),
+  employeeNamesById.get(record?.id)
+ ];
+ return candidates.map(cleanEmployeeName).find(Boolean)||'';
+}
 function renderEmployees(){
  const selected=new Set((session?.status==='active'?session.assignedEmployeeIds:control.assignedEmployeeIds)||[]);
  const saved=[...el('bpEmployees').querySelectorAll('input:checked')].map(x=>x.value);
  if(!session||session.status!=='active')saved.forEach(v=>selected.add(v));
  const eligible=employees.filter(e=>e.status!=='suspended'&&e.status!=='inactive');
- el('bpEmployees').innerHTML=eligible.length?eligible.map(e=>'<label><input type="checkbox" value="'+esc(e.id)+'" '+(selected.has(e.id)?'checked':'')+' '+(session?.status==='active'?'disabled':'')+'><span>'+esc(e.fullName||e.name||e.employeeName||e.displayName||e.id)+'</span></label>').join(''):'<p>جارٍ تحميل حسابات الموظفين…</p>';
+ el('bpEmployees').innerHTML=eligible.length?eligible.map(e=>{
+  const employeeName=resolveEmployeeName(e),unresolved=!employeeName;
+  const label=employeeName||'حساب بدون اسم — راجع إدارة الموظفين';
+  return '<label'+(unresolved?' class="bp-unnamed" title="لا يمكن تكليف هذا الحساب قبل تعريف اسمه في إدارة الموظفين"':'')+'><input type="checkbox" value="'+esc(e.id)+'" '+(selected.has(e.id)?'checked':'')+' '+(session?.status==='active'||unresolved?'disabled':'')+'><span>'+esc(label)+'</span></label>';
+ }).join(''):'<p>لا توجد حسابات موظفين مسماة. راجع إدارة الموظفين.</p>';
 }
 function refresh(){
  const active=Boolean(session?.status==='active'&&control.sessionId===session.id);
@@ -64,6 +86,13 @@ controls.onSnapshot(d=>{
  else refresh();
 },e=>error('تعذر قراءة إعدادات جرد الفروع: '+e.message));
 unsubEmployees=$db.collection('employee_accounts').onSnapshot(s=>{employees=s.docs.map(d=>({id:d.id,...d.data()}));renderEmployees()},e=>error('تعذر تحميل الموظفين: '+e.message));
+$db.collection('users').onSnapshot(snapshot=>{
+ const byId=new Map();
+ for(const doc of snapshot.docs){const row=doc.data()||{},id=String(row.employeeId||'').trim(),candidate=cleanEmployeeName(row.name||row.canonicalName||row.fullName||row.displayName||'');
+  if(id&&candidate&&!byId.has(id))byId.set(id,candidate);
+ }
+ employeeNamesById=byId;renderEmployees();
+},e=>console.warn('[branch presence] Employee display-name fallback unavailable',e?.code||e));
 function withBusy(fn){return async()=>{if(busy)return;busy=true;host.classList.add('bp-busy');error('');try{await fn()}catch(e){console.error(e);error(e.message||'تعذر تنفيذ العملية، تحقق من اتصال الإنترنت ثم أعد المحاولة')}finally{busy=false;host.classList.remove('bp-busy')}}}
 el('bpStart').onclick=withBusy(async()=>{
  if(session?.status==='active')throw Error('هناك جرد فرع نشط؛ أنهِه أولًا');
