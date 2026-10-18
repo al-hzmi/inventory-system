@@ -151,12 +151,28 @@ async function startCamera(){
  if(scanner||!canUse())return;
  el('cameraArea').hidden=false;
  try{
-  const Qrcode=await loadScanner();const next=new Qrcode('cameraReader');scanner=next;
-  await next.start({facingMode:'environment'},{fps:12,qrbox:{width:250,height:160},disableFlip:true},raw=>{
+  const Qrcode=await loadScanner();
+  const F=window.Html5QrcodeSupportedFormats||{};
+  const formats=['CODE_128','CODE_39','CODE_93','EAN_13','EAN_8','UPC_A','UPC_E','ITF','CODABAR','QR_CODE','DATA_MATRIX']
+    .map(k=>F[k]).filter(n=>typeof n==='number');
+  const next=new Qrcode('cameraReader',formats.length?{formatsToSupport:formats,useBarCodeDetectorIfSupported:true,verbose:false}:{verbose:false});
+  scanner=next;
+  // A long, wide detection region is essential for 1D product barcodes on iOS.
+  const options={
+    fps:15,disableFlip:true,aspectRatio:1.3333,
+    qrbox:(width,height)=>({
+      width:Math.max(100,Math.min(Math.floor(width*.94),520)),
+      height:Math.max(95,Math.min(Math.floor(height*.61),230))
+    })
+  };
+  await next.start({facingMode:'environment'},options,raw=>{
    const token=C.key(raw),now=Date.now();
-   if(token===lastCameraToken&&now-lastCameraTime<1700)return;
+   if(token===lastCameraToken&&now-lastCameraTime<950)return;
    lastCameraToken=token;lastCameraTime=now;receive(raw);
   },()=>{});
+  const video=document.querySelector('#cameraReader video');
+  if(video){video.setAttribute('playsinline','');video.setAttribute('autoplay','');}
+
  }catch(e){feedback('تعذر تشغيل الكاميرا. استخدم قارئ الباركود أو أدخل رقم الصنف.','error');stopCamera()}
 }
 async function stopCamera(){const value=scanner;scanner=null;el('cameraArea').hidden=true;if(value){try{await value.stop()}catch{}try{await value.clear()}catch{}}}
