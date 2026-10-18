@@ -120,5 +120,5 @@
   idle(() => {
     register().then(() => { setTimeout(prime, 150); }).catch(() => {});
   });
-  window.__BATCO_FAST_NAV = { version:'76.0', warm, register };
+  window.__BATCO_FAST_NAV = { version:'78.0', warm, register };
 })();

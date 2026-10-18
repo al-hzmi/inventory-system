@@ -1,0 +1,22 @@
+name: V78 startup and employee preferences
+on:
+  push:
+    branches: [codex/ios-startup-v78, main]
+    paths: ['index.html', 'runtime/index-v37-source.txt', 'admin-dashboard.html', 'scripts/build-performance.cjs', 'sw.js', 'package*.json', 'v61-employee-pilot.*', 'tests/v78-*', '.github/workflows/v78-startup.yml']
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v78-employee-directory.mjs && node tests/v78-default-branch.cjs && node tests/v78-boot-service-worker.cjs
+      - run: node tests/v61-pilot-browser.mjs
+      - run: npm run build
+      - run: node tests/v78-entry-boot.cjs .
+      - run: BROWSER=webkit node tests/v78-entry-boot.cjs .

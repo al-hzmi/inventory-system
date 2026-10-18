@@ -30,10 +30,31 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     
+    <script>
+    // Shared, bounded optional-feature downloads. Failed requests can be retried.
+    window.__batcoFeatureLoads = new Map();
+    window.__batcoLoadFeature = (name, src) => {
+        if (window[name]) return Promise.resolve(window[name]);
+        if (window.__batcoFeatureLoads.has(name)) return window.__batcoFeatureLoads.get(name);
+        const promise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            let settled = false;
+            const finish = error => {
+                if (settled) return; settled = true; clearTimeout(timer);
+                script.onload = script.onerror = null;
+                if (error) { script.remove(); reject(error); } else resolve(window[name]);
+            };
+            const timer = setTimeout(() => finish(new Error('FEATURE_TIMEOUT_' + name)), 10000);
+            script.onload = () => finish(window[name] ? null : new Error('FEATURE_MISSING_' + name));
+            script.onerror = () => finish(new Error('FEATURE_NETWORK_' + name));
+            script.src = src; script.async = true; document.head.appendChild(script);
+        });
+        window.__batcoFeatureLoads.set(name, promise);
+        promise.catch(() => window.__batcoFeatureLoads.delete(name));
+        return promise;
+    };
+    </script>
     <script>
         tailwind.config = {
             theme: {
@@ -323,24 +344,39 @@ const readCachedEmployeeSiteControl = () => {
     catch { return DEFAULT_EMPLOYEE_SITE_CONTROL; }
 };
 
+// Bootstrap, login and application share one control subscription per document.
+const employeeSiteControlListeners = new Set();
+let employeeSiteControlState = {...readCachedEmployeeSiteControl(), __loading:true};
+let employeeSiteControlStop = null;
+const subscribeEmployeeSiteControl = listener => {
+    employeeSiteControlListeners.add(listener);
+    const publish = state => { employeeSiteControlState=state; employeeSiteControlListeners.forEach(fn=>fn(state)); };
+    listener(employeeSiteControlState);
+    if (!employeeSiteControlStop) {
+        let active=true, unsubscribe=null, received=false;
+        const fallback = () => {
+            if (!active || received) return;
+            let stored=null;try { stored=JSON.parse(localStorage.getItem(EMPLOYEE_SITE_CONTROL_CACHE_KEY)||'null'); } catch {}
+            const known=stored&&['open','restricted','closed'].includes(stored.mode);
+            publish({...readCachedEmployeeSiteControl(), __loading:false, __unavailable:!known});
+        };
+        const timer=setTimeout(fallback,6000);
+        employeeSiteControlStop=()=>{active=false;clearTimeout(timer);if(unsubscribe)unsubscribe();employeeSiteControlStop=null};
+        getDb().then(db=>{
+            if(!active)return;
+            unsubscribe=db.collection('system_controls').doc(EMPLOYEE_SITE_CONTROL_DOC).onSnapshot(doc=>{
+                if(!active)return;received=true;clearTimeout(timer);
+                const next=sanitizeEmployeeSiteControl(doc.exists?doc.data():DEFAULT_EMPLOYEE_SITE_CONTROL);
+                publish({...next,__loading:false,__unavailable:false});
+                try { localStorage.setItem(EMPLOYEE_SITE_CONTROL_CACHE_KEY,JSON.stringify({mode:next.mode,allowedEmployeeIds:next.allowedEmployeeIds,allowedEmployeeNames:next.allowedEmployeeNames,maintenanceMessage:next.maintenanceMessage})); } catch {}
+            },()=>{clearTimeout(timer);fallback()});
+        }).catch(()=>{clearTimeout(timer);fallback()});
+    }
+    return ()=>{employeeSiteControlListeners.delete(listener);if(!employeeSiteControlListeners.size)employeeSiteControlStop?.()};
+};
 const useEmployeeSiteControl = () => {
-    const [control, setControl] = useState(() => ({ ...readCachedEmployeeSiteControl(), __loading: true }));
-    useEffect(() => {
-        let unsubscribe = null;
-        let active = true;
-        getDb().then(db => {
-            if (!active) return;
-            unsubscribe = db.collection('system_controls').doc(EMPLOYEE_SITE_CONTROL_DOC).onSnapshot(doc => {
-                if (!active) return;
-                const next = sanitizeEmployeeSiteControl(doc.exists ? doc.data() : DEFAULT_EMPLOYEE_SITE_CONTROL);
-                setControl({ ...next, __loading: false });
-                try { localStorage.setItem(EMPLOYEE_SITE_CONTROL_CACHE_KEY, JSON.stringify({mode:next.mode,allowedEmployeeIds:next.allowedEmployeeIds,allowedEmployeeNames:next.allowedEmployeeNames,maintenanceMessage:next.maintenanceMessage})); } catch {}
-            }, () => {
-                if (active) setControl({ ...readCachedEmployeeSiteControl(), __loading: false });
-            });
-        }).catch(() => { if (active) setControl({ ...readCachedEmployeeSiteControl(), __loading: false }); });
-        return () => { active = false; if (unsubscribe) unsubscribe(); };
-    }, []);
+    const [control,setControl]=useState(()=>employeeSiteControlState);
+    useEffect(()=>subscribeEmployeeSiteControl(setControl),[]);
     return control;
 };
 
@@ -509,6 +545,7 @@ const readCachedEmployeeAccount = (alias) => {
 };
 const cacheEmployeeAccount = (account, aliases = []) => {
     if (!account?.id) return account;
+    try { localStorage.setItem('batco_default_branch_v78_' + account.id, ['jeddah','riyadh'].includes(account.defaultBranch) ? account.defaultBranch : ''); } catch {}
     try {
         const cache = JSON.parse(sessionStorage.getItem(LOGIN_ACCOUNT_CACHE_KEY) || '{}');
         const keys = [...new Set([account.canonicalName, ...(account.aliases || []), ...aliases].flatMap(employeeAliasVariants))];
@@ -2235,6 +2272,8 @@ const EmployeeFaceCheck = ({ account, enteredAlias, onBack, onVerified, onUsePho
                     if (!cancelled && !doneRef.current) setManualReady(true);
                 }, 1400);
 
+                try { await window.__batcoLoadFeature('FaceMesh', 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js'); } catch {}
+                if (cancelled || doneRef.current) return;
                 if (window.FaceMesh) {
                     try {
                         const mesh = new FaceMesh({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}` });
@@ -2370,15 +2409,17 @@ const RemoteLoginWait = ({ request, account, loginAttemptId, onApproved, onCance
     useEffect(() => { onApprovedRef.current = onApproved; }, [onApproved]);
 
     useEffect(() => {
-        if (!qrRef.current) return;
-        qrRef.current.innerHTML = '';
-        try {
-            if (!window.QRCode) throw new Error('QR_LIBRARY_UNAVAILABLE');
+        let cancelled = false;
+        window.__batcoLoadFeature('QRCode', 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js').then(() => {
+            if (cancelled || !qrRef.current) return;
+            qrRef.current.innerHTML = '';
             new QRCode(qrRef.current, { text: request.approvalUrl, width: 220, height: 220, colorDark: '#111111', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        } catch (err) {
+        }).catch(err => {
+            if (cancelled) return;
             console.error('[Remote login QR]', err);
             setError('تعذر إنشاء رمز الجوال. ألغِ الطلب وحاول مرة أخرى.');
-        }
+        });
+        return () => { cancelled = true; };
     }, [request.approvalUrl]);
 
     useEffect(() => {
@@ -3057,7 +3098,8 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
 
         const start = async () => {
             try {
-                if (!window.Html5Qrcode) throw new Error('html5-qrcode غير محمل');
+                await window.__batcoLoadFeature('Html5Qrcode', 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js');
+                if (!isMounted) return;
 
                 // مهم: لا نحصر صيغ الباركود.
                 // هذه هي نفس فلسفة الماسح القديم المجرب عندكم: المكتبة تختبر كل الصيغ المدعومة تلقائياً.
@@ -4259,7 +4301,36 @@ const App = () => {
         };
     }, [sessionName, sessionId, isAdmin, accessVerified]);
 
-    const [warehouse, setWarehouse] = useState(null);
+    // A preference only: each new visit starts here, while any deliberate selection wins.
+    const readDefaultBranch = () => {
+        try { const id=localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)||'';
+            const branch=id?localStorage.getItem('batco_default_branch_v78_'+id):'';
+            return ['jeddah','riyadh'].includes(branch)?branch:null;
+        } catch { return null; }
+    };
+    const [transferredWarehouse] = useState(() => {
+        try { const value=sessionStorage.getItem('batco_employee_transfer_warehouse_v1')||'';
+            sessionStorage.removeItem('batco_employee_transfer_warehouse_v1');
+            return ['jeddah','riyadh'].includes(value)?value:null;
+        } catch { return null; }
+    });
+    const [warehouse, setWarehouseState] = useState(() => transferredWarehouse || readDefaultBranch());
+    const warehouseChosen = useRef(Boolean(transferredWarehouse));
+    const setWarehouse = useCallback(value => { warehouseChosen.current=true; setWarehouseState(value); }, []);
+    useEffect(() => {
+        let active=true;
+        warehouseChosen.current=Boolean(transferredWarehouse);
+        if (!sessionName || isAdmin) return;
+        if(!transferredWarehouse)setWarehouseState(readDefaultBranch());
+        let id='';try{id=localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)||''}catch{}
+        if (id) getDb().then(db=>db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(id).get()).then(doc=>{
+            if(!active||!doc.exists)return;
+            const branch=['jeddah','riyadh'].includes(doc.data().defaultBranch)?doc.data().defaultBranch:null;
+            try{localStorage.setItem('batco_default_branch_v78_'+id,branch||'')}catch{}
+            if(!warehouseChosen.current)setWarehouseState(branch);
+        }).catch(()=>{});
+        return ()=>{active=false};
+    },[sessionName,isAdmin]);
     const [query, setQuery] = useState('');
     const [showImageInSearch, setShowImageInSearch] = useState(false);
     const [imageWarehouseNotice, setImageWarehouseNotice] = useState(false);
@@ -4911,6 +4982,9 @@ const EmployeeBootstrap = () => {
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
     const admin = Boolean(token) && PROTECTED_ACCOUNTS[normalizeText(name)] === token;
     const employeeId = localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || '';
+    if (control.__unavailable) {
+        return <div className="min-h-screen bg-bg flex items-center justify-center px-20 font-sans"><div className="text-center"><img src="./assets/batco-logo.svg?v=72.0" alt="BATCO" width="900" height="353" className="batco-brand-logo is-login mx-auto"/><p className="mt-20 text-sm">تعذر التحقق من اتصال النظام الآن. أعد المحاولة بعد قليل.</p><button className="mt-16 px-20 h-48 rounded-12 bg-primary text-white" onClick={()=>location.reload()}>إعادة المحاولة</button></div></div>;
+    }
     if (control.__loading) {
         return <div className="min-h-screen bg-bg flex items-center justify-center px-20 font-sans"><div className="text-center"><img src="./assets/batco-logo.svg?v=72.0" alt="BATCO" width="900" height="353" className="batco-brand-logo is-login mx-auto" /></div></div>;
     }
@@ -4930,7 +5004,8 @@ const EmployeeBootstrap = () => {
 const __entryParams = new URLSearchParams(window.location.search);
 const __employeeMode = __entryParams.get('employee') === '1' || (__entryParams.get('chooser') !== '1' && hasRememberedEmployeeSession());
 ReactDOM.createRoot(document.getElementById('root')).render(__employeeMode ? <EmployeeBootstrap /> : <EntryChooser />);
-setTimeout(()=>document.getElementById('app-loader')?.classList.add('is-hidden'),320);
+// The build's mount observer dismisses the splash only after React paints content.
+if (!window.__BATCO_BOOT_GUARD) { const mount = new MutationObserver(() => { if (document.getElementById('root')?.childElementCount) { document.getElementById('app-loader')?.classList.add('is-hidden'); mount.disconnect(); } }); mount.observe(document.getElementById('root'), {childList:true}); }
 </script>
 <script src="./v56-35-new-arrivals-quick-delete.js?v=56.35"></script>
 </body>

@@ -275,3 +275,7 @@ body.batco-pilot-visual #gallery-section+footer .developer-link{color:#78716c;fo
  body.batco-pilot-visual .batco-search-card-head strong{font-size:18px}
 }
 @media(prefers-reduced-motion:reduce){#batco61-pilot *{animation:none!important}}
+
+/* Consistent monochrome vector icons on iOS, independent of the system font. */
+#batco61-pilot .b65-actions button>svg{width:18px;height:18px;flex:none;display:block;overflow:visible}
+#batco61-pilot .b61-star svg{width:17px;height:17px;display:block}
