@@ -87,6 +87,8 @@
     $('saveState').textContent='محفوظ تلقائيًا على هذا الجهاز · يعمل دون إنترنت';
     $('catalogNotice').hidden=true;
     $('catalogNotice').textContent='';
+    $('bulkAbsent').disabled=c.pending===0;
+    $('undoBulk').hidden=!active.lastBulk?.id;
   }
   function visibleRows(){
     const rep=currentReport(),q=Core.name(search);
@@ -184,6 +186,28 @@
     const id=input.dataset.qty;clearTimeout(delayed.get(id));
     const ok=saveQty(id,input.value);if(ok)renderProducts();
   });
+  $('bulkAbsent').onclick=()=>{
+    if(!active)return;
+    const pending=currentReport().rows.filter(row=>row.status==='pending');
+    if(!pending.length)return toast('كل الأصناف تم فحصها بالفعل');
+    if(!confirm('هل أكملت فحص جميع أركان الفرع؟ سيتم تسجيل '+pending.length+' صنف لم يُفحص بعد على أنه غير موجود بالفرع. لا تستخدم هذا الخيار إلا بعد التأكد من الجرد الميداني الكامل.'))return;
+    if(!confirm('تأكيد أخير: هل تريد اعتماد غياب جميع الأصناف المتبقية؟ يمكن التراجع عن هذه العملية لاحقًا.'))return;
+    const id='bulk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+      entries={...active.entries},at=new Date().toISOString();
+    for(const item of pending)entries[item.sku]={qty:0,at,bulkId:id};
+    const nextSession={...active,entries,lastBulk:{id,at,count:pending.length},updatedAt:at};
+    if(commit({...store,sessions:store.sessions.map(s=>s.id===active.id?nextSession:s)})){render();toast('تم اعتماد المتبقي وتحديث قائمة النواقص')}
+  };
+  $('undoBulk').onclick=()=>{
+    if(!active?.lastBulk?.id)return;
+    const bulkId=active.lastBulk.id;
+    if(!confirm('التراجع عن الاعتماد الجماعي الأخير؟ ستعود الأصناف التي لم تُعدّل بعده إلى حالة «لم يُجرد»، وستبقى الإدخالات اليدوية كما هي.'))return;
+    const entries={...active.entries};
+    let reverted=0;
+    for(const [id,record] of Object.entries(entries))if(record.bulkId===bulkId){delete entries[id];reverted++}
+    const nextSession={...active,entries,lastBulk:null,updatedAt:new Date().toISOString()};
+    if(commit({...store,sessions:store.sessions.map(s=>s.id===active.id?nextSession:s)})){render();toast('تم التراجع عن '+reverted+' إدخالًا جماعيًا')}
+  };
   const download=(missingOnly)=>{
     if(!active)return;
     const rep=currentReport(),selected=missingOnly?rep.missing:rep.rows;
