@@ -49,3 +49,23 @@ h1,h2,h3,p{margin:0}h1{font-size:24px;line-height:1.5;letter-spacing:-.4px}.work
 .bp-admin .bp-note{color:#777;font-size:11px;margin:8px 0}.bp-error{color:#ab2424;font-size:12px;margin-top:10px}
 .bp-busy{opacity:.74;pointer-events:none}
 @media(max-width:600px){.bp-worker{padding:8px 9px 26px}.workerStatus{margin-top:14px}h1{font-size:21px}.scanCard{padding:15px;border-radius:16px}.scanCard h2{font-size:19px}.scanCard>p{font-size:12px}#workerForm{grid-template-columns:1fr}#workerInput{height:64px}.darkBtn{min-height:45px}.workerProgress>div{padding:10px}.workerProgress b{font-size:23px}.bp-admin{margin:8px 0;padding:11px}.bp-label{display:block;width:max-content;margin:3px 0}.bp-bar strong{font-size:13px}.bp-fields{grid-template-columns:1fr}.bp-actions>.btn{flex:1}.bp-open{font-size:11px!important;padding:8px!important}}
+
+/* V83: high-contrast scanner, explicit save status, and unobstructed camera preview. */
+.workerProgress{grid-template-columns:repeat(3,minmax(0,1fr))}
+.workerProgress>div{min-width:0}
+.workerProgress b{overflow-wrap:anywhere}
+.workerProgress b.syncWait{font-size:clamp(11px,2.5vw,15px);line-height:1.7;letter-spacing:0}
+.syncHelp{font-size:12px;line-height:1.85;color:#8c2525;background:#fff5f5;border:1px solid #f0d5d5;border-radius:12px;padding:12px 14px;margin:10px 0}
+.syncActions{display:flex;gap:9px;margin:8px 0 12px;flex-wrap:wrap}
+.retryBtn{border:1px solid #d4d4d4;background:#fff;border-radius:11px;color:#161616;font-size:12px;font-weight:750;min-height:43px;padding:8px 14px;flex:1}
+.retryBtn:hover{background:#f6f6f6}
+.cameraArea{background:#111;overflow:hidden;padding:10px 8px 14px}
+.cameraHint{color:#f0f0f0;font-size:12px;line-height:1.8;text-align:center;padding:0 6px 10px}
+#cameraReader{width:100%;max-width:700px;min-height:225px;border:1px solid #444;border-radius:12px;overflow:hidden;background:#080808;position:relative}
+#cameraReader video{width:100%!important;height:auto!important;min-height:210px;object-fit:cover}
+#cameraReader canvas{max-width:100%}
+#cameraReader__scan_region{width:100%!important;min-height:205px}
+#cameraReader__dashboard{color:#fff}
+.cameraControls{display:flex;justify-content:center;gap:9px;margin-top:12px}
+.cameraControls button{border:1px solid #aaa;background:#f8f8f8;color:#111;border-radius:9px;min-height:43px;padding:9px 20px;font-weight:700}
+@media(max-width:600px){#cameraReader{min-height:215px}.scanCard{padding:13px}.cameraArea{margin-inline:-2px}.syncActions{display:grid;grid-template-columns:1fr}.syncActions button{width:100%}}

@@ -19,7 +19,7 @@ assert.match(js,/batco-site-footer-logo/);
 assert.match(js,/new URLSearchParams/);
 const sw=fs.readFileSync('sw.js','utf8');
 assert.match(sw,/batco-brand-footer\.js/);
-assert.match(sw,/stocktake-shell-v82/);
+assert.match(sw,/stocktake-shell-v8[23]/);
 assert.match(fs.readFileSync('customer-sw.js','utf8'),/batco-customer-v82/);
 const ids=new Map(), appended=[];
 const createElement=tag=>({tagName:tag.toUpperCase(),children:[],attributes:{},setAttribute(k,v){this.attributes[k]=v;},append(...nodes){this.children.push(...nodes);},appendChild(v){this.append(v)}});

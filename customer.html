@@ -261,7 +261,7 @@
     html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.0"></scr'+'ipt><script src="./v56-39-site-identity.js?v=56.39"></scr'+'ipt></body>');
     // V82_CUSTOMER_HEADER: logo in the live product catalog, not only authentication.
     const customerHeaderLabel='<div className="min-w-0"><div className="text-[10px] text-muted">بوابة العملاء</div><b className="text-sm block truncate">{guestMode?\'المعرض الرقمي\':safeProfile.company}</b></div>';
-    const customerHeaderBrand='<div className="batco-customer-header-brand"><img className="batco-customer-header-logo" src="./assets/batco-logo.svg?v=82.0" alt="شركة بيت الأواني الطيبة" width="132" height="52"/>'+customerHeaderLabel+'</div>';
+    const customerHeaderBrand='<div className="batco-customer-header-brand" aria-label="شركة بيت الأواني الطيبة"><img className="batco-customer-header-logo" src="./assets/batco-logo.svg?v=83.0" alt="شركة بيت الأواني الطيبة" width="155" height="62"/></div>';
     if(html.includes(customerHeaderLabel))html=html.replace(customerHeaderLabel,customerHeaderBrand);
     else console.warn('[BATCO V82] Customer header anchor changed; keeping portal available.');
     html=html.replace('</body>','<scr'+'ipt defer src="./batco-brand-footer.js?v=82.0"></scr'+'ipt></body>');
