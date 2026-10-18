@@ -8,6 +8,7 @@ assert.ok(report.some(x=>x.page==='employee'));assert.ok(report.some(x=>x.page==
 for(const f of fs.readdirSync(path.join(built,'assets/build')).filter(x=>x.endsWith('.js')))new vm.Script(fs.readFileSync(path.join(built,'assets/build',f),'utf8'),{filename:f});
 for(const f of ['index.html','customer.html']){const html=fs.readFileSync(path.join(built,f),'utf8');for(const m of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);assert.match(html,/const CORE='\.\/assets\/build\/.*\.html'/)}
 const read=p=>fs.readFileSync(p,'utf8');
+cp.execFileSync(process.execPath,[path.join(root,'tests/v77-entry-smoke.cjs'),built],{cwd:root,stdio:'inherit'});
 let baseline=read(path.join(root,'admin-dashboard.html'));
 if(process.env.BASELINE_ADMIN)baseline=read(process.env.BASELINE_ADMIN);
 else { // Reconstruct only the prior module boundary for a controlled same-data comparison.
