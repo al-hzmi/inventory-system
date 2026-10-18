@@ -164,9 +164,9 @@ el('workerCamera').onclick=startCamera;el('workerCloseCamera').onclick=stopCamer
 el('workerRetry').onclick=()=>{retryBlocked=false;syncFailures=0;syncError='';render();flush()};
 el('workerExport').onclick=()=>{
  if(!queue.length)return;
- const escaped=v=>'"'+String(v??'').replace(/^[\\s]*[=+@-]/,"'window.addEventListener('online',()=>{flush();render()});window.addEventListener('offline',render);").replace(/"/g,'""')+'"';
+ const escaped=v=>'"'+String(v??'').replace(/^\s*[=+@-]/,m=>"'"+m).replace(/"/g,'""')+'"';
  const header=['رقم الصنف','اسم الصنف','وقت المسح','رقم الجرد','هوية الموظف'];
- const csv='\\uFEFF'+[header.map(escaped).join(','),...queue.map(row=>[row.sku,row.name,row.at,bound,userId].map(escaped).join(','))].join('\\r\\n')+'\\r\\n';
+ const csv='\uFEFF'+[header.map(escaped).join(','),...queue.map(row=>[row.sku,row.name,row.at,bound,userId].map(escaped).join(','))].join('\r\n')+'\r\n';
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download='جرد-فرع-معلّق-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);
 };
