@@ -45,7 +45,8 @@
     if(!html.includes(oldSession))throw new Error('V41_CUSTOMER_SESSION_MARKER');
     html=html.replace(oldSession,newSession);
     if(!html.includes("customer-sw.js?v=35.0"))throw new Error('V41_SW_MARKER');
-    html=html.replace("customer-sw.js?v=35.0","customer-sw.js?v=37.0");
+    // The unified worker owns only static shell caching; customer data still follows its live access rules.
+    html=html.replace("customer-sw.js?v=35.0","sw.js?v=76.0");
 
     const employeeViewMarker='window.__employeeCustomerView = EMPLOYEE_CUSTOMER_VIEW;';
     if(!html.includes(employeeViewMarker))throw new Error('V41_TRANSFER_HELPER_MARKER');
