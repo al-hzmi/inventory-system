@@ -37,4 +37,9 @@ button:disabled{cursor:not-allowed}.grow{min-width:0}.title{letter-spacing:-.4px
 .stocktake-floor .btn.found{min-height:40px}
 .stocktake-floor .editrow{grid-template-columns:minmax(0,1fr) 88px!important}
 .stocktake-floor .blind{padding:8px 12px}
+.panel.campaign{color:var(--p);border-top:3px solid #158475}
+.panel.campaign::after{display:none}
+.panel.campaign .campaignMeta,.panel.campaign .progressCopy{color:var(--s)}
+.panel.campaign .progressBig{color:#16796b}
+.panel.campaign .status{color:#176d53;background:#edf9f4;border-color:#d4e8df}
 @media(max-width:959px){.stocktake-floor #app{display:flex;flex-direction:column}.stocktake-floor #app>.top{order:0}.stocktake-floor #app>.scopeBar{order:1}.stocktake-floor #app>.syncStatus{order:2;margin-bottom:0}.stocktake-floor #app>.operatorPanel{order:3}.stocktake-floor #app>.summaryPanel{order:4}.stocktake-floor #app>.completedPanel{order:5}.stocktake-floor .completedPanel{margin-top:12px}}
