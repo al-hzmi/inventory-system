@@ -3,7 +3,7 @@
   'use strict';
   if (window.__BATCO_FAST_NAV) return;
   const ROUTES = new Set([
-    'index.html','customer.html','admin-home.html','admin-dashboard.html','branch-stocktake.html','branch-presence.html',
+    'index.html','customer.html','admin-home.html','admin-dashboard.html','admin-branch-presence.html','branch-stocktake.html','branch-presence.html',
     'control-center.html','admin-stocktake-shell.html','admin-stocktake.html',
     'stocktake.html','stocktake-accountant.html','accountant-stocktake.html',
     'inventory-analytics.html','image-distribution.html','admin-inventory-import.html',
@@ -120,5 +120,5 @@
   idle(() => {
     register().then(() => { setTimeout(prime, 150); }).catch(() => {});
   });
-  window.__BATCO_FAST_NAV = { version:'80.0', warm, register };
+  window.__BATCO_FAST_NAV = { version:'81.0', warm, register };
 })();
