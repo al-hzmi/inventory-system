@@ -36,5 +36,5 @@ if(!allowed)location.replace('./index.html?employee=1');
 else if(typeof firebase==='undefined'||!firebase.firestore)document.getElementById('branchPresenceMount').textContent='تعذر تحميل اتصال المخزون. تحقق من الإنترنت ثم أعد المحاولة.';
 else{if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);const db=firebase.firestore();window.branchPresenceDb=db;db.enablePersistence({synchronizeTabs:true}).catch(()=>{});}
 </script>
-</body>
+<script defer src="./batco-brand-footer.js?v=82.0"></script></body>
 </html>

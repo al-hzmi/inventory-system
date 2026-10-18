@@ -188,6 +188,6 @@ function exportExcel(diffOnly){
 }
 
 async function auditAdmin(action,data){try{await db.collection('stocktake_audit').add({campaignId:state.campaign?.id||data?.campaignId||'',action,actorName:'مهند',actorEmployeeId:ROOT_ID,data,createdAt:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent||''})}catch(e){console.warn(e)}}
-</script></body></html>
+</script><script defer src="./batco-brand-footer.js?v=82.0"></script></body></html>
 
 
