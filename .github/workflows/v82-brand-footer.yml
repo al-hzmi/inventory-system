@@ -1,0 +1,24 @@
+name: V82 unified BATCO branding
+on:
+  push:
+    branches: [feature/v82-unified-brand-footers, main]
+    paths: ['*.html','batco-brand-footer.js','customer-sw.js','sw.js','tests/v82-brand-footer.cjs','.github/workflows/v82-brand-footer.yml']
+  pull_request:
+    paths: ['*.html','batco-brand-footer.js','customer-sw.js','sw.js','tests/v82-brand-footer.cjs','.github/workflows/v82-brand-footer.yml']
+permissions:
+  contents: read
+jobs:
+  branding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: node tests/v82-brand-footer.cjs
+      - run: node tests/v78-boot-service-worker.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v81-branch-standalone-browser.cjs
+      - run: BROWSER=webkit node tests/v81-branch-standalone-browser.cjs
+      - run: npm run build

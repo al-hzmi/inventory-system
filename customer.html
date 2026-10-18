@@ -259,6 +259,12 @@
     if(!html.includes("EMPLOYEE_CUSTOMER_ROUTE.get('employeeView')==='1'")||!html.includes("EMPLOYEE_CUSTOMER_SESSION.name||'موظف'")||!html.includes('!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt')||!html.includes('handoffEmployeeCustomerCart(cartItems,branches)')||!html.includes('EMPLOYEE_CUSTOMER_CART_TRANSFER_BACKUP_KEY')||!html.includes('نقل ومتابعة الاعتماد')||!html.includes('setShowGuestNamePrompt(true),5000')||!html.includes("skipped:'guest_name_pending'")||!html.includes('سجل اسمك للمتابعة'))throw new Error('V41_CUSTOMER_OUTPUT_CHECK');
     html=html.replace('</head>','<link rel="stylesheet" href="./v71-brand.css?v=72.1"></head>');
     html=html.replace('</body>','<script src="./v44-observability.js?v=44.0"></scr'+'ipt><script src="./v48-auth-security.js?v=55.0"></scr'+'ipt><script src="./v56-39-site-identity.js?v=56.39"></scr'+'ipt></body>');
+    // V82_CUSTOMER_HEADER: logo in the live product catalog, not only authentication.
+    const customerHeaderLabel='<div className="min-w-0"><div className="text-[10px] text-muted">بوابة العملاء</div><b className="text-sm block truncate">{guestMode?\'المعرض الرقمي\':safeProfile.company}</b></div>';
+    const customerHeaderBrand='<div className="batco-customer-header-brand"><img className="batco-customer-header-logo" src="./assets/batco-logo.svg?v=82.0" alt="شركة بيت الأواني الطيبة" width="132" height="52"/>'+customerHeaderLabel+'</div>';
+    if(html.includes(customerHeaderLabel))html=html.replace(customerHeaderLabel,customerHeaderBrand);
+    else console.warn('[BATCO V82] Customer header anchor changed; keeping portal available.');
+    html=html.replace('</body>','<scr'+'ipt defer src="./batco-brand-footer.js?v=82.0"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V41 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();

@@ -52,6 +52,6 @@ function bindUi(){$('#back')?.addEventListener('click',()=>location.href=adminPr
 function updateNet(){net.textContent=navigator.onLine?'متصل':'بدون اتصال';net.classList.toggle('off',!navigator.onLine)}window.addEventListener('online',updateNet);window.addEventListener('offline',updateNet);updateNet();
 window.addEventListener('beforeunload',()=>state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}}));start();
 </script>
-</body></html>
+<script defer src="./batco-brand-footer.js?v=82.0"></script></body></html>
 
 
