@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>لوحة التحكم | بيت الأواني الطيبة</title>
 <meta name="theme-color" content="#FFFFFF">
+<script defer src="./batco-fast-nav.js?v=76.0"></script>
 
 
 
@@ -29,7 +30,7 @@ html,body,#root{min-height:100%;background:#FAFAF9;color:#1C1917}*{box-sizing:bo
 /* ===== Brand boot screen ===== */
 #app-loader{position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .28s ease,visibility .28s ease}
 #app-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
-#app-loader img{width:92px;height:92px;object-fit:contain;filter:drop-shadow(0 8px 22px rgba(28,25,23,.08));animation:brandBoot 1.45s ease-in-out infinite}
+#app-loader img{display:block;width:min(43vw,178px);max-width:178px;height:auto;aspect-ratio:900/353;object-fit:contain;filter:none;animation:none}
 @keyframes brandBoot{0%,100%{opacity:.72;transform:scale(.985)}50%{opacity:1;transform:scale(1.025)}}
 @media(prefers-reduced-motion:reduce){#app-loader img{animation:none}}
 
@@ -52,7 +53,7 @@ html,body,#root{min-height:100%;background:#FAFAF9;color:#1C1917}*{box-sizing:bo
 </style>
 <link rel="stylesheet" href="./v71-brand.css?v=71.0">
 <link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.1"></head>
-<body><div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img src="./assets/batco-app-icon.svg" onerror="this.onerror=null;this.src='./assets/batco-app-icon.svg'" alt="بيت الأواني الطيبة"></div><div id="root"></div>
+<body><div id="app-loader" aria-label="جاري تحميل بيت الأواني الطيبة"><img class="batco-splash-wordmark" src="./assets/batco-logo.svg?v=72.0" width="900" height="353" alt="BATCO — شركة بيت الأواني الطيبة"></div><div id="root"></div>
 <script type="text/babel">
 const firebaseConfig={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374',measurementId:'G-ZGF5DT9D0K'};
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
