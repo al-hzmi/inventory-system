@@ -1,0 +1,39 @@
+name: V73 stocktake quality
+on:
+  push:
+    branches: [codex/stocktake-workspace-v73]
+  pull_request:
+    paths:
+      - '*stocktake*'
+      - 'stocktake-*'
+      - 'tests/v73-*'
+      - 'sw.js'
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install isolated test dependencies
+        run: |
+          npm install --no-save --package-lock=false playwright@1.51.1
+          npx playwright install --with-deps chromium
+          python -m pip install openpyxl==3.1.5
+      - name: Existing workflow and data contracts
+        run: |
+          node tests/v56-stocktake-workflow.mjs
+          node tests/v73-stocktake-data.cjs
+          python tests/v73-workbook-readback.py
+      - name: Mocked browser behavior and responsive screenshots
+        run: node tests/v73-stocktake-browser.cjs
+      - name: Upload isolated QA evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stocktake-v73-qa
+          path: ../qa
+          retention-days: 7
