@@ -34,7 +34,6 @@ button:disabled{cursor:not-allowed}.grow{min-width:0}.title{letter-spacing:-.4px
 /* Keep the quantity task foremost, without duplicating its open editor action. */
 .stocktake-floor .card:has(.editbox.open) .btn.entry{display:none}
 .stocktake-floor .btn.note{width:auto;min-width:70px;padding:0 12px;min-height:40px;background:white}
-.stocktake-floor .btn.found{min-height:40px}
 .stocktake-floor .editrow{grid-template-columns:minmax(0,1fr) 88px!important}
 .stocktake-floor .blind{padding:8px 12px}
 .panel.campaign{color:var(--p);border-top:3px solid #222222}
