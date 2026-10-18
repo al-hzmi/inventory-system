@@ -18,7 +18,8 @@ if(!admin&&!employee){location.replace('./index.html?employee=1');return}
 const controls=db.collection('system_controls').doc('branch_presence_feature');
 const sessions=db.collection('branch_presence_sessions');
 let control=null,session=null,seen=new Set(),recent=[],unsubSession=null,unsubSeen=null,
-  bound='',queue=[],sending=false,scanner=null,disabled=false,lastCameraToken='',lastCameraTime=0,audio=null;
+  bound='',queue=[],sending=false,scanner=null,disabled=false,lastCameraToken='',lastCameraTime=0,audio=null,
+  syncError='',syncFailures=0,retryBlocked=false,retryTimer=null;
 const queueKey=id=>'batco_branch_presence_queue_v80_'+encodeURIComponent(userId)+'_'+encodeURIComponent(id);
 const fmt=n=>new Intl.NumberFormat('ar-SA').format(n||0);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -48,8 +49,13 @@ function render(){
  const rep=C.summary(products,count,false);
  el('workerDone').textContent=fmt(rep.observed);
  el('workerPending').textContent=fmt(rep.notObserved);
- const b=el('workerSync');b.textContent=queue.length?'بانتظار مزامنة '+fmt(queue.length):'محفوظ';b.className=queue.length?'syncWait':'syncGood';
- if(queue.length&&!navigator.onLine)b.textContent='دون إنترنت · '+fmt(queue.length)+' غير مرسل';
+ const b=el('workerSync');
+ b.textContent=queue.length?'بانتظار حفظ '+fmt(queue.length):'محفوظ على الخادم';
+ b.className=queue.length?'syncWait':'syncGood';
+ if(queue.length&&!navigator.onLine)b.textContent='دون إنترنت · '+fmt(queue.length);
+ if(queue.length&&syncError)b.textContent='لم تكتمل المزامنة · '+fmt(queue.length);
+ const help=el('workerSyncHelp');help.hidden=!queue.length||!syncError;help.textContent=help.hidden?'':syncError;
+ el('workerRetry').hidden=!queue.length;el('workerExport').hidden=!queue.length;
  el('workerRecent').innerHTML=recent.length?recent.slice(0,10).map(x=>'<div class="recentRow"><b>'+esc(x.sku)+'</b><span>'+esc(x.name)+(x.pending?' · قيد المزامنة':'')+'</span></div>').join(''):'<p>لم يتم رصد أي صنف بعد.</p>';
 }
 function readQueue(id){try{const list=JSON.parse(localStorage.getItem(queueKey(id))||'[]');return Array.isArray(list)?list.filter(x=>x&&typeof x.sku==='string'):[]}catch{return []}}
@@ -57,7 +63,7 @@ function persistQueue(){try{localStorage.setItem(queueKey(bound),JSON.stringify(
 function clearSubscriptions(){if(unsubSession)unsubSession();if(unsubSeen)unsubSeen();unsubSession=unsubSeen=null}
 function bind(id){
  if(bound===id)return;
- clearSubscriptions();stopCamera();bound=id;session=null;seen.clear();recent=[];queue=id?readQueue(id):[];
+ clearSubscriptions();stopCamera();clearTimeout(retryTimer);retryTimer=null;syncError='';syncFailures=0;retryBlocked=false;bound=id;session=null;seen.clear();recent=[];queue=id?readQueue(id):[];
  if(!id){render();return}
  const ref=sessions.doc(id);
  unsubSession=ref.onSnapshot(d=>{session=d.exists?{id:d.id,...d.data()}:null;render();flush()},e=>{status('تعذر تحميل الجرد: '+e.message)});
@@ -82,11 +88,12 @@ function receive(raw){
  queue.push({sku:item.sku,name:item.name||'',at:new Date().toISOString()});
  if(!persistQueue()){queue.pop();return}
  recent.unshift({sku:item.sku,name:item.name||'',pending:true});recent=recent.slice(0,12);
- feedback('تم رصد '+item.sku+' · '+(item.name||''),'good');
+ feedback('تم مسح '+item.sku+' · محفوظ على الجهاز وبانتظار تأكيد الخادم','good');
  render();el('workerInput').focus();flush();
 }
 async function flush(){
- if(sending||!bound||!canUse()||!navigator.onLine||!queue.length)return;
+ if(sending||retryBlocked||!bound||!canUse()||!navigator.onLine||!queue.length)return;
+ clearTimeout(retryTimer);retryTimer=null;
  sending=true;
  try{
   while(queue.length&&canUse()&&navigator.onLine){
@@ -101,10 +108,23 @@ async function flush(){
      if(!(data.products||[]).some(p=>p.sku===first.sku))throw Error('SKU_NOT_IN_SESSION');
      txn.set(scanRef,{sku:first.sku,name:first.name,scannedBy:userId,scannedByName:name,scannedAt:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
     });
-    seen.add(first.sku);queue.shift();persistQueue();
+    seen.add(first.sku);queue.shift();persistQueue();syncFailures=0;syncError='';retryBlocked=false;
    }catch(e){
-    if(/SESSION_CLOSED|SKU_NOT_IN_SESSION/.test(e.message||''))feedback('تعذر مزامنة المسح لأن الجرد أغلق أو تغير. راجع الإدارة.','error');
-    else feedback('المسح محفوظ على الجهاز ولم يصل إلى الخادم بعد. حاول مجددًا عند توفر الاتصال.','error');
+    syncFailures++;
+    const code=String(e?.code||e?.message||'').toLowerCase();
+    const closed=/SESSION_CLOSED|SKU_NOT_IN_SESSION/.test(e?.message||'');
+    retryBlocked=closed||code.includes('permission-denied')||code.includes('unauthenticated');
+    if(closed)syncError='أُغلق الجرد أو تغير تكليف الموظف. لم تُرسل المسوحات المعلقة؛ راجع الإدارة قبل الإغلاق النهائي.';
+    else if(code.includes('permission-denied')||code.includes('unauthenticated'))syncError='الخادم رفض حفظ المسح بسبب صلاحيات قاعدة البيانات. يجب مراجعة إعدادات Firebase مع الإدارة؛ المسوحات ما زالت محفوظة على هذا الجهاز.';
+    else if(code.includes('resource-exhausted')||code.includes('quota'))syncError='قاعدة البيانات بلغت حد الاستخدام أو الحصة مؤقتًا. المسوحات آمنة محليًا ولن تظهر كأنها وصلت إلى الخادم. جرّب لاحقًا.';
+    else if(code.includes('unavailable')||code.includes('deadline')||!navigator.onLine)syncError='تعذر الوصول إلى قاعدة البيانات حاليًا. احتفظ بالصفحة أو صدّر نسخة احتياطية، ثم حاول إعادة المزامنة عند استقرار الاتصال.';
+    else syncError='تعذر تأكيد وصول المسوحات للخادم ('+(String(e?.code||'خطأ غير معروف').slice(0,55))+'). لم نفقد المسوحات المحلية؛ استخدم إعادة المحاولة.';
+    feedback('لم يصل المسح إلى الخادم. '+(retryBlocked?'راجع الإدارة قبل إعادة المحاولة.':'ستُعاد المحاولة تلقائيًا.'),'error');
+    if(!retryBlocked&&queue.length){
+      const delay=code.includes('resource-exhausted')?180000:Math.min(60000,Math.pow(2,Math.min(6,syncFailures))*1250);
+      const sessionId=bound;
+      retryTimer=setTimeout(()=>{if(sessionId===bound)flush()},delay);
+    }
     break;
    }
   }
@@ -141,7 +161,19 @@ async function startCamera(){
 }
 async function stopCamera(){const value=scanner;scanner=null;el('cameraArea').hidden=true;if(value){try{await value.stop()}catch{}try{await value.clear()}catch{}}}
 el('workerCamera').onclick=startCamera;el('workerCloseCamera').onclick=stopCamera;
-window.addEventListener('online',()=>{flush();render()});window.addEventListener('offline',render);
-window.addEventListener('beforeunload',clearSubscriptions);
+el('workerRetry').onclick=()=>{retryBlocked=false;syncFailures=0;syncError='';render();flush()};
+el('workerExport').onclick=()=>{
+ if(!queue.length)return;
+ const escaped=v=>'"'+String(v??'').replace(/^[\\s]*[=+@-]/,"'window.addEventListener('online',()=>{flush();render()});window.addEventListener('offline',render);").replace(/"/g,'""')+'"';
+ const header=['رقم الصنف','اسم الصنف','وقت المسح','رقم الجرد','هوية الموظف'];
+ const csv='\\uFEFF'+[header.map(escaped).join(','),...queue.map(row=>[row.sku,row.name,row.at,bound,userId].map(escaped).join(','))].join('\\r\\n')+'\\r\\n';
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='جرد-فرع-معلّق-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);
+};
+window.addEventListener('online',()=>{retryBlocked=false;flush();render()});
+window.addEventListener('offline',render);
+window.addEventListener('focus',()=>{if(queue.length&&!retryBlocked)flush()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&queue.length&&!retryBlocked)flush()});
+window.addEventListener('beforeunload',()=>{clearTimeout(retryTimer);clearSubscriptions()});
 render();
 })();
