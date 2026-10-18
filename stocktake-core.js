@@ -11,7 +11,26 @@
     return Number.isFinite(number) && number <= Number.MAX_SAFE_INTEGER ? number : NaN;
   }
   const difference = (actual, expected) => Number((actual - expected).toPrecision(15));
+  // A team's absolute count occupies its own field; different teams never overwrite it.
+  const teamKey = id => 't' + Array.from(String(id)).map(c=>c.codePointAt(0).toString(16).padStart(6,'0')).join('');
+  function teamCount(item, id) {
+    const entry=item.teamCounts?.[teamKey(id)];
+    if(entry)return quantity(entry.quantity);
+    const legacy=item._aggregated?item._legacyActual:item.actualQty;
+    return item.teamId===id && legacy!=null ? quantity(legacy) : NaN;
+  }
+  function aggregate(item) {
+    if(!item.teamCounts)return {...item};
+    if(item._aggregated)return {...item};
+    const counts=Object.values(item.teamCounts).map(e=>quantity(e.quantity));
+    if(item.actualQty!=null&&!Object.hasOwn(item.teamCounts,teamKey(item.teamId)))counts.push(quantity(item.actualQty));
+    const actual=counts.reduce((sum,q)=>difference(sum+q,0),0),diff=difference(actual,quantity(item.expectedQty));
+    return {...item,_aggregated:true,_legacyActual:item.actualQty,actualQty:actual,difference:diff,countStatus:!counts.length?'pending':Math.abs(diff)<1e-9?'matched':diff<0?'shortage':'surplus'};
+  }
+  function contributionLabels(item,field){const entries=Object.values(item.teamCounts||{}),legacy=item._aggregated?item._legacyActual:item.actualQty;if(legacy!=null&&!item.teamCounts?.[teamKey(item.teamId)])entries.push({teamName:item.teamName||'',scope:item.scope||item.zone||''});return [...new Set(entries.map(e=>e[field]).filter(Boolean))].join('، ');}
+  function forTeam(item,id){const total=aggregate(item),own=teamCount(item,id),entry=item.teamCounts?.[teamKey(id)];return {...total,_teamActual:own,_totalActual:total.actualQty, countStatus:Number.isFinite(own)?total.countStatus:'pending',lastCountOperationId:entry?.operationId||(item.teamId===id?item.lastCountOperationId:'')};}
   function result(item) {
+    item = aggregate(item);
     const expected = quantity(item.expectedQty);
     if (!Number.isFinite(expected)) throw new Error(`كمية النظام غير صحيحة للصنف ${item.sku}`);
     if ((item.countStatus || 'pending') === 'pending') return { expected, actual: '', diff: '', status: 'pending' };
@@ -61,5 +80,6 @@
       if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
   }
-  global.StocktakeCore = { quantity, difference, result, drafts, capture, restore };
+  global.StocktakeCore = { quantity, difference, teamKey, teamCount, contributionLabels, aggregate, forTeam, result, drafts, capture, restore };
 })(typeof window !== 'undefined' ? window : globalThis);
+
