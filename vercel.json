@@ -217,5 +217,6 @@
     }
   ],
   "buildCommand": "node scripts/build-performance.cjs",
-  "installCommand": "npm ci --ignore-scripts"
+  "installCommand": "npm ci --ignore-scripts",
+  "outputDirectory": "."
 }
