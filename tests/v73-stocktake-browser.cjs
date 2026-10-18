@@ -44,7 +44,7 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  await page.waitForTimeout(50);assert.equal(await page.evaluate(()=>draftStore.get('campaign1:team1:item10:qty')),null);
  // Explicit server rejection retains recovery draft and never reports completion.
  await page.locator('#search').fill('10211');await page.waitForTimeout(80);await page.locator('#actual_item11').fill('5.5');await page.evaluate(()=>__reject=true);await page.locator('[data-save="item11"]').click();await page.waitForTimeout(80);assert.equal(await page.evaluate(()=>draftStore.get('campaign1:team1:item11:qty').value),'5.5');assert.equal(await page.evaluate(()=>state.items.find(i=>i.id==='item11').countStatus),'pending');
- await page.evaluate(()=>{state.campaign.status='closed';render()});assert.equal(await page.locator('[data-save="item11"]').isDisabled(),true);
+ await page.evaluate(()=>{state.campaign.status='closed';render()});assert.equal(await page.locator('[data-save="item11"]').isDisabled(),true);assert.equal(await page.evaluate(()=>canEditItem(state.items[0])),false);assert.equal(await page.evaluate(()=>{const item=state.items[0];state.campaign=null;return canEditItem(item)}),false);
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual(errors,[]);await ctx.close();
  for(const file of ['stocktake.html','admin-stocktake.html','stocktake-accountant.html','accountant-stocktake.html'])for(const width of [390,1440]){
   const {page:p,ctx:c,errors:e}=await pageFor(file,width);if(file==='stocktake.html'){await p.locator('#search').fill('10203');await p.waitForTimeout(70)}
