@@ -83,13 +83,13 @@ function receive(raw){
  if(!result.item){feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');return}
  const item=result.item;
  if(seen.has(item.sku)||queue.some(x=>x.sku===item.sku)){
-  feedback('مسجل مسبقًا: '+item.sku,'duplicate');el('workerInput').focus();return;
+  feedback('مسجل مسبقًا: '+item.sku,'duplicate');if(!scanner)el('workerInput').focus();return;
  }
  queue.push({sku:item.sku,name:item.name||'',at:new Date().toISOString()});
  if(!persistQueue()){queue.pop();return}
  recent.unshift({sku:item.sku,name:item.name||'',pending:true});recent=recent.slice(0,12);
  feedback('تم مسح '+item.sku+' · محفوظ على الجهاز وبانتظار تأكيد الخادم','good');
- render();el('workerInput').focus();flush();
+ render();if(!scanner)el('workerInput').focus();flush();
 }
 async function flush(){
  if(sending||retryBlocked||!bound||!canUse()||!navigator.onLine||!queue.length)return;
