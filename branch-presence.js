@@ -110,9 +110,12 @@ async function flush(){
   }
  }finally{sending=false;render()}
 }
-el('workerForm').addEventListener('submit',e=>{e.preventDefault();receive(el('workerInput').value)});
+let quickScanTimer=0;
+el('workerForm').addEventListener('submit',e=>{e.preventDefault();clearTimeout(quickScanTimer);receive(el('workerInput').value)});
 el('workerInput').addEventListener('input',e=>{
  const q=C.key(e.target.value),box=el('workerSuggestions');
+ clearTimeout(quickScanTimer);
+ if(q.length>=8&&canUse())quickScanTimer=setTimeout(()=>{const raw=el('workerInput').value.trim();if(raw.length>=8&&C.resolve(raw,session?.products||[]).item)receive(raw)},260);
  if(q.length<3){box.hidden=true;return}
  const items=session?.products||[];
  const matches=items.filter(p=>C.key(p.sku).includes(q)).slice(0,5);
