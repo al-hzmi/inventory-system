@@ -30,3 +30,11 @@ button:disabled{cursor:not-allowed}.grow{min-width:0}.title{letter-spacing:-.4px
 @media print{.workspaceFold,.workspaceIntro,.syncStatus{display:none!important}.tablewrap,.desktopTable{max-height:none;overflow:visible}.table th{position:static}.table tr{break-inside:avoid}.table thead{display:table-header-group}}
 
 .adminOperationPending .wrap,.adminOperationPending .modalbg{pointer-events:none;opacity:.75}.adminOperationPending::after{content:'جارٍ تنفيذ العملية… يرجى إبقاء الصفحة مفتوحة';position:fixed;z-index:150;bottom:24px;left:50%;transform:translateX(-50%);background:#183b43;color:white;padding:12px 18px;border-radius:12px;font-size:13px;max-width:90%;text-align:center}
+
+/* Keep the quantity task foremost, without duplicating its open editor action. */
+.stocktake-floor .card:has(.editbox.open) .btn.entry{display:none}
+.stocktake-floor .btn.note{width:auto;min-width:70px;padding:0 12px;min-height:40px;background:white}
+.stocktake-floor .btn.found{min-height:40px}
+.stocktake-floor .editrow{grid-template-columns:minmax(0,1fr) 88px!important}
+.stocktake-floor .blind{padding:8px 12px}
+@media(max-width:959px){.stocktake-floor #app{display:flex;flex-direction:column}.stocktake-floor #app>.top{order:0}.stocktake-floor #app>.scopeBar{order:1}.stocktake-floor #app>.syncStatus{order:2;margin-bottom:0}.stocktake-floor #app>.operatorPanel{order:3}.stocktake-floor #app>.summaryPanel{order:4}.stocktake-floor #app>.completedPanel{order:5}.stocktake-floor .completedPanel{margin-top:12px}}

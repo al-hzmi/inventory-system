@@ -10,7 +10,7 @@ function fixture(){
 const fakeFirebase=String.raw`
 (()=>{
 window.__listeners=[];window.__writes=[];window.__deferred=[];window.__reject=false;window.__cache=false;window.__offline=false;
-const f=window.__fixture,store={stocktake_campaigns:{[f.cp.id]:f.cp},stocktake_teams:{[f.team.id]:f.team},stocktake_items:Object.fromEntries(f.items.map(i=>[i.id,i])),employee_accounts:{admin_mohanad:{canonicalName:'مهند'},e1:{canonicalName:'محمد أحمد'}},system_controls:{stocktake_feature:{enabled:true,accessMode:'all',activeCampaignId:f.cp.id},stocktake_accountant_access:{enabled:true,accessMode:'all',campaignId:f.cp.id}},stocktake_audit:{}};
+const f=window.__fixture,store={stocktake_campaigns:{[f.cp.id]:f.cp},stocktake_teams:{[f.team.id]:f.team},stocktake_items:Object.fromEntries(f.items.map(i=>[i.id,i])),employee_accounts:{admin_mohanad:{canonicalName:'مهند'},e1:{canonicalName:'محمد أحمد'}},system_controls:{stocktake_accounting:{enabled:true,accessMode:'all',campaignId:f.cp.id},stocktake_feature:{enabled:true,accessMode:'all',activeCampaignId:f.cp.id},stocktake_accountant_access:{enabled:true,accessMode:'all',campaignId:f.cp.id}},stocktake_audit:{}};
 let serial=0;
 function doc(c,id){return {id,collection:c,data:()=>store[c]?.[id],exists:!!store[c]?.[id],metadata:{hasPendingWrites:!!store[c]?.[id]?._pending,fromCache:window.__cache},ref:ref(c,id)}}
 function ref(c,id){return {id,collection:c,get:async()=>doc(c,id),set:async(data)=>{store[c]??={};store[c][id]={...store[c][id],...data};emit()},delete:async()=>{delete store[c][id];__writes.push({delete:id});emit()},onSnapshot:(opt,cb)=>listen({c,id},typeof opt==='function'?opt:cb)}}
@@ -33,7 +33,7 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
  }
  const {page,ctx,errors}=await pageFor('stocktake.html');
  await page.locator('#search').fill('10210');await page.waitForTimeout(100);
- await page.locator('#actual_item10').fill('١٢٫٧٥');
+ assert.equal(await page.locator('.activeResult .qtygrid').count(),0);await page.locator('#actual_item10').fill('١٢٫٧٥');
  await page.evaluate(()=>__emit());assert.equal(await page.locator('#actual_item10').inputValue(),'١٢٫٧٥');
  await page.locator('#actual_item10').fill('');await page.locator('[data-save="item10"]').click();assert.equal(await page.evaluate(()=>__writes.length),0);
  await page.locator('#actual_item10').fill('١٢٫٧٥');await page.screenshot({path:path.join(out,'floor-mobile.png'),fullPage:true});
@@ -52,7 +52,7 @@ function firestore(){return db}firestore.FieldValue={serverTimestamp:()=>({secon
    await p.locator('#followupAccess summary').click();await p.locator('[data-accountant-member="e1"]').check();await p.evaluate(()=>__emit());assert.equal(await p.locator('[data-accountant-member="e1"]').isChecked(),true);assert.equal(await p.locator('#followupAccess').getAttribute('open'),'');await p.locator('#followupAccess summary').click();
    await p.evaluate(()=>{state.campaign.status='draft';__store.stocktake_campaigns.campaign1.status='draft';window.prompt=()=>state.teams[0].name});const before=await p.evaluate(()=>__writes.length);await p.evaluate(()=>deleteTeam('team1'));assert.equal(await p.evaluate(()=>__writes.length),before);assert.match(await p.locator('#toast').innerText(),/الحذف مرفوض/);
   }
-  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,file+' '+width+' overflow');assert.deepEqual(e,[],file+' errors');await p.screenshot({path:path.join(out,file.replace('.html','')+'-'+width+'.png'),fullPage:true});await c.close();
+  assert.ok(await p.locator(file==='admin-stocktake.html'?'#reviewSearch':'#search').count(),file+' must render its data view');assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,file+' '+width+' overflow');assert.deepEqual(e,[],file+' errors');await p.screenshot({path:path.join(out,file.replace('.html','')+'-'+width+'.png'),fullPage:true});await c.close();
  }
  await browser.close();console.log('PASS: Arabic/decimal draft preservation, blank rejection, offline enqueue and server acknowledgment, rejected-write recovery, closed read-only, protected deletion, live access controls, 8 responsive views.');
 })().catch(e=>{console.error(e);process.exit(1)});
