@@ -27,8 +27,13 @@ const csv=C.csv([{sku:'=3+4',name:'@risk',warehouseQty:3}],{branch:'فرع','war
 assert.match(csv,/^\uFEFF/);assert.match(csv,/'=3\+4/);assert.match(csv,/'@risk/);
 assert.equal(C.inventory(read('data/jeddah.tsv')).length>500,true);
 const admin=read('admin-stocktake.html'),shell=read('admin-stocktake-shell.html'),field=read('stocktake.html'),home=read('index.html');
-assert.match(admin,/id="newBranchPresence"/);assert.match(admin,/branch-presence-admin\.js/);
-assert.match(admin,/branch-presence-admin\.css/);assert.match(shell,/openBranchFromShell/);
+const adminBranch=read('admin-branch-presence.html');
+assert.match(admin,/id="newBranchPresence"/);
+assert.match(admin,/href="\.\/admin-branch-presence\.html"/);
+assert.doesNotMatch(admin,/branch-presence-admin\.js/);
+assert.match(adminBranch,/branch-presence-admin\.js/);
+assert.match(adminBranch,/branch-presence-admin\.css/);
+assert.doesNotMatch(shell,/openBranchFromShell/);
 assert.match(field,/branch-presence-entry\.js/);assert.match(home,/branch-presence-main-launcher\.js/);
 const page=read('branch-presence.html'),script=read('branch-presence.js');
 assert.match(page,/workerForm/);assert.match(page,/workerCamera/);
