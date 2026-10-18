@@ -189,7 +189,10 @@ try {
     const context = await seedContext(browser, { ...EMP, [TK]:'{broken-json' });
     const page = await context.newPage();
     await page.goto(base + '/index.html?employee=1&customerCartTransfer=1', { waitUntil:'domcontentloaded', timeout:45000 });
-    await sleep(2500);
+    // V78 boots the employee shell asynchronously; verify the mounted application,
+    // not an arbitrary 2.5-second interval while the branded splash is still shown.
+    await page.waitForFunction(() => document.querySelector('#root')?.childElementCount > 0, null, { timeout:12000 })
+      .catch(async error => { const loader=await page.locator('body').innerText(); fail('malformed payload stalled app mount: '+loader.slice(0,200)+'; '+error.message); });
     const text = await page.locator('body').innerText();
     if (!text.trim() || text.includes('V40_')) fail('malformed payload broke bootstrap');
     console.log('MALFORMED_PAYLOAD_SAFE_PASS');
