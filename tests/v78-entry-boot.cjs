@@ -7,10 +7,10 @@ const fake=`(()=>{const snap={docs:[],exists:true,size:0,empty:true,metadata:{},
 (async()=>{
  const browser=await (process.env.BROWSER==='webkit'?webkit:chromium).launch({headless:true,...(process.env.BROWSER==='webkit'?{}:{args:['--no-sandbox']})});
  const output=process.env.SCREENSHOT_DIR||path.join(root,'qa-v78');fs.mkdirSync(output,{recursive:true});
- async function scenario(name,{delayApp=false,failApp=false,employee=false,noPolicy=false,closed=false}={}){
+ async function scenario(name,{delayApp=false,failApp=false,employee=false,noPolicy=false,closed=false,remembered=false}={}){
   const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,serviceWorkers:'block'}),page=await context.newPage(),errors=[];let resume,requests=[];
   const held=new Promise(r=>resume=r);page.on('pageerror',error=>errors.push(error.message));
-  await context.addInitScript(({noPolicy,closed})=>{window.__NO_POLICY=noPolicy;if(closed){localStorage.setItem('inventory_user_name_v2','اختبار');localStorage.setItem('batco_employee_site_access_v1',JSON.stringify({mode:'closed',maintenanceMessage:'النظام متوقف مؤقتًا من الإدارة.'}))}},{noPolicy,closed});
+  await context.addInitScript(({noPolicy,closed,remembered})=>{window.__NO_POLICY=noPolicy;if(remembered){localStorage.setItem('inventory_user_name_v2','موظف الاختبار');localStorage.setItem('inventory_employee_id_v2','qa-employee');localStorage.setItem('inventory_employee_auth_version_v2','2');localStorage.setItem('inventory_login_photo_proof_v2',JSON.stringify({role:'employee',employeeId:'qa-employee',photoId:'qa-proof'}));localStorage.setItem('batco_default_branch_v78_qa-employee','riyadh');}if(closed){localStorage.setItem('inventory_user_name_v2','اختبار');localStorage.setItem('batco_employee_site_access_v1',JSON.stringify({mode:'closed',maintenanceMessage:'النظام متوقف مؤقتًا من الإدارة.'}))}},{noPolicy,closed,remembered});
   await context.route('**/*',async route=>{
    const u=new URL(route.request().url());requests.push(u.href);
    if(u.hostname==='localhost'){
@@ -31,6 +31,8 @@ const fake=`(()=>{const snap={docs:[],exists:true,size:0,empty:true,metadata:{},
    await page.waitForFunction(()=>document.querySelector('#root')?.childElementCount>0,{},{timeout:8000});
    await page.waitForFunction(()=>window.__BATCO_APP_MOUNTED===true);
    if(noPolicy){if(closed)await page.getByText('النظام متوقف مؤقتًا من الإدارة.',{exact:true}).waitFor({timeout:9000});else await page.getByText('تعذر التحقق من اتصال النظام الآن. أعد المحاولة بعد قليل.',{exact:true}).waitFor({timeout:9000});}
+   else if(employee&&!remembered)await page.getByPlaceholder('اكتب اسم الدخول').waitFor();
+   else if(remembered)await page.getByPlaceholder(/رقم الصنف|ابحث/).first().waitFor();
    else await page.waitForFunction(()=>document.querySelector('#root')?.textContent.trim().length>10);
    await page.waitForFunction(()=>getComputedStyle(document.getElementById('app-loader')).visibility==='hidden');
    await page.screenshot({path:path.join(output,name+'.png'),fullPage:true});
@@ -41,6 +43,7 @@ const fake=`(()=>{const snap={docs:[],exists:true,size:0,empty:true,metadata:{},
  }
  await scenario('delayed-app',{delayApp:true});
  await scenario('employee-login',{employee:true});
+ await scenario('employee-remembered',{employee:true,remembered:true});
  await scenario('employee-quota-recovery',{employee:true,noPolicy:true});
  await scenario('employee-cached-closed',{employee:true,noPolicy:true,closed:true});
  await scenario('missing-script',{failApp:true});
