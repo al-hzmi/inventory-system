@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>جرد الفرع بالباركود | BATCO</title>
+<link rel="icon" href="./assets/batco-app-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="stylesheet" href="./branch-presence.css?v=80.0">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script defer src="./branch-presence-core.js?v=80.0"></script>
+<script defer src="./branch-presence.js?v=80.0"></script>
+</head>
+<body>
+<div class="bp-worker">
+<header class="workerHead"><img src="./assets/batco-logo.svg" alt="BATCO" width="130" height="60"><a href="./index.html?employee=1">العودة للنظام</a></header>
+<main>
+ <section class="workerStatus">
+  <span class="eyebrow">جرد الفرع · حضور الأصناف</span><h1 id="workerTitle">جاري التحقق من التكليف…</h1>
+  <p id="workerDescription">يرجى الانتظار حتى يتم تحميل إعدادات الجرد.</p>
+ </section>
+ <section id="workerScan" hidden>
+  <div class="workerProgress"><div><span>أصناف تم رصدها</span><b id="workerDone">0</b></div><div><span>لم تُمسح بعد</span><b id="workerPending">—</b></div><div><span>حالة الحفظ</span><b id="workerSync" class="syncGood">متصل</b></div></div>
+  <div class="scanCard">
+   <h2>امسح الباركود وواصل</h2>
+   <p>أو أدخل رقم الصنف يدويًا واضغط Enter. لا تحتاج تدخل كمية.</p>
+   <form id="workerForm"><label for="workerInput" class="srOnly">باركود أو رقم الصنف</label><input id="workerInput" type="search" enterkeyhint="done" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="باركود / رقم الصنف" aria-describedby="workerFeedback" autofocus><button type="submit" class="darkBtn">تسجيل وجود الصنف</button></form>
+   <div id="workerSuggestions" class="suggestions" hidden></div>
+   <div id="workerFeedback" class="scanFeedback" role="status" aria-live="polite">جاهز للمسح</div>
+   <button type="button" id="workerCamera" class="cameraBtn">فتح الكاميرا لمسح الباركود</button>
+   <section id="cameraArea" class="cameraArea" hidden><div id="cameraReader"></div><button type="button" id="workerCloseCamera">إغلاق الكاميرا</button></section>
+  </div>
+  <div class="recent"><h3>آخر الأصناف المرصودة</h3><div id="workerRecent"><p>لم يتم رصد أي صنف بعد.</p></div></div>
+  <p class="footerNote">الباركود يسجل الصنف مرة واحدة فقط. الأصناف غير الممسوحة تُراجع عند إغلاق الجرد، ولا تتغير كميات المخزون.</p>
+ </section>
+</main>
+</div>
+</body>
+</html>

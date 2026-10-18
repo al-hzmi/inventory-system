@@ -1,0 +1,26 @@
+name: V80 fast branch presence gate
+on:
+  push:
+    branches: [feature/v80-fast-branch-presence, main]
+    paths: ['branch-presence*', 'admin-stocktake.html', 'admin-stocktake-shell.html', 'stocktake.html', 'index.html', 'batco-fast-nav.js', 'sw.js', 'tests/v80-*', '.github/workflows/v80-branch-presence.yml']
+  pull_request:
+    paths: ['branch-presence*', 'admin-stocktake.html', 'admin-stocktake-shell.html', 'stocktake.html', 'index.html', 'batco-fast-nav.js', 'sw.js', 'tests/v80-*', '.github/workflows/v80-branch-presence.yml']
+permissions:
+  contents: read
+jobs:
+  branch-presence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: node tests/v80-branch-presence.cjs
+      - run: node tests/v78-boot-service-worker.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v80-branch-presence-browser.cjs
+      - run: BROWSER=webkit node tests/v80-branch-presence-browser.cjs
+      - run: node tests/v80-branch-admin-browser.cjs
+      - run: BROWSER=webkit node tests/v80-branch-admin-browser.cjs
+      - run: npm run build

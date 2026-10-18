@@ -1,0 +1,24 @@
+/* V80 admin mount: all selectors scoped to keep existing stocktake UI unchanged. */
+.bp-admin{margin:10px 0;border:1px solid #dedede;border-radius:14px;background:#fff;padding:13px 16px;color:#161616}
+.bp-admin[hidden],.bp-admin [hidden]{display:none!important}
+.bp-admin button,.bp-admin input,.bp-admin select{font:inherit}
+.bp-admin .bp-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bp-admin .bp-bar strong{font-size:15px}
+.bp-admin .bp-bar p,.bp-admin .bp-people p{color:#666;font-size:11px;margin:3px 0}
+.bp-admin .bp-label{font-size:10px;color:#444;background:#f2f2f2;border:1px solid #e4e4e4;border-radius:99px;padding:4px 8px;margin:0 6px}
+.bp-admin .bp-open{font-weight:800;background:#111!important;color:#fff!important;border-color:#111!important;white-space:nowrap}
+.bp-admin .bp-body{border-top:1px solid #eee;margin-top:13px;padding-top:13px}
+.bp-admin .bp-summary{padding:12px;border-radius:10px;background:#f7f7f7;font-size:12px;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.bp-admin .bp-summary b{font-size:13px}.bp-admin .bp-summary span{color:#666}
+.bp-admin .bp-summary .bp-state{border:1px solid #ddd;border-radius:99px;padding:3px 8px;color:#111}
+.bp-admin .bp-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bp-admin .bp-fields label{font-size:12px;font-weight:750;display:grid;gap:5px}
+.bp-admin .bp-fields .input,.bp-admin .bp-fields .select{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#111;min-height:42px}
+.bp-admin .bp-people{margin-top:14px}.bp-admin .bp-members{display:flex;gap:8px;flex-wrap:wrap;padding:9px 0}
+.bp-admin .bp-members label{border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;padding:8px 10px;display:flex;align-items:center;gap:7px;font-size:12px}
+.bp-admin .bp-members input{accent-color:#111;width:17px;height:17px}
+.bp-admin .bp-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.bp-admin .bp-actions>.btn{min-height:39px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.bp-admin .bp-note{color:#777;font-size:11px;margin:8px 0}.bp-admin .bp-error{color:#ab2424;font-size:12px;margin-top:10px}
+.bp-admin.bp-busy{opacity:.74;pointer-events:none}
+@media(max-width:600px){.bp-admin{margin:8px 0;padding:11px}.bp-admin .bp-label{display:block;width:max-content;margin:3px 0}.bp-admin .bp-bar strong{font-size:13px}.bp-admin .bp-fields{grid-template-columns:1fr}.bp-admin .bp-actions>.btn{flex:1}.bp-admin .bp-open{font-size:11px!important;padding:8px!important}}

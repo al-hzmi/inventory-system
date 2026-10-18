@@ -239,7 +239,7 @@ $('#noteCancel').onclick=()=>{$('#noteModal').classList.remove('open');state.not
  batch.commit().then(()=>{unsub();saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تمت مزامنة الملاحظة')}).catch(()=>{unsub();saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:note});toast('تعذر اعتماد الملاحظة؛ المسودة محفوظة')});
 };
 async function startScanner(){ensureFeedbackAudio();if(state.scanner)return;$('#scanner').classList.add('open');try{const scanner=new Html5Qrcode('reader');state.scanner=scanner;await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:320,height:180},aspectRatio:1,disableFlip:true},txt=>{const value=String(txt||'').trim();if(!value)return;try{navigator.vibrate&&navigator.vibrate(35)}catch{}const resolved=resolveStocktakeSearch(value);stopScanner();state.search=resolved.query;state.filter='all';state.visible=80;state.activeEditId=resolved.item?.id||'';render();toast(resolved.item?(resolved.fromBarcode?`تم التعرف على الصنف ${resolved.item.sku} من الباركود`:`تم العثور على الصنف ${resolved.item.sku}`):'تمت قراءة الباركود ولم يوجد صنف مطابق')},()=>{})}catch(e){console.error(e);stopScanner();toast('تعذر تشغيل الكاميرا')}}async function stopScanner(){const s=state.scanner;state.scanner=null;if(s){try{await s.stop()}catch{}try{await s.clear()}catch{}}$('#scanner')?.classList.remove('open')}$('#closeScanner').onclick=stopScanner;
-</script>
+</script><script defer src="./branch-presence-entry.js?v=80.0"></script>
 </body>
 </html>
 
