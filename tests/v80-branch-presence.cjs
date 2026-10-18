@@ -13,6 +13,7 @@ const p=C.inventory(sample);
 assert.equal(p.length,3);
 assert.equal(C.resolve('arm_10004',p).item.sku,'ARM_10004');
 assert.equal(C.resolve('ARM10004',p).item.sku,'ARM_10004');
+assert.equal(C.resolve('١٠٠٠٤',p).item.sku,'ARM_10004');
 assert.equal(C.resolve('89000010004987',p).item.sku,'ARM_10004');
 assert.equal(C.resolve('89000010005987',p).item.sku,'ARM_10005');
 assert.equal(C.resolve('invalid',p).reason,'unknown');
