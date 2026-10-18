@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>جرد الفروع | شركة بيت الأواني الطيبة</title>
+<meta name="description" content="جرد موجودات الفرع ومطابقتها بقائمة أصناف المستودع المرجعي">
+<link rel="icon" href="./assets/batco-app-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="stylesheet" href="./branch-stocktake.css?v=79.0">
+<script defer src="./batco-fast-nav.js?v=78.0"></script>
+<script defer src="./branch-stocktake-core.js?v=79.0"></script>
+<script defer src="./branch-stocktake.js?v=79.0"></script>
+</head>
+<body>
+<div class="shell">
+<header class="head">
+  <div class="brand"><img src="./assets/batco-logo.svg" width="156" height="61" alt="شركة بيت الأواني الطيبة"><div><span class="eyebrow">إدارة المخزون</span><h1>جرد الفروع</h1></div></div>
+  <a class="back" href="./admin-stocktake-shell.html" id="backLink">العودة إلى الجرد</a>
+</header>
+<main>
+  <section class="setup panel" id="setup">
+    <span class="eyebrow">مساحة عمل مستقلة</span>
+    <h2>اعرف الأصناف التي يحتاجها الفرع</h2>
+    <p class="sub">اختر فرع البيع ومستودعه المرجعي. لن يظهر الصنف ضمن نواقص الفرع إلا عندما تسجل أنه غير موجود فعلًا، ولا تُغيَّر كميات المستودع.</p>
+    <form id="newForm" class="newForm">
+      <label>اسم الفرع <input id="branchName" required maxlength="64" autocomplete="off" placeholder="مثال: معرض جدة الرئيسي"></label>
+      <label>المستودع المرجعي <select id="warehouse" required><option value="jeddah">مستودع جدة</option><option value="riyadh">مستودع الرياض</option></select></label>
+      <button class="primary" type="submit">بدء جرد جديد <span aria-hidden="true">←</span></button>
+    </form>
+    <div id="startupError" class="notice error" role="alert" hidden></div>
+    <div class="divider"></div>
+    <div class="rowbetween"><h3>عمليات الجرد المحفوظة</h3><small>المحفوظ على هذا الجهاز فقط</small></div>
+    <div id="history" class="history"><p class="sub">لا توجد جلسات سابقة بعد.</p></div>
+  </section>
+  <section id="workspace" hidden>
+    <div class="workspaceTop">
+      <div><span class="eyebrow">جرد فرع مستقل</span><h2 id="sessionName">—</h2><p id="sessionMeta" class="sub">—</p></div>
+      <button type="button" class="back" id="switchSession">ملفات الجرد</button>
+    </div>
+    <div class="notice caution"><b>تنبيه:</b> الأصناف غير المفحوصة ليست أصنافًا ناقصة. «غير موجود بالفرع» يعني أنك أكدت الصفر، مع وجود كمية في المستودع.</div>
+    <div class="summary" id="summary" aria-live="polite"></div>
+    <div class="tools panel">
+      <div class="rowbetween"><div><h3>أصناف الجرد</h3><p class="sub" id="saveState">حفظ تلقائي على هذا الجهاز</p></div><button id="refreshSource" type="button" class="secondary">تحديث قائمة المستودع</button></div>
+      <div class="filterBar" role="group" aria-label="تصفية الأصناف">
+        <button type="button" data-filter="all" class="on">الكل</button>
+        <button type="button" data-filter="pending">لم يُجرد</button>
+        <button type="button" data-filter="missing">غير موجود بالفرع</button>
+        <button type="button" data-filter="present">موجود بالفرع</button>
+      </div>
+      <div class="searchBar"><label for="productSearch">البحث برقم الصنف أو اسمه</label><input id="productSearch" type="search" autocomplete="off" enterkeyhint="search" placeholder="ابحث عن صنف..." /></div>
+      <div class="exportBar">
+        <button type="button" id="exportMissing" class="primary">تصدير نواقص الفرع Excel CSV</button>
+        <button type="button" id="exportFull" class="secondary">تصدير الجرد كاملًا</button>
+      </div>
+      <div class="notice caution" id="catalogNotice" hidden></div>
+      <div id="rows" class="products"></div>
+      <div class="loadMore" id="pagination" hidden><button id="more" type="button" class="secondary">عرض المزيد</button></div>
+    </div>
+  </section>
+</main>
+<footer>شركة بيت الأواني الطيبة · الجرد لا يغيّر الكميات الرسمية في المستودع</footer>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
