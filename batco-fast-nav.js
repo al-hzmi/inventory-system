@@ -72,6 +72,7 @@
     img.style.cssText = 'width:min(43vw,178px);height:auto;max-width:178px;object-fit:contain;';
     curtain.appendChild(img);
     document.body.appendChild(curtain);
+    setTimeout(() => { if (document.visibilityState === 'visible') removeTransition(); }, 6000);
   };
   const removeTransition = () => { curtain?.remove(); curtain = null; };
   const hrefOfLink = (event) => {
@@ -89,6 +90,7 @@
     // Delay one task so another handler can cancel this action before showing anything.
     setTimeout(() => { if (!e.defaultPrevented) showTransition(); }, 0);
   }, true);
+  navigator.serviceWorker?.addEventListener?.('controllerchange', flush);
   window.addEventListener('pageshow', removeTransition);
   window.addEventListener('pagehide', removeTransition);
   document.addEventListener('visibilitychange', () => {
