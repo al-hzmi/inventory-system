@@ -59,3 +59,8 @@ input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{ou
 footer{text-align:center;color:#919191;font-size:11px;padding:22px 6px}
 @media(max-width:760px){.shell{padding:9px 10px 24px}.head{padding:9px 11px;border-radius:13px}.brand{gap:6px}.brand img{width:94px;max-height:42px}.brand h1{font-size:15px}.head .back{padding:8px 10px;font-size:11px;min-height:37px}.panel{padding:15px;border-radius:16px}.newForm{grid-template-columns:1fr;margin:18px 0}.workspaceTop h2{font-size:21px}.summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:13px}.metric b{font-size:25px}.item{flex-direction:column;align-items:stretch;gap:12px}.itemActions{justify-content:space-between;width:100%;flex-wrap:wrap}.itemActions label{flex:1;min-width:88px}.itemActions input{width:100%}.itemActions button{flex:1}.tools>.rowbetween{align-items:start;gap:9px}.tools>.rowbetween button{font-size:11px;padding:7px 10px;min-height:38px;white-space:normal}.exportBar button{flex:1;white-space:normal}.historyButton{padding:12px}.workspaceTop{gap:10px}.workspaceTop>.back{padding:8px;font-size:11px;min-height:37px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+.bulkBar{border:1px solid #ededed;background:#fcfcfc;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin:16px 0}
+.bulkBar b{font-size:13px}.bulkBar .sub{max-width:580px;font-size:11px}
+.bulkButtons{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}.bulkButtons button{white-space:normal;min-height:40px}
+@media(max-width:760px){.bulkBar{display:block;padding:12px}.bulkButtons{margin-top:10px}.bulkButtons button{flex:1}}
