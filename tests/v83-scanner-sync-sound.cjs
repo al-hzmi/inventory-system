@@ -15,7 +15,7 @@ assert.match(stocktake,/window.addEventListener\('keydown',ensureFeedbackAudio/)
 assert.match(stocktake,/window.addEventListener\('touchstart',ensureFeedbackAudio/);
 assert.match(worker,/formatsToSupport:formats/);
 assert.match(worker,/useBarCodeDetectorIfSupported/);
-assert.match(worker,/qrbox:\(width,height\)=>/);
+assert.match(worker,/window\.BranchCameraPro\.options\(true\)/);
 assert.match(worker,/code.includes\('permission-denied'\)/);
 assert.match(worker,/code.includes\('resource-exhausted'\)/);
 assert.match(worker,/retryTimer=setTimeout/);
