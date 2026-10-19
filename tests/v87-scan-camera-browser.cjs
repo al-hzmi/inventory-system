@@ -95,7 +95,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
 
  await page.evaluate(()=>window.__v85.zxing('ARM_10004'));
  await page.waitForFunction(()=>Object.keys(window.__v85.records).length===1);
- await page.waitForFunction(()=>window.__v86Audio.frequencies.filter(x=>x===1175).length===acceptedBefore+1);
+ await page.waitForFunction(target=>window.__v86Audio.frequencies.filter(x=>x===1175).length===target,acceptedBefore+1);
  assert.match(await page.locator('#cameraFlash').innerText(),/تم اعتماد الصنف/);
 
  assert.equal(await page.locator('#workerDone').innerText(),'١','one valid SKU registered');
@@ -108,7 +108,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  await page.locator('#workerInput').fill('ARM_10005');
  await page.locator('#workerInput').press('Enter');
  await page.waitForFunction(()=>Object.keys(window.__v85.records).length===2);
- await page.waitForFunction(()=>window.__v86Audio.frequencies.filter(x=>x===1175).length===acceptedBefore+2);
+ await page.waitForFunction(target=>window.__v86Audio.frequencies.filter(x=>x===1175).length===target,acceptedBefore+2);
  assert.match(await page.locator('#workerFeedback').innerText(),/تم مسح/);
 
  const cameraBoxAfter=await page.locator('.cameraViewport').boundingBox();
