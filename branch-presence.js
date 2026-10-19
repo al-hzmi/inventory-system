@@ -20,6 +20,7 @@ const sessions=db.collection('branch_presence_sessions');
 let control=null,session=null,seen=new Set(),recent=[],unsubSession=null,unsubSeen=null,
   bound='',queue=[],sending=false,scanner=null,scannerStarting=false,cameraSession=0,cameraHardware=null,cameraZoomTimer=null,torchOn=false,alternateDecoder=null,disabled=false,lastCameraToken='',lastCameraTime=0,audio=null,
   syncError='',syncFailures=0,retryBlocked=false,retryTimer=null;
+const scanVerifier=window.BatcoScanPro?.createVerifier({onConfirm:code=>confirmedBarcode(code)})||null;
 const queueKey=id=>'batco_branch_presence_queue_v80_'+encodeURIComponent(userId)+'_'+encodeURIComponent(id);
 const fmt=n=>new Intl.NumberFormat('ar-SA').format(n||0);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -210,22 +211,26 @@ async function configureCamera(current){
  const resolution=hardware.width&&hardware.height?' · '+hardware.width+'×'+hardware.height:'';
  cameraMessage((focusEnabled?'التركيز التلقائي مفعّل':'حرّك الهاتف ببطء حتى تتضح الصورة')+resolution+' · التقريب والإضاءة حسب إمكانات الجهاز');
 }
-function decodedBarcode(raw,details){
- // html5-qrcode uses a native detector when supported, and its ZXing decoder otherwise.
- // Never block the camera while writing to Firestore or display the keyboard in camera mode.
+function confirmedBarcode(raw){
  const token=C.key(raw),now=Date.now();
- if(token===lastCameraToken&&now-lastCameraTime<5000)return;
+ if(token===lastCameraToken&&now-lastCameraTime<3500)return;
  lastCameraToken=token;lastCameraTime=now;
- el('cameraDecoded').hidden=false;el('cameraDecoded').textContent='تم التعرف على الباركود: '+token;
- receive(raw,'camera');
+ el('cameraDecoded').hidden=false;
+ el('cameraDecoded').textContent='باركود مؤكد: '+token;
+ receive(token,'camera');
 }
+function decodedBarcode(raw,details){
+ if(scanVerifier)scanVerifier.push(raw,details?.engine||'zxing');
+ else confirmedBarcode(raw);
+}
+
 async function startCamera(){
  prepareAudio();
  if(scanner||scannerStarting||!canUse())return;
  if(!window.BranchCameraPro){feedback('تعذر تهيئة الكاميرا؛ أعد تحميل الصفحة ثم حاول مجددًا.','error');return}
  scannerStarting=true;const ticket=++cameraSession;
  el('workerCamera').disabled=true;
- resetCameraControls();el('cameraDecoded').hidden=true;el('cameraDecoded').textContent='';cameraMessage('جاري تشغيل كاميرا عالية الوضوح…');
+ scanVerifier?.reset();resetCameraControls();el('cameraDecoded').hidden=true;el('cameraDecoded').textContent='';cameraMessage('جاري تشغيل كاميرا عالية الوضوح…');
  let current=null;
  try{
   const Qrcode=await loadScanner();
@@ -259,7 +264,7 @@ async function startCamera(){
     alternateDecoder=window.BranchBarcodeFallback.create({
      videoProvider:()=>document.querySelector('#cameraReader video'),
      onDecode:code=>{
-      if(ticket===cameraSession&&current===scanner)decodedBarcode(code);
+      if(ticket===cameraSession&&current===scanner)decodedBarcode(code,{engine:'quagga'});
      },
      onStatus:state=>{
       if(ticket===cameraSession&&current===scanner&&state==='secondary-ready')
