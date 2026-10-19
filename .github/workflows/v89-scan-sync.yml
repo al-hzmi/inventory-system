@@ -2,9 +2,9 @@ name: V89 unified verified scanning and sync
 on:
   push:
     branches: [feature/v89-verified-scanning-batched-sync, main]
-    paths: ['batco-scan-pro.js','branch-presence.js','branch-presence.html','stocktake.html','index.html','runtime/index-v37-source.txt','sw.js','tests/v89-*','tests/v88-real-label-browser.cjs','tests/v83-branch-sync-browser.cjs','.github/workflows/v89-scan-sync.yml']
+    paths: ['batco-scan-pro.js','branch-presence.js','branch-presence.html','stocktake.html','index.html','runtime/index-v37-source.txt','sw.js','tests/v89-*','tests/v88-real-label-mapping.cjs','tests/v87-cashier-geometry.cjs','tests/v88-real-label-browser.cjs','tests/v83-branch-sync-browser.cjs','.github/workflows/v89-scan-sync.yml']
   pull_request:
-    paths: ['batco-scan-pro.js','branch-presence.js','branch-presence.html','stocktake.html','index.html','runtime/index-v37-source.txt','sw.js','tests/v89-*','tests/v88-real-label-browser.cjs','tests/v83-branch-sync-browser.cjs','.github/workflows/v89-scan-sync.yml']
+    paths: ['batco-scan-pro.js','branch-presence.js','branch-presence.html','stocktake.html','index.html','runtime/index-v37-source.txt','sw.js','tests/v89-*','tests/v88-real-label-mapping.cjs','tests/v87-cashier-geometry.cjs','tests/v88-real-label-browser.cjs','tests/v83-branch-sync-browser.cjs','.github/workflows/v89-scan-sync.yml']
 permissions:
   contents: read
 jobs:
