@@ -9,14 +9,15 @@ const csvCell=v=>{const s=String(v??'').replace(/^\s*([=+@\-])/,"'$1");return '"
 function inventory(text){
  const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
  const head=(lines.shift()||'').split('\t'),col=(re,fallback)=>{const n=head.findIndex(h=>re.test(h));return n<0?fallback:n};
- const indices={sku:col(/رقم الصنف|sku/i,0),name:col(/اسم الصنف|name/i,1),quantity:col(/الكمية المتوفرة|كمية|quantity/i,3)};
+ const indices={sku:col(/رقم الصنف|sku/i,0),name:col(/اسم الصنف|name/i,1),quantity:col(/الكمية المتوفرة|كمية|quantity/i,3),barcode:col(/رقم الباركود|باركود|barcode|ean|upc/i,-1)};
  const rows=[],used=new Set();
  for(const line of lines){
   const t=line.split('\t'),sku=key(t[indices.sku]),qty=Number(ascii(t[indices.quantity]).replace(/[,٬]/g,''));
   if(!sku)continue;
   if(used.has(sku))throw Error('DUPLICATE_SKU '+sku);
   if(!Number.isFinite(qty)||qty<0)throw Error('INVALID_QUANTITY '+sku);
-  used.add(sku);rows.push({sku,name:String(t[indices.name]||'').trim(),warehouseQty:qty});
+  const barcodes=indices.barcode<0?[]:String(t[indices.barcode]||'').split(/[|;,]/).map(x=>key(x)).filter(Boolean);
+  used.add(sku);rows.push({sku,name:String(t[indices.name]||'').trim(),warehouseQty:qty,barcodes});
  }
  if(!rows.length)throw Error('EMPTY_WAREHOUSE');
  return rows;
@@ -47,6 +48,23 @@ function resolve(input,products){
  }
  return {item:null,reason:'unknown'};
 }
+function checkEAN(value){
+ const digits=String(value||'');
+ if(!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits))return false;
+ let sum=0;
+ for(let i=digits.length-2,m=0;i>=0;i--,m++)sum+=Number(digits[i])*(m%2===0?3:1);
+ return (10-sum%10)%10===Number(digits[digits.length-1]);
+}
+/* A decoded retail EAN is not a partial SKU; no fuzzy substring matching. */
+function resolveScan(raw,products){
+ const q=key(raw);
+ if(!q)return {item:null,reason:'empty'};
+ const exact=products.filter(p=>key(p.sku)===q||[p.barcode,...(Array.isArray(p.barcodes)?p.barcodes:[])].filter(Boolean).some(v=>key(v)===q));
+ if(exact.length===1)return {item:exact[0],reason:'linked-barcode'};
+ if(exact.length>1)return {item:null,reason:'ambiguous'};
+ if(checkEAN(q))return {item:null,reason:'unlinked-ean',raw:q};
+ return resolve(q,products);
+}
 function summary(products,seen,closed){
  const recorded=seen instanceof Set?seen:new Set(seen||[]);
  const available=products.filter(p=>p.warehouseQty>0);
@@ -60,5 +78,5 @@ function csv(rows,meta={}){
  for(const p of rows)lines.push([meta.branch||'',meta.warehouse||'',p.sku,p.name,p.warehouseQty,meta.status||'لم يُرصد خلال الجرد'].map(csvCell).join(','));
  return '\uFEFF'+lines.join('\r\n')+'\r\n';
 }
-global.BranchPresenceCore=Object.freeze({key,compact,inventory,resolve,summary,csv});
+global.BranchPresenceCore=Object.freeze({key,compact,inventory,resolve,resolveScan,checkEAN,summary,csv});
 })(typeof window!=='undefined'?window:globalThis);

@@ -89,3 +89,7 @@ h1,h2,h3,p{margin:0}h1{font-size:24px;line-height:1.5;letter-spacing:-.4px}.work
  .cameraZoom{max-width:unset;width:100%}
  .cameraControls button{width:100%}
 }
+
+/* V85: make decoded barcode number visible even when not yet mapped to a SKU. */
+.cameraDecoded{display:block;direction:rtl;text-align:center;margin:12px 0 4px;padding:11px 14px;background:#edfaf4;color:#165738;border:1px solid #b7e2cb;border-radius:11px;font-size:13px;font-weight:800;overflow-wrap:anywhere}
+.cameraDecoded[hidden]{display:none!important}

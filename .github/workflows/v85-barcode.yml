@@ -1,0 +1,29 @@
+name: V85 EAN barcode dual decoder
+on:
+  push:
+    branches: [feature/v85-dual-engine-ean-video-repro, main]
+    paths: ['branch-barcode-fallback.js','branch-presence.*','branch-presence-core.js','sw.js','tests/v85-*','tests/v84-camera-capabilities.cjs','.github/workflows/v85-barcode.yml']
+  pull_request:
+    paths: ['branch-barcode-fallback.js','branch-presence.*','branch-presence-core.js','sw.js','tests/v85-*','tests/v84-camera-capabilities.cjs','.github/workflows/v85-barcode.yml']
+permissions:
+  contents: read
+jobs:
+  barcode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: node tests/v85-ean-dual-engine.cjs
+      - run: node tests/v84-camera-capabilities.cjs
+      - run: node tests/v78-boot-service-worker.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v85-branch-dual-browser.cjs
+      - run: BROWSER=webkit node tests/v85-branch-dual-browser.cjs
+      - run: node tests/v84-camera-browser.cjs
+      - run: BROWSER=webkit node tests/v84-camera-browser.cjs
+      - run: node tests/v83-branch-sync-browser.cjs
+      - run: BROWSER=webkit node tests/v83-branch-sync-browser.cjs
+      - run: npm run build

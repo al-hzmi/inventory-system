@@ -55,6 +55,6 @@ assert.equal(safe.videoConstraints,undefined,'camera fallback must omit advanced
  assert.match(html,/id="workerTorch"/);assert.match(html,/id="workerZoom"/);
  const sw=fs.readFileSync('sw.js','utf8');
  assert.match(sw,/branch-camera-pro\.js/);
- assert.match(sw,/stocktake-shell-v84/);
+ assert.match(sw,/stocktake-shell-v8[45]/);
  console.log('PASS V84: high-res camera fallback, wide angled capture, real zoom/torch/focus and simplified branch entry');
 })().catch(err=>{console.error(err);process.exit(1)});

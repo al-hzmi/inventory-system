@@ -18,7 +18,7 @@ if(!admin&&!employee){location.replace('./index.html?employee=1');return}
 const controls=db.collection('system_controls').doc('branch_presence_feature');
 const sessions=db.collection('branch_presence_sessions');
 let control=null,session=null,seen=new Set(),recent=[],unsubSession=null,unsubSeen=null,
-  bound='',queue=[],sending=false,scanner=null,scannerStarting=false,cameraSession=0,cameraHardware=null,cameraZoomTimer=null,torchOn=false,disabled=false,lastCameraToken='',lastCameraTime=0,audio=null,
+  bound='',queue=[],sending=false,scanner=null,scannerStarting=false,cameraSession=0,cameraHardware=null,cameraZoomTimer=null,torchOn=false,alternateDecoder=null,disabled=false,lastCameraToken='',lastCameraTime=0,audio=null,
   syncError='',syncFailures=0,retryBlocked=false,retryTimer=null;
 const queueKey=id=>'batco_branch_presence_queue_v80_'+encodeURIComponent(userId)+'_'+encodeURIComponent(id);
 const fmt=n=>new Intl.NumberFormat('ar-SA').format(n||0);
@@ -75,12 +75,22 @@ function bind(id){
 }
 controls.onSnapshot(d=>{control={enabled:false,sessionId:'',assignedEmployeeIds:[],...(d.exists?d.data():{})};bind(control.sessionId);render();flush();if(!canUse())stopCamera()},
 e=>{el('workerTitle').textContent='تعذر قراءة تكليف الجرد';status('تحقق من الشبكة ثم أعد المحاولة: '+e.message)});
-function receive(raw){
+function receive(raw,source='manual'){
  const value=String(raw||'').trim();if(!value)return;
  el('workerInput').value='';el('workerSuggestions').hidden=true;
  if(!canUse()){feedback('الجرد غير مفعل أو غير مسند لحسابك.','error');return}
- const result=C.resolve(value,session.products||[]);
- if(!result.item){feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');return}
+ const result=source==='camera'&&C.resolveScan?C.resolveScan(value,session.products||[]):C.resolve(value,session.products||[]);
+ if(!result.item){
+  if(source==='camera'){
+   const notice=result.reason==='unlinked-ean'
+    ?'تمت قراءة EAN-13: '+value+'، لكنه غير مرتبط بصنف في المستودع. أدخل رقم الصنف الصحيح.'
+    :result.reason==='ambiguous'
+    ?'تمت قراءة '+value+' لكنه يطابق عدة أصناف.'
+    :'تمت قراءة '+value+'، لكن هذا الرمز غير موجود ضمن أكواد المستودع.';
+   feedback(notice,'duplicate');
+  }else feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');
+  return;
+ }
  const item=result.item;
  if(seen.has(item.sku)||queue.some(x=>x.sku===item.sku)){
   feedback('مسجل مسبقًا: '+item.sku,'duplicate');if(!scanner)el('workerInput').focus();return;
@@ -175,20 +185,21 @@ async function configureCamera(current){
  const resolution=hardware.width&&hardware.height?' · '+hardware.width+'×'+hardware.height:'';
  cameraMessage((focusEnabled?'التركيز التلقائي مفعّل':'حرّك الهاتف ببطء حتى تتضح الصورة')+resolution+' · التقريب والإضاءة حسب إمكانات الجهاز');
 }
-function decodedBarcode(raw){
+function decodedBarcode(raw,details){
  // html5-qrcode uses a native detector when supported, and its ZXing decoder otherwise.
  // Never block the camera while writing to Firestore or display the keyboard in camera mode.
  const token=C.key(raw),now=Date.now();
- if(token===lastCameraToken&&now-lastCameraTime<850)return;
+ if(token===lastCameraToken&&now-lastCameraTime<1300)return;
  lastCameraToken=token;lastCameraTime=now;
- receive(raw);
+ el('cameraDecoded').hidden=false;el('cameraDecoded').textContent='تم التعرف على الباركود: '+token;
+ receive(raw,'camera');
 }
 async function startCamera(){
  if(scanner||scannerStarting||!canUse())return;
  if(!window.BranchCameraPro){feedback('تعذر تهيئة الكاميرا؛ أعد تحميل الصفحة ثم حاول مجددًا.','error');return}
  scannerStarting=true;const ticket=++cameraSession;
  el('cameraArea').hidden=false;el('workerCamera').disabled=true;
- resetCameraControls();cameraMessage('جاري تشغيل كاميرا عالية الوضوح…');
+ resetCameraControls();el('cameraDecoded').hidden=true;el('cameraDecoded').textContent='';cameraMessage('جاري تشغيل كاميرا عالية الوضوح…');
  let current=null;
  try{
   const Qrcode=await loadScanner();
@@ -216,6 +227,20 @@ async function startCamera(){
    return;
   }
   await configureCamera(current);
+  if(ticket===cameraSession&&current===scanner&&window.BranchBarcodeFallback){
+   try{
+    alternateDecoder=window.BranchBarcodeFallback.create({
+     videoProvider:()=>document.querySelector('#cameraReader video'),
+     onDecode:code=>{
+      if(ticket===cameraSession&&current===scanner)decodedBarcode(code);
+     },
+     onStatus:state=>{
+      if(ticket===cameraSession&&current===scanner&&state==='secondary-ready')
+       cameraMessage('محرك قراءة إضافي للباركود مفعّل.');
+     }
+    });
+   }catch(e){console.warn('[BATCO] Optional barcode decoder unavailable',e)}
+  }
  }catch(err){
   if(ticket===cameraSession){
    feedback('تعذر تشغيل الكاميرا. استخدم ماسح الباركود الخارجي أو اكتب رقم الصنف.','error');
@@ -230,6 +255,7 @@ async function startCamera(){
 }
 async function stopCamera(){
  ++cameraSession;scannerStarting=false;el('workerCamera').disabled=false;
+ const extra=alternateDecoder;alternateDecoder=null;extra?.stop();
  const current=scanner;scanner=null;
  el('cameraArea').hidden=true;resetCameraControls();
  if(current){try{await current.stop()}catch{}try{await current.clear()}catch{}}
