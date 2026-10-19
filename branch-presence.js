@@ -80,7 +80,17 @@ function receive(raw,source='manual'){
  el('workerInput').value='';el('workerSuggestions').hidden=true;
  if(!canUse()){feedback('الجرد غير مفعل أو غير مسند لحسابك.','error');return}
  const result=source==='camera'&&C.resolveScan?C.resolveScan(value,session.products||[]):C.resolve(value,session.products||[]);
- if(!result.item){feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');return}
+ if(!result.item){
+  if(source==='camera'){
+   const notice=result.reason==='unlinked-ean'
+    ?'تمت قراءة EAN-13: '+value+'، لكنه غير مرتبط بصنف في المستودع. أدخل رقم الصنف الصحيح.'
+    :result.reason==='ambiguous'
+    ?'تمت قراءة '+value+' لكنه يطابق عدة أصناف.'
+    :'تمت قراءة '+value+'، لكن هذا الرمز غير موجود ضمن أكواد المستودع.';
+   feedback(notice,'duplicate');
+  }else feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');
+  return;
+ }
  const item=result.item;
  if(seen.has(item.sku)||queue.some(x=>x.sku===item.sku)){
   feedback('مسجل مسبقًا: '+item.sku,'duplicate');if(!scanner)el('workerInput').focus();return;
