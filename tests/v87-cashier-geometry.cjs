@@ -42,5 +42,5 @@ assert.match(worker,/if\(!persistQueue\(\)\)\{queue\.pop\(\);return\}/);
 assert.doesNotMatch(worker,/workerSoundToggle|workerSoundTest/);
 assert.match(css,/\.cameraViewport\{position:relative;display:block!important;height:clamp/);
 assert.match(css,/\.cameraControls\{display:grid!important/);
-assert.match(read('sw.js'),/stocktake-shell-v8[78]/);
+assert.match(read('sw.js'),/stocktake-shell-v8[789]/);
 console.log('PASS V87: mandatory cashier double beep, iOS gesture unlock, no sound controls, fixed camera geometry, SVG barcode');
