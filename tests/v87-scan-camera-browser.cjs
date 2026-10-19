@@ -84,31 +84,31 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  assert.ok(Math.abs(cameraBoxOpen.height-cameraBoxBefore.height)<2,'camera must never resize on opening');
  assert.ok(Math.abs(controlsBoxOpen.height-controlsBoxBefore.height)<2,'camera controls must not push page on open');
  assert.ok((await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth))<=3,'mobile scanner must not overflow horizontally');
- const acceptedBefore=await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1175).length);
+ const acceptedBefore=await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1510).length);
 
  await page.waitForFunction(()=>window.__v85.secondaryCount>0,{timeout:12000});
  await page.locator('#cameraDecoded').waitFor({state:'visible'});
  assert.match(await page.locator('#cameraDecoded').innerText(),/5469835001128/);
  assert.match(await page.locator('#workerFeedback').innerText(),/غير مرتبط بصنف/);
  assert.equal(await page.evaluate(()=>Object.keys(window.__v85.records).length),0,'Do not count an unrelated EAN as warehouse SKU');
- assert.equal(await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1175).length),acceptedBefore,'unlinked EAN must not beep success');
+ assert.equal(await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1510).length),acceptedBefore,'unlinked EAN must not beep success');
 
  await page.evaluate(()=>window.__v85.zxing('ARM_10004'));
  await page.waitForFunction(()=>Object.keys(window.__v85.records).length===1);
- await page.waitForFunction(target=>window.__v86Audio.frequencies.filter(x=>x===1175).length===target,acceptedBefore+1);
+ await page.waitForFunction(target=>window.__v86Audio.frequencies.filter(x=>x===1510).length===target,acceptedBefore+1);
  assert.match(await page.locator('#cameraFlash').innerText(),/تم اعتماد الصنف/);
 
  assert.equal(await page.locator('#workerDone').innerText(),'١','one valid SKU registered');
 
  await page.locator('#workerInput').fill('ARM_10004');
  await page.locator('#workerInput').press('Enter');
- await page.waitForFunction(()=>window.__v86Audio.frequencies.includes(490));
- assert.equal(await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1175).length),acceptedBefore+1,'duplicate must not play acceptance');
+ await page.waitForFunction(()=>window.__v86Audio.frequencies.includes(590));
+ assert.equal(await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1510).length),acceptedBefore+1,'duplicate must not play acceptance');
  await page.locator('#workerCloseCamera').click();
  await page.locator('#workerInput').fill('ARM_10005');
  await page.locator('#workerInput').press('Enter');
  await page.waitForFunction(()=>Object.keys(window.__v85.records).length===2);
- await page.waitForFunction(target=>window.__v86Audio.frequencies.filter(x=>x===1175).length===target,acceptedBefore+2);
+ await page.waitForFunction(target=>window.__v86Audio.frequencies.filter(x=>x===1510).length===target,acceptedBefore+2);
  assert.match(await page.locator('#workerFeedback').innerText(),/تم مسح/);
 
  const cameraBoxAfter=await page.locator('.cameraViewport').boundingBox();
