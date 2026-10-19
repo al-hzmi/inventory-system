@@ -217,6 +217,20 @@ async function startCamera(){
    return;
   }
   await configureCamera(current);
+  if(ticket===cameraSession&&current===scanner&&window.BranchBarcodeFallback){
+   try{
+    alternateDecoder=window.BranchBarcodeFallback.create({
+     videoProvider:()=>document.querySelector('#cameraReader video'),
+     onDecode:code=>{
+      if(ticket===cameraSession&&current===scanner)decodedBarcode(code);
+     },
+     onStatus:state=>{
+      if(ticket===cameraSession&&current===scanner&&state==='secondary-ready')
+       cameraMessage('محرك قراءة إضافي للباركود مفعّل.');
+     }
+    });
+   }catch(e){console.warn('[BATCO] Optional barcode decoder unavailable',e)}
+  }
  }catch(err){
   if(ticket===cameraSession){
    feedback('تعذر تشغيل الكاميرا. استخدم ماسح الباركود الخارجي أو اكتب رقم الصنف.','error');
