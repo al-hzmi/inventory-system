@@ -106,6 +106,38 @@ if(fs.existsSync(path.join(root,'customer.html'))){
 }
 write('assets/build/report.json',JSON.stringify(report,null,2));
 
+// Static social preview metadata for every HTML URL (not injected by client JS).
+const preview='https://raw.githubusercontent.com/al-hzmi/inventory-system/main/share-image.png?v=20261019';
+const socialTags=[
+ '<!-- BATCO_SOCIAL_PREVIEW_START -->',
+ '<meta property="og:type" content="website">',
+ '<meta property="og:locale" content="ar_SA">',
+ '<meta property="og:site_name" content="BATCO | شركة بيت الأواني الطيبة">',
+ '<meta property="og:title" content="BATCO | شركة بيت الأواني الطيبة">',
+ '<meta property="og:description" content="شركة بيت الأواني الطيبة — BATCO">',
+ '<meta property="og:image" content="'+preview+'">',
+ '<meta property="og:image:secure_url" content="'+preview+'">',
+ '<meta property="og:image:type" content="image/png">',
+ '<meta property="og:image:width" content="1536">',
+ '<meta property="og:image:height" content="807">',
+ '<meta property="og:image:alt" content="الشعار الرسمي لشركة بيت الأواني الطيبة BATCO">',
+ '<meta name="twitter:card" content="summary_large_image">',
+ '<meta name="twitter:title" content="BATCO | شركة بيت الأواني الطيبة">',
+ '<meta name="twitter:description" content="شركة بيت الأواني الطيبة — BATCO">',
+ '<meta name="twitter:image" content="'+preview+'">',
+ '<meta name="twitter:image:alt" content="الشعار الرسمي لشركة بيت الأواني الطيبة BATCO">',
+ '<!-- BATCO_SOCIAL_PREVIEW_END -->'
+].join('\n');
+for(const folder of [root,out]){
+ for(const filename of fs.readdirSync(folder).filter(x=>x.endsWith('.html'))){
+  const dest=path.join(folder,filename);let html=fs.readFileSync(dest,'utf8');
+  if(!/<head\b/i.test(html))continue;
+  html=html.replace(/<!-- BATCO_SOCIAL_PREVIEW_START -->[\s\S]*?<!-- BATCO_SOCIAL_PREVIEW_END -->\s*/g,'');
+  html=html.replace(/<head\b[^>]*>/i,m=>m+'\n'+socialTags+'\n');
+  fs.writeFileSync(dest,html);
+ }
+}
+
 console.log(JSON.stringify({precompiledPages:report.length,report}));
 
 
