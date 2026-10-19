@@ -59,7 +59,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  await page.waitForFunction(()=>window.__v85.secondaryCount>0,{timeout:12000});
  await page.locator('#cameraDecoded').waitFor({state:'visible'});
  assert.match(await page.locator('#cameraDecoded').innerText(),/5469835001128/);
- assert.match(await page.locator('#workerFeedback').innerText(),/غير مرتبط بصنف/);
+ assert.match(await page.locator('#workerFeedback').innerText(),/لم نجد صنفًا مطابقًا|غير مرتبط بصنف/);
  assert.equal(await page.evaluate(()=>Object.keys(window.__v85.records).length),0,'Do not count an unrelated EAN as warehouse SKU');
  await page.evaluate(()=>window.__v85.zxing('ARM_10004'));
  await page.waitForFunction(()=>Object.keys(window.__v85.records).length===1);

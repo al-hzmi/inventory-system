@@ -232,3 +232,24 @@ body{background:#f5f6f6}
  .cameraControls .cameraZoom{max-width:100%!important;flex:none}
  .barcodeGlyph{width:26px;height:26px;flex-basis:26px}
 }
+
+/* V88 — fill the camera frame edge-to-edge with a cropped preview instead of
+   pillarboxing vertical iPhone video. Full resolution source stays unchanged for decoders. */
+.cameraViewport{background:#060808!important}
+#cameraReader,#cameraReader__scan_region{
+ width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;
+ min-height:0!important;overflow:hidden!important;position:absolute!important;inset:0!important
+}
+#cameraReader video,#cameraReader__scan_region video{
+ display:block!important;position:absolute!important;inset:0!important;
+ width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;
+ max-width:100%!important;object-fit:cover!important;object-position:center center!important;
+ background:#060808!important
+}
+/* Keep library draw/scan canvas invisible, but retain its full source image for decoding. */
+#cameraReader canvas{max-width:100%!important}
+.cameraTopline{gap:8px}
+.cameraDecoded{font-variant-numeric:tabular-nums}
+@media(max-width:600px){
+ .cameraViewport{height:clamp(258px,90vw,375px)!important;max-height:375px!important}
+}

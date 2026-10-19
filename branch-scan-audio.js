@@ -13,14 +13,14 @@ function getContext(){
  try{
   context=new Factory();
   master=context.createGain();
-  master.gain.value=.88;
+  master.gain.value=1.0;
   if(typeof context.createDynamicsCompressor==='function'){
    const limiter=context.createDynamicsCompressor();
-   limiter.threshold.value=-9;
+   limiter.threshold.value=-4;
    limiter.knee.value=0;
-   limiter.ratio.value=12;
+   limiter.ratio.value=10;
    limiter.attack.value=.003;
-   limiter.release.value=.085;
+   limiter.release.value=.10;
    master.connect(limiter);
    limiter.connect(context.destination);
   }else master.connect(context.destination);
@@ -74,11 +74,16 @@ function play(kind){
   if(kind==='accepted'){
    // Crisp retail checkout beep: two focused, punchy high-frequency pulses.
    // Compressor caps peaks to avoid distorted clipping on iPhone speakers.
-   chirp(ctx,1175,at,.095,.39,'square');
-   chirp(ctx,1480,at+.107,.145,.40,'square');
-   chirp(ctx,2220,at+.107,.075,.11,'triangle');
-  }else if(kind==='duplicate')chirp(ctx,490,at,.105,.15,'triangle');
-  else chirp(ctx,320,at,.12,.13,'triangle');
+   chirp(ctx,1510,at,.135,.58,'square');
+   chirp(ctx,1980,at+.141,.175,.58,'square');
+   chirp(ctx,2390,at+.141,.115,.22,'triangle');
+  }else if(kind==='duplicate'){
+   chirp(ctx,590,at,.105,.23,'triangle');
+  }else{
+   // Clearly different error: lower, spaced double-buzz. Never confused with approval.
+   chirp(ctx,370,at,.155,.39,'square');
+   chirp(ctx,270,at+.19,.22,.35,'square');
+  }
   unlocked=true;
   return true;
  }catch{return false}

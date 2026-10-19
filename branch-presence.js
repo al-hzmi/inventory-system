@@ -104,16 +104,16 @@ function receive(raw,source='manual'){
  const value=String(raw||'').trim();if(!value)return;
  el('workerInput').value='';el('workerSuggestions').hidden=true;
  if(!canUse()){feedback('الجرد غير مفعل أو غير مسند لحسابك.','error');return}
- const result=source==='camera'&&C.resolveScan?C.resolveScan(value,session.products||[]):C.resolve(value,session.products||[]);
+ const result=C.resolveScan?C.resolveScan(value,session.products||[]):C.resolve(value,session.products||[]);
  if(!result.item){
-  if(source==='camera'){
-   const notice=result.reason==='unlinked-ean'
-    ?'تمت قراءة EAN-13: '+value+'، لكنه غير مرتبط بصنف في المستودع. أدخل رقم الصنف الصحيح.'
-    :result.reason==='ambiguous'
-    ?'تمت قراءة '+value+' لكنه يطابق عدة أصناف.'
-    :'تمت قراءة '+value+'، لكن هذا الرمز غير موجود ضمن أكواد المستودع.';
-   feedback(notice,'error');
-  }else feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');
+  const reason=result.reason==='unlinked-ean'
+   ?'قراءة صحيحة للباركود '+value+'، لكن لم نجد صنفًا مطابقًا في هذا الجرد. أدخل رقم الصنف يدويًا.'
+   :result.reason==='invalid-ean'
+   ?'تعذّر اعتماد الباركود '+value+' لأن رقم التحقق غير صحيح؛ جرّب إعادة توجيه الكاميرا.'
+   :result.reason==='ambiguous'
+   ?'الرمز '+value+' يطابق أكثر من صنف؛ يرجى إدخال رقم الصنف الصحيح.'
+   :'تمت قراءة '+value+'، لكن لا يوجد صنف مطابق في المستودع المرجعي.';
+  feedback(reason,'error');
   return;
  }
  const item=result.item;
