@@ -7,11 +7,11 @@
 <title>جرد الفرع | BATCO</title>
 <link rel="icon" href="./assets/batco-app-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
-<link rel="stylesheet" href="./branch-presence.css?v=86.0">
+<link rel="stylesheet" href="./branch-presence.css?v=87.0">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script defer src="./branch-presence-core.js?v=85.0"></script>
-<script defer src="./branch-camera-pro.js?v=84.0"></script><script defer src="./branch-barcode-fallback.js?v=85.0"></script><script defer src="./branch-scan-audio.js?v=86.0"></script><script defer src="./branch-presence.js?v=86.0"></script>
+<script defer src="./branch-camera-pro.js?v=84.0"></script><script defer src="./branch-barcode-fallback.js?v=85.0"></script><script defer src="./branch-scan-audio.js?v=87.0"></script><script defer src="./branch-presence.js?v=87.0"></script>
 </head>
 <body>
 <div class="bp-worker">
@@ -26,19 +26,19 @@
   <div class="scanCard">
    <div class="scanHeading"><div><span class="scanEyebrow">جرد الفرع السريع</span><h2>مسح الأصناف</h2><p>سجّل وجود الصنف مباشرةً؛ لا تحتاج إلى إدخال كميات.</p></div><span class="scanMode"><span class="liveDot" aria-hidden="true"></span> جاهز للمسح</span></div>
    <div class="scanToolbar">
-    <button type="button" id="workerCamera" class="cameraBtn"><span aria-hidden="true" class="cameraGlyph">▣</span><span>تشغيل ماسح الباركود</span><span aria-hidden="true" class="cameraChevron">‹</span></button>
-    <div class="soundToolbar"><span class="soundTitle">تنبيه قبول الأصناف</span><div class="soundActions"><button type="button" id="workerSoundToggle" class="soundToggle" aria-pressed="true">الصوت يعمل</button><button type="button" id="workerSoundTest" class="soundTest">تجربة الصوت <span aria-hidden="true">♪</span></button></div><small id="workerSoundHint" class="soundHint" role="status">اضغط تشغيل الماسح لتفعيل الصوت على الآيفون</small></div>
+    <button type="button" id="workerCamera" class="cameraBtn" aria-pressed="false"><svg class="barcodeGlyph" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true" focusable="false"><path d="M3 9V5h5M24 5h5v4M3 23v4h5M24 27h5v-4"/><path d="M8 11v10M11 11v10M14 11v10M18 11v10M21 11v10M24 11v10" stroke-width="1.8"/><path d="M6 16h20" stroke-width="1" stroke-dasharray="1 3"/></svg><span id="workerCameraLabel">تشغيل ماسح الباركود</span><svg class="cameraArrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+<p class="audioInfo" aria-label="تنبيه تلقائي عند قبول الصنف"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg> صوت تأكيد تلقائي عند قبول الصنف</p>
    </div>
-   <section id="cameraArea" class="cameraArea" hidden>
+   <section id="cameraArea" class="cameraArea idle">
     <div class="cameraTopline"><span class="cameraLive"><span class="liveDot" aria-hidden="true"></span> المسح المباشر</span><span>وجّه الباركود داخل الإطار</span></div>
-    <div class="cameraViewport"><div id="cameraReader"></div><div id="cameraFlash" class="cameraFlash" aria-hidden="true"></div></div>
-    <div id="cameraDecoded" class="cameraDecoded" role="status" aria-live="polite" hidden></div>
+    <div class="cameraViewport"><div id="cameraReader"></div><div id="cameraStandby" class="cameraStandby"><svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 16V8h9M33 8h9v8M6 32v8h9M33 40h9v-8"/><path d="M14 19v10M18 19v10M22 19v10M26 19v10M30 19v10M34 19v10"/></svg><span>الكاميرا جاهزة للتشغيل</span></div><div id="cameraFlash" class="cameraFlash" aria-hidden="true"></div><div id="cameraDecoded" class="cameraDecoded" role="status" aria-live="polite" hidden></div></div>
+
     <div class="cameraControls">
      <button type="button" id="workerTorch" hidden aria-pressed="false">تشغيل الإضاءة</button>
      <div id="workerZoomControl" class="cameraZoom" hidden><label for="workerZoom">تقريب العدسة <output id="workerZoomLabel" for="workerZoom">1×</output></label><input id="workerZoom" type="range" min="1" max="3" step=".1" value="1" aria-label="تقريب العدسة"></div>
-     <button type="button" id="workerCloseCamera">إغلاق الكاميرا</button>
+     <button type="button" id="workerCloseCamera" hidden>إغلاق الكاميرا</button>
     </div>
-    <p class="cameraNote" id="cameraNote" aria-live="polite">يمكنك مسح الأصناف تباعًا دون إيقاف الكاميرا.</p>
+    <p class="cameraNote" id="cameraNote" aria-live="polite">المعاينة ثابتة الحجم. يمكنك مسح الأصناف تباعًا.</p>
    </section>
    <div id="workerFeedback" class="scanFeedback" role="status" aria-live="polite"><span class="feedbackIcon" aria-hidden="true">✓</span><span class="feedbackText">جاهز للمسح</span></div>
    <div id="workerSyncHelp" class="syncHelp" role="alert" aria-live="polite" hidden></div>
