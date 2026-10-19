@@ -7,11 +7,11 @@
 <title>جرد الفرع | BATCO</title>
 <link rel="icon" href="./assets/batco-app-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
-<link rel="stylesheet" href="./branch-presence.css?v=84.0">
+<link rel="stylesheet" href="./branch-presence.css?v=85.0">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script defer src="./branch-presence-core.js?v=80.0"></script>
-<script defer src="./branch-camera-pro.js?v=84.0"></script><script defer src="./branch-presence.js?v=84.0"></script>
+<script defer src="./branch-presence-core.js?v=85.0"></script>
+<script defer src="./branch-camera-pro.js?v=84.0"></script><script defer src="./branch-barcode-fallback.js?v=85.0"></script><script defer src="./branch-presence.js?v=85.0"></script>
 </head>
 <body>
 <div class="bp-worker">
@@ -30,7 +30,7 @@
    <div id="workerSuggestions" class="suggestions" hidden></div>
    <div id="workerFeedback" class="scanFeedback" role="status" aria-live="polite">جاهز للمسح</div><div id="workerSyncHelp" class="syncHelp" role="alert" aria-live="polite" hidden></div><div class="syncActions"><button type="button" id="workerRetry" class="retryBtn" hidden>إعادة محاولة المزامنة</button><button type="button" id="workerExport" class="retryBtn" hidden>نسخة احتياطية للمسوحات المعلّقة</button></div>
    <button type="button" id="workerCamera" class="cameraBtn">فتح الكاميرا لمسح الباركود</button>
-   <section id="cameraArea" class="cameraArea" hidden><p class="cameraHint" id="cameraHint">وجّه الباركود نحو الكاميرا. جرّب تقريب العدسة أو الإضاءة إن لزم.</p><div id="cameraReader"></div><div class="cameraControls"><button type="button" id="workerTorch" hidden aria-pressed="false">تشغيل الإضاءة</button><div id="workerZoomControl" class="cameraZoom" hidden><label for="workerZoom">تقريب العدسة <output id="workerZoomLabel" for="workerZoom">1×</output></label><input id="workerZoom" type="range" min="1" max="3" step=".1" value="1" aria-label="تقريب العدسة"></div><button type="button" id="workerCloseCamera">إغلاق الكاميرا</button></div><p class="cameraNote" id="cameraNote" aria-live="polite">تعمل درجة التقريب والإضاءة حسب إمكانات كاميرا الجهاز.</p></section>
+   <section id="cameraArea" class="cameraArea" hidden><p class="cameraHint" id="cameraHint">وجّه الباركود نحو الكاميرا. جرّب تقريب العدسة أو الإضاءة إن لزم.</p><div id="cameraReader"></div><div id="cameraDecoded" class="cameraDecoded" role="status" aria-live="polite" hidden></div><div class="cameraControls"><button type="button" id="workerTorch" hidden aria-pressed="false">تشغيل الإضاءة</button><div id="workerZoomControl" class="cameraZoom" hidden><label for="workerZoom">تقريب العدسة <output id="workerZoomLabel" for="workerZoom">1×</output></label><input id="workerZoom" type="range" min="1" max="3" step=".1" value="1" aria-label="تقريب العدسة"></div><button type="button" id="workerCloseCamera">إغلاق الكاميرا</button></div><p class="cameraNote" id="cameraNote" aria-live="polite">تعمل درجة التقريب والإضاءة حسب إمكانات كاميرا الجهاز.</p></section>
   </div>
   <div class="recent"><h3>آخر الأصناف المرصودة</h3><div id="workerRecent"><p>لم يتم رصد أي صنف بعد.</p></div></div>
   <p class="footerNote">الباركود يسجل الصنف مرة واحدة فقط. الأصناف غير الممسوحة تُراجع عند إغلاق الجرد، ولا تتغير كميات المخزون.</p>
