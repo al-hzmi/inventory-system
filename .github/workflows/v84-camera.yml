@@ -1,0 +1,27 @@
+name: V84 long-range barcode camera
+on:
+  push:
+    branches: [feature/v84-long-range-angled-barcode-camera, main]
+    paths: ['branch-camera-pro.js','branch-presence.*','branch-presence-entry.js','branch-presence-main-launcher.js','sw.js','tests/v83-scanner-sync-sound.cjs','tests/v84-*','.github/workflows/v84-camera.yml']
+  pull_request:
+    paths: ['branch-camera-pro.js','branch-presence.*','branch-presence-entry.js','branch-presence-main-launcher.js','sw.js','tests/v83-scanner-sync-sound.cjs','tests/v84-*','.github/workflows/v84-camera.yml']
+permissions:
+  contents: read
+jobs:
+  camera:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: node tests/v84-camera-capabilities.cjs
+      - run: node tests/v83-scanner-sync-sound.cjs
+      - run: node tests/v78-boot-service-worker.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v84-camera-browser.cjs
+      - run: BROWSER=webkit node tests/v84-camera-browser.cjs
+      - run: node tests/v83-branch-sync-browser.cjs
+      - run: BROWSER=webkit node tests/v83-branch-sync-browser.cjs
+      - run: npm run build

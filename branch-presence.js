@@ -18,7 +18,7 @@ if(!admin&&!employee){location.replace('./index.html?employee=1');return}
 const controls=db.collection('system_controls').doc('branch_presence_feature');
 const sessions=db.collection('branch_presence_sessions');
 let control=null,session=null,seen=new Set(),recent=[],unsubSession=null,unsubSeen=null,
-  bound='',queue=[],sending=false,scanner=null,disabled=false,lastCameraToken='',lastCameraTime=0,audio=null,
+  bound='',queue=[],sending=false,scanner=null,scannerStarting=false,cameraSession=0,cameraHardware=null,cameraZoomTimer=null,torchOn=false,disabled=false,lastCameraToken='',lastCameraTime=0,audio=null,
   syncError='',syncFailures=0,retryBlocked=false,retryTimer=null;
 const queueKey=id=>'batco_branch_presence_queue_v80_'+encodeURIComponent(userId)+'_'+encodeURIComponent(id);
 const fmt=n=>new Intl.NumberFormat('ar-SA').format(n||0);
@@ -145,38 +145,121 @@ el('workerInput').addEventListener('input',e=>{
 el('workerSuggestions').onclick=e=>{const button=e.target.closest('[data-sku]');if(button)receive(button.dataset.sku)};
 function loadScanner(){return new Promise((resolve,reject)=>{
  if(window.Html5Qrcode)return resolve(window.Html5Qrcode);
- const script=document.createElement('script');script.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';script.onload=()=>window.Html5Qrcode?resolve(window.Html5Qrcode):reject(Error('MISSING_SCANNER'));script.onerror=()=>reject(Error('NO_SCANNER_LIBRARY'));document.head.append(script);
+ const script=document.createElement('script');script.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+ script.onload=()=>window.Html5Qrcode?resolve(window.Html5Qrcode):reject(Error('MISSING_SCANNER'));
+ script.onerror=()=>reject(Error('NO_SCANNER_LIBRARY'));document.head.append(script);
 })}
+function cameraMessage(message){el('cameraNote').textContent=message}
+function resetCameraControls(){
+ clearTimeout(cameraZoomTimer);cameraZoomTimer=null;cameraHardware=null;torchOn=false;
+ el('workerZoomControl').hidden=true;el('workerTorch').hidden=true;
+ el('workerTorch').setAttribute('aria-pressed','false');el('workerTorch').textContent='تشغيل الإضاءة';
+}
+async function configureCamera(current){
+ if(!window.BranchCameraPro||!current)return;
+ const video=document.querySelector('#cameraReader video');
+ if(video){video.setAttribute('playsinline','');video.setAttribute('autoplay','');}
+ const hardware=window.BranchCameraPro.getHardware(current,video);
+ cameraHardware=hardware;
+ if(hardware.zoomSupported){
+  const input=el('workerZoom'),range=hardware.zoomRange;
+  input.min=String(range.min);input.max=String(Math.min(range.max,8));
+  input.step=String(Number.isFinite(range.step)&&range.step>0?range.step:.1);
+  input.value=String(Math.min(Number(input.max),Math.max(range.min,hardware.zoomCurrent||range.min)));
+  el('workerZoomLabel').textContent=Number(input.value).toFixed(1)+'×';
+  el('workerZoomControl').hidden=false;
+ }
+ el('workerTorch').hidden=!hardware.torchSupported;
+ const focusEnabled=await hardware.focus().catch(()=>false);
+ if(current!==scanner)return;
+ const resolution=hardware.width&&hardware.height?' · '+hardware.width+'×'+hardware.height:'';
+ cameraMessage((focusEnabled?'التركيز التلقائي مفعّل':'حرّك الهاتف ببطء حتى تتضح الصورة')+resolution+' · التقريب والإضاءة حسب إمكانات الجهاز');
+}
+function decodedBarcode(raw){
+ // html5-qrcode uses a native detector when supported, and its ZXing decoder otherwise.
+ // Never block the camera while writing to Firestore or display the keyboard in camera mode.
+ const token=C.key(raw),now=Date.now();
+ if(token===lastCameraToken&&now-lastCameraTime<850)return;
+ lastCameraToken=token;lastCameraTime=now;
+ receive(raw);
+}
 async function startCamera(){
- if(scanner||!canUse())return;
- el('cameraArea').hidden=false;
+ if(scanner||scannerStarting||!canUse())return;
+ if(!window.BranchCameraPro){feedback('تعذر تهيئة الكاميرا؛ أعد تحميل الصفحة ثم حاول مجددًا.','error');return}
+ scannerStarting=true;const ticket=++cameraSession;
+ el('cameraArea').hidden=false;el('workerCamera').disabled=true;
+ resetCameraControls();cameraMessage('جاري تشغيل كاميرا عالية الوضوح…');
+ let current=null;
  try{
   const Qrcode=await loadScanner();
+  if(ticket!==cameraSession||!canUse())return;
   const F=window.Html5QrcodeSupportedFormats||{};
-  const formats=['CODE_128','CODE_39','CODE_93','EAN_13','EAN_8','UPC_A','UPC_E','ITF','CODABAR','QR_CODE','DATA_MATRIX']
-    .map(k=>F[k]).filter(n=>typeof n==='number');
-  const next=new Qrcode('cameraReader',formats.length?{formatsToSupport:formats,useBarCodeDetectorIfSupported:true,verbose:false}:{verbose:false});
-  scanner=next;
-  // A long, wide detection region is essential for 1D product barcodes on iOS.
-  const options={
-    fps:15,disableFlip:true,aspectRatio:1.3333,
-    qrbox:(width,height)=>({
-      width:Math.max(100,Math.min(Math.floor(width*.94),520)),
-      height:Math.max(95,Math.min(Math.floor(height*.61),230))
-    })
-  };
-  await next.start({facingMode:'environment'},options,raw=>{
-   const token=C.key(raw),now=Date.now();
-   if(token===lastCameraToken&&now-lastCameraTime<950)return;
-   lastCameraToken=token;lastCameraTime=now;receive(raw);
-  },()=>{});
-  const video=document.querySelector('#cameraReader video');
-  if(video){video.setAttribute('playsinline','');video.setAttribute('autoplay','');}
-
- }catch(e){feedback('تعذر تشغيل الكاميرا. استخدم قارئ الباركود أو أدخل رقم الصنف.','error');stopCamera()}
+  const formats=window.BranchCameraPro.formats(F);
+  const init=()=>new Qrcode('cameraReader',formats.length?{
+   formatsToSupport:formats,useBarCodeDetectorIfSupported:true,verbose:false
+  }:{useBarCodeDetectorIfSupported:true,verbose:false});
+  current=init();scanner=current;
+  try{
+   await current.start({facingMode:'environment'},window.BranchCameraPro.options(true),decodedBarcode,()=>{});
+  }catch(highResError){
+   // Unsupported 1080p constraints should not prevent scanning on older iPhones.
+   try{await current.stop()}catch{}
+   try{await current.clear()}catch{}
+   if(ticket!==cameraSession)return;
+   current=init();scanner=current;
+   cameraMessage('تعمل الكاميرا بالإعدادات المتوافقة مع جهازك.');
+   await current.start({facingMode:'environment'},window.BranchCameraPro.options(false),decodedBarcode,()=>{});
+  }
+  if(ticket!==cameraSession||!canUse()){
+   if(scanner===current)scanner=null;
+   try{await current.stop()}catch{}try{await current.clear()}catch{}
+   return;
+  }
+  await configureCamera(current);
+ }catch(err){
+  if(ticket===cameraSession){
+   feedback('تعذر تشغيل الكاميرا. استخدم ماسح الباركود الخارجي أو اكتب رقم الصنف.','error');
+   cameraMessage('تعذر تشغيل الكاميرا: تأكد من السماح باستخدام الكاميرا في إعدادات Safari.');
+  }
+  if(scanner===current)scanner=null;
+  if(current){try{await current.stop()}catch{}try{await current.clear()}catch{}}
+  if(ticket===cameraSession){el('cameraArea').hidden=true;resetCameraControls();}
+ }finally{
+  if(ticket===cameraSession){scannerStarting=false;el('workerCamera').disabled=false;}
+ }
 }
-async function stopCamera(){const value=scanner;scanner=null;el('cameraArea').hidden=true;if(value){try{await value.stop()}catch{}try{await value.clear()}catch{}}}
-el('workerCamera').onclick=startCamera;el('workerCloseCamera').onclick=stopCamera;
+async function stopCamera(){
+ ++cameraSession;scannerStarting=false;el('workerCamera').disabled=false;
+ const current=scanner;scanner=null;
+ el('cameraArea').hidden=true;resetCameraControls();
+ if(current){try{await current.stop()}catch{}try{await current.clear()}catch{}}
+}
+el('workerCamera').onclick=startCamera;
+el('workerCloseCamera').onclick=stopCamera;
+el('workerZoom').addEventListener('input',e=>{
+ const value=Number(e.target.value);
+ el('workerZoomLabel').textContent=value.toFixed(1)+'×';
+ clearTimeout(cameraZoomTimer);
+ const hardware=cameraHardware,opened=scanner;
+ cameraZoomTimer=setTimeout(async()=>{
+  if(!hardware||!opened||opened!==scanner)return;
+  try{const actual=await hardware.setZoom(value);if(opened===scanner)el('workerZoomLabel').textContent=actual.toFixed(1)+'×'}
+  catch{if(opened===scanner)cameraMessage('التقريب غير متاح من المتصفح على هذا الجهاز؛ استخدم العدسة الرئيسية مع إضاءة أفضل.')}
+ },90);
+});
+el('workerTorch').onclick=async()=>{
+ const hardware=cameraHardware,opened=scanner;
+ if(!hardware||!opened)return;
+ try{
+  const actual=await hardware.setTorch(!torchOn);
+  if(opened!==scanner)return;
+  torchOn=actual;
+  el('workerTorch').textContent=actual?'إطفاء الإضاءة':'تشغيل الإضاءة';
+  el('workerTorch').setAttribute('aria-pressed',String(actual));
+ }catch{
+  if(opened===scanner){el('workerTorch').hidden=true;cameraMessage('التحكم بالإضاءة غير متاح في هذا المتصفح.')}
+ }
+};
 el('workerRetry').onclick=()=>{retryBlocked=false;syncFailures=0;syncError='';render();flush()};
 el('workerExport').onclick=()=>{
  if(!queue.length)return;

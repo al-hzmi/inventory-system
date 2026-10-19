@@ -15,7 +15,7 @@ assert.match(stocktake,/window.addEventListener\('keydown',ensureFeedbackAudio/)
 assert.match(stocktake,/window.addEventListener\('touchstart',ensureFeedbackAudio/);
 assert.match(worker,/formatsToSupport:formats/);
 assert.match(worker,/useBarCodeDetectorIfSupported/);
-assert.match(worker,/qrbox:\(width,height\)=>/);
+assert.match(worker,/window\.BranchCameraPro\.options\(true\)/);
 assert.match(worker,/code.includes\('permission-denied'\)/);
 assert.match(worker,/code.includes\('resource-exhausted'\)/);
 assert.match(worker,/retryTimer=setTimeout/);
@@ -25,5 +25,5 @@ assert.match(page,/id="workerRetry"/);
 assert.match(page,/id="workerExport"/);
 assert.match(page,/id="workerSyncHelp"/);
 assert.match(css,/cameraHint/);
-assert.match(read('sw.js'),/stocktake-shell-v83/);
+assert.match(read('sw.js'),/stocktake-shell-v8[34]/);
 console.log('PASS V83 customer header, barcode tuning, audio on accepted manual counts, Firestore diagnostics and pending scan backup');

@@ -11,7 +11,7 @@ if(!name||!id||localStorage.getItem('inventory_employee_auth_version_v2')!=='2'|
 const start=()=>{
  if(typeof getDb!=='function')return;
  getDb().then(database=>{
-  const a=document.createElement('a');a.href='./branch-presence.html';a.id='branchPresenceHomeShortcut';a.textContent='جرد الفرع · باركود';
+  const a=document.createElement('a');a.href='./branch-presence.html';a.id='branchPresenceHomeShortcut';a.textContent='جرد الفرع';
   a.style.cssText='display:none;position:fixed;z-index:700;bottom:calc(18px + env(safe-area-inset-bottom));left:12px;background:#111;color:#fff;border:1px solid #555;border-radius:13px;padding:11px 14px;box-shadow:0 7px 22px #0002;font:700 12px/1.5 system-ui,sans-serif;text-decoration:none';
   document.body.append(a);
   const un=database.collection('system_controls').doc('branch_presence_feature').onSnapshot(d=>{
