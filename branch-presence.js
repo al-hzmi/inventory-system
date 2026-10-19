@@ -164,7 +164,7 @@ async function flush(){
     const closed=/SESSION_CLOSED|SKU_NOT_IN_SESSION/.test(e?.message||'');
     retryBlocked=closed||code.includes('permission-denied')||code.includes('unauthenticated');
     if(closed)syncError='أُغلق الجرد أو تغيّر تكليف الموظف. لم تُرسل المسوحات المعلقة؛ راجع الإدارة.';
-    else if(code.includes('permission-denied')||code.includes('unauthenticated'))syncError='رفض Firestore حفظ الجرد بسبب صلاحيات الخادم. تحتاج الإدارة إلى مراجعة قواعد Firebase؛ جميع المسوحات المعلقة محفوظة على هذا الجهاز.';
+    else if(code.includes('permission-denied')||code.includes('unauthenticated'))syncError='رفض Firestore حفظ الجرد بسبب صلاحيات قاعدة البيانات. تحتاج الإدارة إلى مراجعة قواعد Firebase؛ جميع المسوحات المعلقة محفوظة على هذا الجهاز.';
     else if(code.includes('resource-exhausted')||code.includes('quota'))syncError='تجاوز مشروع Firebase حد الاستخدام/الحصة. لا يمكن حفظ المسوحات بالخادم حتى تعود الحصة أو تُعدّل الفوترة. جميع المسوحات محفوظة محليًا؛ صدّر النسخة الاحتياطية.';
     else if(code.includes('unavailable')||code.includes('deadline')||!navigator.onLine)syncError='قاعدة البيانات غير متاحة حاليًا. المسوحات محفوظة محليًا، وسيُعاد إرسالها عند عودة الخدمة.';
     else syncError='لم يؤكد الخادم الحفظ ('+String(e?.code||'خطأ غير معروف').slice(0,55)+'). المسوحات المحلية لم تُحذف.';
