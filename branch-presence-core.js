@@ -55,6 +55,23 @@ function checkEAN(value){
  for(let i=digits.length-2,m=0;i>=0;i--,m++)sum+=Number(digits[i])*(m%2===0?3:1);
  return (10-sum%10)%10===Number(digits[digits.length-1]);
 }
+/* BARCODE-TO-SKU: manufacturer-verified label pattern, never arbitrary substring.
+   A real ARAB RIVER product label photographed in Jeddah shows:
+   AR: 25978 => EAN 5469835|25978|9. Verify EAN check digit first.
+   Only the observed fixed 7-digit manufacturer prefix is trusted. */
+function manufacturerEAN(raw,products){
+ const q=key(raw);
+ if(!/^5469835\d{6}$/.test(q)||!checkEAN(q))return {item:null,reason:'unlinked-ean'};
+ const itemDigits=q.slice(7,12);
+ const candidates=products.filter(p=>{
+   const sku=key(p.sku);
+   const match=/^AR[_\s-]?(\d{1,5})$/.exec(sku);
+   return match&&match[1].padStart(5,'0')===itemDigits;
+ });
+ if(candidates.length===1)return {item:candidates[0],reason:'verified-manufacturer-ean'};
+ if(candidates.length>1)return {item:null,reason:'ambiguous'};
+ return {item:null,reason:'unlinked-ean'};
+}
 /* A decoded retail EAN is not a partial SKU; no fuzzy substring matching. */
 function resolveScan(raw,products){
  const q=key(raw);
@@ -62,7 +79,7 @@ function resolveScan(raw,products){
  const exact=products.filter(p=>key(p.sku)===q||[p.barcode,...(Array.isArray(p.barcodes)?p.barcodes:[])].filter(Boolean).some(v=>key(v)===q));
  if(exact.length===1)return {item:exact[0],reason:'linked-barcode'};
  if(exact.length>1)return {item:null,reason:'ambiguous'};
- if(checkEAN(q))return {item:null,reason:'unlinked-ean',raw:q};
+ if(checkEAN(q))return {...manufacturerEAN(q,products),raw:q};
  return resolve(q,products);
 }
 function summary(products,seen,closed){
@@ -78,5 +95,5 @@ function csv(rows,meta={}){
  for(const p of rows)lines.push([meta.branch||'',meta.warehouse||'',p.sku,p.name,p.warehouseQty,meta.status||'لم يُرصد خلال الجرد'].map(csvCell).join(','));
  return '\uFEFF'+lines.join('\r\n')+'\r\n';
 }
-global.BranchPresenceCore=Object.freeze({key,compact,inventory,resolve,resolveScan,checkEAN,summary,csv});
+global.BranchPresenceCore=Object.freeze({key,compact,inventory,resolve,resolveScan,manufacturerEAN,checkEAN,summary,csv});
 })(typeof window!=='undefined'?window:globalThis);
