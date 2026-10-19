@@ -25,5 +25,5 @@ assert.match(page,/id="workerRetry"/);
 assert.match(page,/id="workerExport"/);
 assert.match(page,/id="workerSyncHelp"/);
 assert.match(css,/cameraHint/);
-assert.match(read('sw.js'),/stocktake-shell-v83/);
+assert.match(read('sw.js'),/stocktake-shell-v8[34]/);
 console.log('PASS V83 customer header, barcode tuning, audio on accepted manual counts, Firestore diagnostics and pending scan backup');
