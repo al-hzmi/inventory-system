@@ -17,6 +17,7 @@ jobs:
           persist-credentials: false
       - run: npm ci --ignore-scripts
       - run: node tests/v89-shared-scanning.cjs
+      - run: node tests/v89-cross-page-syntax.cjs
       - run: node tests/v88-real-label-mapping.cjs
       - run: node tests/v87-cashier-geometry.cjs
       - run: node tests/v78-boot-service-worker.cjs
