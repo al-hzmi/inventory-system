@@ -196,3 +196,39 @@ body{background:#f5f6f6}
  .darkBtn{min-height:49px}
 }
 @media(prefers-reduced-motion:reduce){.cameraFlash{transition:none}}
+
+/* V87 — stable camera geometry and cashier-first barcode workstation.
+   The viewport occupies identical space before, during and after scanning. */
+.barcodeGlyph{width:28px;height:28px;flex:0 0 28px;stroke:#fff}
+.cameraArrow{margin-inline-start:auto;width:21px;height:21px;flex:none;opacity:.9}
+.audioInfo{display:flex;align-items:center;justify-content:center;gap:8px;background:#f4f6f5;border:1px solid #e6e8e7;border-radius:12px;padding:9px 12px;font-size:11px;color:#475650;font-weight:720;line-height:1.7;margin:0}
+.audioInfo svg{flex:none;color:#29644a}
+.scanToolbar{gap:9px}
+.cameraArea{display:block!important;margin:12px 0 0!important;border-radius:17px;overflow:hidden;padding:10px!important}
+.cameraArea[hidden]{display:block!important}
+.cameraTopline{min-height:28px}
+.cameraViewport{position:relative;display:block!important;height:clamp(234px,72vw,342px)!important;min-height:0!important;max-height:342px!important;aspect-ratio:auto!important;border-radius:13px!important;overflow:hidden!important;background:#080b0b!important;contain:layout paint}
+#cameraReader{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;max-width:100%!important;margin:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;background:transparent!important}
+#cameraReader>div,#cameraReader__scan_region{max-width:100%!important;max-height:100%!important;min-height:0!important}
+#cameraReader video{position:relative;display:block!important;max-width:100%!important;width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;object-fit:contain!important;background:#080b0b!important}
+#cameraReader canvas{max-width:100%!important}
+.cameraStandby{position:absolute;z-index:2;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:11px;color:#b4bec0;font-size:12px;font-weight:700;letter-spacing:-.1px;background:linear-gradient(160deg,#101819,#0a0d0d)}
+.cameraStandby svg{color:#d1d8d6;opacity:.82}
+.cameraStandby[hidden]{display:none!important}
+.cameraDecoded{position:absolute;z-index:8;top:10px;left:10px;right:10px;margin:0!important;padding:7px 10px!important;pointer-events:none;background:rgba(25,40,40,.92)!important;color:#f3f7f5!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:unset!important}
+.cameraFlash{z-index:9}
+.cameraControls{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:43px 47px;gap:7px!important;align-items:center!important;justify-content:stretch!important;align-content:center!important;width:100%;height:108px;min-height:108px;max-height:108px;padding:6px 0;margin:10px 0 0!important;overflow:hidden}
+.cameraControls #workerTorch{grid-column:1;grid-row:1;min-height:42px!important;width:100%;padding:7px 10px}
+.cameraControls #workerCloseCamera{grid-column:2;grid-row:1;min-height:42px!important;width:100%;padding:7px 10px}
+.cameraControls #workerZoomControl{grid-column:1/-1;grid-row:2;min-height:45px!important;height:45px!important;max-width:none!important;width:100%;flex:none;padding:5px 12px!important;gap:0!important;overflow:hidden}
+.cameraZoom label{font-size:10px!important;line-height:1.3}
+.cameraZoom input{margin:0!important;height:19px!important;min-height:19px!important}
+.cameraNote{margin:3px 0 0!important;line-height:1.5!important;min-height:18px;max-height:36px;overflow:hidden}
+@media(max-width:600px){
+ .cameraArea{margin:12px 0 0!important}
+ .cameraViewport{height:clamp(226px,74vw,316px)!important;max-height:316px!important}
+ .cameraControls{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:43px 47px;gap:7px!important;align-items:center!important;height:108px;min-height:108px;max-height:108px}
+ .cameraControls button{width:100%!important;flex:none}
+ .cameraControls .cameraZoom{max-width:100%!important;flex:none}
+ .barcodeGlyph{width:26px;height:26px;flex-basis:26px}
+}
