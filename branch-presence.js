@@ -127,7 +127,7 @@ function receive(raw,source='manual'){
     :result.reason==='ambiguous'
     ?'تمت قراءة '+value+' لكنه يطابق عدة أصناف.'
     :'تمت قراءة '+value+'، لكن هذا الرمز غير موجود ضمن أكواد المستودع.';
-   feedback(notice,'duplicate');
+   feedback(notice,'error');
   }else feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');
   return;
  }
