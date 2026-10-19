@@ -127,39 +127,52 @@ function receive(raw,source='manual'){
  feedback('تم مسح '+item.sku+' · محفوظ على الجهاز وبانتظار تأكيد الخادم','good');
  render();if(!scanner)el('workerInput').focus();flush();
 }
+/* V89: one authorization/session read per 12 accepted SKUs rather than per SKU.
+   Each chunk commits atomically and leaves the local pending queue untouched on failure. */
 async function flush(){
  if(sending||retryBlocked||!bound||!canUse()||!navigator.onLine||!queue.length)return;
  clearTimeout(retryTimer);retryTimer=null;
  sending=true;
  try{
   while(queue.length&&canUse()&&navigator.onLine){
-   const first=queue[0];
-   if(seen.has(first.sku)){queue.shift();persistQueue();continue}
-   const sessionRef=sessions.doc(bound),scanRef=sessionRef.collection('seen').doc('sku_'+encodeURIComponent(first.sku));
+   const chunk=queue.filter(x=>!seen.has(x.sku)).slice(0,12);
+   if(!chunk.length){queue=queue.filter(x=>!seen.has(x.sku));persistQueue();break;}
+   const sendingSession=bound,sessionRef=sessions.doc(sendingSession);
    try{
     await db.runTransaction(async txn=>{
-     const snap=await txn.get(sessionRef);
-     const data=snap.data();
+     const doc=await txn.get(sessionRef),data=doc.data();
      if(!data||data.status!=='active'||!(data.assignedEmployeeIds||[]).includes(userId))throw Error('SESSION_CLOSED');
-     if(!(data.products||[]).some(p=>p.sku===first.sku))throw Error('SKU_NOT_IN_SESSION');
-     txn.set(scanRef,{sku:first.sku,name:first.name,scannedBy:userId,scannedByName:name,scannedAt:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+     const valid=new Set((data.products||[]).map(p=>p.sku));
+     if(chunk.some(item=>!valid.has(item.sku)))throw Error('SKU_NOT_IN_SESSION');
+     for(const item of chunk){
+      const ref=sessionRef.collection('seen').doc('sku_'+encodeURIComponent(item.sku));
+      txn.set(ref,{sku:item.sku,name:item.name,scannedBy:userId,scannedByName:name,scannedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+     }
     });
-    seen.add(first.sku);queue.shift();persistQueue();syncFailures=0;syncError='';retryBlocked=false;
+    // Only dequeue after Firestore confirms the entire atomic transaction.
+    const sent=new Set(chunk.map(x=>x.sku));
+    chunk.forEach(x=>seen.add(x.sku));
+    if(sendingSession===bound){
+     queue=queue.filter(x=>!sent.has(x.sku)&&!seen.has(x.sku));
+     persistQueue();
+     recent=recent.map(x=>sent.has(x.sku)?{...x,pending:false}:x);
+    }
+    syncFailures=0;syncError='';retryBlocked=false;
    }catch(e){
     syncFailures++;
     const code=String(e?.code||e?.message||'').toLowerCase();
     const closed=/SESSION_CLOSED|SKU_NOT_IN_SESSION/.test(e?.message||'');
     retryBlocked=closed||code.includes('permission-denied')||code.includes('unauthenticated');
-    if(closed)syncError='أُغلق الجرد أو تغير تكليف الموظف. لم تُرسل المسوحات المعلقة؛ راجع الإدارة قبل الإغلاق النهائي.';
-    else if(code.includes('permission-denied')||code.includes('unauthenticated'))syncError='الخادم رفض حفظ المسح بسبب صلاحيات قاعدة البيانات. يجب مراجعة إعدادات Firebase مع الإدارة؛ المسوحات ما زالت محفوظة على هذا الجهاز.';
-    else if(code.includes('resource-exhausted')||code.includes('quota'))syncError='قاعدة البيانات بلغت حد الاستخدام أو الحصة مؤقتًا. المسوحات آمنة محليًا ولن تظهر كأنها وصلت إلى الخادم. جرّب لاحقًا.';
-    else if(code.includes('unavailable')||code.includes('deadline')||!navigator.onLine)syncError='تعذر الوصول إلى قاعدة البيانات حاليًا. احتفظ بالصفحة أو صدّر نسخة احتياطية، ثم حاول إعادة المزامنة عند استقرار الاتصال.';
-    else syncError='تعذر تأكيد وصول المسوحات للخادم ('+(String(e?.code||'خطأ غير معروف').slice(0,55))+'). لم نفقد المسوحات المحلية؛ استخدم إعادة المحاولة.';
-    feedback('لم يصل المسح إلى الخادم. '+(retryBlocked?'راجع الإدارة قبل إعادة المحاولة.':'ستُعاد المحاولة تلقائيًا.'),'error');
+    if(closed)syncError='أُغلق الجرد أو تغيّر تكليف الموظف. لم تُرسل المسوحات المعلقة؛ راجع الإدارة.';
+    else if(code.includes('permission-denied')||code.includes('unauthenticated'))syncError='رفض Firestore حفظ الجرد بسبب صلاحيات الخادم. تحتاج الإدارة إلى مراجعة قواعد Firebase؛ جميع المسوحات المعلقة محفوظة على هذا الجهاز.';
+    else if(code.includes('resource-exhausted')||code.includes('quota'))syncError='تجاوز مشروع Firebase حد الاستخدام/الحصة. لا يمكن حفظ المسوحات بالخادم حتى تعود الحصة أو تُعدّل الفوترة. جميع المسوحات محفوظة محليًا؛ صدّر النسخة الاحتياطية.';
+    else if(code.includes('unavailable')||code.includes('deadline')||!navigator.onLine)syncError='قاعدة البيانات غير متاحة حاليًا. المسوحات محفوظة محليًا، وسيُعاد إرسالها عند عودة الخدمة.';
+    else syncError='لم يؤكد الخادم الحفظ ('+String(e?.code||'خطأ غير معروف').slice(0,55)+'). المسوحات المحلية لم تُحذف.';
+    // Do not play a rejection sound for a SKU accepted locally: this is a distinct server error.
+    status('المزامنة متوقفة: '+syncError);
     if(!retryBlocked&&queue.length){
-      const delay=code.includes('resource-exhausted')?180000:Math.min(60000,Math.pow(2,Math.min(6,syncFailures))*1250);
-      const sessionId=bound;
-      retryTimer=setTimeout(()=>{if(sessionId===bound)flush()},delay);
+     const delay=code.includes('resource-exhausted')?300000:Math.min(90000,Math.pow(2,Math.min(6,syncFailures))*1800);
+     const id=bound;retryTimer=setTimeout(()=>{if(id===bound)flush()},delay);
     }
     break;
    }
