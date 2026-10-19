@@ -26,4 +26,6 @@ jobs:
       - run: BROWSER=webkit node tests/v88-real-label-browser.cjs
       - run: node tests/v83-branch-sync-browser.cjs
       - run: BROWSER=webkit node tests/v83-branch-sync-browser.cjs
+      - run: node tests/v89-sync-batch-browser.cjs
+      - run: BROWSER=webkit node tests/v89-sync-batch-browser.cjs
       - run: npm run build
