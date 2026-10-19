@@ -2,9 +2,9 @@ name: V84 long-range barcode camera
 on:
   push:
     branches: [feature/v84-long-range-angled-barcode-camera, main]
-    paths: ['branch-camera-pro.js','branch-presence.*','branch-presence-entry.js','branch-presence-main-launcher.js','sw.js','tests/v84-*','.github/workflows/v84-camera.yml']
+    paths: ['branch-camera-pro.js','branch-presence.*','branch-presence-entry.js','branch-presence-main-launcher.js','sw.js','tests/v83-scanner-sync-sound.cjs','tests/v84-*','.github/workflows/v84-camera.yml']
   pull_request:
-    paths: ['branch-camera-pro.js','branch-presence.*','branch-presence-entry.js','branch-presence-main-launcher.js','sw.js','tests/v84-*','.github/workflows/v84-camera.yml']
+    paths: ['branch-camera-pro.js','branch-presence.*','branch-presence-entry.js','branch-presence-main-launcher.js','sw.js','tests/v83-scanner-sync-sound.cjs','tests/v84-*','.github/workflows/v84-camera.yml']
 permissions:
   contents: read
 jobs:
