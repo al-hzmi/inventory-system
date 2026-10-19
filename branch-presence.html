@@ -7,11 +7,11 @@
 <title>جرد الفرع | BATCO</title>
 <link rel="icon" href="./assets/batco-app-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
-<link rel="stylesheet" href="./branch-presence.css?v=85.0">
+<link rel="stylesheet" href="./branch-presence.css?v=86.0">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script defer src="./branch-presence-core.js?v=85.0"></script>
-<script defer src="./branch-camera-pro.js?v=84.0"></script><script defer src="./branch-barcode-fallback.js?v=85.0"></script><script defer src="./branch-presence.js?v=85.0"></script>
+<script defer src="./branch-camera-pro.js?v=84.0"></script><script defer src="./branch-barcode-fallback.js?v=85.0"></script><script defer src="./branch-scan-audio.js?v=86.0"></script><script defer src="./branch-presence.js?v=86.0"></script>
 </head>
 <body>
 <div class="bp-worker">
@@ -24,13 +24,30 @@
  <section id="workerScan" hidden>
   <div class="workerProgress"><div><span>أصناف ممسوحة</span><b id="workerDone">0</b></div><div><span>لم تُمسح بعد</span><b id="workerPending">—</b></div><div><span>حالة الحفظ</span><b id="workerSync" class="syncGood">جارٍ التحقق</b></div></div>
   <div class="scanCard">
-   <h2>امسح الباركود وواصل</h2>
-   <p>أو أدخل رقم الصنف يدويًا واضغط Enter. لا تحتاج تدخل كمية.</p>
-   <form id="workerForm"><label for="workerInput" class="srOnly">باركود أو رقم الصنف</label><input id="workerInput" type="search" enterkeyhint="done" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="باركود / رقم الصنف" aria-describedby="workerFeedback" autofocus><button type="submit" class="darkBtn">تسجيل وجود الصنف</button></form>
-   <div id="workerSuggestions" class="suggestions" hidden></div>
-   <div id="workerFeedback" class="scanFeedback" role="status" aria-live="polite">جاهز للمسح</div><div id="workerSyncHelp" class="syncHelp" role="alert" aria-live="polite" hidden></div><div class="syncActions"><button type="button" id="workerRetry" class="retryBtn" hidden>إعادة محاولة المزامنة</button><button type="button" id="workerExport" class="retryBtn" hidden>نسخة احتياطية للمسوحات المعلّقة</button></div>
-   <button type="button" id="workerCamera" class="cameraBtn">فتح الكاميرا لمسح الباركود</button>
-   <section id="cameraArea" class="cameraArea" hidden><p class="cameraHint" id="cameraHint">وجّه الباركود نحو الكاميرا. جرّب تقريب العدسة أو الإضاءة إن لزم.</p><div id="cameraReader"></div><div id="cameraDecoded" class="cameraDecoded" role="status" aria-live="polite" hidden></div><div class="cameraControls"><button type="button" id="workerTorch" hidden aria-pressed="false">تشغيل الإضاءة</button><div id="workerZoomControl" class="cameraZoom" hidden><label for="workerZoom">تقريب العدسة <output id="workerZoomLabel" for="workerZoom">1×</output></label><input id="workerZoom" type="range" min="1" max="3" step=".1" value="1" aria-label="تقريب العدسة"></div><button type="button" id="workerCloseCamera">إغلاق الكاميرا</button></div><p class="cameraNote" id="cameraNote" aria-live="polite">تعمل درجة التقريب والإضاءة حسب إمكانات كاميرا الجهاز.</p></section>
+   <div class="scanHeading"><div><span class="scanEyebrow">جرد الفرع السريع</span><h2>مسح الأصناف</h2><p>سجّل وجود الصنف مباشرةً؛ لا تحتاج إلى إدخال كميات.</p></div><span class="scanMode"><span class="liveDot" aria-hidden="true"></span> جاهز للمسح</span></div>
+   <div class="scanToolbar">
+    <button type="button" id="workerCamera" class="cameraBtn"><span aria-hidden="true" class="cameraGlyph">▣</span><span>تشغيل ماسح الباركود</span><span aria-hidden="true" class="cameraChevron">‹</span></button>
+    <div class="soundToolbar"><span class="soundTitle">تنبيه قبول الأصناف</span><div class="soundActions"><button type="button" id="workerSoundToggle" class="soundToggle" aria-pressed="true">الصوت يعمل</button><button type="button" id="workerSoundTest" class="soundTest">تجربة الصوت <span aria-hidden="true">♪</span></button></div><small id="workerSoundHint" class="soundHint" role="status">اضغط تشغيل الماسح لتفعيل الصوت على الآيفون</small></div>
+   </div>
+   <section id="cameraArea" class="cameraArea" hidden>
+    <div class="cameraTopline"><span class="cameraLive"><span class="liveDot" aria-hidden="true"></span> المسح المباشر</span><span>وجّه الباركود داخل الإطار</span></div>
+    <div class="cameraViewport"><div id="cameraReader"></div><div id="cameraFlash" class="cameraFlash" aria-hidden="true"></div></div>
+    <div id="cameraDecoded" class="cameraDecoded" role="status" aria-live="polite" hidden></div>
+    <div class="cameraControls">
+     <button type="button" id="workerTorch" hidden aria-pressed="false">تشغيل الإضاءة</button>
+     <div id="workerZoomControl" class="cameraZoom" hidden><label for="workerZoom">تقريب العدسة <output id="workerZoomLabel" for="workerZoom">1×</output></label><input id="workerZoom" type="range" min="1" max="3" step=".1" value="1" aria-label="تقريب العدسة"></div>
+     <button type="button" id="workerCloseCamera">إغلاق الكاميرا</button>
+    </div>
+    <p class="cameraNote" id="cameraNote" aria-live="polite">يمكنك مسح الأصناف تباعًا دون إيقاف الكاميرا.</p>
+   </section>
+   <div id="workerFeedback" class="scanFeedback" role="status" aria-live="polite"><span class="feedbackIcon" aria-hidden="true">✓</span><span class="feedbackText">جاهز للمسح</span></div>
+   <div id="workerSyncHelp" class="syncHelp" role="alert" aria-live="polite" hidden></div>
+   <div class="syncActions"><button type="button" id="workerRetry" class="retryBtn" hidden>إعادة محاولة المزامنة</button><button type="button" id="workerExport" class="retryBtn" hidden>نسخة احتياطية للمسوحات المعلّقة</button></div>
+   <div class="manualEntry">
+    <div class="manualIntro"><strong>الإدخال اليدوي</strong><span>في حال تعذر قراءة الباركود</span></div>
+    <form id="workerForm"><label for="workerInput" class="srOnly">باركود أو رقم الصنف</label><input id="workerInput" type="search" enterkeyhint="done" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="رقم الصنف أو الباركود" aria-describedby="workerFeedback"><button type="submit" class="darkBtn">اعتماد</button></form>
+    <div id="workerSuggestions" class="suggestions" hidden></div>
+   </div>
   </div>
   <div class="recent"><h3>آخر الأصناف المرصودة</h3><div id="workerRecent"><p>لم يتم رصد أي صنف بعد.</p></div></div>
   <p class="footerNote">الباركود يسجل الصنف مرة واحدة فقط. الأصناف غير الممسوحة تُراجع عند إغلاق الجرد، ولا تتغير كميات المخزون.</p>
