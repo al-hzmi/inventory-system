@@ -69,3 +69,23 @@ h1,h2,h3,p{margin:0}h1{font-size:24px;line-height:1.5;letter-spacing:-.4px}.work
 .cameraControls{display:flex;justify-content:center;gap:9px;margin-top:12px}
 .cameraControls button{border:1px solid #aaa;background:#f8f8f8;color:#111;border-radius:9px;min-height:43px;padding:9px 20px;font-weight:700}
 @media(max-width:600px){#cameraReader{min-height:215px}.scanCard{padding:13px}.cameraArea{margin-inline:-2px}.syncActions{display:grid;grid-template-columns:1fr}.syncActions button{width:100%}}
+
+/* V84: true hardware camera controls, optimised for one-hand inventory scanning. */
+#cameraReader{max-width:100%;border-radius:13px;min-height:260px}
+#cameraReader video{min-height:245px;object-fit:contain!important;background:#070707}
+#cameraReader__scan_region{min-height:240px}
+.cameraControls{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:11px}
+.cameraControls button{min-height:42px}
+.cameraZoom{display:flex;flex:1 1 180px;flex-direction:column;gap:4px;align-items:stretch;max-width:380px;padding:10px 11px;background:#242424;color:#fff;border-radius:11px}
+.cameraZoom label{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:750}
+.cameraZoom output{font-variant-numeric:tabular-nums}
+.cameraZoom input{height:24px;min-height:24px;width:100%;accent-color:#fff;touch-action:pan-x}
+.cameraControls #workerTorch[aria-pressed="true"]{background:#f5e4a0;border-color:#e5d088}
+.cameraNote{font-size:11px!important;color:#c5c5c5;line-height:1.8;text-align:center;padding:10px 5px 0}
+.cameraHint{font-size:12px}
+@media(max-width:600px){
+ #cameraReader{min-height:235px}#cameraReader video{min-height:220px}
+ .cameraControls{align-items:stretch;flex-direction:column}
+ .cameraZoom{max-width:unset;width:100%}
+ .cameraControls button{width:100%}
+}
