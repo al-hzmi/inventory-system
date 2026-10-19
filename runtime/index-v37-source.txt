@@ -3114,10 +3114,12 @@ const BarcodeScannerModal = memo(({ onClose, onScan, items=[] }) => {
             try{
                 await window.__batcoLoadFeature('Html5Qrcode','https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js');
                 if(!isMounted)return;
-                const make=()=>new Html5Qrcode('reader',Pro?{
-                    formatsToSupport:Pro.formats(window.Html5QrcodeSupportedFormats||{}),
-                    useBarCodeDetectorIfSupported:true
-                }:undefined);
+                const make=()=>{
+                    const fmts=Pro?.formats(window.Html5QrcodeSupportedFormats||{})||[];
+                    return new Html5Qrcode('reader',Pro?(fmts.length?{
+                        formatsToSupport:fmts,useBarCodeDetectorIfSupported:true
+                    }:{useBarCodeDetectorIfSupported:true}):undefined);
+                };
                 html5QrCode=make();
                 const onRead=value=>read(value,'zxing');
                 try{await html5QrCode.start({facingMode:'environment'},Pro?.cameraOptions(true)||{fps:12,qrbox:{width:320,height:180}},onRead,()=>{})}
