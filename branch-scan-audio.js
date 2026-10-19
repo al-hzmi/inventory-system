@@ -28,6 +28,8 @@ function silentUnlock(ctx){
 }
 function prepare(){
  if(!enabled)return false;
+ // iOS 17+ supports a playback audio session independent of the ringer category.
+ try{if(root.navigator?.audioSession)root.navigator.audioSession.type='playback'}catch{}
  const ctx=getContext();if(!ctx)return false;
  silentUnlock(ctx);
  if(ctx.state==='running'){unlocked=true;blocked=false;notify();return true}
@@ -79,7 +81,15 @@ function output(kind,force=false){
  }catch{blocked=true;notify();return false}
 }
 function play(kind){return output(kind)}
-function test(){prepare();return output('test',true)}
+function test(){
+ prepare();
+ const ctx=getContext();if(!ctx)return false;
+ if(ctx.state!=='running'){
+  try{ctx.resume()?.then(()=>output('test',true)).catch(()=>{blocked=true;notify()})}catch{}
+  return true;
+ }
+ return output('test',true);
+}
 function setEnabled(value){
  enabled=Boolean(value);
  try{root.localStorage?.setItem('batco_branch_scan_sound_v86',enabled?'on':'off')}catch{}
