@@ -103,7 +103,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  await page.locator('#workerInput').fill('ARM_10004');
  await page.locator('#workerInput').press('Enter');
  await page.waitForFunction(()=>window.__v86Audio.frequencies.includes(490));
- assert.equal(await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===830).length),afterTest+1,'duplicate must not play acceptance');
+ assert.equal(await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1175).length),acceptedBefore+1,'duplicate must not play acceptance');
  await page.locator('#workerCloseCamera').click();
  await page.locator('#workerInput').fill('ARM_10005');
  await page.locator('#workerInput').press('Enter');
