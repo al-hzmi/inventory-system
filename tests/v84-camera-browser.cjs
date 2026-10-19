@@ -60,7 +60,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  assert.equal(state.attempts[0].videoConstraints.height.ideal,1080);
  assert.ok(state.attempts[0].roi.width>=375,'wide area supports off-centre angles');
  assert.ok(state.formats.length>=9,'common barcode formats enabled');
- await page.locator('#workerZoom').fill('2.5');
+ await page.locator('#workerZoom').evaluate(el=>{el.value='2.5';el.dispatchEvent(new Event('input',{bubbles:true}))});
  await page.waitForFunction(()=>window.__cam84.actualZoom===2.5);
  assert.match(await page.locator('#workerZoomLabel').innerText(),/2.5/);
  await page.locator('#workerTorch').click();
