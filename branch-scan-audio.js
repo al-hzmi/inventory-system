@@ -35,6 +35,7 @@ function prepare(){
  if(ctx.state==='running'){unlocked=true;blocked=false;notify();return true}
  try{
   const resumed=ctx.resume();
+  if(ctx.state==='running'){unlocked=true;blocked=false;notify()}
   if(resumed?.then)resumed.then(()=>{unlocked=ctx.state==='running';blocked=!unlocked;notify()}).catch(()=>{blocked=true;notify()});
   else {unlocked=ctx.state==='running';notify()}
  }catch{blocked=true;notify()}
