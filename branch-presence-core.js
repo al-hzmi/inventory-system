@@ -80,6 +80,8 @@ function resolveScan(raw,products){
  if(exact.length===1)return {item:exact[0],reason:'linked-barcode'};
  if(exact.length>1)return {item:null,reason:'ambiguous'};
  if(checkEAN(q))return {...manufacturerEAN(q,products),raw:q};
+ // A checksum-invalid retail-length number is never a fuzzy SKU match.
+ if(/^\d{8}$|^\d{12}$|^\d{13}$/.test(q))return {item:null,reason:'invalid-ean',raw:q};
  return resolve(q,products);
 }
 function summary(products,seen,closed){
