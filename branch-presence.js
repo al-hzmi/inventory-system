@@ -229,7 +229,7 @@ function decodedBarcode(raw,details){
  // html5-qrcode uses a native detector when supported, and its ZXing decoder otherwise.
  // Never block the camera while writing to Firestore or display the keyboard in camera mode.
  const token=C.key(raw),now=Date.now();
- if(token===lastCameraToken&&now-lastCameraTime<1300)return;
+ if(token===lastCameraToken&&now-lastCameraTime<5000)return;
  lastCameraToken=token;lastCameraTime=now;
  el('cameraDecoded').hidden=false;el('cameraDecoded').textContent='تم التعرف على الباركود: '+token;
  receive(raw,'camera');
