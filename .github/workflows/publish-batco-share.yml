@@ -1,0 +1,32 @@
+name: Publish BATCO share image
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/render-batco-share.py'
+      - 'assets/batco-logo.svg'
+      - '.github/workflows/publish-batco-share.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install image rendering libraries
+        run: python3 -m pip install --disable-pip-version-check --quiet pillow cairosvg
+      - name: Produce share-image.png
+        run: python3 scripts/render-batco-share.py
+      - name: Publish approved preview asset
+        run: |
+          git add share-image.png
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'assets: publish BATCO official social preview PNG'
+            git push origin HEAD:main
+          fi
