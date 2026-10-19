@@ -32,7 +32,7 @@
   // Service-worker updates run off the critical loading path, at most once per 6 hours.
   if('serviceWorker' in navigator)setTimeout(()=>{
     try{
-      const key='batco_sw_checked_v71',last=Number(localStorage.getItem(key)||0);
+      const key='batco_sw_checked_v89',last=Number(localStorage.getItem(key)||0);
       if(Date.now()-last<21600000)return;
       localStorage.setItem(key,String(Date.now()));
       navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(reg=>reg.update().catch(()=>{}))).catch(()=>{});
