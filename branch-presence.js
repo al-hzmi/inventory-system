@@ -45,7 +45,7 @@ function prepareFromGesture(event){
 document.addEventListener('pointerdown',prepareFromGesture,{capture:true,passive:true});
 document.addEventListener('touchstart',prepareFromGesture,{capture:true,passive:true});
 document.addEventListener('keydown',event=>{
- if(event.target.closest?.('#workerForm,#workerInput')&&event.key==='Enter')prepareAudio();
+ if(event.target.closest?.('#workerForm,#workerInput'))prepareAudio();
 },{capture:true});
 el('workerSoundToggle').onclick=()=>{
  const active=scanSound?.status().enabled;
