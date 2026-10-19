@@ -1,102 +1,87 @@
-/* BATCO V86 — audible scan confirmation, iOS/Safari gesture-unlocked WebAudio.
-   A sound signifies local acceptance of a NEW SKU, never successful server sync. */
+/* BATCO V87 — mandatory, cashier-style confirmation sound for newly accepted SKUs.
+ * Web Audio is unlocked on a trusted touch/pointer/key gesture (iOS Safari).
+ * No in-app mute / demo setting; actual speaker volume remains under iOS control.
+ * Sound means locally recorded, not confirmation of successful Firestore sync. */
 (function(root){
 'use strict';
-let context=null,enabled=true,unlocked=false,blocked=false,lastKind='',lastAt=0;
-let onChange=()=>{};
-try{enabled=root.localStorage?.getItem('batco_branch_scan_sound_v86')!=='off'}catch{}
-const notify=()=>{try{onChange(status())}catch{}};
-function status(){
- return {enabled,ready:enabled&&unlocked&&context?.state==='running',supported:Boolean(root.AudioContext||root.webkitAudioContext),blocked};
-}
+let context=null,master=null,unlocked=false,lastKind='',lastAt=0;
+const status=()=>({enabled:true,ready:!!context&&context.state==='running'&&unlocked,supported:!!(root.AudioContext||root.webkitAudioContext)});
 function getContext(){
  if(context)return context;
  const Factory=root.AudioContext||root.webkitAudioContext;
- if(!Factory){blocked=true;notify();return null}
- try{context=new Factory();if(typeof context.addEventListener==='function')context.addEventListener('statechange',()=>{unlocked=context.state==='running';notify()});}
- catch{blocked=true;notify();return null}
+ if(!Factory)return null;
+ try{
+  context=new Factory();
+  master=context.createGain();
+  master.gain.value=.88;
+  if(typeof context.createDynamicsCompressor==='function'){
+   const limiter=context.createDynamicsCompressor();
+   limiter.threshold.value=-9;
+   limiter.knee.value=0;
+   limiter.ratio.value=12;
+   limiter.attack.value=.003;
+   limiter.release.value=.085;
+   master.connect(limiter);
+   limiter.connect(context.destination);
+  }else master.connect(context.destination);
+ }catch{context=null;master=null}
  return context;
 }
 function silentUnlock(ctx){
- // WebKit requires a sound source started directly inside the trusted gesture.
  try{
-  const oscillator=ctx.createOscillator(),gain=ctx.createGain(),now=ctx.currentTime;
-  gain.gain.setValueAtTime(0,now);
-  oscillator.connect(gain);gain.connect(ctx.destination);
-  oscillator.start(now);oscillator.stop(now+.018);
+  const o=ctx.createOscillator(),g=ctx.createGain(),now=ctx.currentTime;
+  g.gain.setValueAtTime(.00001,now);
+  o.connect(g);g.connect(master);
+  o.start(now);o.stop(now+.015);
  }catch{}
 }
 function prepare(){
- if(!enabled)return false;
- // iOS 17+ supports a playback audio session independent of the ringer category.
  try{if(root.navigator?.audioSession)root.navigator.audioSession.type='playback'}catch{}
- const ctx=getContext();if(!ctx)return false;
+ const ctx=getContext();
+ if(!ctx)return false;
+ if(ctx.state==='running'){unlocked=true;return true}
  silentUnlock(ctx);
- if(ctx.state==='running'){unlocked=true;blocked=false;notify();return true}
  try{
-  const resumed=ctx.resume();
-  if(ctx.state==='running'){unlocked=true;blocked=false;notify()}
-  if(resumed?.then)resumed.then(()=>{unlocked=ctx.state==='running';blocked=!unlocked;notify()}).catch(()=>{blocked=true;notify()});
-  else {unlocked=ctx.state==='running';notify()}
- }catch{blocked=true;notify()}
- return ctx.state==='running';
+  const result=ctx.resume();
+  if(ctx.state==='running')unlocked=true;
+  result?.then?.(()=>{unlocked=ctx.state==='running'}).catch?.(()=>{});
+ }catch{}
+ return !!unlocked;
 }
-function note(ctx,hz,start,duration,level,type='sine'){
- const oscillator=ctx.createOscillator(),gain=ctx.createGain();
- oscillator.type=type;
- oscillator.frequency.setValueAtTime(hz,start);
- gain.gain.setValueAtTime(.0001,start);
- gain.gain.exponentialRampToValueAtTime(Math.max(.001,level),start+.013);
- gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
- oscillator.connect(gain);gain.connect(ctx.destination);
- oscillator.start(start);oscillator.stop(start+duration+.018);
+function chirp(ctx,freq,at,duration,level,type='square'){
+ const osc=ctx.createOscillator(),gain=ctx.createGain();
+ osc.type=type;
+ osc.frequency.setValueAtTime(freq,at);
+ gain.gain.setValueAtTime(.0001,at);
+ gain.gain.linearRampToValueAtTime(level,at+.004);
+ gain.gain.setValueAtTime(level,at+duration-.018);
+ gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+ osc.connect(gain);gain.connect(master);
+ osc.start(at);osc.stop(at+duration+.008);
 }
-function output(kind,force=false){
- if(!enabled)return false;
+function play(kind){
+ if(!['accepted','duplicate','error'].includes(kind))return false;
  const now=Date.now();
- if(!force&&kind===lastKind&&now-lastAt<110)return false;
- lastKind=kind;lastAt=now;
+ if(kind===lastKind&&now-lastAt<125)return false;
  const ctx=getContext();if(!ctx)return false;
  if(ctx.state!=='running'){
-  // Once sound is gesture-unlocked, WebKit sometimes suspends after app switching.
-  // Resume is best-effort; the manual "تجربة الصوت" button provides another gesture.
   prepare();
-  if(ctx.state!=='running'){notify();return false}
+  if(ctx.state!=='running')return false;
  }
+ lastKind=kind;lastAt=now;
  try{
-  const at=ctx.currentTime+.005;
+  const at=ctx.currentTime+.008;
   if(kind==='accepted'){
-   // Two distinct, full-volume but capped confirmation notes.
-   note(ctx,830,at,.145,.17,'sine');
-   note(ctx,1170,at+.105,.19,.16,'sine');
-  }else if(kind==='duplicate'){
-   note(ctx,380,at,.15,.11,'triangle');
-  }else if(kind==='error'){
-   note(ctx,280,at,.16,.095,'triangle');
-  }else if(kind==='test'){
-   note(ctx,830,at,.145,.17,'sine');
-   note(ctx,1170,at+.105,.19,.16,'sine');
-  }
-  unlocked=true;blocked=false;notify();
+   // Crisp retail checkout beep: two focused, punchy high-frequency pulses.
+   // Compressor caps peaks to avoid distorted clipping on iPhone speakers.
+   chirp(ctx,1175,at,.095,.39,'square');
+   chirp(ctx,1480,at+.107,.145,.40,'square');
+   chirp(ctx,2220,at+.107,.075,.11,'triangle');
+  }else if(kind==='duplicate')chirp(ctx,490,at,.105,.15,'triangle');
+  else chirp(ctx,320,at,.12,.13,'triangle');
+  unlocked=true;
   return true;
- }catch{blocked=true;notify();return false}
+ }catch{return false}
 }
-function play(kind){return output(kind)}
-function test(){
- prepare();
- const ctx=getContext();if(!ctx)return false;
- if(ctx.state!=='running'){
-  try{ctx.resume()?.then(()=>output('test',true)).catch(()=>{blocked=true;notify()})}catch{}
-  return true;
- }
- return output('test',true);
-}
-function setEnabled(value){
- enabled=Boolean(value);
- try{root.localStorage?.setItem('batco_branch_scan_sound_v86',enabled?'on':'off')}catch{}
- if(enabled)prepare();
- notify();return status();
-}
-function subscribe(fn){onChange=typeof fn==='function'?fn:()=>{};notify()}
-root.BranchScanAudio=Object.freeze({prepare,play,test,setEnabled,status,subscribe});
+root.BranchScanAudio=Object.freeze({prepare,play,status});
 })(typeof window!=='undefined'?window:globalThis);

@@ -26,36 +26,21 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const canUse=()=>Boolean(control?.enabled&&session?.status==='active'&&control.sessionId===session.id&&(session.assignedEmployeeIds||[]).includes(userId)&&(control.assignedEmployeeIds||[]).includes(userId));
 const queuedSet=()=>new Set(queue.map(x=>x.sku));
 const scanSound=window.BranchScanAudio||null;
-const soundHint=el('workerSoundHint'),soundToggle=el('workerSoundToggle');
-function updateSoundStatus(state){
- if(!state)return;
- soundToggle.setAttribute('aria-pressed',String(state.enabled));
- soundToggle.textContent=state.enabled?'الصوت يعمل':'الصوت متوقف';
- soundToggle.classList.toggle('isOff',!state.enabled);
- soundHint.textContent=!state.supported?'الصوت غير مدعوم في هذا المتصفح؛ تأكد من ظهور تأكيد الصنف على الشاشة.'
-  :!state.enabled?'الصوت متوقف. اضغط الزر لتشغيل تنبيهات الأصناف.'
-  :state.ready?'الصوت مهيأ · ستسمع نغمة واضحة عند قبول كل صنف جديد.'
-  :'اضغط «تجربة الصوت» أو «تشغيل ماسح الباركود» لتفعيل الصوت على الآيفون.';
-}
-scanSound?.subscribe(updateSoundStatus);
 function prepareAudio(){try{scanSound?.prepare()}catch{}}
-function prepareFromGesture(event){
- if(event.target.closest?.('#workerCamera,#workerSoundTest,#workerSoundToggle,#workerForm,#workerInput'))prepareAudio();
-}
+// iOS WebKit requires AudioContext activation in a real gesture, before any async camera work.
+// Prepare on the entire work area so Bluetooth/wired scanner buttons and manual input qualify.
+function prepareFromGesture(){prepareAudio()}
 document.addEventListener('pointerdown',prepareFromGesture,{capture:true,passive:true});
 document.addEventListener('touchstart',prepareFromGesture,{capture:true,passive:true});
-document.addEventListener('keydown',event=>{
- if(event.target.closest?.('#workerForm,#workerInput'))prepareAudio();
-},{capture:true});
-el('workerSoundToggle').onclick=()=>{
- const active=scanSound?.status().enabled;
- scanSound?.setEnabled(!active);
- if(!active)scanSound?.test();
-};
-el('workerSoundTest').onclick=()=>{
- prepareAudio();
- if(!scanSound?.test())soundHint.textContent='إذا لم تسمع النغمة، ارفع صوت الوسائط في الآيفون ثم اضغط «تجربة الصوت» مرة أخرى.';
-};
+document.addEventListener('keydown',prepareFromGesture,{capture:true});
+function setCameraLayout(active){
+ const area=el('cameraArea');
+ area.classList.toggle('idle',!active);
+ el('cameraStandby').hidden=active;
+ el('workerCloseCamera').hidden=!active;
+ el('workerCamera').setAttribute('aria-pressed',String(active));
+ el('workerCameraLabel').textContent=active?'ماسح الباركود يعمل':'تشغيل ماسح الباركود';
+}
 let flashTimer=null;
 function feedback(message,kind=''){
  const box=el('workerFeedback'),text=box.querySelector('.feedbackText'),glyph=box.querySelector('.feedbackIcon');
@@ -239,7 +224,7 @@ async function startCamera(){
  if(scanner||scannerStarting||!canUse())return;
  if(!window.BranchCameraPro){feedback('تعذر تهيئة الكاميرا؛ أعد تحميل الصفحة ثم حاول مجددًا.','error');return}
  scannerStarting=true;const ticket=++cameraSession;
- el('cameraArea').hidden=false;el('workerCamera').disabled=true;
+ el('workerCamera').disabled=true;
  resetCameraControls();el('cameraDecoded').hidden=true;el('cameraDecoded').textContent='';cameraMessage('جاري تشغيل كاميرا عالية الوضوح…');
  let current=null;
  try{
@@ -268,6 +253,7 @@ async function startCamera(){
    return;
   }
   await configureCamera(current);
+  if(ticket===cameraSession&&current===scanner)setCameraLayout(true);
   if(ticket===cameraSession&&current===scanner&&window.BranchBarcodeFallback){
    try{
     alternateDecoder=window.BranchBarcodeFallback.create({
@@ -289,18 +275,19 @@ async function startCamera(){
   }
   if(scanner===current)scanner=null;
   if(current){try{await current.stop()}catch{}try{await current.clear()}catch{}}
-  if(ticket===cameraSession){el('cameraArea').hidden=true;resetCameraControls();}
+  if(ticket===cameraSession){setCameraLayout(false);resetCameraControls();}
  }finally{
-  if(ticket===cameraSession){scannerStarting=false;el('workerCamera').disabled=false;}
+  if(ticket===cameraSession){scannerStarting=false;el('workerCamera').disabled=!!scanner;}
  }
 }
 async function stopCamera(){
  ++cameraSession;scannerStarting=false;el('workerCamera').disabled=false;
  const extra=alternateDecoder;alternateDecoder=null;extra?.stop();
  const current=scanner;scanner=null;
- el('cameraArea').hidden=true;resetCameraControls();
+ setCameraLayout(false);resetCameraControls();
  if(current){try{await current.stop()}catch{}try{await current.clear()}catch{}}
 }
+setCameraLayout(false);
 el('workerCamera').onclick=startCamera;
 el('workerCloseCamera').onclick=stopCamera;
 el('workerZoom').addEventListener('input',e=>{
