@@ -30,5 +30,5 @@ assert.match(css,/#cameraReader video,#cameraReader__scan_region video/);
 assert.match(css,/object-fit:cover!important/);
 assert.match(audio,/chirp\(ctx,1510/);
 assert.match(audio,/chirp\(ctx,370/);
-assert.match(fs.readFileSync('sw.js','utf8'),/stocktake-shell-v88/);
+assert.match(fs.readFileSync('sw.js','utf8'),/stocktake-shell-v8[89]/);
 console.log('PASS V88: photographed 5469835259789 maps verified AR_25978 in actual Jeddah inventory; misreads, bad checksum, missing prefix and duplicate candidates rejected');

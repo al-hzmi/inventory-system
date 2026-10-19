@@ -77,7 +77,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  assert.equal(options.rect.width>=350,true,'camera should scan most of iPhone width');
  assert.equal(options.formatCount>=8,true,'major one-dimensional barcode symbologies supported');
  assert.equal(options.native,true);
- await page.evaluate(()=>window.__cameraCb('ARM_10005'));
+ await page.evaluate(async()=>{for(let i=0;i<3;i++){window.__cameraCb('ARM_10005');await new Promise(r=>setTimeout(r,80))}});
  await page.waitForFunction(()=>Object.keys(window.__v83.scans).length===2);
  await page.evaluate(()=>window.__cameraCb('ARM_10005'));
  assert.equal(await page.evaluate(()=>Object.keys(window.__v83.scans).length),2,'duplicate camera scans should not double count');

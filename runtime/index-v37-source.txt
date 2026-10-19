@@ -3074,8 +3074,9 @@ const LoginScreen = props => {
 // ============================================================
 // ماسح الباركود للجوال — Ultra Fast 1D (iPhone + Android)
 // ============================================================
-const BarcodeScannerModal = memo(({ onClose, onScan }) => {
+const BarcodeScannerModal = memo(({ onClose, onScan, items=[] }) => {
     const [camError, setCamError] = useState("");
+    const [scanWarning, setScanWarning] = useState("");
     const onScanRef = useRef(onScan);
     const scanLockedRef = useRef(false);
 
@@ -3085,79 +3086,66 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
     }, [onScan]);
 
     useEffect(() => {
-        let isMounted = true;
-        let html5QrCode = null;
-
-        const cleanup = async () => {
-            if (!html5QrCode) return;
-            try {
-                if (html5QrCode.isScanning) await html5QrCode.stop();
-            } catch (e) {}
-            try { html5QrCode.clear(); } catch (e) {}
+        let isMounted=true,html5QrCode=null,extra=null;
+        const Pro=window.BatcoScanPro,Audio=window.BranchScanAudio;
+        const verifier=Pro?.createVerifier({onConfirm:code=>{
+            if(!isMounted||scanLockedRef.current)return;
+            const result=Pro.lookup(code,items,item=>item.id||item.sku);
+            if(!result.matched){
+                setScanWarning('تمت قراءة '+code+' لكن لا يوجد صنف مطابق في هذا المستودع.');
+                Audio?.play('error');return;
+            }
+            scanLockedRef.current=true;
+            try{navigator.vibrate?.(40)}catch{}
+            Audio?.play('accepted');
+            onScanRef.current(result.query);
+        }});
+        const read=(value,engine='zxing')=>{
+            if(!isMounted||scanLockedRef.current)return;
+            if(verifier)verifier.push(value,engine);
+            else onScanRef.current(String(value||'').trim());
         };
-
-        const start = async () => {
-            try {
-                await window.__batcoLoadFeature('Html5Qrcode', 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js');
-                if (!isMounted) return;
-
-                // مهم: لا نحصر صيغ الباركود.
-                // هذه هي نفس فلسفة الماسح القديم المجرب عندكم: المكتبة تختبر كل الصيغ المدعومة تلقائياً.
-                html5QrCode = new Html5Qrcode("reader");
-
-                const config = {
-                    // الإعداد المجرب سابقاً على جوالاتكم. رفع FPS أكثر كان يضغط فك الترميز بلا فائدة.
-                    fps: 10,
-                    // منطقة واسعة مثل النسخة القديمة؛ ممتازة للباركود الطويل أو المائل قليلاً.
-                    qrbox: (viewfinderWidth, viewfinderHeight) => {
-                        const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72);
-                        return { width: size, height: size };
-                    },
-                    aspectRatio: 1,
-                    disableFlip: true
+        const cleanup=async()=>{
+            extra?.stop();extra=null;
+            const old=html5QrCode;html5QrCode=null;
+            if(old){try{if(old.isScanning)await old.stop()}catch{}try{await old.clear()}catch{}}
+        };
+        const start=async()=>{
+            try{
+                await window.__batcoLoadFeature('Html5Qrcode','https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js');
+                if(!isMounted)return;
+                const make=()=>{
+                    const fmts=Pro?.formats(window.Html5QrcodeSupportedFormats||{})||[];
+                    return new Html5Qrcode('reader',Pro?(fmts.length?{
+                        formatsToSupport:fmts,useBarCodeDetectorIfSupported:true
+                    }:{useBarCodeDetectorIfSupported:true}):undefined);
                 };
-
-                const onScanSuccess = (decodedText) => {
-                    if (!isMounted || scanLockedRef.current) return;
-                    const value = String(decodedText || '').trim();
-                    if (!value) return;
-
-                    // أول قراءة فقط؛ نظهر النتيجة فوراً ثم يعتني unmount بإغلاق الكاميرا.
-                    scanLockedRef.current = true;
-                    try { navigator.vibrate && navigator.vibrate(35); } catch (e) {}
-                    onScanRef.current(value);
-                };
-
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    config,
-                    onScanSuccess,
-                    () => {}
-                );
-
-                if (!isMounted) await cleanup();
-            } catch (err) {
-                console.error("خطأ الكاميرا:", err);
-                if (!isMounted) return;
-                let msg = "تعذر فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.";
-                const raw = String(err?.message || err || '');
-                if (!window.isSecureContext) msg = "الكاميرا تحتاج إلى تشغيل الموقع عبر HTTPS.";
-                else if (/NotAllowed|Permission|denied/i.test(raw)) msg = "صلاحية الكاميرا مرفوضة. اسمح باستخدام الكاميرا ثم أعد المحاولة.";
-                else if (/NotFound|DevicesNotFound/i.test(raw)) msg = "لم يتم العثور على كاميرا متاحة.";
-                else if (/NotReadable|TrackStart/i.test(raw)) msg = "الكاميرا مستخدمة بواسطة تطبيق آخر. أغلقه ثم حاول مجدداً.";
-                setCamError(msg);
+                html5QrCode=make();
+                const onRead=value=>read(value,'zxing');
+                try{await html5QrCode.start({facingMode:'environment'},Pro?.cameraOptions(true)||{fps:12,qrbox:{width:320,height:180}},onRead,()=>{})}
+                catch(initial){
+                    await cleanup();if(!isMounted)return;
+                    html5QrCode=make();
+                    await html5QrCode.start({facingMode:'environment'},Pro?.cameraOptions(false)||{fps:10,qrbox:{width:300,height:170}},onRead,()=>{});
+                }
+                if(!isMounted){await cleanup();return}
+                if(window.BranchBarcodeFallback)extra=window.BranchBarcodeFallback.create({
+                    videoProvider:()=>document.querySelector('#reader video'),
+                    onDecode:value=>read(value,'quagga')
+                });
+            }catch(err){
+                console.error('خطأ الكاميرا',err);
+                if(!isMounted)return;
+                const raw=String(err?.message||err||'');
+                setCamError(!window.isSecureContext?'الكاميرا تحتاج HTTPS':
+                    /NotAllowed|Permission|denied/i.test(raw)?'صلاحية الكاميرا مرفوضة. فعّلها من إعدادات Safari.':
+                    /NotReadable|TrackStart/i.test(raw)?'الكاميرا مستخدمة في تطبيق آخر.':
+                    'تعذر فتح الكاميرا. تحقق من الصلاحيات أو أعد المحاولة.');
             }
         };
-
         start();
-
-        return () => {
-            isMounted = false;
-            scanLockedRef.current = true;
-            cleanup();
-        };
+        return()=>{isMounted=false;scanLockedRef.current=true;cleanup()};
     }, []);
-
     return (
         <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-16 animate-card">
             <div className="w-full max-w-[380px] bg-bg rounded-16 overflow-hidden shadow-lift flex flex-col">
@@ -3184,7 +3172,7 @@ const BarcodeScannerModal = memo(({ onClose, onScan }) => {
                 </div>
 
                 <div className="p-16 text-center text-[13px] font-medium text-primary bg-surface border-t border-border">
-                    وجّه الكاميرا للباركود وسيتم التقاطه تلقائياً
+                    وجّه الكاميرا للباركود وسيتم التحقق منه قبل فتح الصنف{scanWarning && <p role="status" className="text-[11px] text-danger mt-8">{scanWarning}</p>}
                     <p className="text-[11px] text-muted font-normal mt-4">وضع التوافق العالي — يدعم جميع صيغ الباركود المتاحة</p>
                 </div>
             </div>
@@ -4787,7 +4775,7 @@ const App = () => {
                                    className={`w-full h-48 pr-40 pl-48 rounded-12 border outline-none transition-colors ${!warehouse ? 'bg-surface border-border text-muted cursor-not-allowed' : 'bg-bg border-border focus:border-accent text-primary'}`} />
                             
                             {warehouse && (
-                                <button onClick={() => setShowScanner(true)} title="مسح الباركود بالكاميرا"
+                                <button onClick={() => { window.BranchScanAudio?.prepare(); setShowScanner(true); }} title="مسح الباركود بالكاميرا"
                                     className="absolute left-6 top-1/2 -translate-y-1/2 w-36 h-36 flex items-center justify-center rounded-8 text-secondary bg-surface border border-border hover:text-accent hover:border-accent transition-colors">
                                     <Icon.Scan className="w-18 h-18" />
                                 </button>
@@ -4953,7 +4941,7 @@ const App = () => {
             </div>
 
             {/* ===== النوافذ المنبثقة ===== */}
-            {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} onScan={(scannedText) => { setShowScanner(false); setQuery(scannedText); }} />}
+            {showScanner && <BarcodeScannerModal items={databases[warehouse]||[]} onClose={() => setShowScanner(false)} onScan={(scannedText) => { setShowScanner(false); setQuery(scannedText); }} />}
             {showDrafts && <DraftsModal drafts={drafts} setDrafts={setDrafts} setCart={setCart} setWarehouse={setWarehouse} onClose={() => setShowDrafts(false)} />}
             {showCart && <OrderInvoiceModal cart={cart} setCart={setCart} drafts={drafts} setDrafts={setDrafts} onClose={() => setShowCart(false)} sessionName={sessionName} warehouse={warehouse} />}
             {showHistory && <OrderHistoryModal onClose={() => setShowHistory(false)} sessionName={sessionName} />}
