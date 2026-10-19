@@ -25,14 +25,54 @@ const fmt=n=>new Intl.NumberFormat('ar-SA').format(n||0);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const canUse=()=>Boolean(control?.enabled&&session?.status==='active'&&control.sessionId===session.id&&(session.assignedEmployeeIds||[]).includes(userId)&&(control.assignedEmployeeIds||[]).includes(userId));
 const queuedSet=()=>new Set(queue.map(x=>x.sku));
+const scanSound=window.BranchScanAudio||null;
+const soundHint=el('workerSoundHint'),soundToggle=el('workerSoundToggle');
+function updateSoundStatus(state){
+ if(!state)return;
+ soundToggle.setAttribute('aria-pressed',String(state.enabled));
+ soundToggle.textContent=state.enabled?'الصوت يعمل':'الصوت متوقف';
+ soundToggle.classList.toggle('isOff',!state.enabled);
+ soundHint.textContent=!state.supported?'الصوت غير مدعوم في هذا المتصفح؛ تأكد من ظهور تأكيد الصنف على الشاشة.'
+  :!state.enabled?'الصوت متوقف. اضغط الزر لتشغيل تنبيهات الأصناف.'
+  :state.ready?'الصوت مهيأ · ستسمع نغمة واضحة عند قبول كل صنف جديد.'
+  :'اضغط «تجربة الصوت» أو «تشغيل ماسح الباركود» لتفعيل الصوت على الآيفون.';
+}
+scanSound?.subscribe(updateSoundStatus);
+function prepareAudio(){try{scanSound?.prepare()}catch{}}
+function prepareFromGesture(event){
+ if(event.target.closest?.('#workerCamera,#workerSoundTest,#workerSoundToggle,#workerForm,#workerInput'))prepareAudio();
+}
+document.addEventListener('pointerdown',prepareFromGesture,{capture:true,passive:true});
+document.addEventListener('touchstart',prepareFromGesture,{capture:true,passive:true});
+document.addEventListener('keydown',event=>{
+ if(event.target.closest?.('#workerForm,#workerInput'))prepareAudio();
+},{capture:true});
+el('workerSoundToggle').onclick=()=>{
+ const active=scanSound?.status().enabled;
+ scanSound?.setEnabled(!active);
+ if(!active)scanSound?.test();
+};
+el('workerSoundTest').onclick=()=>{
+ prepareAudio();
+ if(!scanSound?.test())soundHint.textContent='إذا لم تسمع النغمة، ارفع صوت الوسائط في الآيفون ثم اضغط «تجربة الصوت» مرة أخرى.';
+};
+let flashTimer=null;
 function feedback(message,kind=''){
- el('workerFeedback').textContent=message;el('workerFeedback').className='scanFeedback '+kind;
- if(kind==='good'||kind==='duplicate'){try{navigator.vibrate?.(kind==='good'?40:[30,30,30])}catch{}}
- if(kind==='good'){try{
-  const A=window.AudioContext||window.webkitAudioContext;if(!A)return;
-  if(!audio)audio=new A();if(audio.state==='suspended')audio.resume().catch(()=>{});
-  const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=850;g.gain.value=.025;o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.09);
- }catch{}}
+ const box=el('workerFeedback'),text=box.querySelector('.feedbackText'),glyph=box.querySelector('.feedbackIcon');
+ text.textContent=message;box.className='scanFeedback '+kind;
+ glyph.textContent=kind==='good'?'✓':kind==='duplicate'?'!':kind==='error'?'×':'✓';
+ // A green confirmation is shown at the camera itself: workers needn't look away.
+ const flash=el('cameraFlash');
+ if(flash&&scanner){
+  flash.textContent=kind==='good'?'تم اعتماد الصنف ✓':kind==='duplicate'?'تم رصده مسبقًا':'تعذر اعتماد الصنف';
+  flash.className='cameraFlash '+(kind||'');
+  clearTimeout(flashTimer);
+  flashTimer=setTimeout(()=>{flash.className='cameraFlash';flash.textContent=''},1300);
+ }
+ if(kind==='good'||kind==='duplicate'){try{navigator.vibrate?.(kind==='good'?55:[35,40,35])}catch{}}
+ if(kind==='good')scanSound?.play('accepted');
+ if(kind==='duplicate')scanSound?.play('duplicate');
+ if(kind==='error')scanSound?.play('error');
 }
 function status(text){el('workerDescription').textContent=text}
 function render(){
@@ -87,7 +127,7 @@ function receive(raw,source='manual'){
     :result.reason==='ambiguous'
     ?'تمت قراءة '+value+' لكنه يطابق عدة أصناف.'
     :'تمت قراءة '+value+'، لكن هذا الرمز غير موجود ضمن أكواد المستودع.';
-   feedback(notice,'duplicate');
+   feedback(notice,'error');
   }else feedback(result.reason==='ambiguous'?'الباركود يطابق أكثر من صنف. أدخل رقم الصنف الصحيح يدويًا.':'الباركود غير معروف في المستودع المرجعي. أدخل رقم الصنف يدويًا.','error');
   return;
  }
@@ -141,7 +181,7 @@ async function flush(){
  }finally{sending=false;render()}
 }
 let quickScanTimer=0;
-el('workerForm').addEventListener('submit',e=>{e.preventDefault();clearTimeout(quickScanTimer);receive(el('workerInput').value)});
+el('workerForm').addEventListener('submit',e=>{e.preventDefault();prepareAudio();clearTimeout(quickScanTimer);receive(el('workerInput').value)});
 el('workerInput').addEventListener('input',e=>{
  const q=C.key(e.target.value),box=el('workerSuggestions');
  clearTimeout(quickScanTimer);
@@ -189,12 +229,13 @@ function decodedBarcode(raw,details){
  // html5-qrcode uses a native detector when supported, and its ZXing decoder otherwise.
  // Never block the camera while writing to Firestore or display the keyboard in camera mode.
  const token=C.key(raw),now=Date.now();
- if(token===lastCameraToken&&now-lastCameraTime<1300)return;
+ if(token===lastCameraToken&&now-lastCameraTime<5000)return;
  lastCameraToken=token;lastCameraTime=now;
  el('cameraDecoded').hidden=false;el('cameraDecoded').textContent='تم التعرف على الباركود: '+token;
  receive(raw,'camera');
 }
 async function startCamera(){
+ prepareAudio();
  if(scanner||scannerStarting||!canUse())return;
  if(!window.BranchCameraPro){feedback('تعذر تهيئة الكاميرا؛ أعد تحميل الصفحة ثم حاول مجددًا.','error');return}
  scannerStarting=true;const ticket=++cameraSession;
