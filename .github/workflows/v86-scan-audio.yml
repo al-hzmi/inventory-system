@@ -1,0 +1,29 @@
+name: V86 iPhone scan audio and UI
+on:
+  push:
+    branches: [feature/v86-scanner-ui-audio-feedback, main]
+    paths: ['branch-scan-audio.js','branch-presence.html','branch-presence.css','branch-presence.js','sw.js','tests/v86-*','.github/workflows/v86-scan-audio.yml']
+  pull_request:
+    paths: ['branch-scan-audio.js','branch-presence.html','branch-presence.css','branch-presence.js','sw.js','tests/v86-*','.github/workflows/v86-scan-audio.yml']
+permissions:
+  contents: read
+jobs:
+  audio-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: node tests/v86-audio-ui.cjs
+      - run: node tests/v85-ean-dual-engine.cjs
+      - run: node tests/v78-boot-service-worker.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v86-scan-audio-browser.cjs
+      - run: BROWSER=webkit node tests/v86-scan-audio-browser.cjs
+      - run: node tests/v85-branch-dual-browser.cjs
+      - run: BROWSER=webkit node tests/v85-branch-dual-browser.cjs
+      - run: node tests/v83-branch-sync-browser.cjs
+      - run: BROWSER=webkit node tests/v83-branch-sync-browser.cjs
+      - run: npm run build
