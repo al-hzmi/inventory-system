@@ -277,7 +277,7 @@ async function startScanner(){
   render();toast('تم التعرف على الصنف '+resolved.item.sku);
  }
  const read=(txt,engine='zxing')=>{if(gate)gate.push(txt,engine);else handleConfirmedStocktakeBarcode(String(txt||'').trim())};
- const init=()=>new Html5Qrcode('reader',Pro?{formatsToSupport:Pro.formats(window.Html5QrcodeSupportedFormats||{}),useBarCodeDetectorIfSupported:true}:undefined);
+ const init=()=>{const fmts=Pro?.formats(window.Html5QrcodeSupportedFormats||{})||[];return new Html5Qrcode('reader',Pro?(fmts.length?{formatsToSupport:fmts,useBarCodeDetectorIfSupported:true}:{useBarCodeDetectorIfSupported:true}):undefined)};
  try{
   current=init();state.scanner=current;
   try{await current.start({facingMode:'environment'},Pro?.cameraOptions(true)||{fps:12,qrbox:{width:300,height:200}},read,()=>{})}
