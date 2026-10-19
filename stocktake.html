@@ -123,7 +123,19 @@ function syncHtml(){const pending=state.items.filter(i=>i._pending).length;const
 const destroy=()=>{state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}});stopScanner()};window.addEventListener('beforeunload',destroy);window.addEventListener('online',render);window.addEventListener('offline',render);
 if(!user.name||(!user.isAdmin&&!user.validEmployee))location.href='./index.html?employee=1';else start();
 function cleanDigits(value){return eng(String(value??'')).replace(/\D/g,'')}
-function resolveStocktakeSearch(raw){const value=String(raw??'').trim(),normalized=norm(value),clean=cleanDigits(value);let exact=state.items.find(i=>norm(i.sku)===normalized);if(!exact&&clean)exact=state.items.find(i=>cleanDigits(i.sku)===clean);if(exact)return{query:String(exact.sku),item:exact,fromBarcode:false};if(clean.length>=8&&/^\d+$/.test(clean)){const possible=state.items.filter(i=>{const d=cleanDigits(i.sku);return d&&d.length>=3&&clean.includes(d)}).sort((a,b)=>cleanDigits(b.sku).length-cleanDigits(a.sku).length);if(possible[0])return{query:String(possible[0].sku),item:possible[0],fromBarcode:true}}return{query:value,item:null,fromBarcode:false}}
+function resolveStocktakeSearch(raw){
+ const value=String(raw??'').trim(),normalized=norm(value),clean=cleanDigits(value);
+ let exact=state.items.find(i=>norm(i.sku)===normalized);
+ if(!exact&&clean)exact=state.items.find(i=>cleanDigits(i.sku)===clean);
+ if(exact)return {query:String(exact.sku),item:exact,fromBarcode:false};
+ const mapper=window.BatcoScanPro;
+ if(mapper&&/^(?:\d{8}|\d{12}|\d{13})$/.test(clean)){
+  if(!mapper.checksum(clean))return {query:value,item:null,fromBarcode:false,invalid:true};
+  const result=mapper.lookup(clean,state.items,item=>item.sku);
+  return {...result,fromBarcode:result.matched};
+ }
+ return {query:value,item:null,fromBarcode:false};
+}
 function stocktakeSuggestions(raw){const q=norm(eng(String(raw||'').trim()));if(!q)return [];return state.items.filter(i=>norm(eng(String(i.sku||''))).startsWith(q)).slice(0,20)}
 function searchResultsHtml(){if(!state.itemsLoaded)return '<div class="searchEmpty" role="status">جارٍ تحميل أصناف الحملة…</div>';if(!state.items.length)return `<div class="searchEmpty" role="status">${itemCacheOnly?'لا توجد أصناف محفوظة لهذه المجموعة على الجهاز. اتصل بالإنترنت لتحميلها.':'لا توجد أصناف في لقطة مخزون الحملة.'}</div>`;if(!state.search.trim())return '';const matches=stocktakeSuggestions(state.search);return matches.length?`<div class="skuSuggestions" aria-label="الأصناف المطابقة"><div class="suggestionHint">اختر الصنف المطلوب${matches.length===20?' · أول 20 نتيجة، أكمل الرقم لتضييق البحث':''}</div>${matches.map(i=>`<button type="button" data-open="${esc(i.id)}" class="skuSuggestion"><span><b dir="ltr">${esc(i.sku)}</b><small>${esc(i.name||'')}</small></span><span aria-hidden="true">‹</span></button>`).join('')}</div>`:'<div class="searchEmpty" role="status">لا توجد نتائج ضمن أصناف الحملة. تحقق من الرقم أو النطاق.</div>'}
 function renderWelcome(teams){const t=state.team,c=state.campaign,closed=c.status==='closed',members=teamMemberNames(t),assistants=t.extraMemberNames||[],ready=state.itemsLoaded&&state.items.length>0;app.classList.add('welcomeMode');app.innerHTML=`<section class="stocktakeWelcome" aria-labelledby="welcomeTitle"><div class="welcomeBrand"><img src="./assets/batco-logo.svg" alt="باتكو" width="180" height="72"><span>إدارة المخزون · أعمال الجرد</span></div><div class="welcomeHeading"><span class="welcomeEyebrow">لجنة الجرد${c.isTest||c.testMode?' · وضع اختبار':''}</span><h1 id="welcomeTitle">${esc(cleanUiName(c.name||'محضر الجرد'))}</h1><p>دقة الجرد تبدأ بكم. راجعوا بيانات المجموعة والنطاق قبل بدء العمل.</p></div><dl class="welcomeRoster"><div><dt>عضو اللجنة</dt><dd>${esc(members.join('، ')||'غير محدد')}</dd></div><div><dt>المساعد</dt><dd>${esc(assistants.join('، ')||'لا يوجد مساعد مسجل')}</dd></div><div><dt>المجموعة</dt><dd>${esc(cleanUiName(t.name))}</dd></div><div><dt>نطاق الجرد</dt><dd>${esc(t.scope||t.zone||'غير محدد')}</dd></div></dl>${teams.length>1?`<label class="welcomeTeamLabel" for="teamSelect">المجموعة المسندة<select id="teamSelect" class="teamselect">${teams.map(x=>`<option value="${esc(x.id)}" ${x.id===t.id?'selected':''}>${esc(cleanUiName(x.name))} · ${esc(x.scope||x.zone||'')}</option>`).join('')}</select></label>`:''}<div class="welcomeReadiness" role="status">${!state.itemsLoaded?'جارٍ تجهيز أصناف الحملة…':ready?`${state.items.length} صنف متاح لجميع لجان الجرد`:itemCacheOnly?'اتصل بالإنترنت لتحميل أصناف هذه المجموعة.':'لقطة مخزون الحملة غير جاهزة. راجع الإدارة لإكمال تحميل المخزون.'}</div><button type="button" id="startStocktake" class="welcomeStart" ${ready?'':'disabled'}>${closed?'عرض الجرد':'ابدأ الجرد'} <span aria-hidden="true">←</span></button><p class="welcomeFootnote">سجّل كمية جهتك فقط؛ تُجمع كميات الجهات تلقائيًا في نتيجة موحدة.</p><button type="button" id="backBtn" class="welcomeBack">العودة للنظام</button></section>`;$('#teamSelect')?.addEventListener('change',e=>pickTeam(e.target.value));$('#backBtn').onclick=()=>location.href='./index.html?employee=1';$('#startStocktake').onclick=()=>{if(!state.itemsLoaded||!state.items.length)return;state.enteredScope=c.id+':'+t.id;render();$('#search')?.focus({preventScroll:true})}}
@@ -247,7 +259,30 @@ $('#noteCancel').onclick=()=>{$('#noteModal').classList.remove('open');state.not
  let unsub=()=>{};unsub=db.collection('stocktake_items').doc(it.id).onSnapshot({includeMetadataChanges:true},d=>{if(d.data()?.lastNoteOperationId===operationId&&(durableCache||!d.metadata.hasPendingWrites)){if(state.noteItem?.id===it.id)$('#noteCancel').click();saving.delete('note:'+it.id);toast('تم تسجيل الملاحظة · بانتظار تأكيد المزامنة');unsub()}},()=>{});
  batch.commit().then(()=>{unsub();saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تمت مزامنة الملاحظة')}).catch(()=>{unsub();saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:note});toast('تعذر اعتماد الملاحظة؛ المسودة محفوظة')});
 };
-async function startScanner(){ensureFeedbackAudio();if(state.scanner)return;$('#scanner').classList.add('open');try{const scanner=new Html5Qrcode('reader');state.scanner=scanner;await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:320,height:180},aspectRatio:1,disableFlip:true},txt=>{const value=String(txt||'').trim();if(!value)return;try{navigator.vibrate&&navigator.vibrate(35)}catch{}const resolved=resolveStocktakeSearch(value);stopScanner();state.search=resolved.query;state.filter='all';state.visible=80;state.activeEditId=resolved.item?.id||'';render();toast(resolved.item?(resolved.fromBarcode?`تم التعرف على الصنف ${resolved.item.sku} من الباركود`:`تم العثور على الصنف ${resolved.item.sku}`):'تمت قراءة الباركود ولم يوجد صنف مطابق')},()=>{})}catch(e){console.error(e);stopScanner();toast('تعذر تشغيل الكاميرا')}}async function stopScanner(){const s=state.scanner;state.scanner=null;if(s){try{await s.stop()}catch{}try{await s.clear()}catch{}}$('#scanner')?.classList.remove('open')}$('#closeScanner').onclick=stopScanner;
+async function startScanner(){
+ ensureFeedbackAudio();window.BranchScanAudio?.prepare();
+ if(state.scanner)return;
+ $('#scanner').classList.add('open');
+ const Pro=window.BatcoScanPro,gate=Pro?.createVerifier({onConfirm:handleConfirmedStocktakeBarcode});
+ let current=null;
+ function handleConfirmedStocktakeBarcode(value){
+  const resolved=resolveStocktakeSearch(value);
+  window.BranchScanAudio?.play(resolved.item?'accepted':'error');
+  if(!resolved.item){toast(resolved.invalid?'الباركود غير صحيح؛ أعد توجيه الكاميرا':'تمت قراءة الباركود، لكن لا يوجد صنف مطابق في الجرد');return}
+  stopScanner();
+  state.search=resolved.query;state.filter='all';state.visible=80;state.activeEditId=resolved.item.id||'';
+  render();toast('تم التعرف على الصنف '+resolved.item.sku);
+ }
+ const read=(txt)=>{if(gate)gate.push(txt,'zxing');else handleConfirmedStocktakeBarcode(String(txt||'').trim())};
+ const init=()=>new Html5Qrcode('reader',Pro?{formatsToSupport:Pro.formats(window.Html5QrcodeSupportedFormats||{}),useBarCodeDetectorIfSupported:true}:undefined);
+ try{
+  current=init();state.scanner=current;
+  try{await current.start({facingMode:'environment'},Pro?.cameraOptions(true)||{fps:12,qrbox:{width:300,height:200}},read,()=>{})}
+  catch(e){try{await current.stop()}catch{}try{await current.clear()}catch{};current=init();state.scanner=current;await current.start({facingMode:'environment'},Pro?.cameraOptions(false)||{fps:10,qrbox:{width:280,height:180}},read,()=>{})}
+ }catch(e){console.error(e);stopScanner();toast('تعذر تشغيل الكاميرا. تأكد من منح صلاحيتها.')}
+}
+async function stopScanner(){const s=state.scanner;state.scanner=null;if(s){try{await s.stop()}catch{}try{await s.clear()}catch{}}$('#scanner')?.classList.remove('open')}
+$('#closeScanner').onclick=stopScanner;
 </script><script defer src="./branch-presence-entry.js?v=80.0"></script>
 <script defer src="./batco-brand-footer.js?v=82.0"></script></body>
 </html>
