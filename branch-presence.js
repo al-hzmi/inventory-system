@@ -136,7 +136,7 @@ async function flush(){
  try{
   while(queue.length&&canUse()&&navigator.onLine){
    const chunk=queue.filter(x=>!seen.has(x.sku)).slice(0,12);
-   if(!chunk.length){queue=queue.filter(x=>!seen.has(x.sku));persistQueue();break;}
+   if(!chunk.length){const remaining=queue;queue=queue.filter(x=>!seen.has(x.sku));if(!persistQueue())queue=remaining;break;}
    const sendingSession=bound,sessionRef=sessions.doc(sendingSession);
    try{
     await db.runTransaction(async txn=>{
