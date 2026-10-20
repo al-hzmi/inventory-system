@@ -289,8 +289,8 @@ const VISIBILITY_RULES = {
 const CARD_VIEW = { IMAGE: 0, QUANTITY: 1, DETAILS: 2 };
 
 const WAREHOUSES = {
-    jeddah: { key: 'jeddah', label: 'مخزون جدة',   name: 'مستودع جدة'   },
-    riyadh: { key: 'riyadh', label: 'مخزون الرياض', name: 'مستودع الرياض' },
+    jeddah: { key: 'jeddah', label: 'فرع جدة',   name: 'مستودع جدة'   },
+    riyadh: { key: 'riyadh', label: 'فرع الرياض', name: 'مستودع الرياض' },
 };
 
 const SPECIAL_CATEGORIES = { NEW_ARRIVALS: 'جديدنا', UNCATEGORIZED : 'بقية الأصناف', MISSING_IMAGES: 'نواقص الصور' };
@@ -4692,7 +4692,7 @@ const App = () => {
             <div className="sticky top-0 z-30 bg-bg/95 backdrop-blur border-b border-border">
                 <div className="max-w-[1024px] mx-auto px-16 py-12 flex flex-col gap-10">
                     <div className="flex justify-between items-center w-full sm:w-auto gap-16">
-                        <div className="flex flex-1 sm:flex-none sm:self-start bg-surface border border-border rounded-12 p-4 gap-4" role="group" aria-label="اختيار المستودع">
+                        <div className="flex flex-1 sm:flex-none sm:self-start bg-surface border border-border rounded-12 p-4 gap-4" role="group" aria-label="اختيار الفرع">
                             {Object.values(WAREHOUSES).map(wh => (
                                 <button key={wh.key} onClick={() => setWarehouse(wh.key)} aria-pressed={warehouse === wh.key}
                                         className={`flex-1 sm:flex-none sm:px-32 h-40 rounded-10 text-[15px] font-semibold transition-colors duration-200 ${warehouse === wh.key ? 'bg-primary text-bg' : 'text-secondary hover:text-primary'}`}>
@@ -4771,7 +4771,7 @@ const App = () => {
                             <Icon.Search className="w-18 h-18 text-muted absolute right-14 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input ref={searchInputRef} id="searchInput" type="text" autoComplete="off"
                                    value={query} onChange={(e) => setQuery(e.target.value)} disabled={!warehouse}
-                                   placeholder={warehouse ? "اكتب رقم الصنف أو امسح الباركود..." : "اختر المستودع أولاً"}
+                                   placeholder={warehouse ? "اكتب رقم الصنف أو امسح الباركود..." : "اختر الفرع أولاً"}
                                    className={`w-full h-48 pr-40 pl-48 rounded-12 border outline-none transition-colors ${!warehouse ? 'bg-surface border-border text-muted cursor-not-allowed' : 'bg-bg border-border focus:border-accent text-primary'}`} />
                             
                             {warehouse && (
@@ -4794,7 +4794,7 @@ const App = () => {
                             </label>
                     </div>
 
-                        {imageWarehouseNotice && <div role="status" aria-live="polite" className="batco-image-warehouse-toast">اختر المستودع أولًا</div>}
+                        {imageWarehouseNotice && <div role="status" aria-live="polite" className="batco-image-warehouse-toast">اختر الفرع أولًا</div>}
                         <div id="batco-pilot-search-slot" aria-label="اختصارات البحث" />
                     </div>
 
@@ -4886,7 +4886,7 @@ const App = () => {
                                 </div>
 
                                 {loading ? ( <SkeletonGrid />
-                                ) : !warehouse ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر المستودع" note="حدد مخزون جدة أو مخزون الرياض من الأعلى لفتح المعرض." /></div>
+                                ) : !warehouse ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر الفرع" note="حدد فرع جدة أو فرع الرياض من الأعلى لفتح المعرض." /></div>
                                 ) : !activeCategory ? ( <div className="max-w-[480px] mx-auto"><StateBlock icon={<Icon.Grid className="w-20 h-20" />} title="اختر قسماً" note="حدد قسماً من الأعلى لاستعراض المنتجات المتوفرة." /></div>
                                 ) : (
                                     <div>
