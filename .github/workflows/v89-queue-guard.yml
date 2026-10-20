@@ -1,0 +1,25 @@
+name: V89.1 quota safe queue
+on:
+  push:
+    branches: [fix/v89-server-queue-integrity, main]
+    paths: ['branch-presence.js', 'tests/v89-quota-recovery-browser.cjs', '.github/workflows/v89-queue-guard.yml']
+  pull_request:
+    paths: ['branch-presence.js', 'tests/v89-quota-recovery-browser.cjs', '.github/workflows/v89-queue-guard.yml']
+permissions:
+  contents: read
+jobs:
+  queue-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: npm ci --ignore-scripts
+      - run: node tests/v89-shared-scanning.cjs
+      - run: node tests/v89-cross-page-syntax.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v89-sync-batch-browser.cjs
+      - run: node tests/v89-quota-recovery-browser.cjs
+      - run: BROWSER=webkit node tests/v89-quota-recovery-browser.cjs
+      - run: npm run build

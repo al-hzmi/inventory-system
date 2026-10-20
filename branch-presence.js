@@ -136,7 +136,7 @@ async function flush(){
  try{
   while(queue.length&&canUse()&&navigator.onLine){
    const chunk=queue.filter(x=>!seen.has(x.sku)).slice(0,12);
-   if(!chunk.length){queue=queue.filter(x=>!seen.has(x.sku));persistQueue();break;}
+   if(!chunk.length){const previous=queue;queue=queue.filter(x=>!seen.has(x.sku));if(!persistQueue())queue=previous;break;}
    const sendingSession=bound,sessionRef=sessions.doc(sendingSession);
    try{
     await db.runTransaction(async txn=>{
@@ -151,10 +151,11 @@ async function flush(){
     });
     // Only dequeue after Firestore confirms the entire atomic transaction.
     const sent=new Set(chunk.map(x=>x.sku));
-    chunk.forEach(x=>seen.add(x.sku));
     if(sendingSession===bound){
+     chunk.forEach(x=>seen.add(x.sku));
+     const previous=queue;
      queue=queue.filter(x=>!sent.has(x.sku)&&!seen.has(x.sku));
-     persistQueue();
+     if(!persistQueue())queue=previous;
      recent=recent.map(x=>sent.has(x.sku)?{...x,pending:false}:x);
     }
     syncFailures=0;syncError='';retryBlocked=false;
