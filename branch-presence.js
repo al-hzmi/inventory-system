@@ -151,10 +151,11 @@ async function flush(){
     });
     // Only dequeue after Firestore confirms the entire atomic transaction.
     const sent=new Set(chunk.map(x=>x.sku));
-    chunk.forEach(x=>seen.add(x.sku));
     if(sendingSession===bound){
+     chunk.forEach(x=>seen.add(x.sku));
+     const previous=queue;
      queue=queue.filter(x=>!sent.has(x.sku)&&!seen.has(x.sku));
-     persistQueue();
+     if(!persistQueue())queue=previous;
      recent=recent.map(x=>sent.has(x.sku)?{...x,pending:false}:x);
     }
     syncFailures=0;syncError='';retryBlocked=false;
