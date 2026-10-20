@@ -51,7 +51,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  await page.locator('#workerInput').fill('ARM_10004');
  await page.locator('#workerInput').press('Enter');
  await page.locator('#workerSyncHelp').waitFor({state:'visible'});
- assert.match(await page.locator('#workerSyncHelp').innerText(),/صلاحيات قاعدة البيانات/);
+ assert.match(await page.locator('#workerSyncHelp').innerText(),/صلاحيات الخادم|قواعد Firebase/);
  assert.match(await page.locator('#workerSync').innerText(),/لم تكتمل المزامنة/);
  assert.equal(await page.evaluate(()=>Object.keys(window.__v83.scans).length),0,'rejected writes cannot be reported as server confirmed');
  const raw=await page.evaluate(()=>localStorage.getItem('batco_branch_presence_queue_v80_qa83_demo83'));
