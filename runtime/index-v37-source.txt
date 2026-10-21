@@ -3215,6 +3215,21 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                 time: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
             });
+            // V96: persist an initial *server* session at the same time as the login.
+            // A login log is still authoritative when session writes fail; never invent an online state.
+            try {
+                await Promise.race([db.collection('site_sessions').doc('employee_login_'+verifiedLoginRef.id).set({
+                    loginAttemptId,securityPhotoId:photoRef.id,loginLogId:verifiedLoginRef.id,
+                    name:canonicalName,employeeId:employeeAccount.id,
+                    identitySource:'verified_login_server_v96',
+                    startTime:firebase.firestore.FieldValue.serverTimestamp(),
+                    lastActive:firebase.firestore.FieldValue.serverTimestamp(),
+                    state:'online',durationMinutes:0,
+                    userAgent:navigator.userAgent
+                },{merge:true}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('SESSION_PROBE_TIMEOUT')),4500))]);
+            } catch(sessionError) {
+                console.warn('[V96 initial server session failed; login log remains verified]',sessionError?.code||sessionError?.message||sessionError);
+            }
             localStorage.setItem(STORAGE_KEYS.NAME, canonicalName);
             localStorage.removeItem(STORAGE_KEYS.TOKEN);
             localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, employeeAccount.id);
@@ -4426,7 +4441,13 @@ const App = () => {
         setAccessVerified(Boolean(employeeId) && authVersion === EMPLOYEE_AUTH_VERSION);
     }, [sessionName, isAdmin]);
 
-    const [sessionId] = useState(() => Date.now().toString() + Math.random().toString(36).substr(2, 5));
+    // Keep the same session across reloads of a single authenticated login.
+    const [sessionId] = useState(() => {
+        const proof=readLoginPhotoProof();
+        return proof?.role==='employee'&&proof?.loginLogId
+            ?'employee_login_'+String(proof.loginLogId)
+            :Date.now().toString()+Math.random().toString(36).substr(2,5);
+    });
     
     const [cart, setCart] = useState(() => {
         const name = localStorage.getItem(STORAGE_KEYS.NAME) || '';

@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const admin=fs.readFileSync('admin-dashboard.html','utf8'),app=fs.readFileSync('runtime/index-v37-source.txt','utf8');
+function has(src,need,label){assert(src.includes(need),label+' missing '+need)}
+const section=admin.slice(admin.indexOf('function EmployeeLive(){'),admin.indexOf('function CustomerLive(){'));
+has(section,'verifiedLoginRecords.forEach(log=>','show server-verified logins without requiring site_sessions');
+has(section,"put(key,{id:log.id",'server login display');
+has(section,"kind:'verified_login'","independent login display");
+has(section,"kind:'profile_history'","profile record with unverified warning");
+has(section,"r.kind==='profile_history'","proper distinction of unverified profile history");
+has(section,'لم تصل جلسة حضور حديثة','never hide successful login due to session error');
+has(section,"Boolean(r.session&&employeeIsHere(r.session))",'online only when a verified session is fresh');
+has(section,'حالة اتصال سجلات الموظفين','live dashboard health indicator');
+has(section,"collectionSources[key].fromCache",'cache-only warning');
+has(section,"unlinkedSessions.length",'orphaned session diagnostic');
+const attach=admin.slice(admin.indexOf('const attach=(key,name)=>'),admin.indexOf('Object.entries(COLLECTIONS).forEach'));
+has(attach,'includeMetadataChanges:true','recognize cached vs server snapshot transition');
+has(admin,"const verifiedLoginRecords=eLogins.filter(x=>x.faceVerified===true&&!x.isAdmin&&x.employeeId&&x.securityPhotoId)",'legacy login logs included');
+has(admin,"verifiedLoginById.get(String(s.loginLogId))",'session log matching based on immutable doc id');
+const login=app.slice(app.indexOf('const finalizeEmployeeLogin ='),app.indexOf('const finalizeAdminLogin ='));
+has(login,"db.collection('login_logs').add({",'employee record acknowledged');
+has(login,'loginAttemptId,','attempt correlation persisted');
+has(login,".doc('employee_login_'+verifiedLoginRef.id).set({",'persist initial login session');
+has(login,"loginLogId:verifiedLoginRef.id",'link same verified login');
+has(login,"Promise.race([db.collection('site_sessions')",'bounded waiting for session');
+has(app,"?'employee_login_'+String(proof.loginLogId)",'stable reloaded session');
+console.log('V96 employee activity visibility and Firebase source semantics: PASS');
