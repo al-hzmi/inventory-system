@@ -1,0 +1,37 @@
+name: V91 missing invoice incident
+on:
+  push:
+    branches: [main, 'hotfix/v91-mohammed-dalal-records-*']
+  pull_request:
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'v44-observability.js'
+      - 'admin-dashboard.html'
+      - 'tests/v91-incident-audit.cjs'
+      - '.github/workflows/v91-missing-invoice.yml'
+  workflow_dispatch:
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v91-incident-audit.cjs
+      - run: npm run build
+      - run: |
+          node - <<'NODE'
+          const fs=require('fs'),assert=require('assert');
+          const html=fs.readFileSync('admin-dashboard.html','utf8');
+          const adminJs=[...html.matchAll(/assets\/build\/admin-dashboard\.([a-f0-9]+)\.js/g)].map(x=>'assets/build/admin-dashboard.'+x[1]+'.js');
+          assert(adminJs.length>0,'admin page must be compiled');
+          assert(adminJs.some(f=>fs.existsSync(f)&&fs.readFileSync(f,'utf8').includes('Mohammed Dalal')),'compiled admin incident panel missing');
+          const employeeJs=[...fs.readdirSync('assets/build')].filter(f=>f.startsWith('employee.')&&f.endsWith('.js'));
+          assert(employeeJs.some(f=>fs.readFileSync('assets/build/'+f,'utf8').includes('copyLocalReceipt')),'compiled invoice export missing');
+          console.log('V91 built live pages: PASS');
+          NODE
