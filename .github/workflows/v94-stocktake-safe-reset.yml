@@ -1,0 +1,19 @@
+name: V94 stocktake safe reset and duplicate reconciliation
+on:
+  push:
+    branches: [main, 'hotfix/v94-stocktake-safety-reset-*']
+  pull_request:
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v94-stocktake-safe-reset.cjs
+      - run: npm run build
