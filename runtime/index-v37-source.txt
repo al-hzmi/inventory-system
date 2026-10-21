@@ -4530,18 +4530,28 @@ const App = () => {
             }
         }, 90000);
         // A restored/foregrounded tab must refresh its presence without waiting for a 5-minute cycle.
+        // Restore a complete authenticated presence row when the page resumes.
+        // A lastActive-only merge would create an unverified phantom after a failed initial write.
         const onForeground = () => { if(document.visibilityState==='visible'&&isTracking) {
             const proof=readLoginPhotoProof();
-            if(!isAdmin&&!(proof?.role==='employee'&&proof.employeeId===localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)&&proof.photoId&&proof.loginAttemptId))return;
+            if(!isAdmin&&!(proof?.role==='employee'&&proof.employeeId===localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)&&proof.photoId&&proof.loginAttemptId&&proof.loginLogId))return;
             getDb().then(db=>db.collection('site_sessions').doc(sessionId).set({
+                loginAttemptId:!isAdmin?proof?.loginAttemptId||'':'',
+                securityPhotoId:!isAdmin?proof?.photoId||'':'',
+                loginLogId:!isAdmin?proof?.loginLogId||'':'',
+                identitySource:!isAdmin?'employee_login_photo_record':'admin_session',
+                name:sessionName,employeeId:isAdmin?null:(localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)||null),
+                userAgent:navigator.userAgent,
                 lastActive:firebase.firestore.FieldValue.serverTimestamp(),state:'online'
             },{merge:true})).catch(e=>console.warn('[Employee return presence]',e?.code||e?.message||e));
         }};
         document.addEventListener('visibilitychange',onForeground);
+        window.addEventListener('pageshow',onForeground);
         return () => {
             isTracking = false;
             clearInterval(interval);
             document.removeEventListener('visibilitychange',onForeground);
+            window.removeEventListener('pageshow',onForeground);
         };
     }, [sessionName, sessionId, isAdmin, accessVerified]);
 
