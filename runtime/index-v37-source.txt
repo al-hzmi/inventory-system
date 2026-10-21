@@ -1329,6 +1329,27 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
     const historyKey = `b2b_history_${sessionName}`;
     const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem(historyKey)) || []);
 
+    const [historyNotice,setHistoryNotice] = useState('');
+    const copyLocalReceipt = async order => {
+        const text = [
+            'تقرير فاتورة محفوظة بجهاز الموظف (لا يثبت وصولها إلى الخادم)',
+            'الموظف: ' + sessionName,
+            'العميل: ' + (order.customer || ''),
+            'التاريخ: ' + (order.date || ''),
+            'المبلغ: ' + (order.totalAmount || 0),
+            'معرّف الخادم: ' + (order.serverId || 'غير متوفر - سجل قديم'),
+            'تفاصيل الفاتورة:',
+            order.msg || ''
+        ].join('\n');
+        try {
+            if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+            else {
+                const input=document.createElement('textarea');input.value=text;document.body.appendChild(input);input.select();
+                if(!document.execCommand('copy'))throw new Error('COPY_FAILED');input.remove();
+            }
+            setHistoryNotice('تم نسخ بيانات الفاتورة. أرسلها للإدارة للمطابقة؛ لا تعاود إنشاء الفاتورة قبل التحقق منها.');
+        } catch(e) { console.warn('[Invoice receipt copy]',e);setHistoryNotice('تعذر النسخ تلقائيًا؛ استخدم إعادة إرسال واتساب أو مشاركة نص الفاتورة مع الإدارة.'); }
+    };
     const resendWhatsApp = (msg) => {
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     };
@@ -1350,6 +1371,7 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                     <h3 className="font-bold text-primary flex items-center gap-8">
                         <Icon.List className="w-20 h-20 text-accent"/> سجل الفواتير السابقة
                     </h3>
+                    {historyNotice&&<p role="status" className="text-[11px] text-secondary px-3">{historyNotice}</p>}
                     <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
                 <div className="p-16 overflow-y-auto flex-1 bg-surface">
@@ -1363,12 +1385,16 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                                         <div>
                                             <div className="text-[14px] font-bold text-primary">{order.customer}</div>
                                             <div className="text-[11px] text-muted mt-2">{order.date} • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
+                                            <div className="text-[10px] text-secondary mt-1">{order.serverId?`معرّف الفاتورة: ${order.serverId}`:'محفوظ على هذا الجهاز فقط — يلزم مطابقته بالخادم'}</div>
                                         </div>
                                         <div className="text-[15px] font-bold text-accent">{NUMBER_FORMATTER.format(order.totalAmount)} ر.س</div>
                                     </div>
                                     <div className="flex gap-8 mt-8">
                                         <button onClick={() => resendWhatsApp(order.msg)} className="flex-1 h-36 bg-successSoft text-success rounded-8 font-semibold text-[13px] hover:bg-success hover:text-white transition-colors flex items-center justify-center gap-6">
                                             إعادة إرسال واتساب
+                                        </button>
+                                        <button type="button" onClick={() => copyLocalReceipt(order)} className="flex-1 h-36 rounded-8 bg-surface border border-border text-primary text-[12px] font-bold">
+                                            نسخ الفاتورة
                                         </button>
                                         <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
                                             <Icon.Trash className="w-16 h-16"/>
@@ -4307,7 +4333,7 @@ const App = () => {
                     durationMinutes: 0,
                     userAgent: navigator.userAgent
                 });
-            } catch (e) {}
+            } catch (e) { console.warn('[V91 employee initial session]', e?.code || e?.message || e); }
         };
         initSession();
 
