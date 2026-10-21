@@ -1,0 +1,42 @@
+name: V92 verified attendance, feedback and seller
+on:
+  push:
+    branches: [main, 'hotfix/v92-verified-attendance-feedback-*']
+  pull_request:
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'v44-observability.js'
+      - 'admin-dashboard.html'
+      - 'v70-employee-feedback.js'
+      - 'v70-admin-feedback.js'
+      - 'admin-feedback.html'
+      - 'tests/v92-verified-attendance-feedback.cjs'
+      - '.github/workflows/v92-verified-attendance-feedback.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v91-incident-audit.cjs
+      - run: node tests/v92-verified-attendance-feedback.cjs
+      - run: npm install --no-save --no-package-lock --ignore-scripts jsdom@24.1.3
+      - run: node tests/v70-feedback.mjs
+      - run: npm run build
+      - run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const out=fs.readdirSync('assets/build');
+          const client=out.filter(f=>f.startsWith('employee.')&&f.endsWith('.js'));
+          const admin=out.filter(f=>f.startsWith('admin-dashboard.')&&f.endsWith('.js'));
+          assert(client.some(f=>fs.readFileSync('assets/build/'+f,'utf8').includes('INVOICE_WRITE_TIMEOUT')),'invoice save guarantee absent from compiled employee bundle');
+          assert(admin.some(f=>fs.readFileSync('assets/build/'+f,'utf8').includes('verifiedLoginRecords')),'verified login counter absent from compiled admin bundle');
+          console.log('V92 compiled frontend: PASS');
+          NODE

@@ -1486,7 +1486,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
         const gregorianDate = new Date().toLocaleDateString('en-GB');
         let msg = `*طلب مبيعات جديد*\n`;
         msg += `════════════════\n`;
-        msg += `المندوب: ${sessionName}\n`;
+        msg += `البائع: ${sessionName}\n`;
         msg += `العميل: ${customer.trim()}\n`;
         msg += `المستودع: ${WAREHOUSES[warehouse]?.name || warehouse}\n`;
         msg += `التاريخ: ${gregorianDate}\n`;
@@ -3065,7 +3065,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                 lastPhotoVerifiedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
             await db.collection('employee_login_attempts').doc(loginAttemptId).set({photoCaptured:true,securityPhotoId:photoRef.id,status:'completed',completedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-            await db.collection('login_logs').add({
+            const verifiedLoginRef = await db.collection('login_logs').add({
                 name: canonicalName,
                 employeeId: employeeAccount.id,
                 enteredAlias,
@@ -3080,7 +3080,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
             localStorage.removeItem(STORAGE_KEYS.TOKEN);
             localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, employeeAccount.id);
             localStorage.setItem(STORAGE_KEYS.EMPLOYEE_AUTH_VERSION, EMPLOYEE_AUTH_VERSION);
-            localStorage.setItem(STORAGE_KEYS.LOGIN_PHOTO_PROOF, JSON.stringify({role:'employee',employeeId:employeeAccount.id,photoId:photoRef.id,loginAttemptId,verifiedAt:Date.now()}));
+            localStorage.setItem(STORAGE_KEYS.LOGIN_PHOTO_PROOF, JSON.stringify({role:'employee',employeeId:employeeAccount.id,photoId:photoRef.id,loginAttemptId,loginLogId:verifiedLoginRef.id,verifiedAt:Date.now()}));
             localStorage.removeItem(STORAGE_KEYS.ACCESS_GATE_VERSION);
             localStorage.removeItem(STORAGE_KEYS.ACCESS_APPROVED_NAME);
             onLogin(canonicalName, false);
@@ -4319,13 +4319,19 @@ const App = () => {
     }, [sessionName]);
 
     useEffect(() => {
-        if (!sessionName) return;
+        if (!sessionName || (!isAdmin && !accessVerified)) return;
         
         let isTracking = true;
         const initSession = async () => {
             try {
                 const db = await getDb();
+                const proof=readLoginPhotoProof();
+                if(!isAdmin&&!(proof?.role==='employee'&&proof.employeeId===localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)&&proof.photoId&&proof.loginAttemptId&&proof.loginLogId))return;
                 await db.collection('site_sessions').doc(sessionId).set({
+                    loginAttemptId:!isAdmin?proof?.loginAttemptId||'':'',
+                    securityPhotoId:!isAdmin?proof?.photoId||'':'',
+                    loginLogId:!isAdmin?proof?.loginLogId||'':'',
+                    identitySource:!isAdmin?'employee_login_photo_record':'admin_session',
                     name: sessionName,
                     employeeId: isAdmin ? null : (localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || null),
                     startTime: firebase.firestore.FieldValue.serverTimestamp(),
@@ -4341,25 +4347,41 @@ const App = () => {
             if (document.visibilityState === 'visible' && isTracking) {
                 getDb().then(db => {
                     // Restore identity even when the initial session write failed on a transient quota/network error.
+                    const proof=readLoginPhotoProof();
+                    if(!isAdmin&&!(proof?.role==='employee'&&proof.employeeId===localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)&&proof.photoId&&proof.loginAttemptId&&proof.loginLogId))return;
                     db.collection('site_sessions').doc(sessionId).set({
+                        loginAttemptId:!isAdmin?proof?.loginAttemptId||'':'',
+                        securityPhotoId:!isAdmin?proof?.photoId||'':'',
+                        loginLogId:!isAdmin?proof?.loginLogId||'':'',
+                        identitySource:!isAdmin?'employee_login_photo_record':'admin_session',
                         name: sessionName,
                         employeeId: isAdmin ? null : (localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || null),
                         userAgent: navigator.userAgent,
                         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-                        durationMinutes: firebase.firestore.FieldValue.increment(5)
+                        durationMinutes: firebase.firestore.FieldValue.increment(1.5),
+                        state:'online'
                     }, { merge: true }).catch(e=>console.warn('[Employee session heartbeat]',e?.code||e?.message||e));
 
                     db.collection('users').doc(toSafeDocId(sessionName)).set({
-                        timeSpentMinutes: firebase.firestore.FieldValue.increment(5),
+                        timeSpentMinutes: firebase.firestore.FieldValue.increment(1.5),
                         lastActive: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true }).catch(e=>console.warn('[Employee profile heartbeat]',e?.code||e?.message||e));
                 }).catch(e=>console.warn('[Employee session init]',e?.code||e?.message||e));
             }
-        }, 300000);
-        
+        }, 90000);
+        // A restored/foregrounded tab must refresh its presence without waiting for a 5-minute cycle.
+        const onForeground = () => { if(document.visibilityState==='visible'&&isTracking) {
+            const proof=readLoginPhotoProof();
+            if(!isAdmin&&!(proof?.role==='employee'&&proof.employeeId===localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)&&proof.photoId&&proof.loginAttemptId))return;
+            getDb().then(db=>db.collection('site_sessions').doc(sessionId).set({
+                lastActive:firebase.firestore.FieldValue.serverTimestamp(),state:'online'
+            },{merge:true})).catch(e=>console.warn('[Employee return presence]',e?.code||e?.message||e));
+        }};
+        document.addEventListener('visibilitychange',onForeground);
         return () => {
             isTracking = false;
             clearInterval(interval);
+            document.removeEventListener('visibilitychange',onForeground);
         };
     }, [sessionName, sessionId, isAdmin, accessVerified]);
 

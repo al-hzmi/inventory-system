@@ -6,7 +6,7 @@ const RELEASE='v70',COLLECTION='employee_experience_feedback',PREFIX='batco_empl
 // Faster first-visit prompt: ~4s after identity/server precheck; keep background-interaction protection.
 const INITIAL_DELAY=4000,RETRY_DELAY=800,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=1800;
 let identity=null,visit=0,dialog=null,waiting=false,sending=false,rating=0,visible=false,previousFocus=null;
-let checkTimer=null,firstReadyAt=0,lastInteraction=Date.now();
+let checkTimer=null,firstReadyAt=0,lastInteraction=Date.now(),resetUnsubscribe=null;
 for(const eventName of ['pointerdown','touchstart','keydown','wheel','scroll']){
  document.addEventListener(eventName,()=>{lastInteraction=Date.now()},true);
 }
@@ -65,7 +65,7 @@ async function submit(){
    release:RELEASE,topic:'site_and_recent_update',schemaVersion:1,
    employeeId:identity.id,employeeName:identity.name,
    stars:rating,note,submittedAt:window.firebase.firestore.FieldValue.serverTimestamp(),
-   source:'employee_website'
+   source:'employee_website',status:'submitted'
   };
   await limited(firestore.collection(COLLECTION).doc(docFor(identity.id)).set(payload,{merge:true}),12000);
   const state=readState();saveState({...state,visits:visit,submitted:true,submittedAt:Date.now()});
@@ -124,15 +124,35 @@ function isBusy(){
  if(document.querySelector('#b61-admin-panel,[role="dialog"]:not(#batco70-feedback-dialog)'))return true;
  return false;
 }
+function acceptRatingReset(doc){
+ if(!identity||!doc?.exists)return false;
+ const row=doc.data()||{},generation=Number(row.resetGeneration)||0,state=readState();
+ if(generation>Number(state.resetGenerationSeen||0)&&!Number(row.stars)){
+  saveState({...state,submitted:false,deferThroughVisit:0,resetGenerationSeen:generation});
+  return true;
+ }
+ return false;
+}
 async function shouldSkipServer(){
  try{
-  const doc=await limited(db().collection(COLLECTION).doc(docFor(identity.id)).get({source:'server'}),2200);
+  const doc=await limited(db().collection(COLLECTION).doc(docFor(identity.id)).get({source:'server'}),3500);
   if(doc.exists&&Number(doc.data()?.stars)>0){
-   const state=readState();saveState({...state,visits:visit,submitted:true});
+   const state=readState();
+   saveState({...state,visits:visit,submitted:true,resetGenerationSeen:Math.max(Number(state.resetGenerationSeen||0),Number(doc.data()?.resetGeneration||0))});
    return true;
   }
- }catch(error){console.warn('[Feedback V70] Cannot precheck existing rating',error?.code||error?.message||String(error))}
+  acceptRatingReset(doc);
+ }catch(error){console.warn('[Feedback V92] Cannot precheck existing rating',error?.code||error?.message||String(error))}
  return false;
+}
+function watchRatingResets(){
+ if(resetUnsubscribe||!identity)return;
+ try{
+  resetUnsubscribe=db().collection(COLLECTION).doc(docFor(identity.id)).onSnapshot(doc=>{
+   if(doc.metadata?.fromCache)return;
+   if(acceptRatingReset(doc)&&!visible&&!sending)schedule();
+  },error=>console.warn('[Feedback V92] Reset listener failed',error?.code||error?.message||String(error)));
+ }catch(error){console.warn('[Feedback V92] Reset watch init',error?.message||String(error))}
 }
 function schedule(){
  if(waiting)return;waiting=true;
@@ -155,9 +175,11 @@ async function init(){
  const state=readState();
  visit=Math.max(0,Number(state.visits)||0)+1;
  saveState({...state,visits:visit});
- if(state.submitted||visit<=Number(state.deferThroughVisit||0))return;
- if(await shouldSkipServer())return;
+ const alreadyRated=await shouldSkipServer();
+ watchRatingResets();
  if(getIdentity()?.id!==identity.id)return;
+ const nextState=readState();
+ if(alreadyRated||nextState.submitted||visit<=Number(nextState.deferThroughVisit||0))return;
  schedule();
 }
 window.BatcoFeedback={release:RELEASE,isVisible:()=>visible};

@@ -14,13 +14,15 @@ const device=()=>({installId:installId(),fingerprint:'fp44_'+hash([navigator.pla
 const path=location.pathname.split('/').pop()||'index.html';
 const employeeName=()=>{try{return String(localStorage.getItem('inventory_user_name_v2')||'').trim()}catch{return''}};
 const employeeId=()=>{try{return String(localStorage.getItem('inventory_employee_id_v2')||'').trim()}catch{return''}};
+const employeeProof=()=>{try{return safeJson(localStorage.getItem('inventory_login_photo_proof_v2')||'null',{})||{}}catch{return{}}};
+const employeeSessionValid=()=>{try{const id=employeeId(),p=employeeProof();return Boolean(employeeName()&&id&&localStorage.getItem('inventory_employee_auth_version_v2')==='2'&&p.role==='employee'&&p.employeeId===id&&p.photoId&&p.loginAttemptId)}catch{return false}};
 const quickProfile=()=>{try{return safeJson(localStorage.getItem('batco_quick_customer_profile_v1')||'null')}catch{return null}};
 const visitorId=()=>{try{return String(localStorage.getItem('batco_customer_visitor_id_v1')||'').trim()}catch{return''}};
 const guestName=()=>{try{return String(localStorage.getItem('customer_guest_name_v1')||'').trim()}catch{return''}};
 const isCustomerPath=/customer\.html$/i.test(path);
 const employeeCustomerView=isCustomerPath&&new URLSearchParams(location.search).get('employeeView')==='1'&&employeeName();
 function actor(){
- if(employeeName()&&(!isCustomerPath||employeeCustomerView))return{type:'employee',id:employeeId()||'name_'+hash(employeeName()),name:employeeName(),employeeId:employeeId(),key:'employee_'+(employeeId()||hash(employeeName())),surface:employeeCustomerView?'customer_portal':'employee_app'};
+ if(employeeSessionValid()&&(!isCustomerPath||employeeCustomerView))return{type:'employee',id:employeeId()||'name_'+hash(employeeName()),name:employeeName(),employeeId:employeeId(),key:'employee_'+(employeeId()||hash(employeeName())),surface:employeeCustomerView?'customer_portal':'employee_app'};
  if(isCustomerPath){const q=quickProfile(),id=String(q?.uid||visitorId()||installId());return{type:'customer',id,name:String(q?.name||guestName()||'').trim(),company:String(q?.company||'').trim(),visitorId:visitorId(),key:'customer_'+id,surface:'customer_portal'};}
  return{type:'system',id:'unknown',name:'',key:'system_unknown',surface:path};
 }
@@ -32,6 +34,7 @@ const DEFAULTS={
 };
 let permissionDoc={},effective={...DEFAULTS[me.type]},db=null,permUnsub=null,presenceTimer=null,cartTimer=null,searchTimer=null,lastCartHash='',cartSyncInFlight=false,presenceFailures=0;
 const sessionId='v44s_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8),dev=device();
+const identityIsCurrent=()=>me.type!=='employee'||(employeeSessionValid()&&actor().key===me.key);
 function serverTs(){return window.firebase?.firestore?.FieldValue?.serverTimestamp?.()||new Date()}
 function initDb(){try{if(!window.firebase||!window.firebase.apps?.length)return null;return window.firebase.firestore()}catch{return null}}
 function actorOverrideKeys(){const out=[me.id,me.key];if(me.employeeId)out.push(me.employeeId);if(me.visitorId)out.push(me.visitorId);if(me.name)out.push('name_'+hash(norm(me.name)));return[...new Set(out.filter(Boolean))]}
@@ -87,7 +90,7 @@ function applyPermissionDom(){
 }
 function basePayload(action,label='',data={}){return{version:VERSION,featureVersion:FEATURE_VERSION,sessionId,actorType:me.type,actorId:me.id,actorKey:me.key,actorName:me.name||'',company:me.company||'',employeeId:me.employeeId||'',visitorId:me.visitorId||'',surface:me.surface,page:path,action,label:String(label||'').slice(0,240),data:data||{},device:{installId:dev.installId,fingerprint:dev.fingerprint,platform:dev.platform,screen:dev.screen,standalone:dev.standalone},createdAt:serverTs(),clientAt:Date.now()}}
 let lastEvent=new Map();
-async function log(action,label='',data={},dedupeMs=350){if(!db||isQa())return;const key=action+'|'+label+'|'+JSON.stringify(data||{}).slice(0,180),prev=lastEvent.get(key)||0;if(now()-prev<dedupeMs)return;lastEvent.set(key,now());try{await db.collection('v44_activity_logs').add(basePayload(action,label,data))}catch(e){console.warn('[V44 activity]',e?.message||e)}}
+async function log(action,label='',data={},dedupeMs=350){if(!db||isQa()||!identityIsCurrent())return;const key=action+'|'+label+'|'+JSON.stringify(data||{}).slice(0,180),prev=lastEvent.get(key)||0;if(now()-prev<dedupeMs)return;lastEvent.set(key,now());try{await db.collection('v44_activity_logs').add(basePayload(action,label,data))}catch(e){console.warn('[V44 activity]',e?.message||e)}}
 function presenceDocId(){return(me.key+'_'+dev.fingerprint).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,240)}
 function presenceWarning(show){
  let warning=document.getElementById('v91-presence-warning');
@@ -99,9 +102,12 @@ function presenceWarning(show){
  document.body.appendChild(warning);
 }
 async function heartbeat(state='online'){
- if(!db||isQa())return;
+ if(!db||isQa()||!identityIsCurrent())return;
  try{
-  await db.collection('v44_presence').doc(presenceDocId()).set({version:VERSION,featureVersion:FEATURE_VERSION,actorType:me.type,actorId:me.id,actorKey:me.key,actorName:me.name||'',company:me.company||'',employeeId:me.employeeId||'',visitorId:me.visitorId||'',surface:me.surface,page:path,state,lastActive:serverTs(),device:dev,sessionId},{merge:true});
+  const proof=me.type==='employee'?employeeProof():null;
+  await db.collection('v44_presence').doc(presenceDocId()).set({version:VERSION,featureVersion:FEATURE_VERSION,actorType:me.type,actorId:me.id,actorKey:me.key,actorName:me.name||'',company:me.company||'',employeeId:me.employeeId||'',visitorId:me.visitorId||'',surface:me.surface,page:path,state,lastActive:serverTs(),device:dev,sessionId,
+   loginAttemptId:proof?.loginAttemptId||'',securityPhotoId:proof?.photoId||'',loginLogId:proof?.loginLogId||'',identitySource:me.type==='employee'?'local_photo_login_evidence':'customer_visit'
+  },{merge:true});
   presenceFailures=0;presenceWarning(false);
  }catch(e){presenceFailures++;console.warn('[V91 presence save]',e?.code||e?.message||e);if(presenceFailures>=2&&document.visibilityState==='visible')presenceWarning(true)}
 }
@@ -111,7 +117,7 @@ document.addEventListener('click',e=>{const el=e.target?.closest?.('button,a,[ro
 document.addEventListener('input',e=>{const el=e.target;if(!(el instanceof HTMLInputElement||el instanceof HTMLTextAreaElement))return;const p=norm(el.placeholder||el.getAttribute('aria-label')||'');if(!/بحث/.test(p))return;if(effective.search===false){el.value='';denied();return}clearTimeout(searchTimer);const q=String(el.value||'').trim();searchTimer=setTimeout(()=>{if(q.length>=1)log('search_query',q,{placeholder:el.placeholder||'',surface:me.surface},900)},1000)},true);
 function cartCandidate(){try{if(me.type==='employee'){const n=employeeName();if(!n)return null;return{key:'b2b_cart_'+n,value:localStorage.getItem('b2b_cart_'+n)}}const q=quickProfile(),keys=[];if(q?.uid)keys.push('customer_cart_v1_'+q.uid);keys.push('customer_guest_cart_v1');for(const k of keys){const v=localStorage.getItem(k);if(v&&v!=='{}')return{key:k,value:v}}return{key:keys[0],value:localStorage.getItem(keys[0])}}catch{return null}}
 function normalizeCart(raw){const obj=safeJson(raw||'{}',{})||{};return Object.values(obj).map(r=>({id:String(r?.id||r?.cleanId||''),cleanId:String(r?.cleanId||''),name:String(r?.name||''),qty:Number(r?.cartQty??r?.totalQty??0)||0,warehouseKey:String(r?.warehouseKey||''),pack:String(r?.pack||''),price:Number(r?.cartonPrice??r?.price??0)||0,imageFile:String(r?.imageFile||''),branchQuantities:r?.branchQuantities||{}})).filter(x=>x.id||x.cleanId)}
-async function syncCart(){if(!db||isQa()||cartSyncInFlight)return;const c=cartCandidate(),items=normalizeCart(c?.value),signature=JSON.stringify(items),sig=hash(signature);if(sig===lastCartHash)return;cartSyncInFlight=true;const totalQty=items.reduce((s,x)=>s+Number(x.qty||0),0),payload={version:VERSION,featureVersion:FEATURE_VERSION,actorType:me.type,actorId:me.id,actorKey:me.key,actorName:me.name||'',company:me.company||'',surface:me.surface,cartStorageKey:c?.key||'',itemsCurrent:items,itemCount:items.length,totalQty,updatedAt:serverTs(),device:{installId:dev.installId,fingerprint:dev.fingerprint,platform:dev.platform}};if(items.length){payload.lastNonEmptyItems=items;payload.lastNonEmptyAt=serverTs()}try{await db.collection('v44_live_carts').doc(me.key.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,240)).set(payload,{merge:true});lastCartHash=sig;await log('cart_snapshot',`${items.length} صنف`,{itemCount:items.length,totalQty,items},1000)}catch(e){console.warn('[V44 cart]',e?.message||e)}finally{cartSyncInFlight=false}}
+async function syncCart(){if(!db||isQa()||cartSyncInFlight||!identityIsCurrent())return;const c=cartCandidate(),items=normalizeCart(c?.value),signature=JSON.stringify(items),sig=hash(signature);if(sig===lastCartHash)return;cartSyncInFlight=true;const totalQty=items.reduce((s,x)=>s+Number(x.qty||0),0),payload={version:VERSION,featureVersion:FEATURE_VERSION,actorType:me.type,actorId:me.id,actorKey:me.key,actorName:me.name||'',company:me.company||'',surface:me.surface,cartStorageKey:c?.key||'',itemsCurrent:items,itemCount:items.length,totalQty,updatedAt:serverTs(),device:{installId:dev.installId,fingerprint:dev.fingerprint,platform:dev.platform}};if(items.length){payload.lastNonEmptyItems=items;payload.lastNonEmptyAt=serverTs()}try{await db.collection('v44_live_carts').doc(me.key.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,240)).set(payload,{merge:true});lastCartHash=sig;await log('cart_snapshot',`${items.length} صنف`,{itemCount:items.length,totalQty,items},1000)}catch(e){console.warn('[V44 cart]',e?.message||e)}finally{cartSyncInFlight=false}}
 function connectPermissions(){try{permUnsub=db.collection('system_controls').doc('permissions_v44').onSnapshot(s=>{permissionDoc=s.exists?(s.data()||{}):{};resolvePermissions()},()=>{})}catch{}}
 let initializingDb=false;
 function boot(){db=initDb();if(!db){if(!initializingDb&&typeof window.getDb==='function'){initializingDb=true;window.getDb().then(()=>{initializingDb=false;boot()}).catch(e=>{initializingDb=false;console.warn('[V44 initialization]',e?.code||e?.message||e);setTimeout(boot,1600)})}else setTimeout(boot,450);return}window.__V44_OBSERVABILITY={version:VERSION,featureVersion:FEATURE_VERSION,actor:me,log,permissions:()=>({...effective}),syncCart};connectPermissions();heartbeat('online');log('session_start',me.surface,{path:location.pathname});presenceTimer=setInterval(()=>heartbeat(document.visibilityState==='visible'?'online':'away'),45000);cartTimer=setInterval(syncCart,1400);syncCart();setTimeout(applyPermissionDom,400);const mo=new MutationObserver(()=>{clearTimeout(mo.t);mo.t=setTimeout(applyPermissionDom,120)});mo.observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('visibilitychange',()=>{heartbeat(document.visibilityState==='visible'?'online':'away');if(document.visibilityState==='visible')log('page_visible',path)});window.addEventListener('pagehide',()=>{heartbeat('left');log('session_end',me.surface,{},0)})}
