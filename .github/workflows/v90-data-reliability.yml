@@ -1,0 +1,34 @@
+name: V90 invoice and activity reliability
+on:
+  push:
+    branches: [main, 'hotfix/v90-invoice-presence-*']
+  pull_request:
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'v44-observability.js'
+      - 'tests/v90-data-reliability.cjs'
+      - '.github/workflows/v90-data-reliability.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v90-data-reliability.cjs
+      - run: npm run build
+      - run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const root=fs.readFileSync('index.html','utf8');
+          if(/document\.write\(/.test(root))throw Error('unexpected legacy bootstrap');
+          const built=fs.readdirSync('assets/build').filter(x=>x.startsWith('employee.')&&x.endsWith('.js'));
+          if(!built.some(x=>fs.readFileSync('assets/build/'+x,'utf8').includes('INVOICE_WRITE_TIMEOUT')))throw Error('invoice fix absent from build');
+          console.log('V90 built employee invoice: PASS');
+          NODE
