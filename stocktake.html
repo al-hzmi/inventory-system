@@ -118,11 +118,13 @@ window.addEventListener('touchstart',ensureFeedbackAudio,{passive:true});
 window.addEventListener('keydown',ensureFeedbackAudio,{passive:true});
 const teamMemberIds=t=>Array.isArray(t.memberEmployeeIds)?t.memberEmployeeIds:(t.assignedEmployeeId?[t.assignedEmployeeId]:[]);const teamMemberNames=t=>Array.isArray(t.memberEmployeeNames)?t.memberEmployeeNames:[t.assignedEmployeeName,t.counterName].filter(Boolean);const isMember=t=>user.isAdmin||teamMemberIds(t).includes(user.employeeId)||teamMemberNames(t).some(x=>norm(x)===norm(user.name));const canAccess=c=>{if(user.isAdmin)return true;if(!user.validEmployee||!c?.enabled)return false;const ids=new Set(c.allowedEmployeeIds||[]),names=new Set((c.allowedEmployeeNames||[]).map(norm));return c.accessMode==='all'||(c.accessMode==='selected'&&(ids.has(user.employeeId)||names.has(norm(user.name))))};
 const draftStore=StocktakeCore.drafts(user.employeeId||ROOT_ID),saving=new Set();let itemCacheOnly=true,focusedItem='',lastRenderScope='';
+let itemListPaint=0;
+function scheduleItemListPaint(){if(itemListPaint)return;itemListPaint=requestAnimationFrame(()=>{itemListPaint=0;render()})}
 const draftKey=(id,kind='qty')=>`${state.campaign?.id}:${state.team?.id}:${id}:${kind}`;
 const draftValue=i=>draftStore.get(draftKey(i.id))?.value??((i.countStatus||'pending')!=='pending'?(Number.isFinite(i._teamActual)?i._teamActual:i.actualQty):'');
 function saveDraft(id,value,kind='qty',extra={}){const ok=draftStore.set(draftKey(id,kind),{value,...extra});if(!ok)toast('تعذر حفظ المسودة على الجهاز؛ أبقِ الصفحة مفتوحة حتى تأكيد المزامنة');return ok}
 function syncHtml(){const pending=state.items.filter(i=>i._pending).length;const message=!durableCache?'التخزين الدائم غير متاح على هذا المتصفح؛ انتظر تأكيد المزامنة قبل المغادرة':pending?`${pending} صنف محفوظ على الجهاز · بانتظار المزامنة`:!navigator.onLine?'بدون اتصال · يمكنك مواصلة الجرد على الأصناف المحمّلة':itemCacheOnly?'عرض البيانات المحفوظة على الجهاز · جارٍ التحقق من المزامنة':'تمت المزامنة مع الخادم';return `<div class="syncStatus ${!durableCache?'error':pending||itemCacheOnly||!navigator.onLine?'wait':''}" role="status">${message}</div>`}
-const destroy=()=>{state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}});stopScanner()};window.addEventListener('beforeunload',destroy);window.addEventListener('online',render);window.addEventListener('offline',render);
+const destroy=()=>{if(itemListPaint)cancelAnimationFrame(itemListPaint);state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}});stopScanner()};window.addEventListener('beforeunload',destroy);window.addEventListener('online',render);window.addEventListener('offline',render);
 if(!user.name||(!user.isAdmin&&!user.validEmployee))location.href='./index.html?employee=1';else start();
 function cleanDigits(value){return eng(String(value??'')).replace(/\D/g,'')}
 function resolveStocktakeSearch(raw){
@@ -147,7 +149,7 @@ let campaignBound='',itemsUnsub=null,teamsUnsub=null,campaignUnsub=null;
 function bindCampaign(){const c=state.control;if(!canAccess(c)){unbindCampaign();app.innerHTML=lockHtml(c?.enabled?'الجرد غير مسند لحسابك':'الجرد غير مفعّل حاليًا','لن يظهر الجرد إلا أثناء حملة نشطة ومسندة لحسابك.');return}const id=String(c.activeCampaignId||'').trim();if(!id){unbindCampaign();app.innerHTML=lockHtml('لا توجد حملة جرد نشطة','الإدارة لم تبدأ حملة الجرد بعد.');return}if(campaignBound===id)return;unbindCampaign();campaignBound=id;campaignUnsub=db.collection('stocktake_campaigns').doc(id).onSnapshot(d=>{state.campaign=d.exists?{id:d.id,...d.data()}:null;render()},()=>{});teamsUnsub=db.collection('stocktake_teams').where('campaignId','==',id).onSnapshot(s=>{state.teams=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.orderIndex??999)-(b.orderIndex??999));pickTeam()},()=>{});state.unsubs.push(campaignUnsub,teamsUnsub)}
 function unbindCampaign(){campaignBound='';state.campaign=null;state.teams=[];state.team=null;state.items=[];if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}if(campaignUnsub){try{campaignUnsub()}catch{}campaignUnsub=null}if(teamsUnsub){try{teamsUnsub()}catch{}teamsUnsub=null}}
 function accessibleTeams(){return state.teams.filter(isMember)}
-function pickTeam(id=''){const list=accessibleTeams();const chosen=list.find(t=>t.id===id)||list.find(t=>t.id===state.team?.id)||list[0]||null;if(chosen?.id===state.team?.id&&itemsUnsub){state.team=chosen;render();return}state.team=chosen;state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);state.items=s.docs.map(d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},chosen.id)).sort((a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en'));for(const i of state.items){for(const kind of ['qty','note']){const key=draftKey(i.id,kind),draft=draftStore.get(key),op=kind==='qty'?i.lastCountOperationId:i.lastNoteOperationId;if(draft?.operationId===op&&!i._pending&&!itemCacheOnly)draftStore.remove(key)}}render()},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
+function pickTeam(id=''){const list=accessibleTeams();const chosen=list.find(t=>t.id===id)||list.find(t=>t.id===state.team?.id)||list[0]||null;if(chosen?.id===state.team?.id&&itemsUnsub){state.team=chosen;render();return}state.team=chosen;state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly;state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);if(wasReady&&wasCacheOnly===itemCacheOnly&&!s.docChanges({includeMetadataChanges:true}).length)return;state.items=s.docs.map(d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},chosen.id)).sort((a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en'));for(const i of state.items){for(const kind of ['qty','note']){const key=draftKey(i.id,kind),draft=draftStore.get(key),op=kind==='qty'?i.lastCountOperationId:i.lastNoteOperationId;if(draft?.operationId===op&&!i._pending&&!itemCacheOnly)draftStore.remove(key)}}scheduleItemListPaint()},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
 function lockHtml(title,note){return `<div class="lock"><h2>${esc(title)}</h2><p>${esc(note)}</p><button class="btn" style="padding:0 18px;margin-top:12px" onclick="location.href='./index.html?employee=1'">العودة للنظام</button></div>`}
 function completedMatches(i){if((i.countStatus||'pending')==='pending')return false;if(state.filter==='matched')return i.countStatus==='matched';if(state.filter==='variance')return ['shortage','surplus'].includes(i.countStatus);if(state.filter==='notes')return Boolean(String(i.note||'').trim());return true}
 function recentStamp(i){return Number(i.lastCountAt?.seconds||i.updatedAt?.seconds||i.firstCountAt?.seconds||0)}
@@ -239,16 +241,27 @@ async function writeCount(item,actual,source){
  if(!durableCache&&!navigator.onLine){saving.delete(item.id);toast('التخزين الدائم غير متاح؛ اتصل بالإنترنت قبل الاعتماد');return false}
  if(!Number.isFinite(StocktakeCore.quantity(item.expectedQty))){saving.delete(item.id);toast('كمية النظام غير صالحة؛ راجع الإدارة قبل الاعتماد');return false}
  const finishedAll=!((item.countStatus||'pending')!=='pending')&&state.items.length>0&&state.items.every(i=>i.id===item.id||(i.countStatus||'pending')!=='pending');
- const key=draftKey(item.id),operationId=db.collection('stocktake_audit').doc().id;
+ const key=draftKey(item.id),previousDraft=draftStore.get(key);
+ // Preserve the operation identity on retries. An unknown network result must never
+ // generate a second counted audit entry for the very same unconfirmed quantity.
+ const operationId=previousDraft?.operationId&&String(previousDraft.value)===String(actual)
+   ?String(previousDraft.operationId):db.collection('stocktake_audit').doc().id;
  if(!saveDraft(item.id,String(actual),'qty',{operationId})){saving.delete(item.id);return false}
  // The local draft remains until the Firestore transaction actually commits.
  if(!navigator.onLine){saving.delete(item.id);toast('بدون اتصال: الكمية محفوظة كمسودة على الجهاز، ولم تُعتمد في Firebase');return false}
- const itemRef=db.collection('stocktake_items').doc(item.id),campaignRef=db.collection('stocktake_campaigns').doc(entryCampaignId),controlRef=db.collection('system_controls').doc(CONTROL_DOC);
+ const itemRef=db.collection('stocktake_items').doc(item.id),campaignRef=db.collection('stocktake_campaigns').doc(entryCampaignId),controlRef=db.collection('system_controls').doc(CONTROL_DOC),operationRef=db.collection('stocktake_audit').doc(operationId);
+ let confirmTimer=null;
  try {
-   const result=await db.runTransaction(async tx=>{
-     // Reads must precede writes so concurrent counters retry against a fresh item.
-     const [campaignDoc,controlDoc,currentDoc]=await Promise.all([tx.get(campaignRef),tx.get(controlRef),tx.get(itemRef)]);
+   const transaction=db.runTransaction(async tx=>{
+     // Read the audit operation alongside the campaign and item. Firestore retries
+     // transactions after concurrent edits, so duplicate retries are idempotent.
+     const [campaignDoc,controlDoc,currentDoc,operationDoc]=await Promise.all([tx.get(campaignRef),tx.get(controlRef),tx.get(itemRef),tx.get(operationRef)]);
      const campaign=campaignDoc.data()||{},control=controlDoc.data()||{},fresh=currentDoc.data();
+     if(operationDoc.exists){
+       const completed=operationDoc.data()||{},after=completed.after||{};
+       if(completed.campaignId!==entryCampaignId||completed.teamId!==countingTeam.id||completed.itemId!==item.id||Math.abs(Number(after.teamActualQty)-actual)>1e-9)throw new Error('STOCKTAKE_OPERATION_CONFLICT');
+       return {status:after.countStatus,total:after.actualQty,alreadyCommitted:true};
+     }
      if(campaign.status!=='active'||control.enabled!==true||String(control.activeCampaignId||'')!==entryCampaignId)throw new Error('STOCKTAKE_NOT_ACTIVE');
      if(!currentDoc.exists||fresh.campaignId!==entryCampaignId)throw new Error('STOCKTAKE_ITEM_NOT_FOUND');
      const expectedNow=StocktakeCore.quantity(fresh.expectedQty);
@@ -269,24 +282,29 @@ async function writeCount(item,actual,source){
      if(!fresh.counted&&!fresh.firstCountAt){patch.firstCountAt=now;patch.firstCountByEmployeeId=user.employeeId||ROOT_ID;patch.firstCountByName=user.name}
      patch['teamCounts.'+entryKey]={quantity:actual,operationId,teamId:countingTeam.id,teamName:countingTeam.name||'',scope:countingTeam.scope||countingTeam.zone||'',actorName:user.name};
      tx.update(itemRef,patch);
-     tx.set(db.collection('stocktake_audit').doc(operationId),{campaignId:entryCampaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:Number.isFinite(previousActual)?'count_revised':'count_created',before:{actualQty:current.actualQty??null,countStatus:current.countStatus||'pending',difference:current.difference??null,note:fresh.note||'',revision:fresh.revision||0},after:{actualQty:nextTotal,teamActualQty:actual,countStatus:status,difference},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now,source,userAgent:navigator.userAgent||''});
+     tx.set(operationRef,{campaignId:entryCampaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:Number.isFinite(previousActual)?'count_revised':'count_created',before:{actualQty:current.actualQty??null,countStatus:current.countStatus||'pending',difference:current.difference??null,note:fresh.note||'',revision:fresh.revision||0},after:{actualQty:nextTotal,teamActualQty:actual,countStatus:status,difference},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now,source,userAgent:navigator.userAgent||''});
      if(source==='found_later')tx.set(db.collection('stocktake_audit').doc(operationId+'_found'),{campaignId:entryCampaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:'quantity_found_later',before:{actualQty:current.actualQty},after:{foundQty:StocktakeCore.difference(actual,Number.isFinite(previousActual)?previousActual:0),actualQty:nextTotal,teamActualQty:actual},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
      return {status,total:nextTotal};
    });
+   // A temporary network stall is not a failed count. Keep the durable draft and
+   // replay the same operation ID if the user retries after the timeout.
+   const result=await Promise.race([transaction,new Promise((_,reject)=>{confirmTimer=setTimeout(()=>reject(new Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
    // A transaction is acknowledged by Firestore, never by a pending local snapshot.
    if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);
    if(state.team?.id===countingTeam.id&&state.campaign?.id===entryCampaignId&&state.activeEditId===item.id){state.activeEditId='';state.search=''}
    feedback(result.status,finishedAll);toast('تم تأكيد حفظ كمية الصنف على خادم Firebase');return true;
  } catch(error) {
    const code=String(error?.code||error?.message||error);
-   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:String(actual),failedAt:Date.now(),error:code});
+   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:String(actual),operationId,failedAt:Date.now(),error:code});
    const message=/STOCKTAKE_DUPLICATE_SCOPE/.test(code)?'تم رفض عدّ مكرر للصنف في النطاق نفسه'
      :/STOCKTAKE_CHANGED_RETRY|STOCKTAKE_REFERENCE_CHANGED/.test(code)?'تغير جرد الصنف بالتزامن؛ أعد فتحه وراجع أحدث قيمة'
      :/STOCKTAKE_NOT_ACTIVE/.test(code)?'الجرد غير مفعّل حاليًا على الخادم'
      :/STOCKTAKE_CONFLICT_REVIEW/.test(code)?'الصنف عليه تعارض عدّ؛ راجع الإدارة'
+     :/STOCKTAKE_CONFIRM_TIMEOUT/.test(code)?'تأخر تأكيد الخادم؛ بقيت الكمية مسودة بنفس رقم العملية. أعد المحاولة لاحقًا دون تغيير الكمية.'
+     :/resource-exhausted|quota-exceeded/i.test(code)?'قاعدة Firebase ترفض الحفظ بسبب الحصة أو الموارد؛ الكمية محفوظة كمسودة وغير معتمدة.'
      :'تعذر اعتماد الصنف في Firebase ('+code.slice(0,40)+')، والكمية محفوظة كمسودة';
    console.warn('[V95 stocktake transaction]',code);toast(message);return false;
- } finally {saving.delete(item.id)}
+ } finally {if(confirmTimer)clearTimeout(confirmTimer);saving.delete(item.id)}
 
 }
 

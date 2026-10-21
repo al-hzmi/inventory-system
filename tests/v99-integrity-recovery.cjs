@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const stock=fs.readFileSync('stocktake.html','utf8');
+const app=fs.readFileSync('runtime/index-v37-source.txt','utf8');
+const write=stock.slice(stock.indexOf('async function writeCount('),stock.indexOf('function saveActual(',stock.indexOf('async function writeCount(')));
+const login=app.slice(app.indexOf('const finalizeEmployeeLogin ='),app.indexOf('const finalizeAdminLogin ='));
+const invoice=app.slice(app.indexOf('const OrderInvoiceModal = memo('),app.indexOf('const saveAsDraft = () => {'));
+for(const x of ['previousDraft?.operationId','operationDoc.exists','tx.get(operationRef)','STOCKTAKE_CONFIRM_TIMEOUT','operationId,failedAt:Date.now()','saving.delete(item.id)','scheduleItemListPaint()'])
+ assert(stock.includes(x),'Stocktake missing '+x);
+assert(write.indexOf('tx.get(operationRef)')<write.indexOf('tx.update(itemRef,patch)'),'audit read must happen before writes');
+assert(write.includes('await Promise.race([transaction'),'no bounded transaction wait');
+assert(write.includes('completed.campaignId!==entryCampaignId'),'replay must validate identity');
+assert(stock.includes("s.docChanges({includeMetadataChanges:true})"),'snapshot metadata batching');
+assert(login.indexOf("db.collection('login_logs').add({")<login.indexOf("const userRef = db.collection('users')"),'critical login confirmation before optional counters');
+assert(login.includes('[Employee optional login statistics]'),'non-critical write errors must be logged');
+assert(login.includes("db.collection('site_sessions').doc('employee_login_'+verifiedLoginRef.id).set({"),'attendance best-effort');
+assert(!login.includes('SESSION_PROBE_TIMEOUT'),'login must not stall waiting for attendance');
+assert(invoice.includes("orderRef.get({source:'server'})"),'verify ambiguous invoice timeout against server');
+assert(invoice.includes('orderRef.set(payload)'),'must keep explicit server write');
+assert(invoice.indexOf('await Promise.race([')<invoice.indexOf('setCart({});'),'cart must persist until server acknowledgement');
+console.log('V99 stocktake idempotency, bounded wait, employee login and invoice recovery regression PASS');

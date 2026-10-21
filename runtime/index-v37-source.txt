@@ -1670,12 +1670,27 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
                 totalAmount, timestamp: savedAt, createdAt: savedAt,
                 clientCreatedAt: Date.now(), userAgent: navigator.userAgent, source: 'employee_invoice_v90'
             };
-            await Promise.race([
-                orderRef.set(payload),
-                new Promise((_, reject) => {
-                    timeoutId = setTimeout(() => reject(new Error('INVOICE_WRITE_TIMEOUT')), 20000);
-                })
-            ]);
+            try {
+                await Promise.race([
+                    orderRef.set(payload),
+                    new Promise((_, reject) => {
+                        timeoutId = setTimeout(() => reject(new Error('INVOICE_WRITE_TIMEOUT')), 16000);
+                    })
+                ]);
+            } catch (writeError) {
+                // A timed-out write may have committed late. A *server-only* read
+                // can confirm that exact invoice ID without creating a duplicate.
+                if (String(writeError?.message||'')!=='INVOICE_WRITE_TIMEOUT') throw writeError;
+                let checkTimer;
+                try {
+                    const verified=await Promise.race([
+                        orderRef.get({source:'server'}),
+                        new Promise((_,reject)=>{checkTimer=setTimeout(()=>reject(new Error('INVOICE_VERIFY_TIMEOUT')),4000)})
+                    ]);
+                    if(!verified.exists||verified.metadata?.fromCache||verified.data()?.repName!==sessionName||verified.data()?.customerName!==customer.trim())
+                        throw writeError;
+                } finally {if(checkTimer)clearTimeout(checkTimer)}
+            }
             try { localStorage.removeItem(pendingKey); } catch (_) {}
             pendingInvoiceId.current = '';
             pendingInvoiceSignature.current = '';
@@ -1697,7 +1712,12 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
         } catch (error) {
             console.error('[Invoice save failed]', error);
             try { whatsappWindow?.close(); } catch (_) {}
-            alert('تعذر تأكيد حفظ الفاتورة في قاعدة البيانات. لم تُمسح السلة ولم يُرسل الطلب إلى واتساب. تحقق من الاتصال أو صلاحيات Firebase ثم أعد المحاولة.');
+            const code=String(error?.code||error?.message||error);
+            const cause=/resource-exhausted|quota-exceeded/i.test(code)?'تجاوزت قاعدة البيانات الحصة أو الموارد المتاحة.'
+              :/permission-denied/i.test(code)?'رفضت صلاحيات قاعدة البيانات العملية.'
+              :/INVOICE_WRITE_TIMEOUT|INVOICE_VERIFY_TIMEOUT|unavailable/i.test(code)?'انقطع الاتصال أو انتهت مهلة تأكيد الخادم.'
+              :'فشل تأكيد الخادم: '+code.slice(0,100);
+            alert(cause+'\nالسلة محفوظة، والفاتورة لم تتأكد. أعد اعتماد نفس الفاتورة دون تغيير الأصناف أو العميل حتى لا تتكرر العملية.');
         } finally {
             if (timeoutId) clearTimeout(timeoutId);
             submitLock.current = false;
@@ -3186,21 +3206,6 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                 screen: verificationContext.screen || `${window.screen?.width || 0}x${window.screen?.height || 0}`,
                 requesterUserAgent: navigator.userAgent
             });
-            const userRef = db.collection('users').doc(toSafeDocId(canonicalName));
-            const userDoc = await userRef.get();
-            const info = { employeeId: employeeAccount.id, name: canonicalName, lastLogin: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent };
-            if (userDoc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
-            else await userRef.set({ ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
-            await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).set({
-                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastEnteredAlias: enteredAlias,
-                loginCount: firebase.firestore.FieldValue.increment(1),
-                passwordResetRequiresPhoto: false,
-                passwordResetPhotoCompletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                passwordResetPhotoId: photoRef.id,
-                lastPhotoVerifiedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-            await db.collection('employee_login_attempts').doc(loginAttemptId).set({photoCaptured:true,securityPhotoId:photoRef.id,status:'completed',completedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
             const verifiedLoginRef = await db.collection('login_logs').add({
                 name: canonicalName,
                 employeeId: employeeAccount.id,
@@ -3215,21 +3220,41 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                 time: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
             });
+            // These historical counters are non-critical. The verified Firebase login
+            // record above is what authorizes the session and powers the live dashboard.
+            (async()=>{try{
+                const userRef = db.collection('users').doc(toSafeDocId(canonicalName));
+                const userDoc = await userRef.get();
+                const info = { employeeId: employeeAccount.id, name: canonicalName, lastLogin: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent };
+                if (userDoc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
+                else await userRef.set({ ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
+                await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).set({
+                    lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastEnteredAlias: enteredAlias,
+                    loginCount: firebase.firestore.FieldValue.increment(1),
+                    passwordResetRequiresPhoto: false,
+                    passwordResetPhotoCompletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    passwordResetPhotoId: photoRef.id,
+                    lastPhotoVerifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            }catch(statsError){console.warn('[Employee optional login statistics]',statsError?.code||statsError?.message||statsError)}})();
+            db.collection('employee_login_attempts').doc(loginAttemptId).set({
+                photoCaptured:true,securityPhotoId:photoRef.id,status:'completed',
+                completedAt:firebase.firestore.FieldValue.serverTimestamp()
+            },{merge:true}).catch(e=>console.warn('[Employee login attempt annotation]',e?.code||e?.message||e));
             // V96: persist an initial *server* session at the same time as the login.
             // A login log is still authoritative when session writes fail; never invent an online state.
-            try {
-                await Promise.race([db.collection('site_sessions').doc('employee_login_'+verifiedLoginRef.id).set({
-                    loginAttemptId,securityPhotoId:photoRef.id,loginLogId:verifiedLoginRef.id,
-                    name:canonicalName,employeeId:employeeAccount.id,
-                    identitySource:'verified_login_server_v96',
-                    startTime:firebase.firestore.FieldValue.serverTimestamp(),
-                    lastActive:firebase.firestore.FieldValue.serverTimestamp(),
-                    state:'online',durationMinutes:0,
-                    userAgent:navigator.userAgent
-                },{merge:true}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('SESSION_PROBE_TIMEOUT')),4500))]);
-            } catch(sessionError) {
-                console.warn('[V96 initial server session failed; login log remains verified]',sessionError?.code||sessionError?.message||sessionError);
-            }
+            // An attendance heartbeat is best-effort; never delay entry after the
+            // verified login log has been acknowledged by Firestore.
+            db.collection('site_sessions').doc('employee_login_'+verifiedLoginRef.id).set({
+                loginAttemptId,securityPhotoId:photoRef.id,loginLogId:verifiedLoginRef.id,
+                name:canonicalName,employeeId:employeeAccount.id,
+                identitySource:'verified_login_server_v96',
+                startTime:firebase.firestore.FieldValue.serverTimestamp(),
+                lastActive:firebase.firestore.FieldValue.serverTimestamp(),
+                state:'online',durationMinutes:0,
+                userAgent:navigator.userAgent
+            },{merge:true}).catch(sessionError=>console.warn('[Employee initial attendance write]',sessionError?.code||sessionError?.message||sessionError));
             localStorage.setItem(STORAGE_KEYS.NAME, canonicalName);
             localStorage.removeItem(STORAGE_KEYS.TOKEN);
             localStorage.setItem(STORAGE_KEYS.EMPLOYEE_ID, employeeAccount.id);

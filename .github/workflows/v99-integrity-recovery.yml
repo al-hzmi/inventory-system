@@ -1,0 +1,32 @@
+name: V99 critical inventory integrity
+on:
+  push:
+    branches: [main, 'hotfix/v99-critical-inventory-integrity-*']
+    paths:
+      - 'stocktake.html'
+      - 'runtime/index-v37-source.txt'
+      - 'tests/v99-integrity-recovery.cjs'
+      - '.github/workflows/v99-integrity-recovery.yml'
+  pull_request:
+    paths:
+      - 'stocktake.html'
+      - 'runtime/index-v37-source.txt'
+      - 'tests/v99-integrity-recovery.cjs'
+      - '.github/workflows/v99-integrity-recovery.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v91-incident-audit.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: npm run build
