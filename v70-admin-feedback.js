@@ -2,7 +2,7 @@
    Firestore rules must independently restrict collection reads; this guard is UI only. */
 (function(){
 'use strict';
-const COLLECTION='employee_experience_feedback',MAX_RECORDS=500;
+const COLLECTION='employee_experience_feedback',MAX_RECORDS=500,STAFF_FIELD='experienceFeedbackV70';
 const $=q=>document.querySelector(q);
 const expectedAdminToken='1jh297-spgf2z';
 function isAdmin(){
@@ -71,21 +71,28 @@ async function resetFeedback(record){
  pending=true;
  try{
   const firestore=firebase.firestore(),fv=firebase.firestore.FieldValue;
-  const ref=firestore.collection(COLLECTION).doc(record.id);
+  const ref=firestore.collection(record.__source==='users'?'users':COLLECTION).doc(record.id);
   const latest=await ref.get({source:'server'});
-  if(!latest.exists||String(latest.data()?.employeeId||'')!==String(record.employeeId||''))throw new Error('RECORD_CHANGED');
-  if(!(Number(latest.data()?.stars)>0))throw new Error('RATING_ALREADY_RESET');
-  await ref.update({
-   stars:fv.delete(),note:fv.delete(),submittedAt:fv.delete(),
-   status:'reset',resetRequestedAt:fv.serverTimestamp(),
-   resetGeneration:fv.increment(1),resetReason:'employee_submitted_by_mistake'
-  });
+  const current=record.__source==='users'?latest.data()?.[STAFF_FIELD]:latest.data();
+  if(!latest.exists||String(current?.employeeId||'')!==String(record.employeeId||''))throw new Error('RECORD_CHANGED');
+  if(!(Number(current?.stars)>0))throw new Error('RATING_ALREADY_RESET');
+  if(record.__source==='users'){
+    await ref.set({[STAFF_FIELD]:{
+      release:'v70',employeeId:record.employeeId,employeeName:record.employeeName||'',
+      stars:0,status:'reset',resetGeneration:(Number(current.resetGeneration)||0)+1,
+      resetRequestedAt:fv.serverTimestamp(),resetReason:'employee_submitted_by_mistake'
+    }},{merge:true});
+  }else{
+    await ref.update({stars:fv.delete(),note:fv.delete(),submittedAt:fv.delete(),
+      status:'reset',resetRequestedAt:fv.serverTimestamp(),
+      resetGeneration:fv.increment(1),resetReason:'employee_submitted_by_mistake'});
+  }
   rows=rows.filter(x=>x.id!==record.id);
   summary();render();
-  message.textContent='أُلغي تقييم '+label+' من الإحصاءات. ستظهر نافذة التقييم له من جديد بعد تحديث صفحته أو عند استقبال إشعار إعادة التقييم.';
+  message.textContent='أُلغي تقييم '+label+' من الإحصاءات. سيصله طلب التقييم مجددًا عند فتح النظام.';
  }catch(e){
-  console.warn('[Feedback V92] Reset failed',e?.code||e?.message||e);
-  message.textContent='لم يتم إلغاء التقييم: '+safe(e?.code||e?.message||'تعذر التحديث',100)+'. تحقق من صلاحيات قاعدة البيانات ثم حاول مجددًا.';
+  console.warn('[Feedback V93] Reset failed',e?.code||e?.message||e);
+  message.textContent='لم يتم إلغاء التقييم: '+safe(e?.code||e?.message||'تعذر التحديث',100)+'. تحقق من صلاحيات Firebase.';
  }finally{pending=false}
 }
 async function load(){
@@ -96,13 +103,27 @@ async function load(){
  try{
   if(!window.firebase?.firestore)throw Error('تعذر تحميل قاعدة البيانات');
   if(!firebase.apps.length)firebase.initializeApp(config);
-  const snap=await firebase.firestore().collection(COLLECTION).orderBy('submittedAt','desc').limit(MAX_RECORDS).get({source:'server'});
-  rows=snap.docs.map(doc=>({id:doc.id,...doc.data()}))
-   .filter(x=>Number.isInteger(Number(x.stars))&&Number(x.stars)>=1&&Number(x.stars)<=5)
-   .map(x=>({...x,stars:Number(x.stars)}))
-   .sort((a,b)=>millis(b.submittedAt)-millis(a.submittedAt));
+  const firestore=firebase.firestore();
+  const [primary,profile]=await Promise.allSettled([
+    firestore.collection(COLLECTION).orderBy('submittedAt','desc').limit(MAX_RECORDS).get({source:'server'}),
+    Promise.resolve().then(()=>firestore.collection('users').limit(750).get({source:'server'}))
+  ]);
+  const failures=[];
+  const primaryRows=primary.status==='fulfilled'
+    ?primary.value.docs.map(doc=>({id:doc.id,...doc.data(),__source:'feedback'}))
+    :(failures.push('مجموعة التقييمات: '+String(primary.reason?.code||primary.reason?.message||'read failed')),[]);
+  const profileRows=profile.status==='fulfilled'
+    ?profile.value.docs.filter(doc=>doc.data()?.[STAFF_FIELD]).map(doc=>({id:doc.id,...doc.data()[STAFF_FIELD],__source:'users'}))
+    :(failures.push('ملفات الموظفين: '+String(profile.reason?.code||profile.reason?.message||'read failed')),[]);
+  if(primary.status==='rejected'&&profile.status==='rejected')throw new Error(failures.join(' ؛ '));
+  const byEmployee=new Map();
+  [...primaryRows,...profileRows].filter(x=>Number.isInteger(Number(x.stars))&&Number(x.stars)>=1&&Number(x.stars)<=5).forEach(x=>{
+    const k=String(x.employeeId||x.id),old=byEmployee.get(k);
+    if(!old||millis(x.submittedAt)>millis(old.submittedAt)||(millis(x.submittedAt)===millis(old.submittedAt)&&x.__source==='feedback'))byEmployee.set(k,{...x,stars:Number(x.stars)});
+  });
+  rows=[...byEmployee.values()].sort((a,b)=>millis(b.submittedAt)-millis(a.submittedAt));
   summary();render();
-  message.textContent='تم تحميل '+rows.length+' تقييم'+(snap.size>=MAX_RECORDS?' (آخر 500 سجل متاح).':' · التقييمات تظهر باسم صاحب الحساب.');
+  message.textContent='تم تحميل '+rows.length+' تقييم من مصادر الحفظ المتاحة.'+(failures.length?' تنبيه: '+failures.join(' ؛ '):'');
  }catch(error){
   console.warn('[Feedback V70] Admin read failed',error?.code||error?.message||String(error));
   message.textContent='تعذر قراءة التقييمات من قاعدة البيانات. تحقق من الاتصال وصلاحيات Firestore ثم اضغط «تحديث».';

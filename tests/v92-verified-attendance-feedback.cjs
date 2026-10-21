@@ -47,9 +47,9 @@ requireAll(feedback,[
  'watchRatingResets();',
  'function watchRatingResets()'
 ],'employee rating reset');
-assert(index.includes('./v70-employee-feedback.js?v=92.0'),'employee receives new rating script');
+assert(index.includes('./v70-employee-feedback.js?v=93.0'),'employee receives new rating script');
 assert(index.includes('./v44-observability.js?v=92.0'),'employee receives new presence script');
-assert(adminHtml.includes('./v70-admin-feedback.js?v=92.0'),'admin receives new reset script');
+assert(adminHtml.includes('./v70-admin-feedback.js?v=93.0'),'admin receives new reset script');
 new vm.Script(presence,{filename:'v44-observability.js'});
 new vm.Script(feedback,{filename:'v70-employee-feedback.js'});
 new vm.Script(reviews,{filename:'v70-admin-feedback.js'});

@@ -22,7 +22,7 @@ for(const key of ['employeeLogins','employeeLoginAttempts','employeeOrders','cus
 assert(admin.includes("const records=[...recordMap.values()]"),'must deduplicate overlapping Firestore queries');
 assert(admin.includes("metadata?.fromCache"),'must reject cached snapshots in incident audit');
 for(const marker of ["presenceFailures>=2","presenceWarning(true)","cartSyncInFlight","lastCartHash=sig;await log","finally{cartSyncInFlight=false}"])assert(tracker.includes(marker),'telemetry recovery missing: '+marker);
-for(const marker of ["copyLocalReceipt","لا يثبت وصولها إلى الخادم","محفوظ على هذا الجهاز فقط","[V91 employee initial session]","await Promise.race([","orderRef.set(payload)"])assert(employee.includes(marker),'local reconciliation or invoice guarantee missing: '+marker);
+for(const marker of ["copyLocalReceipt","لا يثبت وصولها إلى الخادم","محفوظة على هذا الجهاز ولم يُعثر على تطابق في الخادم","[V91 employee initial session]","await Promise.race([","orderRef.set(payload)"])assert(employee.includes(marker),'local reconciliation or invoice guarantee missing: '+marker);
 assert(!employee.includes("getDb().then(db => {\n            db.collection('orders').add"),'legacy fire-and-forget invoice restored');
 new vm.Script(tracker,{filename:'v44-observability.js'});
 console.log('V91 Mohammed Dalal live audit / telemetry / local receipt: PASS');

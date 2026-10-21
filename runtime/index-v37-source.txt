@@ -1330,6 +1330,103 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
     const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem(historyKey)) || []);
 
     const [historyNotice,setHistoryNotice] = useState('');
+
+    // V93: a local invoice is not proof that Firestore received it.
+    const [serverStatus,setServerStatus]=useState({});
+    const [checkingServer,setCheckingServer]=useState(false);
+    const [restoring,setRestoring]=useState('');
+    const normalizeMoney=v=>Number(String(v??0).replace(/[,،]/g,''))||0;
+    const sameLegacyInvoice=(remote,local)=>{
+        const clock=Number(local.id)||0;
+        const created=remote.timestamp?.toMillis?.()||remote.createdAt?.toMillis?.()||Number(remote.clientCreatedAt)||0;
+        const near=clock&&created&&Math.abs(clock-created)<48*60*60*1000;
+        return String(remote.customerName||'').trim()===String(local.customer||'').trim() &&
+            Math.abs(normalizeMoney(remote.totalAmount)-normalizeMoney(local.totalAmount))<0.01 &&
+            String(remote.warehouse||'')===String(local.warehouse||'') && near;
+    };
+    const confirmServerStatus=async()=>{
+        if(!history.length){setServerStatus({});return}
+        setCheckingServer(true);
+        const next={};
+        try{
+            const db=await getDb();
+            const candidates=await db.collection('orders').where('repName','==',sessionName).limit(700).get({source:'server'});
+            if(candidates.metadata?.fromCache)throw new Error('SERVER_CACHE_ONLY');
+            const remote=candidates.docs.map(d=>({id:d.id,...d.data()}));
+            for(const order of history){
+                const key=String(order.id),direct=order.serverId&&remote.find(r=>r.id===order.serverId);
+                if(direct){next[key]={code:'verified',serverId:direct.id};continue}
+                if(order.serverId){
+                    try{
+                        const doc=await db.collection('orders').doc(order.serverId).get({source:'server'});
+                        if(doc.exists){next[key]={code:'verified',serverId:doc.id};continue}
+                    }catch(e){next[key]={code:'error',message:String(e?.code||e?.message||e)};continue}
+                }
+                const likely=remote.filter(r=>sameLegacyInvoice(r,order));
+                next[key]=likely.length?{code:'possible',serverId:likely[0].id}:{code:candidates.size>=700?'incomplete':'unverified'};
+            }
+        }catch(e){
+            history.forEach(order=>next[String(order.id)]={code:'error',message:String(e?.code||e?.message||e)});
+            console.warn('[V93 invoice source verification]',e);
+        }finally{setServerStatus(next);setCheckingServer(false)}
+    };
+    useEffect(()=>{void confirmServerStatus()},[sessionName]);
+    const parseLegacyItems=message=>{
+        const result=[];
+        const pattern=/\*\[\s*([^\]]+?)\s*\]\*[\s\S]*?الكمية:\s*\*([\d.,٠-٩۰-۹]+)\*\s*\|\s*الإجمالي:\s*\*([\d.,٠-٩۰-۹]+)\*/g;
+        const digits=value=>toEnglishDigits(String(value||'')).replace(/[,،]/g,'');
+        let match;while((match=pattern.exec(String(message||'')))!==null){
+            const qty=Number(digits(match[2]))||0,total=Number(digits(match[3]))||0,id=match[1].trim();
+            if(!id||qty<=0)continue;
+            result.push({id,cleanId:id,name:'',qty,price:total/qty,total});
+        }
+        return result;
+    };
+    const restoreLegacyOrder=async(order)=>{
+        const localKey=String(order.id),status=serverStatus[localKey];
+        if(status?.code!=='unverified'||restoring||checkingServer)return;
+        if(!confirm('هذه الفاتورة موجودة في سجل جهازك لكن تعذّر العثور على تطابق لها في سجلات الخادم تحت هذا الحساب. هل تريد إرسال نسخة استرداد منها إلى الإدارة؟ لن تُنشئ فاتورة مبيعات جديدة على واتساب.'))return;
+        setRestoring(localKey);
+        try{
+            const proof=readLoginPhotoProof(),employeeId=localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID);
+            if(!(proof?.role==='employee'&&proof.employeeId===employeeId&&proof.photoId&&proof.loginAttemptId))throw new Error('LOGIN_PROOF_REQUIRED');
+            const db=await getDb();
+            const candidates=await db.collection('orders').where('repName','==',sessionName).limit(700).get({source:'server'});
+            if(candidates.metadata?.fromCache||candidates.size>=700)throw new Error('INCOMPLETE_INVOICE_SCAN');
+            if(candidates.docs.some(d=>sameLegacyInvoice(d.data(),order)))throw new Error('POSSIBLE_EXISTING_INVOICE');
+            const items=parseLegacyItems(order.msg);
+            const key='legacy_v93_'+hashCode(sessionName+'|'+localKey+'|'+String(order.msg||'')).replace(/[^a-zA-Z0-9_-]/g,'');
+            const ref=db.collection('orders').doc(key);
+            const existing=await ref.get({source:'server'});
+            if(!existing.exists){
+                const payload={
+                    invoiceNo:'RESTORE-'+key.slice(-13).toUpperCase(),repName:sessionName,
+                    employeeId,customerName:String(order.customer||''),warehouse:String(order.warehouse||''),
+                    items,totalAmount:normalizeMoney(order.totalAmount),
+                    timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+                    originalClientCreatedAt:Number(order.id)||null,originalDate:String(order.date||''),
+                    legacyMessage:String(order.msg||'').slice(0,14000),
+                    source:'employee_local_history_recovered_v93',recoveryStatus:'unverified_legacy_restored',
+                    verifiedOriginalInvoice:false,
+                    recoveryOperator:sessionName,recoveredAt:firebase.firestore.FieldValue.serverTimestamp()
+                };
+                await ref.set(payload);
+            }
+            const confirmed=await ref.get({source:'server'});
+            if(!confirmed.exists)throw new Error('RECOVERY_NOT_CONFIRMED');
+            const updated=history.map(h=>h.id===order.id?{...h,serverId:ref.id,recoveryStatus:'legacy_recovered'}:h);
+            localStorage.setItem(historyKey,JSON.stringify(updated));
+            setHistory(updated);
+            setServerStatus(p=>({...p,[localKey]:{code:'restored',serverId:ref.id}}));
+            setHistoryNotice('تم إرسال نسخة استرداد موثقة المصدر إلى سجلات الإدارة. ستظهر بوسم «مستعادة من جهاز الموظف»، وليست إثباتًا لحفظها سابقًا.');
+        }catch(e){
+            console.error('[V93 legacy invoice restore]',e);
+            const code=String(e?.code||e?.message||e);
+            setHistoryNotice('لم تُستعد الفاتورة: '+(code==='POSSIBLE_EXISTING_INVOICE'?'يوجد تطابق محتمل في الخادم. راجع الإدارة لتجنب التكرار.':code==='INCOMPLETE_INVOICE_SCAN'?'هناك سجلات كثيرة ولا يمكن استبعاد التكرار بأمان.':code));
+        }finally{setRestoring('')}
+    };
+
     const copyLocalReceipt = async order => {
         const text = [
             'تقرير فاتورة محفوظة بجهاز الموظف (لا يثبت وصولها إلى الخادم)',
@@ -1372,6 +1469,7 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                         <Icon.List className="w-20 h-20 text-accent"/> سجل الفواتير السابقة
                     </h3>
                     {historyNotice&&<p role="status" className="text-[11px] text-secondary px-3">{historyNotice}</p>}
+                    <button type="button" disabled={checkingServer||Boolean(restoring)} onClick={confirmServerStatus} className="h-32 px-8 bg-surface border border-border rounded-8 text-[11px] font-bold disabled:opacity-50">{checkingServer?'التحقق...':'التحقق من الخادم'}</button>
                     <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
                 <div className="p-16 overflow-y-auto flex-1 bg-surface">
@@ -1385,7 +1483,13 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                                         <div>
                                             <div className="text-[14px] font-bold text-primary">{order.customer}</div>
                                             <div className="text-[11px] text-muted mt-2">{order.date} • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
-                                            <div className="text-[10px] text-secondary mt-1">{order.serverId?`معرّف الفاتورة: ${order.serverId}`:'محفوظ على هذا الجهاز فقط — يلزم مطابقته بالخادم'}</div>
+                                            <div className="text-[10px] text-secondary mt-1">{serverStatus[String(order.id)]?.code==='verified'?'مؤكدة في Firestore · '+serverStatus[String(order.id)].serverId
+    :serverStatus[String(order.id)]?.code==='restored'?'مستعادة من هذا الجهاز إلى الإدارة · '+serverStatus[String(order.id)].serverId
+    :serverStatus[String(order.id)]?.code==='possible'?'يوجد تطابق محتمل في السجلات — يحتاج مطابقة'
+    :serverStatus[String(order.id)]?.code==='unverified'?'محفوظة على هذا الجهاز ولم يُعثر على تطابق في الخادم'
+    :serverStatus[String(order.id)]?.code==='incomplete'?'نتائج البحث غير مكتملة — راجع الإدارة'
+    :serverStatus[String(order.id)]?.code==='error'?'تعذر قراءة Firebase: '+serverStatus[String(order.id)].message
+    :checkingServer?'يجري التحقق من الخادم...':'محفوظة محليًا — لم تتحقق بعد'}</div>
                                         </div>
                                         <div className="text-[15px] font-bold text-accent">{NUMBER_FORMATTER.format(order.totalAmount)} ر.س</div>
                                     </div>
@@ -1396,6 +1500,7 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                                         <button type="button" onClick={() => copyLocalReceipt(order)} className="flex-1 h-36 rounded-8 bg-surface border border-border text-primary text-[12px] font-bold">
                                             نسخ الفاتورة
                                         </button>
+                                        {serverStatus[String(order.id)]?.code==='unverified'&&<button type="button" disabled={Boolean(restoring)} onClick={()=>restoreLegacyOrder(order)} className="flex-1 h-36 rounded-8 bg-accentSoft text-accent border border-accent/30 text-[12px] font-bold disabled:opacity-50">{restoring===String(order.id)?'يجري الاسترداد...':'استعادة سجل الفاتورة للإدارة'}</button>}
                                         <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
                                             <Icon.Trash className="w-16 h-16"/>
                                         </button>

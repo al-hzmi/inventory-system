@@ -1,0 +1,41 @@
+name: V93 invoice evidence and rating reliability
+on:
+  push:
+    branches: [main, 'hotfix/v93-invoice-proof-review-save-*']
+  pull_request:
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'v70-employee-feedback.js'
+      - 'v70-admin-feedback.js'
+      - 'admin-dashboard.html'
+      - 'tests/v93-invoice-rating.mjs'
+      - '.github/workflows/v93-invoice-rating.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm install --no-save --no-package-lock --ignore-scripts jsdom@24.1.3
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v91-incident-audit.cjs
+      - run: node tests/v92-verified-attendance-feedback.cjs
+      - run: node tests/v70-feedback.mjs
+      - run: node tests/v93-invoice-rating.mjs
+      - run: npm run build
+      - run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const files=fs.readdirSync('assets/build');
+          const staff=files.filter(x=>x.startsWith('employee.')&&x.endsWith('.js'));
+          const admin=files.filter(x=>x.startsWith('admin-dashboard.')&&x.endsWith('.js'));
+          assert(staff.some(x=>fs.readFileSync('assets/build/'+x,'utf8').includes('employee_local_history_recovered_v93')),'Compiled employee recovery absent');
+          assert(admin.some(x=>fs.readFileSync('assets/build/'+x,'utf8').includes('exactInvoiceId')),'Compiled admin exact invoice lookup absent');
+          console.log('V93 compiled assets PASS');
+          NODE

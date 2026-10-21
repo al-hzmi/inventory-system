@@ -2,7 +2,7 @@
    This records rating data only; it never changes stock, permissions or orders. */
 (function(){
 'use strict';
-const RELEASE='v70',COLLECTION='employee_experience_feedback',PREFIX='batco_employee_feedback_v70_';
+const RELEASE='v70',COLLECTION='employee_experience_feedback',PREFIX='batco_employee_feedback_v70_',STAFF_FIELD='experienceFeedbackV70';
 // Faster first-visit prompt: ~4s after identity/server precheck; keep background-interaction protection.
 const INITIAL_DELAY=4000,RETRY_DELAY=800,MAX_BUSY_WAIT=60000,IDLE_THRESHOLD=1800;
 let identity=null,visit=0,dialog=null,waiting=false,sending=false,rating=0,visible=false,previousFocus=null;
@@ -26,7 +26,25 @@ const keyFor=id=>PREFIX+String(id).replace(/[^a-zA-Z0-9_-]/g,'_');
 const docFor=id=>RELEASE+'_'+String(id).replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,130);
 const readState=()=>safeJson(localStorage.getItem(keyFor(identity.id)),{visits:0});
 const saveState=s=>{try{localStorage.setItem(keyFor(identity.id),JSON.stringify(s))}catch{}};
-const db=()=>{if(!window.firebase?.apps?.length||!window.firebase.firestore)throw Error('الاتصال بقاعدة البيانات غير جاهز');return window.firebase.firestore()};
+const db=()=>{if(!window.firebase?.apps?.length||!window.firebase.firestore)throw Error('FIREBASE_NOT_READY');return window.firebase.firestore()};
+const connectDb=async()=>{if(typeof window.getDb==='function')return limited(window.getDb(),11000);return db()};
+const userDocId=name=>String(name||'').replace(/[\/\\\[\]#?]/g,'_').replace(/^\.+|\.+$/g,'').trim().slice(0,200)||'unknown';
+const fallbackRef=firestore=>firestore.collection('users').doc(userDocId(identity.name));
+const problemMessage=error=>{const code=String(error?.code||error?.message||'unknown');if(/permission.denied/i.test(code))return 'صلاحيات قاعدة البيانات رفضت حفظ التقييم (permission-denied).';if(/unavailable|network|offline/i.test(code))return 'الاتصال بقاعدة البيانات غير متاح حاليًا.';if(/deadline|timeout|مهلة/i.test(code))return 'انتهت مهلة الاتصال قبل تأكيد حفظ التقييم.';if(/FIREBASE_NOT_READY|script.timeout/i.test(code))return 'لم تكتمل تهيئة قاعدة البيانات. أعد المحاولة.';return 'خطأ من قاعدة البيانات: '+code.slice(0,85)};
+async function saveFeedback(firestore,payload){
+ try{await limited(firestore.collection(COLLECTION).doc(docFor(identity.id)).set(payload,{merge:true}),13000);return 'feedback'}
+ catch(error){
+  if(!/permission.denied/i.test(String(error?.code||error?.message||'')))throw error;
+  // Fallback to the employee's existing profile, which already receives successful session writes.
+  // Private review notes are intentionally excluded from the more broadly accessible profile.
+  await limited(fallbackRef(firestore).set({[STAFF_FIELD]:{
+    release:RELEASE,employeeId:identity.id,employeeName:identity.name,
+    stars:payload.stars,submittedAt:window.firebase.firestore.FieldValue.serverTimestamp(),
+    status:'submitted',source:'employee_rating_fallback_v93'
+  }},{merge:true}),13000);
+  return 'users';
+ }
+}
 const limited=(promise,ms)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('انتهت مهلة الاتصال')),ms))]);
 function postpone(){
  if(!identity)return;
@@ -60,22 +78,22 @@ async function submit(){
  dialog.querySelector('.b70-message').textContent='';
  const note=String(dialog.querySelector('textarea').value||'').trim().slice(0,500);
  try{
-  const firestore=db();
+  const firestore=await connectDb();
   const payload={
    release:RELEASE,topic:'site_and_recent_update',schemaVersion:1,
    employeeId:identity.id,employeeName:identity.name,
    stars:rating,note,submittedAt:window.firebase.firestore.FieldValue.serverTimestamp(),
    source:'employee_website',status:'submitted'
   };
-  await limited(firestore.collection(COLLECTION).doc(docFor(identity.id)).set(payload,{merge:true}),12000);
-  const state=readState();saveState({...state,visits:visit,submitted:true,submittedAt:Date.now()});
+  const savedTo=await saveFeedback(firestore,payload);
+  const state=readState();saveState({...state,visits:visit,submitted:true,submittedAt:Date.now(),savedTo});
   dialog.querySelector('.b70-message').style.color='#292524';
-  dialog.querySelector('.b70-message').textContent='تم إرسال تقييمك، شكرًا لك.';
+  dialog.querySelector('.b70-message').textContent=savedTo==='users'?(note?'تم حفظ النجوم، لكن لم تُحفظ الملاحظة بسبب صلاحيات التقييم.':'تم حفظ تقييم النجوم في ملف الموظف، شكرًا لك.'):'تم إرسال تقييمك، شكرًا لك.';
   send.textContent='تم الإرسال';clearTimeout(checkTimer);
   setTimeout(dismiss,950);
  }catch(error){
   console.warn('[Feedback V70] Save failed',error?.code||error?.message||String(error));
-  dialog.querySelector('.b70-message').textContent='تعذّر حفظ التقييم. حاول مرة ثانية، أو اختر «قيّم لاحقًا».';
+  dialog.querySelector('.b70-message').textContent='تعذّر حفظ التقييم: '+problemMessage(error)+' يمكنك إعادة المحاولة أو اختيار «قيّم لاحقًا».';
   send.textContent='إعادة الإرسال';sending=false;later.disabled=false;paintStars();
  }
 }
@@ -126,33 +144,44 @@ function isBusy(){
 }
 function acceptRatingReset(doc){
  if(!identity||!doc?.exists)return false;
- const row=doc.data()||{},generation=Number(row.resetGeneration)||0,state=readState();
+ const row=doc.data()?.[STAFF_FIELD]||doc.data()||{},generation=Number(row.resetGeneration)||0,state=readState();
  if(generation>Number(state.resetGenerationSeen||0)&&!Number(row.stars)){
   saveState({...state,submitted:false,deferThroughVisit:0,resetGenerationSeen:generation});
   return true;
  }
  return false;
 }
+const isRated=doc=>Boolean(doc?.exists&&Number(doc.data()?.stars||doc.data()?.[STAFF_FIELD]?.stars)>0);
 async function shouldSkipServer(){
  try{
-  const doc=await limited(db().collection(COLLECTION).doc(docFor(identity.id)).get({source:'server'}),3500);
-  if(doc.exists&&Number(doc.data()?.stars)>0){
-   const state=readState();
-   saveState({...state,visits:visit,submitted:true,resetGenerationSeen:Math.max(Number(state.resetGenerationSeen||0),Number(doc.data()?.resetGeneration||0))});
-   return true;
+  const firestore=await connectDb();
+  let primary=null,profile=null;
+  try{primary=await limited(firestore.collection(COLLECTION).doc(docFor(identity.id)).get({source:'server'}),4500)}
+  catch(error){console.warn('[Feedback V93] dedicated rating precheck',error?.code||error?.message||error)}
+  try{profile=await limited(fallbackRef(firestore).get({source:'server'}),4500)}
+  catch(error){console.warn('[Feedback V93] employee profile precheck',error?.code||error?.message||error)}
+  if(isRated(primary)||isRated(profile)){
+    const state=readState(),g=Math.max(Number(primary?.data()?.resetGeneration||0),Number(profile?.data()?.[STAFF_FIELD]?.resetGeneration||0));
+    saveState({...state,visits:visit,submitted:true,resetGenerationSeen:Math.max(Number(state.resetGenerationSeen||0),g)});
+    return true;
   }
-  acceptRatingReset(doc);
- }catch(error){console.warn('[Feedback V92] Cannot precheck existing rating',error?.code||error?.message||String(error))}
+  if(primary)acceptRatingReset(primary);
+  if(profile)acceptRatingReset(profile);
+ }catch(error){console.warn('[Feedback V93] Cannot precheck existing rating',error?.code||error?.message||String(error))}
  return false;
 }
-function watchRatingResets(){
+async function watchRatingResets(){
  if(resetUnsubscribe||!identity)return;
  try{
-  resetUnsubscribe=db().collection(COLLECTION).doc(docFor(identity.id)).onSnapshot(doc=>{
-   if(doc.metadata?.fromCache)return;
-   if(acceptRatingReset(doc)&&!visible&&!sending)schedule();
-  },error=>console.warn('[Feedback V92] Reset listener failed',error?.code||error?.message||String(error)));
- }catch(error){console.warn('[Feedback V92] Reset watch init',error?.message||String(error))}
+  const firestore=await connectDb(),unsubs=[];
+  const listen=ref=>{try{return ref.onSnapshot(doc=>{
+    if(doc.metadata?.fromCache)return;
+    if(acceptRatingReset(doc)&&!visible&&!sending)schedule();
+  },error=>console.warn('[Feedback V93] Reset listener',error?.code||error?.message||error))}catch(error){console.warn('[Feedback V93] Reset watch init',error?.message||error);return null}};
+  const a=listen(firestore.collection(COLLECTION).doc(docFor(identity.id))),b=listen(fallbackRef(firestore));
+  for(const fn of [a,b])if(fn)unsubs.push(fn);
+  resetUnsubscribe=()=>unsubs.forEach(fn=>fn());
+ }catch(error){console.warn('[Feedback V93] Reset watch init',error?.code||error?.message||error)}
 }
 function schedule(){
  if(waiting)return;waiting=true;
@@ -176,7 +205,7 @@ async function init(){
  visit=Math.max(0,Number(state.visits)||0)+1;
  saveState({...state,visits:visit});
  const alreadyRated=await shouldSkipServer();
- watchRatingResets();
+ void watchRatingResets();
  if(getIdentity()?.id!==identity.id)return;
  const nextState=readState();
  if(alreadyRated||nextState.submitted||visit<=Number(nextState.deferThroughVisit||0))return;
