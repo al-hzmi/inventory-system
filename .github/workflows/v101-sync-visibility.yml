@@ -1,0 +1,24 @@
+name: V101 accurate stocktake sync status
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'stocktake.html'
+      - 'tests/v101-sync-visibility.cjs'
+      - '.github/workflows/v101-sync-visibility.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: node tests/v101-sync-visibility.cjs
+      - run: npm run build
