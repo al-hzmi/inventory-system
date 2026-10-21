@@ -4358,20 +4358,30 @@ const App = () => {
                         employeeId: isAdmin ? null : (localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || null),
                         userAgent: navigator.userAgent,
                         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-                        durationMinutes: firebase.firestore.FieldValue.increment(5)
+                        durationMinutes: firebase.firestore.FieldValue.increment(1.5),
+                        state:'online'
                     }, { merge: true }).catch(e=>console.warn('[Employee session heartbeat]',e?.code||e?.message||e));
 
                     db.collection('users').doc(toSafeDocId(sessionName)).set({
-                        timeSpentMinutes: firebase.firestore.FieldValue.increment(5),
+                        timeSpentMinutes: firebase.firestore.FieldValue.increment(1.5),
                         lastActive: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true }).catch(e=>console.warn('[Employee profile heartbeat]',e?.code||e?.message||e));
                 }).catch(e=>console.warn('[Employee session init]',e?.code||e?.message||e));
             }
-        }, 300000);
-        
+        }, 90000);
+        // A restored/foregrounded tab must refresh its presence without waiting for a 5-minute cycle.
+        const onForeground = () => { if(document.visibilityState==='visible'&&isTracking) {
+            const proof=readLoginPhotoProof();
+            if(!isAdmin&&!(proof?.role==='employee'&&proof.employeeId===localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID)&&proof.photoId&&proof.loginAttemptId))return;
+            getDb().then(db=>db.collection('site_sessions').doc(sessionId).set({
+                lastActive:firebase.firestore.FieldValue.serverTimestamp(),state:'online'
+            },{merge:true})).catch(e=>console.warn('[Employee return presence]',e?.code||e?.message||e));
+        }};
+        document.addEventListener('visibilitychange',onForeground);
         return () => {
             isTracking = false;
             clearInterval(interval);
+            document.removeEventListener('visibilitychange',onForeground);
         };
     }, [sessionName, sessionId, isAdmin, accessVerified]);
 
