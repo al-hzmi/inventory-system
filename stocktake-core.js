@@ -24,8 +24,16 @@
     if(item._aggregated)return {...item};
     const counts=Object.values(item.teamCounts).map(e=>quantity(e.quantity));
     if(item.actualQty!=null&&!Object.hasOwn(item.teamCounts,teamKey(item.teamId)))counts.push(quantity(item.actualQty));
+    const sources=Object.values(item.teamCounts).filter(e=>e&&Number.isFinite(quantity(e.quantity)));
+    const scopes=sources.map(e=>String(e.scope||'').trim().toLowerCase().replace(/\s+/g,' '));
+    // Separate counters may contribute only from explicitly DIFFERENT physical areas.
+    // The same or unspecified area risks counting the same cartons twice.
+    const conflicting=sources.length>1&&(!scopes.every(Boolean)||new Set(scopes).size!==scopes.length);
     const actual=counts.reduce((sum,q)=>difference(sum+q,0),0),diff=difference(actual,quantity(item.expectedQty));
-    return {...item,_aggregated:true,_legacyActual:item.actualQty,actualQty:actual,difference:diff,countStatus:!counts.length?'pending':Math.abs(diff)<1e-9?'matched':diff<0?'shortage':'surplus'};
+    return {...item,_aggregated:true,_legacyActual:item.actualQty,actualQty:actual,
+      countConflict:conflicting,conflictEntries:conflicting?sources.map(e=>({teamId:e.teamId,teamName:e.teamName,scope:e.scope,quantity:e.quantity})):[],
+      difference:conflicting?null:diff,
+      countStatus:conflicting?'conflict':!counts.length?'pending':Math.abs(diff)<1e-9?'matched':diff<0?'shortage':'surplus'};
   }
   function contributionLabels(item,field){const entries=Object.values(item.teamCounts||{}),legacy=item._aggregated?item._legacyActual:item.actualQty;if(legacy!=null&&!item.teamCounts?.[teamKey(item.teamId)])entries.push({teamName:item.teamName||'',scope:item.scope||item.zone||''});return [...new Set(entries.map(e=>e[field]).filter(Boolean))].join('، ');}
   function forTeam(item,id){const total=aggregate(item),own=teamCount(item,id),entry=item.teamCounts?.[teamKey(id)];return {...total,_teamActual:own,_totalActual:total.actualQty, countStatus:Number.isFinite(own)?total.countStatus:'pending',lastCountOperationId:entry?.operationId||(item.teamId===id?item.lastCountOperationId:'')};}
@@ -34,6 +42,7 @@
     const expected = quantity(item.expectedQty);
     if (!Number.isFinite(expected)) throw new Error(`كمية النظام غير صحيحة للصنف ${item.sku}`);
     if ((item.countStatus || 'pending') === 'pending') return { expected, actual: '', diff: '', status: 'pending' };
+    if(item.countConflict||item.countStatus==='conflict')return {expected,actual:'',diff:'',status:'conflict'};
     const actual = quantity(item.actualQty);
     if (!Number.isFinite(actual)) throw new Error(`الكمية الفعلية غير صحيحة للصنف ${item.sku}`);
     const diff = difference(actual, expected);
