@@ -20,7 +20,7 @@ assert.ok(pilot.includes("enable(identity.id);")&&pilot.includes("waitUI(identit
 assert.ok(!pilot.includes('.onSnapshot(')&&!pilot.includes('if(allowed){enable(identity.id)'), 'Remote pilot allowlist must not control public release');
 assert.ok(!pilot.includes("if(safeRead(key(id)+'_classic',{}).hidden)"),'Old hidden preferences must not suppress official UI');
 assert.ok(pilot.includes("batco_pilot61_"),'Legacy favorites must remain after release');
-assert.ok(loader.includes('rev=71.0')&&loader.includes('v61-employee-pilot.js?v=69.0')&&loader.includes('v61-employee-pilot.css?v=69.0'),'Official loader must bust cached files');
+assert.ok(/CORE='\.\/runtime\/index-v37-source\.txt\?[^']+'/.test(loader)&&/v61-employee-pilot\.js\?v=[0-9.]+/.test(loader)&&/v61-employee-pilot\.css\?v=[0-9.]+/.test(loader),'Source-controlled bootstrap must reference versioned employee assets before build');
 assert.ok(runtime.includes('className={`batco-gallery-favorite-anchor')&&runtime.includes("showImage?'below-zoom':'without-zoom'"),'Gallery star goes to the right below zoom');
 assert.ok(css.includes('.batco-gallery-favorite-anchor{')&&css.includes('right:8px;left:auto;top:52px'),'Star must avoid top-left logo');
 assert.ok(css.includes('.batco-direct-favorite.is-icon-only')&&css.includes('width:38px;height:38px'),'Gallery favorite must be square');
