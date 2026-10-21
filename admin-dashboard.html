@@ -519,6 +519,7 @@ function AdminApp(){
   const [employeeSiteControl,setEmployeeSiteControl]=useState(DEFAULT_EMPLOYEE_SITE_CONTROL);
   const [data,setData]=useState({customers:[],customerDevices:[],customerSessions:[],customerLogins:[],customerActivity:[],customerOrders:[],customerDrafts:[],customerSecurityPhotos:[],employeeUsers:[],employeeAccounts:[],employeeAliases:[],employeeNotifications:[],employeeSecurityPhotos:[],employeeLoginAttempts:[],employeeSessions:[],employeeLogins:[],access:[],search:[],employeeOrders:[],employeeDrafts:[],categoryAudit:[],newArrivalReviews:[],adminAudit:[],livePresence:[],liveActivity:[]});
    const [collectionErrors,setCollectionErrors]=useState({});
+  const [collectionSources,setCollectionSources]=useState({});
   const [lazyLoadState,setLazyLoadState]=useState({});
   const lazyLoaders=useRef({}),lazyRequested=useRef(new Set());
   const requestLazy=key=>{if(lazyRequested.current.has(key))return;const load=lazyLoaders.current[key];if(load){lazyRequested.current.add(key);load()}};
@@ -528,7 +529,12 @@ function AdminApp(){
     let stopped=false;const unsubs=[];const waiting=new Set(Object.keys(COLLECTIONS).filter(key=>!LAZY_ADMIN_KEYS.has(key)));let pendingData={},dataFrame=0;
     const markReady=key=>{waiting.delete(key);if(!waiting.size&&!stopped)setSyncing(false)};
     const flushData=()=>{dataFrame=0;if(stopped)return;const patch=pendingData;pendingData={};if(Object.keys(patch).length)setData(prev=>({...prev,...patch}))};
-    const apply=(key,name,snap)=>{if(stopped)return;setCollectionErrors(prev=>prev[key]?Object.fromEntries(Object.entries(prev).filter(([k])=>k!==key)):prev);const rows=snap.docs.map(d=>({id:d.id,...d.data(),__collection:name}));pendingData[key]=rows;if(LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'ready'}));if(!dataFrame)dataFrame=requestAnimationFrame(flushData);markReady(key)};
+    const apply=(key,name,snap)=>{if(stopped)return;
+      if(['employeeLogins','employeeSessions','employeeAccounts','livePresence'].includes(key)){
+        const next={fromCache:Boolean(snap.metadata?.fromCache),pendingWrites:Boolean(snap.metadata?.hasPendingWrites),received:true};
+        setCollectionSources(prev=>prev[key]?.fromCache===next.fromCache&&prev[key]?.pendingWrites===next.pendingWrites?prev:{...prev,[key]:next});
+      }
+      setCollectionErrors(prev=>prev[key]?Object.fromEntries(Object.entries(prev).filter(([k])=>k!==key)):prev);const rows=snap.docs.map(d=>({id:d.id,...d.data(),__collection:name}));pendingData[key]=rows;if(LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'ready'}));if(!dataFrame)dataFrame=requestAnimationFrame(flushData);markReady(key)};
     const attach=(key,name)=>{
       const limit=REALTIME_LIMIT[key]||160;let unsubscribe=null,usingFallback=false;
       const field=REALTIME_ORDER[key];
@@ -800,7 +806,16 @@ function AdminApp(){
     const exitEvents=eSessions.filter(s=>authenticatedSession(s)&&!employeeIsHere(s)).map(s=>({type:'exit',name:s.name||'—',time:s.lastActive,device:s.userAgent}));
     const timeline=[...loginEvents,...exitEvents].sort((a,b)=>tsMs(b.time)-tsMs(a.time)).slice(0,40);
     const activeAccounts=eAccounts.filter(a=>a.status!=='suspended'&&a.status!=='merged').length;
+    const healthKeys=[['employeeLogins','سجل الدخول'],['employeeSessions','جلسات العمل'],['employeeAccounts','حسابات الموظفين']];
+    const healthLabel=key=>collectionErrors[key]?'فشل القراءة: '+collectionErrors[key]:!collectionSources[key]?'بانتظار الاتصال':collectionSources[key].fromCache?'نسخة الجهاز فقط — غير مؤكدة':'متصل بقاعدة البيانات';
+    const hasReadProblem=healthKeys.some(([key])=>collectionErrors[key]||!collectionSources[key]||collectionSources[key].fromCache);
     return <div className="grid gap-4">
+      <section className={`rounded-xl border p-3 text-[11px] leading-6 ${hasReadProblem?'bg-amber-50 border-amber-200 text-amber-900':'bg-white border-border text-secondary'}`} role="status">
+        <b className="block text-xs text-primary">حالة اتصال سجلات الموظفين</b>
+        {healthKeys.map(([key,label])=><div key={key}><b>{label}:</b> {healthLabel(key)}</div>)}
+        <p className="mt-1">صفر في «متصل الآن» يعني عدم رصد جلسة حديثة خلال 3 دقائق، ولا يعني أن الموظفين لم يسجلوا الدخول سابقًا. يظهر آخر دخول مثبت بشكل مستقل أدناه.</p>
+        {hasReadProblem&&<button type="button" className="mt-2 border border-amber-300 rounded-lg px-3 py-1.5 font-bold bg-white" onClick={()=>location.reload()}>إعادة الاتصال وتحديث السجلات</button>}
+      </section>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2"><Stat label="متصل الآن" value={employeeOnline.size} tone="success"/><Stat label="الحسابات النشطة" value={activeAccounts}/><Stat label="بانتظار إنشاء رمز" value={eAccounts.filter(a=>a.status!=='merged'&&!a.passwordHash).length} tone="info"/><Stat label="طلبات اليوم" value={todayEmployeeOrders.length}/><Stat label="قيمة اليوم" value={`${num(todayEmployeeOrderValue)} ر.س`} tone="accent"/></div>
       <div className="grid lg:grid-cols-[.9fr_1.1fr] gap-4">
         <section className="bg-white border border-border rounded-2xl shadow-card overflow-hidden"><div className="p-4 border-b border-border flex items-center justify-between"><div><b className="text-sm">حالة الموظفين الآن</b><div className="text-[10px] text-muted mt-1">الدخول المسجل في Firebase: الصورة وهوية الموظف وسجل الخادم. تُعرض عمليات الدخول حتى عندما تفشل كتابة جلسة الحضور. مؤشر «متصل» يتطلب نبض جلسة حديثًا.</div></div><button onClick={()=>setEmployeeEditor({initialName:''})} className="h-9 px-3 rounded-xl bg-primary text-white text-[10px] font-bold flex items-center gap-1.5"><Icon name="plus" className="w-3.5 h-3.5"/>موظف جديد</button></div><div className="p-3 border-b border-border text-[10px] text-secondary bg-surface/40">مصادر العرض: ${verifiedLoginRecords.length} دخول موثق · ${latestSessions.length} جلسة مطابقة · ${unlinkedSessions.length} جلسة تحتاج مطابقة. لا يعني آخر دخول أن الموظف متصل الآن.</div><div className="divide-y divide-border">{presence.length?presence.map((r,i)=>{const on=Boolean(r.session&&employeeIsHere(r.session));const verified=Boolean(r.log||r.session);return <button key={r.id||i} onClick={()=>setDetail(r.session||r.log||{...r,__collection:'employee_profile_login'})} className="w-full p-3.5 text-right hover:bg-surface flex items-center gap-3"><span className={`w-2.5 h-2.5 rounded-full shrink-0 ${on?'bg-success':'bg-muted'}`}></span><div className="min-w-0 flex-1"><b className="text-xs block truncate">{r.name||'—'}</b><span className="text-[10px] text-muted block mt-1">{on?'داخل النظام الآن · الجلسة متزامنة بالخادم':r.kind==='profile_history'?'آخر دخول في ملف الحساب · لا يوجد سجل تحقق مطابق':r.session?`آخر نشاط موثق ${ago(r.session.lastActive||r.session.startTime)} · غير متصل الآن`:'دخول موثق في Firebase · لم تصل جلسة حضور حديثة'}</span></div><span className="text-[10px] text-secondary shrink-0">{on?'متصل':dateTime(r.time)}</span></button>}):<div className="py-12 text-center text-xs text-muted">{syncing?'جارٍ جلب سجلات الحضور والدخول من Firebase...':'لا توجد سجلات دخول موظفين مستلمة حتى الآن. راجع حالة الاتصال أدناه.'}</div>}</div></section>
