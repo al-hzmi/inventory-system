@@ -24,4 +24,11 @@ has(login,".doc('employee_login_'+verifiedLoginRef.id).set({",'persist initial l
 has(login,"loginLogId:verifiedLoginRef.id",'link same verified login');
 has(login,"Promise.race([db.collection('site_sessions')",'bounded waiting for session');
 has(app,"?'employee_login_'+String(proof.loginLogId)",'stable reloaded session');
+has(section,'مصادر العرض: {verifiedLoginRecords.length}', 'real JSX count');
+assert(!section.includes('مصادر العرض: ${verifiedLoginRecords.length}'),'raw interpolation should not render to customers');
+const fg=app.slice(app.indexOf('const onForeground = () =>'),app.indexOf('window.removeEventListener(\'pageshow\',onForeground)'));
+has(fg,"securityPhotoId:!isAdmin?proof?.photoId||''",'foreground backfill carries photo ID');
+has(fg,"loginLogId:!isAdmin?proof?.loginLogId||''",'foreground backfill carries login log ID');
+has(fg,"identitySource:!isAdmin?'employee_login_photo_record':'admin_session'",'foreground backfill carries identity');
+has(fg,"window.addEventListener('pageshow',onForeground)",'page restore immediately reconciles presence');
 console.log('V96 employee activity visibility and Firebase source semantics: PASS');
