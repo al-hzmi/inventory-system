@@ -3178,6 +3178,9 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                 faceVerified: true,
                 remoteApproval: Boolean(verificationContext.remote),
                 securityPhotoId: photoRef.id,
+                loginAttemptId,
+                canonicalName,
+                loginStatus:'verified',
                 time: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
             });
