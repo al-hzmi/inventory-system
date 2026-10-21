@@ -201,6 +201,17 @@ async function writeCount(item,actual,source){
  if(!Number.isFinite(actual)||actual<0){toast('أدخل كمية صحيحة؛ اكتب 0 صراحةً إذا لم توجد كمية');return false}
  if(saving.has(item.id)||surplusDialogActive)return false;
  const entryTeamId=state.team.id,entryCampaignId=state.campaign.id;
+ // Warn and stop double-counting one physical location; another team may count the SKU
+ // only when both teams have explicit, DISTINCT location scopes.
+ const ourScope=norm(countingTeam.scope||countingTeam.zone||'');
+ const foreignCounts=Object.values(item.teamCounts||{}).filter(x=>x&&x.teamId!==countingTeam.id&&Number.isFinite(StocktakeCore.quantity(x.quantity)));
+ const overlapping=foreignCounts.filter(x=>!ourScope||!norm(x.scope||'')||norm(x.scope||'')===ourScope);
+ if(overlapping.length){
+  const names=[...new Set(overlapping.map(x=>x.teamName||x.actorName||'مجموعة أخرى'))].join('، ');
+  toast('هذا الصنف جُرد من '+names+' في النطاق نفسه أو نطاق غير محدد. راجع مسؤول الجرد لتجنب احتساب الكمية مرتين.');
+  return false;
+ }
+
  const expected=StocktakeCore.quantity(item.expectedQty);
  if(!Number.isFinite(expected)){toast('كمية النظام غير صالحة؛ راجع الإدارة قبل الاعتماد');return false}
  const previewTotal=StocktakeCore.difference(Number(item._totalActual||0)-(Number.isFinite(item._teamActual)?item._teamActual:0)+actual,0);
