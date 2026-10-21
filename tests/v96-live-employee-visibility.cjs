@@ -19,10 +19,11 @@ has(admin,"const verifiedLoginRecords=eLogins.filter(x=>x.faceVerified===true&&!
 has(admin,"verifiedLoginById.get(String(s.loginLogId))",'session log matching based on immutable doc id');
 const login=app.slice(app.indexOf('const finalizeEmployeeLogin ='),app.indexOf('const finalizeAdminLogin ='));
 has(login,"db.collection('login_logs').add({",'employee record acknowledged');
+assert(login.indexOf("db.collection('login_logs').add({")<login.indexOf("const userRef = db.collection('users')"),'confirmed login must precede optional profile counters');
 has(login,'loginAttemptId,','attempt correlation persisted');
 has(login,".doc('employee_login_'+verifiedLoginRef.id).set({",'persist initial login session');
 has(login,"loginLogId:verifiedLoginRef.id",'link same verified login');
-has(login,"Promise.race([db.collection('site_sessions')",'bounded waiting for session');
+assert(!login.includes('SESSION_PROBE_TIMEOUT'),'attendance heartbeat must not delay successful login');
 has(app,"?'employee_login_'+String(proof.loginLogId)",'stable reloaded session');
 has(section,'مصادر العرض: {verifiedLoginRecords.length}', 'real JSX count');
 assert(!section.includes('مصادر العرض: ${verifiedLoginRecords.length}'),'raw interpolation should not render to customers');
