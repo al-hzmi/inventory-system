@@ -1452,6 +1452,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
     const [submitting, setSubmitting] = useState(false);
     const submitLock = useRef(false);
     const pendingInvoiceId = useRef('');
+    const pendingInvoiceSignature = useRef('');
     const handleSubmit = async () => {
         if (submitLock.current || !items.length) return;
         if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
@@ -1490,9 +1491,10 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
             let pending = null;
             try { pending = JSON.parse(localStorage.getItem(pendingKey) || 'null'); } catch (_) {}
             const previousId = pending?.signature === invoiceSignature && typeof pending?.id === 'string'
-                ? pending.id : pendingInvoiceId.current;
+                ? pending.id : (pendingInvoiceSignature.current === invoiceSignature ? pendingInvoiceId.current : '');
             const orderRef = previousId ? db.collection('orders').doc(previousId) : db.collection('orders').doc();
             pendingInvoiceId.current = orderRef.id;
+            pendingInvoiceSignature.current = invoiceSignature;
             try { localStorage.setItem(pendingKey, JSON.stringify({ id: orderRef.id, signature: invoiceSignature })); } catch (_) {}
 
             const savedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -1514,6 +1516,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
             ]);
             try { localStorage.removeItem(pendingKey); } catch (_) {}
             pendingInvoiceId.current = '';
+            pendingInvoiceSignature.current = '';
 
             const newOrder = {
                 id: Date.now(), serverId: orderRef.id, invoiceNo: payload.invoiceNo,
