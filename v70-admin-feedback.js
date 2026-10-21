@@ -106,7 +106,7 @@ async function load(){
   const firestore=firebase.firestore();
   const [primary,profile]=await Promise.allSettled([
     firestore.collection(COLLECTION).orderBy('submittedAt','desc').limit(MAX_RECORDS).get({source:'server'}),
-    firestore.collection('users').limit(750).get({source:'server'})
+    Promise.resolve().then(()=>firestore.collection('users').limit(750).get({source:'server'}))
   ]);
   const failures=[];
   const primaryRows=primary.status==='fulfilled'
