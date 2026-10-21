@@ -17,6 +17,8 @@ for(const marker of [
   "case'incident':return",
   "'مزامنة ناقصة'",
 ]) assert(admin.includes(marker),'missing live incident audit guarantee: '+marker);
+const realtime=admin.match(/const REALTIME_KEYS=new Set\(\[([^\]]+)\]\)/)?.[1]||'';
+for(const key of ['employeeLogins','employeeLoginAttempts','employeeOrders','customerLogins','customerActivity','search'])assert(realtime.includes("'"+key+"'"),'critical event must be real-time: '+key);
 assert(admin.includes("const records=[...recordMap.values()]"),'must deduplicate overlapping Firestore queries');
 assert(admin.includes("metadata?.fromCache"),'must reject cached snapshots in incident audit');
 for(const marker of ["presenceFailures>=2","presenceWarning(true)","cartSyncInFlight","lastCartHash=sig;await log","finally{cartSyncInFlight=false}"])assert(tracker.includes(marker),'telemetry recovery missing: '+marker);
