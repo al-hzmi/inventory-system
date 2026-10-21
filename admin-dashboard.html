@@ -543,8 +543,8 @@ function AdminApp(){
       const fail=e=>{console.warn('[Dashboard snapshot]',name,e);if(!stopped)setCollectionErrors(prev=>({...prev,[key]:String(e?.code||e?.message||'unknown').slice(0,150)}));if(!stopped&&LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'error'}));markReady(key)};
       const loadOnce=async()=>{if(LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'loading'}));try{const s=await ordered().get();apply(key,name,s)}catch(e){if(stopped)return;if(!needsIndexFallback(e)){fail(e);return}try{const s=await db.collection(name).limit(limit).get();apply(key,name,s)}catch(err){fail(err)}}};
       if(!REALTIME_KEYS.has(key)){if(LAZY_ADMIN_KEYS.has(key))lazyLoaders.current[key]=loadOnce;else loadOnce();return()=>{delete lazyLoaders.current[key]}};
-      const fallback=()=>{if(stopped||usingFallback)return;usingFallback=true;try{unsubscribe?.()}catch{};unsubscribe=db.collection(name).limit(limit).onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime fallback]',name,e);fail(e)})};
-      try{unsubscribe=ordered().onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);needsIndexFallback(e)?fallback():fail(e)})}catch(e){needsIndexFallback(e)?fallback():fail(e)}
+      const fallback=()=>{if(stopped||usingFallback)return;usingFallback=true;try{unsubscribe?.()}catch{};unsubscribe=db.collection(name).limit(limit).onSnapshot({includeMetadataChanges:true},s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime fallback]',name,e);fail(e)})};
+      try{unsubscribe=ordered().onSnapshot({includeMetadataChanges:true},s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);needsIndexFallback(e)?fallback():fail(e)})}catch(e){needsIndexFallback(e)?fallback():fail(e)}
       return()=>{try{unsubscribe?.()}catch{}}
     };
     Object.entries(COLLECTIONS).forEach(([key,name])=>unsubs.push(attach(key,name)));
