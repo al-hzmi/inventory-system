@@ -3218,7 +3218,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
             // V96: persist an initial *server* session at the same time as the login.
             // A login log is still authoritative when session writes fail; never invent an online state.
             try {
-                await db.collection('site_sessions').doc('employee_login_'+verifiedLoginRef.id).set({
+                await Promise.race([db.collection('site_sessions').doc('employee_login_'+verifiedLoginRef.id).set({
                     loginAttemptId,securityPhotoId:photoRef.id,loginLogId:verifiedLoginRef.id,
                     name:canonicalName,employeeId:employeeAccount.id,
                     identitySource:'verified_login_server_v96',
@@ -3226,7 +3226,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                     lastActive:firebase.firestore.FieldValue.serverTimestamp(),
                     state:'online',durationMinutes:0,
                     userAgent:navigator.userAgent
-                },{merge:true});
+                },{merge:true}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('SESSION_PROBE_TIMEOUT')),4500))]);
             } catch(sessionError) {
                 console.warn('[V96 initial server session failed; login log remains verified]',sessionError?.code||sessionError?.message||sessionError);
             }
