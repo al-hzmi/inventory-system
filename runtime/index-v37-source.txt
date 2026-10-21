@@ -1449,11 +1449,14 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
     const items = Object.values(cart);
     const totalAmount = items.reduce((sum, item) => sum + ((item.price || 0) * item.cartQty), 0);
 
-    const handleSubmit = () => {
+    const [submitting, setSubmitting] = useState(false);
+    const submitLock = useRef(false);
+    const pendingInvoiceId = useRef('');
+    const handleSubmit = async () => {
+        if (submitLock.current || !items.length) return;
         if (!customer.trim()) return alert("يجب كتابة اسم العميل أولاً لتسجيل الفاتورة.");
-        
-        const gregorianDate = new Date().toLocaleDateString('en-GB');
 
+        const gregorianDate = new Date().toLocaleDateString('en-GB');
         let msg = `*طلب مبيعات جديد*\n`;
         msg += `════════════════\n`;
         msg += `المندوب: ${sessionName}\n`;
@@ -1462,44 +1465,82 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
         msg += `التاريخ: ${gregorianDate}\n`;
         if (notes.trim()) msg += `الملاحظات: ${notes.trim()}\n`;
         msg += `════════════════\n\n`;
-
         items.forEach((it, idx) => {
             msg += `${idx + 1}. *[ ${it.id} ]*\n`;
             msg += `   الكمية: *${it.cartQty}* | الإجمالي: *${NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}* ر.س\n`;
             if (idx < items.length - 1) msg += `  ╌╌╌╌╌╌╌╌╌╌╌╌\n`;
         });
-
         msg += `\n════════════════\n`;
         msg += `*الإجمالي النهائي: ${NUMBER_FORMATTER.format(totalAmount)} ر.س*\n`;
 
-        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-        window.open(waUrl, '_blank');
-
-        const newOrder = {
-            id: Date.now(),
-            date: gregorianDate,
-            customer: customer.trim(),
-            warehouse: warehouse,
-            totalAmount: totalAmount,
-            msg: msg 
-        };
-        const historyKey = `b2b_history_${sessionName}`;
-        const existingHistory = JSON.parse(localStorage.getItem(historyKey)) || [];
-        localStorage.setItem(historyKey, JSON.stringify([newOrder, ...existingHistory]));
-
-        getDb().then(db => {
-            db.collection('orders').add({
-                repName: sessionName, customerName: customer.trim(), warehouse: warehouse, notes: notes.trim(), 
-                items: items.map(i => ({ cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty, price: i.price, total: i.price * i.cartQty })),
-                totalAmount: totalAmount, timestamp: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent
+        // A WhatsApp popup is reserved during the user's click, but opened only after server acknowledgement.
+        // Never clear the cart or claim a successful invoice if Firestore cannot confirm the write.
+        submitLock.current = true;
+        setSubmitting(true);
+        let whatsappWindow = null;
+        try { whatsappWindow = window.open('about:blank', '_blank'); } catch (_) {}
+        let timeoutId = null;
+        try {
+            const db = await getDb();
+            const invoiceSignature = JSON.stringify({
+                rep: sessionName, customer: customer.trim(), warehouse, notes: notes.trim(),
+                items: items.map(i => [i.cleanId, i.id, Number(i.cartQty), Number(i.price || 0)])
             });
-        }).catch(()=>{});
+            const pendingKey = 'batco_pending_employee_invoice_v90_' + encodeURIComponent(sessionName);
+            let pending = null;
+            try { pending = JSON.parse(localStorage.getItem(pendingKey) || 'null'); } catch (_) {}
+            const previousId = pending?.signature === invoiceSignature && typeof pending?.id === 'string'
+                ? pending.id : pendingInvoiceId.current;
+            const orderRef = previousId ? db.collection('orders').doc(previousId) : db.collection('orders').doc();
+            pendingInvoiceId.current = orderRef.id;
+            try { localStorage.setItem(pendingKey, JSON.stringify({ id: orderRef.id, signature: invoiceSignature })); } catch (_) {}
 
-        setCart({});
-        onClose();
+            const savedAt = firebase.firestore.FieldValue.serverTimestamp();
+            const payload = {
+                invoiceNo: 'INV-' + orderRef.id.slice(0, 8).toUpperCase(),
+                repName: sessionName, customerName: customer.trim(), warehouse, notes: notes.trim(),
+                items: items.map(i => ({
+                    cleanId: i.cleanId, id: i.id, name: i.name, qty: i.cartQty,
+                    price: i.price, total: (Number(i.price) || 0) * (Number(i.cartQty) || 0)
+                })),
+                totalAmount, timestamp: savedAt, createdAt: savedAt,
+                clientCreatedAt: Date.now(), userAgent: navigator.userAgent, source: 'employee_invoice_v90'
+            };
+            await Promise.race([
+                orderRef.set(payload),
+                new Promise((_, reject) => {
+                    timeoutId = setTimeout(() => reject(new Error('INVOICE_WRITE_TIMEOUT')), 20000);
+                })
+            ]);
+            try { localStorage.removeItem(pendingKey); } catch (_) {}
+            pendingInvoiceId.current = '';
+
+            const newOrder = {
+                id: Date.now(), serverId: orderRef.id, invoiceNo: payload.invoiceNo,
+                date: gregorianDate, customer: customer.trim(), warehouse, totalAmount, msg
+            };
+            try {
+                const historyKey = `b2b_history_${sessionName}`;
+                const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]');
+                localStorage.setItem(historyKey, JSON.stringify([newOrder, ...(Array.isArray(existingHistory) ? existingHistory : [])]));
+            } catch (historyError) { console.warn('[Invoice local history]', historyError); }
+            setCart({});
+            onClose();
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+            if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.replace(waUrl);
+            else window.location.assign(waUrl);
+        } catch (error) {
+            console.error('[Invoice save failed]', error);
+            try { whatsappWindow?.close(); } catch (_) {}
+            alert('تعذر تأكيد حفظ الفاتورة في قاعدة البيانات. لم تُمسح السلة ولم يُرسل الطلب إلى واتساب. تحقق من الاتصال أو صلاحيات Firebase ثم أعد المحاولة.');
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+            submitLock.current = false;
+            setSubmitting(false);
+        }
     };
 
-    const saveAsDraft = () => {
+        const saveAsDraft = () => {
         const draftId = Date.now();
         const draftName = customer.trim() || `مسودة ${new Date().toLocaleTimeString('ar-SA')}`;
         const newDraft = {
@@ -1585,9 +1626,9 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
                                 className="flex-1 h-48 bg-surface text-primary border border-border rounded-12 font-bold text-[13px] hover:bg-border disabled:opacity-50 transition-colors flex items-center justify-center gap-6">
                             <Icon.Archive className="w-16 h-16"/> مسودة
                         </button>
-                        <button onClick={handleSubmit} disabled={items.length === 0}
+                        <button onClick={handleSubmit} disabled={items.length === 0 || submitting}
                                 className="w-[70%] h-48 bg-primary text-bg rounded-12 font-bold text-[14px] hover:bg-accent disabled:opacity-50 transition-colors shadow-card flex items-center justify-center gap-8">
-                            اعتماد (واتساب)
+                            {submitting ? 'جاري تأكيد الحفظ...' : 'اعتماد (واتساب)'}
                         </button>
                     </div>
                 </div>
