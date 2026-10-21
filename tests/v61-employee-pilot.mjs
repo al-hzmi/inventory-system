@@ -27,7 +27,7 @@ assert.ok(css.includes('.batco-direct-favorite.is-icon-only')&&css.includes('wid
 assert.ok(runtime.includes('<polygon points="12 2.6')&&runtime.includes('strokeWidth="1.7"'),'Star uses thin vector stroke');
 assert.equal((runtime.match(/className="batco-admin-action-row"/g)||[]).length,2,'Both result types separate admin control');
 assert.ok(runtime.includes('className="batco-shopping-action-row"')&&css.includes('grid-template-columns:auto minmax(0,1fr)'),'Favorite and invoice control align');
-assert.ok(runtime.includes('className="batco-image-warehouse-toast">اختر المستودع أولًا')&&css.includes('position:static;display:table'),'Warehouse hint stays in flow');
+assert.ok(runtime.includes('className="batco-image-warehouse-toast">اختر الفرع أولًا')&&css.includes('position:static;display:table'),'Warehouse hint stays in flow');
 assert.equal((runtime.match(/<PilotFavoriteButton item=\{item\}/g)||[]).length,4,'Search/gallery direct favorite actions remain');
 assert.ok(runtime.includes("e.preventDefault();e.stopPropagation();"),'Favorite cannot flip gallery card');
 assert.ok(runtime.includes('عرض صور الأصناف</span>'),'Image control retains one-line label');
