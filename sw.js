@@ -1,7 +1,7 @@
 /* Cache only the stocktake shell. Never cache API, identity or Firestore traffic. */
 const STOCKTAKE_CACHE='stocktake-shell-v89';
 const RESOURCE_CACHE='batco-static-resources-v89';
-const NAV_CACHE='batco-navigation-shell-v97';
+const NAV_CACHE='batco-navigation-shell-v98-rollback';
 const PAGES=['/admin-branch-presence.html','/branch-presence.html','/branch-stocktake.html','/stocktake.html','/admin-stocktake.html','/stocktake-accountant.html','/accountant-stocktake.html'];
 const ASSETS=['/batco-scan-pro.js','/branch-scan-audio.js','/branch-barcode-fallback.js','/branch-camera-pro.js','/batco-brand-footer.js','/branch-presence-core.js','/branch-presence.js','/branch-presence-main-launcher.js','/branch-presence-page.css','/branch-presence-admin.css','/branch-presence-admin.js','/branch-presence-entry.js','/branch-presence.css','/branch-stocktake-core.js','/branch-stocktake.js','/branch-stocktake.css','/stocktake-core.js','/stocktake-workspace.css','/stocktake-workbook.js','/v71-brand.css','/v56-39-site-identity.js','/assets/batco-logo.svg','/assets/batco-app-icon.svg'];
 const VENDORS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js','https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js'];
@@ -69,27 +69,9 @@ self.addEventListener('fetch',event=>{
      const refresh=async()=>{const r=await fetch(request);if(r.ok&&r.type!=='opaque')await put(cache,key,r.clone());return r};
      if(hit){if(!immutable)event.waitUntil(refresh().catch(()=>{}));return hit}return refresh();})());return;
  }
- // V97: Never serve a stale employee/admin attendance dashboard as if it were live.
- // Network-first prevents an installed iPhone PWA silently displaying last week's code.
- // An offline administrator must see an explicit offline state, not misleading zero counts.
- if(local&&(request.mode==='navigate'||request.destination==='document')&&navPath(url)==='/admin-dashboard.html'){
-   event.respondWith((async()=>{
-     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);
-     try{
-       const fresh=await fetch(request,{cache:'no-store',signal:controller.signal});
-       if(!fresh.ok)return fresh;
-       if(String(fresh.headers.get('content-type')||'').includes('text/html')){
-         const freshCopy=fresh.clone();event.waitUntil((async()=>{const cache=await openCache(NAV_CACHE);await put(cache,'/admin-dashboard.html',freshCopy)})().catch(()=>{}));
-       }
-       return fresh;
-     }catch(error){
-       const retryUrl=new URL(request.url);retryUrl.searchParams.set('batco-retry','1');
-       const html='<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>سجلات الموظفين غير متاحة</title><body style="font:600 15px/2 system-ui;text-align:center;padding:16vh 24px;background:white;color:#111"><h2>تعذر الاتصال ببيانات الإدارة</h2><p>لا يمكن تأكيد حضور الموظفين دون الاتصال بالخادم. لن نعرض سجلات مخزنة قديمة على أنها مباشرة.</p><a style="display:inline-block;padding:12px 22px;border:1px solid #aaa;border-radius:12px;color:inherit;text-decoration:none" href="'+retryUrl.pathname+retryUrl.search+'">إعادة المحاولة</a></body></html>';
-       return new Response(html,{status:503,headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
-     }finally{clearTimeout(timer)}
-   })());return;
- }
- // Other prefetched documents remain instantly available for offline stocktaking.
+ // Responsive cache-first navigation: show the locally cached HTML shell immediately,
+ // then refresh only static HTML asynchronously. Live employee information still comes
+ // from Firestore listeners; no employee data is stored in this navigation cache.
  if(local&&(request.mode==='navigate'||request.destination==='document')&&NAV_PAGES.has(navPath(url))){
    const path=navPath(url);
    event.respondWith((async()=>{

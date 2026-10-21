@@ -1,28 +1,28 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('sw.js','utf8');
-assert.match(source,/const NAV_CACHE='batco-navigation-shell-v97'/);
-assert.match(source,/navPath\(url\)==='\/admin-dashboard\.html'/);
-assert.match(source,/cache:'no-store'/);
-assert.match(source,/سجلات مخزنة قديمة/);
+assert.match(source,/const NAV_CACHE='batco-navigation-shell-v98-rollback'/);
 assert.match(source,/NAV_PAGES\.has\(navPath\(url\)\)/);
+assert.doesNotMatch(source,/cache:'no-store',signal:controller\.signal/);
 assert.match(source,/\['\/admin-branch-presence\.html'/);
-async function tryDashboard(offline){
-  const events={};const calls=[],stored=[];
-  const fake={self:{location:{origin:'https://inventory-system-coral-nu.vercel.app'},addEventListener:(name,fn)=>events[name]=fn},
-    caches:{open:async()=>({put:async (key,res)=>stored.push(key),match:async()=>null}),keys:async()=>[]},
-    fetch:async(req,opts)=>{calls.push({url:req.url,opts});if(offline)throw new Error('OFFLINE');return new Response('<html>V97 PRODUCTION</html>',{status:200,headers:{'Content-Type':'text/html'}})},
-    URL,Response,AbortController,Promise,setTimeout,clearTimeout,console
-  };
-  vm.runInNewContext(source,fake);
-  let response;const waits=[];
-  events.fetch({request:{url:'https://inventory-system-coral-nu.vercel.app/admin-dashboard.html?section=employees&module=live',method:'GET',mode:'navigate',destination:'document'},respondWith:p=>response=p,waitUntil:p=>waits.push(p)});
-  const result=await response;
-  assert.equal(calls.length,1,'should make exactly one fresh admin page request');
-  assert.equal(calls[0].opts.cache,'no-store','dashboard must bypass HTTP cache');
-  assert.equal(result.status,offline?503:200);
-  assert.match(await result.text(),offline?/لا يمكن تأكيد حضور الموظفين/:/V97 PRODUCTION/);
-  await Promise.allSettled(waits);
-  if(!offline)assert(stored.includes('/admin-dashboard.html'),'fresh response should replace navigation cache');
+async function verify(cached,offline){
+ const handlers={},waits=[],requests=[],cacheWrites=[];
+ const cache={match:async()=>cached?new Response('<html>cached admin shell</html>',{headers:{'content-type':'text/html'}}):null,put:async(key)=>cacheWrites.push(key)};
+ const fake={self:{location:{origin:'https://inventory-system-coral-nu.vercel.app'},addEventListener:(key,fn)=>handlers[key]=fn},
+   caches:{open:async()=>cache,match:async()=>null,keys:async()=>[]},
+   fetch:async(req)=>{requests.push(req);if(offline)throw new Error('offline');return new Response('<html>updated admin shell</html>',{headers:{'content-type':'text/html'}})},
+   URL,Response,AbortController,Promise,setTimeout,clearTimeout,console};
+ vm.runInNewContext(source,fake);
+ let answer;
+ handlers.fetch({request:{url:'https://inventory-system-coral-nu.vercel.app/admin-dashboard.html',method:'GET',mode:'navigate',destination:'document'},
+  respondWith:p=>answer=p,waitUntil:p=>waits.push(p)});
+ const result=await answer;
+ assert.equal(result.status,cached||!offline?200:503);
+ const html=await result.text();
+ if(cached)assert.match(html,/cached admin shell/);
+ else if(offline)assert.match(html,/تعذر الاتصال بالنظام/);
+ else assert.match(html,/updated admin shell/);
+ await Promise.allSettled(waits);
+ if(!cached&&!offline)assert(cacheWrites.includes('/admin-dashboard.html'));
 }
-(async()=>{await tryDashboard(false);await tryDashboard(true);console.log('V97 dashboard network-first, offline explicit error, stocktake shell unaffected PASS')})().catch(err=>{console.error(err);process.exitCode=1});
+(async()=>{await verify(true,false);await verify(true,true);await verify(false,false);await verify(false,true);console.log('V98 instant cached navigation and online refresh PASS')})().catch(e=>{console.error(e);process.exitCode=1});
