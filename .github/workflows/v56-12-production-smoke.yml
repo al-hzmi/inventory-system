@@ -52,6 +52,12 @@ jobs:
             exit 1
           fi
 
+      - name: Build the expected production artifact for deterministic parity
+        if: steps.probe.outputs.enabled == 'true'
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
       - name: Verify production assets and V56.33 contracts
         if: steps.probe.outputs.enabled == 'true'
         shell: bash
@@ -68,7 +74,7 @@ jobs:
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/admin-stocktake.html?verify=$nonce" -o /tmp/admin.html
           curl -fsSL --retry 3 --retry-delay 2 -H 'Cache-Control: no-cache' "$PROD/image-distribution.html?verify=$nonce" -o /tmp/image-distribution.html
 
-          cmp -s index.html /tmp/index.html || { echo "::error::Production index.html differs from current main."; exit 1; }
+          cmp -s index.html /tmp/index.html || { echo "::error::Production index.html differs from the locally built current main."; exit 1; }
           cmp -s runtime/index-v37-source.txt /tmp/runtime.txt || { echo "::error::Production employee runtime differs from current main."; exit 1; }
           cmp -s runtime/customer-v37-source.txt /tmp/customer-runtime.txt || { echo "::error::Production customer runtime differs from current main."; exit 1; }
           cmp -s stocktake.html /tmp/stocktake.html || { echo "::error::Production stocktake.html differs from current main."; exit 1; }
