@@ -8,7 +8,7 @@ has(section,"put(key,{id:log.id",'server login display');
 has(section,"kind:'verified_login'","independent login display");
 has(section,"kind:'profile_history'","profile record with unverified warning");
 has(section,"r.kind==='profile_history'","proper distinction of unverified profile history");
-has(section,'لا توجد جلسة حضور حديثة','never hide successful login due to session error');
+has(section,'لم تصل جلسة حضور حديثة','never hide successful login due to session error');
 has(section,"Boolean(r.session&&employeeIsHere(r.session))",'online only when a verified session is fresh');
 has(section,'حالة اتصال سجلات الموظفين','live dashboard health indicator');
 has(section,"collectionSources[key].fromCache",'cache-only warning');
