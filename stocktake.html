@@ -158,7 +158,7 @@ function chip(id,label,count){return `<button class="chip ${state.filter===id?'a
 function completedCardHtml(i){const st=i.countStatus||'pending',diff=Number(i.actualQty)-Number(i.expectedQty);return `<article class="completedRow"><button class="completedOpen" data-open="${i.id}" aria-label="فتح الصنف">‹</button><div><div class="completedSku">${esc(i.sku)}</div><div class="completedName">${esc(i.name||'')}${i.pack!==''&&i.pack!=null?` · الشد: ${esc(i.pack)}`:''}</div><div class="completedNumbers"><span class="mini">الفعلي ${fmt(i.actualQty)}</span><span class="mini">النظام ${fmt(i.expectedQty)}</span><span class="mini">الفرق ${diff>0?'+':''}${fmt(diff)}</span>${i.note?'<span class="mini">ملاحظة</span>':''}</div></div><span class="completedStatus ${st}">${statusLabel(st)}</span></article>`}
 function cardHtml(i,readonly){const st=i.countStatus||'pending',counted=st!=='pending',diff=counted?Number(i.actualQty)-Number(i.expectedQty):null;return `<article class="card ${st}" data-id="${i.id}"><div class="meta"><div class="grow"><div class="sku">${esc(i.sku)}</div><div class="name">${esc(i.name||'')}${i.pack!==''&&i.pack!=null?` · الشد: ${esc(i.pack)}`:''}</div></div><span class="pill ${st==='matched'?'ok':st==='shortage'?'bad':st==='surplus'?'info':''}">${statusLabel(st)}</span></div>${counted?`<div class="qtygrid"><div class="q"><span>كمية النظام</span><b>${fmt(i.expectedQty)}</b></div><div class="q"><span>إجمالي الجهات</span><b>${fmt(i.actualQty)}</b></div><div class="q"><span>الفرق</span><b>${diff>0?'+':''}${fmt(diff)}</b></div></div><div class="variance ${st}">${st==='matched'?'✓ مطابق':st==='shortage'?`نقص ${fmt(Math.abs(diff))}`:`زيادة ${fmt(diff)}`}${i.revision?` · تعديل رقم ${fmt(i.revision)}`:''}</div>`:`<div class="blind"></div>`}${i.note?`<div class="hint"><b>ملاحظة:</b> ${esc(i.note)}</div>`:''}${i._pending?'<div class="pendingmark">بانتظار المزامنة...</div>':''}<div class="actions"><button class="btn entry" data-entry="${i.id}" ${readonly?'disabled':''}>${counted?'تعديل الكمية':'إدخال الكمية'}</button><button class="btn note ${String(i.note||'').trim()?'has':''}" data-note="${i.id}" ${readonly?'disabled':''} title="ملاحظة" aria-label="ملاحظة على الصنف ${esc(i.sku)}">ملاحظة</button></div><div class="editbox ${state.activeEditId===i.id?'open':''}" id="edit_${i.id}"><div class="editrow"><input class="actual" id="actual_${i.id}" inputmode="decimal" value="${esc(draftValue(i))}" aria-label="كمية هذا الصنف لدى جهتك ${esc(i.sku)}" autocomplete="off" placeholder="كمية هذا الصنف" ${readonly||saving.has(i.id)?'disabled':''}><button class="save" data-save="${i.id}" ${readonly||saving.has(i.id)?'disabled':''}>${saving.has(i.id)?'جارٍ الحفظ':'اعتماد'}</button></div></div></article>`}
 function bindUi(readonly){$('#backBtn')?.addEventListener('click',()=>{state.enteredScope='';render()});$('#teamSelect')?.addEventListener('change',e=>{state.activeEditId='';state.search='';state.historyVisible=12;pickTeam(e.target.value)});document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{const strip=b.closest('.filters');if(strip)state.filterScroll=strip.scrollLeft;state.filter=b.dataset.filter;state.historyVisible=12;render()});const se=$('#search');if(se){se.oninput=e=>{const resolved=resolveStocktakeSearch(e.target.value);state.search=e.target.value;state.activeEditId=resolved.item?.id||'';if(resolved.item&&resolved.fromBarcode)state.search=resolved.query;render();const next=$('#search');if(next&&!state.activeEditId){next.focus();try{next.setSelectionRange(next.value.length,next.value.length)}catch{}}};se.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const resolved=resolveStocktakeSearch(se.value);if(resolved.item){state.search=resolved.query;state.activeEditId=resolved.item.id;render()}else toast('لم يتم العثور على الصنف')}}}$('#keyboardModeBtn')?.addEventListener('click',async()=>{if(!user.isAdmin)return;const next=state.control?.searchKeyboardMode==='text'?'numeric':'text';try{state.control.searchKeyboardMode=next;render();await db.collection('system_controls').doc(CONTROL_DOC).set({searchKeyboardMode:next,searchKeyboardUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),searchKeyboardUpdatedBy:ROOT_ID},{merge:true});toast(next==='numeric'?'لوحة الأرقام مفعلة':'لوحة الإدخال الكاملة مفعلة')}catch(e){console.error(e);toast('تعذر تغيير لوحة الإدخال')}});$('#scanBtn')?.addEventListener('click',()=>{ensureFeedbackAudio();startScanner()});$('#loadMoreHistory')?.addEventListener('click',()=>{state.historyVisible=(state.historyVisible||12)+12;render()});document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.activeEditId=b.dataset.open;state.search=String(state.items.find(i=>i.id===b.dataset.open)?.sku||'');render()});if(readonly)return;document.querySelectorAll('[data-entry]').forEach(b=>b.onclick=()=>{ensureFeedbackAudio();state.activeEditId=b.dataset.entry;render()});document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveActual(b.dataset.save));document.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>openNote(b.dataset.note));document.querySelectorAll('.actual').forEach(inp=>inp.oninput=()=>saveDraft(inp.id.replace('actual_',''),inp.value));document.querySelectorAll('.actual').forEach(inp=>inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=inp.id.replace('actual_','');saveActual(id)}})}
-function canEditItem(item){return Boolean(item&&state.campaign&&state.team&&item.campaignId===state.campaign.id&&state.campaign.status!=='closed'&&canAccess(state.control)&&isMember(state.team))}
+function canEditItem(item){return Boolean(item&&state.campaign&&state.team&&item.campaignId===state.campaign.id&&state.campaign.status==='active'&&canAccess(state.control)&&isMember(state.team))}
 
 let surplusDialogActive=false;
 function confirmSurplusCount(item,enteredQty,totalQty,expectedQty){
@@ -241,20 +241,53 @@ async function writeCount(item,actual,source){
  const finishedAll=!((item.countStatus||'pending')!=='pending')&&state.items.length>0&&state.items.every(i=>i.id===item.id||(i.countStatus||'pending')!=='pending');
  const key=draftKey(item.id),operationId=db.collection('stocktake_audit').doc().id;
  if(!saveDraft(item.id,String(actual),'qty',{operationId})){saving.delete(item.id);return false}
- const totalActual=StocktakeCore.difference(Number(item._totalActual||0)-(Number.isFinite(item._teamActual)?item._teamActual:0)+actual,0);
- const wasCounted=(item.countStatus||'pending')!=='pending',before={actualQty:item.actualQty??null,countStatus:item.countStatus||'pending',difference:item.difference??null,note:item.note||'',revision:item.revision||0},status=statusOf(totalActual,item.expectedQty),difference=StocktakeCore.difference(totalActual,Number(item.expectedQty)),now=firebase.firestore.FieldValue.serverTimestamp(),patch={counted:true,updatedAt:now,lastCountAt:now,updatedByEmployeeId:user.employeeId||ROOT_ID,updatedByName:user.name,revision:firebase.firestore.FieldValue.increment(1),lastInputSource:source,lastCountOperationId:operationId};
- if(!item.counted&&!item.firstCountAt){patch.firstCountAt=now;patch.firstCountByEmployeeId=user.employeeId||ROOT_ID;patch.firstCountByName=user.name}
- patch['teamCounts.'+StocktakeCore.teamKey(countingTeam.id)]={quantity:actual,operationId,teamId:countingTeam.id,teamName:countingTeam.name||'',scope:countingTeam.scope||countingTeam.zone||'',actorName:user.name};
- const batch=db.batch();batch.update(db.collection('stocktake_items').doc(item.id),patch);
- batch.set(db.collection('stocktake_audit').doc(operationId),{campaignId:item.campaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:wasCounted?'count_revised':'count_created',before,after:{actualQty:totalActual,teamActualQty:actual,countStatus:status,difference},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now,source,userAgent:navigator.userAgent||''});
- if(source==='found_later')batch.set(db.collection('stocktake_audit').doc(operationId+'_found'),{campaignId:item.campaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:'quantity_found_later',before:{actualQty:item.actualQty},after:{foundQty:StocktakeCore.difference(actual,Number.isFinite(item._teamActual)?item._teamActual:0),actualQty:totalActual,teamActualQty:actual},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
- // Local snapshots acknowledge durable enqueue; the commit promise acknowledges the server.
- return new Promise(resolve=>{
-   let accepted=false,unsub=()=>{};
-   const accept=()=>{if(accepted)return;accepted=true;saving.delete(item.id);if(state.team?.id===countingTeam.id&&state.campaign?.id===item.campaignId&&state.activeEditId===item.id){state.activeEditId='';state.search=''}feedback(status,finishedAll);render();toast(finishedAll?'تم إنهاء جميع أصناف الحملة · تحقق من حالة المزامنة':navigator.onLine?'تم تسجيل الكمية · جارٍ تأكيد المزامنة':'تم تسجيل الكمية على الجهاز · ستُزامن عند الاتصال');resolve(true)};
-   unsub=db.collection('stocktake_items').doc(item.id).onSnapshot({includeMetadataChanges:true},snap=>{if(snap.data()?.teamCounts?.[StocktakeCore.teamKey(countingTeam.id)]?.operationId===operationId&&(durableCache||!snap.metadata.hasPendingWrites)){accept();unsub()}},()=>{});
-   batch.commit().then(()=>{accept();unsub();if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);toast('تمت مزامنة الكمية مع الخادم')}).catch(e=>{console.error(e);unsub();saving.delete(item.id);if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:String(actual)});toast('لم تُعتمد الكمية على الخادم؛ المسودة محفوظة. افتح الصنف وأعد الاعتماد');render();resolve(false)});
- });
+ // The local draft remains until the Firestore transaction actually commits.
+ if(!navigator.onLine){saving.delete(item.id);toast('بدون اتصال: الكمية محفوظة كمسودة على الجهاز، ولم تُعتمد في Firebase');return false}
+ const itemRef=db.collection('stocktake_items').doc(item.id),campaignRef=db.collection('stocktake_campaigns').doc(entryCampaignId),controlRef=db.collection('system_controls').doc(CONTROL_DOC);
+ try {
+   const result=await db.runTransaction(async tx=>{
+     // Reads must precede writes so concurrent counters retry against a fresh item.
+     const [campaignDoc,controlDoc,currentDoc]=await Promise.all([tx.get(campaignRef),tx.get(controlRef),tx.get(itemRef)]);
+     const campaign=campaignDoc.data()||{},control=controlDoc.data()||{},fresh=currentDoc.data();
+     if(campaign.status!=='active'||control.enabled!==true||String(control.activeCampaignId||'')!==entryCampaignId)throw new Error('STOCKTAKE_NOT_ACTIVE');
+     if(!currentDoc.exists||fresh.campaignId!==entryCampaignId)throw new Error('STOCKTAKE_ITEM_NOT_FOUND');
+     const expectedNow=StocktakeCore.quantity(fresh.expectedQty);
+     if(!Number.isFinite(expectedNow)||Math.abs(expectedNow-expected)>1e-9)throw new Error('STOCKTAKE_REFERENCE_CHANGED');
+     const entryKey=StocktakeCore.teamKey(countingTeam.id);
+     const otherEntries=Object.values(fresh.teamCounts||{}).filter(x=>x&&x.teamId!==countingTeam.id&&Number.isFinite(StocktakeCore.quantity(x.quantity)));
+     const ourScope=norm(countingTeam.scope||countingTeam.zone||'');
+     if(otherEntries.some(x=>!ourScope||!norm(x.scope||'')||norm(x.scope||'')===ourScope))throw new Error('STOCKTAKE_DUPLICATE_SCOPE');
+     const previous=fresh.teamCounts?.[entryKey];
+     const previousActual=previous?StocktakeCore.quantity(previous.quantity):(fresh.teamId===countingTeam.id&&fresh.actualQty!=null?StocktakeCore.quantity(fresh.actualQty):NaN);
+     const current=StocktakeCore.aggregate(fresh);
+     if(current.countConflict)throw new Error('STOCKTAKE_CONFLICT_REVIEW');
+     const aggregateQty=Number(current.actualQty)||0;
+     const nextTotal=StocktakeCore.difference(aggregateQty-(Number.isFinite(previousActual)?previousActual:0)+actual,0);
+     if(Math.abs(nextTotal-previewTotal)>1e-9)throw new Error('STOCKTAKE_CHANGED_RETRY');
+     const status=statusOf(nextTotal,expectedNow),difference=StocktakeCore.difference(nextTotal,expectedNow),now=firebase.firestore.FieldValue.serverTimestamp();
+     const patch={counted:true,updatedAt:now,lastCountAt:now,updatedByEmployeeId:user.employeeId||ROOT_ID,updatedByName:user.name,revision:firebase.firestore.FieldValue.increment(1),lastInputSource:source,lastCountOperationId:operationId};
+     if(!fresh.counted&&!fresh.firstCountAt){patch.firstCountAt=now;patch.firstCountByEmployeeId=user.employeeId||ROOT_ID;patch.firstCountByName=user.name}
+     patch['teamCounts.'+entryKey]={quantity:actual,operationId,teamId:countingTeam.id,teamName:countingTeam.name||'',scope:countingTeam.scope||countingTeam.zone||'',actorName:user.name};
+     tx.update(itemRef,patch);
+     tx.set(db.collection('stocktake_audit').doc(operationId),{campaignId:entryCampaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:Number.isFinite(previousActual)?'count_revised':'count_created',before:{actualQty:current.actualQty??null,countStatus:current.countStatus||'pending',difference:current.difference??null,note:fresh.note||'',revision:fresh.revision||0},after:{actualQty:nextTotal,teamActualQty:actual,countStatus:status,difference},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now,source,userAgent:navigator.userAgent||''});
+     if(source==='found_later')tx.set(db.collection('stocktake_audit').doc(operationId+'_found'),{campaignId:entryCampaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:'quantity_found_later',before:{actualQty:current.actualQty},after:{foundQty:StocktakeCore.difference(actual,Number.isFinite(previousActual)?previousActual:0),actualQty:nextTotal,teamActualQty:actual},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
+     return {status,total:nextTotal};
+   });
+   // A transaction is acknowledged by Firestore, never by a pending local snapshot.
+   if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);
+   if(state.team?.id===countingTeam.id&&state.campaign?.id===entryCampaignId&&state.activeEditId===item.id){state.activeEditId='';state.search=''}
+   feedback(result.status,finishedAll);toast('تم تأكيد حفظ كمية الصنف على خادم Firebase');return true;
+ } catch(error) {
+   const code=String(error?.code||error?.message||error);
+   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:String(actual),failedAt:Date.now(),error:code});
+   const message=/STOCKTAKE_DUPLICATE_SCOPE/.test(code)?'تم رفض عدّ مكرر للصنف في النطاق نفسه'
+     :/STOCKTAKE_CHANGED_RETRY|STOCKTAKE_REFERENCE_CHANGED/.test(code)?'تغير جرد الصنف بالتزامن؛ أعد فتحه وراجع أحدث قيمة'
+     :/STOCKTAKE_NOT_ACTIVE/.test(code)?'الجرد غير مفعّل حاليًا على الخادم'
+     :/STOCKTAKE_CONFLICT_REVIEW/.test(code)?'الصنف عليه تعارض عدّ؛ راجع الإدارة'
+     :'تعذر اعتماد الصنف في Firebase ('+code.slice(0,40)+')، والكمية محفوظة كمسودة';
+   console.warn('[V95 stocktake transaction]',code);toast(message);return false;
+ } finally {saving.delete(item.id)}
+
 }
 
 function saveActual(id){ensureFeedbackAudio();const it=state.items.find(x=>x.id===id),inp=$(`#actual_${CSS.escape(id)}`);if(!it||!inp||state.campaign?.status==='closed')return;if(!inp.value.trim())return toast('اكتب الكمية أولًا؛ الحقل الفارغ لا يعني صفرًا');writeCount(it,n(inp.value),(it.countStatus||'pending')==='pending'?'first_manual_count':'manual_revision')}
@@ -269,8 +302,14 @@ $('#noteCancel').onclick=()=>{$('#noteModal').classList.remove('open');state.not
  if(!saveDraft(it.id,note,'note',{operationId})){saving.delete('note:'+it.id);return}
  const batch=db.batch();batch.update(db.collection('stocktake_items').doc(it.id),{note,hasNote:!!note,noteUpdatedAt:now,noteUpdatedBy:user.name,lastNoteOperationId:operationId});
  batch.set(db.collection('stocktake_audit').doc(operationId),{campaignId:it.campaignId,teamId:it.teamId,itemId:it.id,sku:it.sku,action:'note_updated',before:{note:it.note||''},after:{note},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
- let unsub=()=>{};unsub=db.collection('stocktake_items').doc(it.id).onSnapshot({includeMetadataChanges:true},d=>{if(d.data()?.lastNoteOperationId===operationId&&(durableCache||!d.metadata.hasPendingWrites)){if(state.noteItem?.id===it.id)$('#noteCancel').click();saving.delete('note:'+it.id);toast('تم تسجيل الملاحظة · بانتظار تأكيد المزامنة');unsub()}},()=>{});
- batch.commit().then(()=>{unsub();saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تمت مزامنة الملاحظة')}).catch(()=>{unsub();saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:note});toast('تعذر اعتماد الملاحظة؛ المسودة محفوظة')});
+ batch.commit().then(()=>{
+   saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);
+   if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تم تأكيد حفظ الملاحظة على خادم Firebase');
+ }).catch(e=>{
+   console.warn('[V95 stocktake note]',e?.code||e?.message||e);saving.delete('note:'+it.id);
+   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:note,failedAt:Date.now()});
+   toast('فشل حفظ الملاحظة بالخادم؛ بقيت مسودة لإعادة المحاولة');
+ });
 };
 async function startScanner(){
  ensureFeedbackAudio();window.BranchScanAudio?.prepare();
