@@ -1327,7 +1327,18 @@ const OrderQuantityControl = memo(({ item, cart, setCart }) => {
 
 const OrderHistoryModal = memo(({ onClose, sessionName }) => {
     const historyKey = `b2b_history_${sessionName}`;
-    const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem(historyKey)) || []);
+    const [history, setHistory] = useState(() => {try{const saved=JSON.parse(localStorage.getItem(historyKey)||'[]');return Array.isArray(saved)?saved:[]}catch{return[]}});
+    const [remoteHistory,setRemoteHistory]=useState([]);
+    const [remoteHistoryState,setRemoteHistoryState]=useState('loading');
+    const [remoteHistoryError,setRemoteHistoryError]=useState('');
+    // Firestore is the authoritative sales ledger. The local list is only a migration/backup cache.
+    const displayHistory=useMemo(()=>{
+        const remoteById=new Map(remoteHistory.map(o=>[String(o.serverId),o]));
+        const local=history.map(o=>o.serverId&&remoteById.has(String(o.serverId))
+            ?{...o,...remoteById.get(String(o.serverId)),id:o.id,msg:o.msg||remoteById.get(String(o.serverId)).msg}
+            :o);
+        return [...local,...remoteHistory.filter(o=>!history.some(h=>h.serverId&&String(h.serverId)===String(o.serverId)))].sort((a,b)=>Number(b.clientCreatedAt||0)-Number(a.clientCreatedAt||0));
+    },[history,remoteHistory]);
 
     const [historyNotice,setHistoryNotice] = useState('');
 
@@ -1345,14 +1356,30 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
             String(remote.warehouse||'')===String(local.warehouse||'') && near;
     };
     const confirmServerStatus=async()=>{
-        if(!history.length){setServerStatus({});return}
         setCheckingServer(true);
+        setRemoteHistoryState('loading');setRemoteHistoryError('');
         const next={};
         try{
             const db=await getDb();
             const candidates=await db.collection('orders').where('repName','==',sessionName).limit(700).get({source:'server'});
             if(candidates.metadata?.fromCache)throw new Error('SERVER_CACHE_ONLY');
             const remote=candidates.docs.map(d=>({id:d.id,...d.data()}));
+            const serverInvoices=remote.map(order=>{
+                const time=order.timestamp?.toDate?.()||order.createdAt?.toDate?.()||new Date(order.clientCreatedAt||Date.now());
+                const when=Number.isFinite(time.getTime())?time.toLocaleDateString('en-GB'):'—';
+                const details=Array.isArray(order.items)?order.items:[];
+                const msg=order.legacyMessage||[
+                    '*فاتورة مبيعات محفوظة في النظام*','البائع: '+(order.repName||sessionName),
+                    'العميل: '+(order.customerName||''),'التاريخ: '+when,
+                    ...details.map((it,i)=>(i+1)+'. ['+(it.id||it.cleanId||'')+'] الكمية: '+(it.qty||0)+' | الإجمالي: '+(it.total||0)+' ر.س'),
+                    'الإجمالي: '+(order.totalAmount||0)+' ر.س'
+                ].join('\n');
+                return {id:'server_'+order.id,serverId:order.id,invoiceNo:order.invoiceNo||'',
+                    customer:String(order.customerName||''),date:when,warehouse:order.warehouse||'',
+                    totalAmount:Number(order.totalAmount)||0,clientCreatedAt:Number(order.clientCreatedAt||order.originalClientCreatedAt)||time.getTime(),
+                    recoveryStatus:order.recoveryStatus||'',msg,source:'server'};
+            });
+            setRemoteHistory(serverInvoices);setRemoteHistoryState(candidates.size>=700?'partial':'ready');
             for(const order of history){
                 const key=String(order.id),direct=order.serverId&&remote.find(r=>r.id===order.serverId);
                 if(direct){next[key]={code:'verified',serverId:direct.id};continue}
@@ -1366,8 +1393,10 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                 next[key]=likely.length?{code:'possible',serverId:likely[0].id}:{code:candidates.size>=700?'incomplete':'unverified'};
             }
         }catch(e){
-            history.forEach(order=>next[String(order.id)]={code:'error',message:String(e?.code||e?.message||e)});
-            console.warn('[V93 invoice source verification]',e);
+            const message=String(e?.code||e?.message||e);
+            history.forEach(order=>next[String(order.id)]={code:'error',message});
+            setRemoteHistoryState('error');setRemoteHistoryError(message);
+            console.warn('[V95 invoice server list]',e);
         }finally{setServerStatus(next);setCheckingServer(false)}
     };
     useEffect(()=>{void confirmServerStatus()},[sessionName]);
@@ -1473,17 +1502,19 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                     <button onClick={onClose} className="p-4 bg-bg rounded-8 border border-border"><Icon.Close className="w-16 h-16 text-secondary"/></button>
                 </div>
                 <div className="p-16 overflow-y-auto flex-1 bg-surface">
-                    {history.length === 0 ? (
-                        <div className="text-center p-32 text-muted">لا يوجد طلبات سابقة محفوظة في جهازك.</div>
+                    <div role="status" className="text-[11px] text-secondary mb-12">{remoteHistoryState==='ready'?'السجل الرئيسي: Firebase • '+remoteHistory.length+' فاتورة محفوظة على الخادم':remoteHistoryState==='partial'?'تظهر أول 700 فاتورة؛ السجل الكامل يحتاج تصفحًا إضافيًا':remoteHistoryState==='loading'?'جارٍ مزامنة الفواتير مع قاعدة البيانات...':'تعذر الوصول إلى سجل Firebase: '+remoteHistoryError+' · السجل المحلي احتياطي فقط'}</div>
+                    {displayHistory.length === 0 ? (
+                        <div className="text-center p-32 text-muted">{remoteHistoryState==='loading'?'جارٍ جلب الفواتير من Firebase...':remoteHistoryState==='error'?'تعذر تحميل سجل الخادم. تحقق من الاتصال وصلاحيات Firebase.':'لا توجد فواتير على الخادم أو في سجل الجهاز.'}</div>
                     ) : (
                         <div className="flex flex-col gap-12">
-                            {history.map(order => (
+                            {displayHistory.map(order => (
                                 <div key={order.id} className="bg-bg border border-border rounded-12 p-16 flex flex-col gap-12 shadow-card">
                                     <div className="flex justify-between items-start border-b border-border pb-8">
                                         <div>
                                             <div className="text-[14px] font-bold text-primary">{order.customer}</div>
                                             <div className="text-[11px] text-muted mt-2">{order.date} • {WAREHOUSES[order.warehouse]?.name || order.warehouse}</div>
-                                            <div className="text-[10px] text-secondary mt-1">{serverStatus[String(order.id)]?.code==='verified'?'مؤكدة في Firestore · '+serverStatus[String(order.id)].serverId
+                                            <div className="text-[10px] text-secondary mt-1">{order.source==='server'?(order.recoveryStatus==='unverified_legacy_restored'?'مستعادة من سجل محلي — تحتاج مطابقة محاسبية':'فاتورة محفوظة في Firebase · '+order.serverId)
+    :serverStatus[String(order.id)]?.code==='verified'?'مؤكدة في Firestore · '+serverStatus[String(order.id)].serverId
     :serverStatus[String(order.id)]?.code==='restored'?'مستعادة من هذا الجهاز إلى الإدارة · '+serverStatus[String(order.id)].serverId
     :serverStatus[String(order.id)]?.code==='possible'?'يوجد تطابق محتمل في السجلات — يحتاج مطابقة'
     :serverStatus[String(order.id)]?.code==='unverified'?'محفوظة على هذا الجهاز ولم يُعثر على تطابق في الخادم'
@@ -1501,9 +1532,9 @@ const OrderHistoryModal = memo(({ onClose, sessionName }) => {
                                             نسخ الفاتورة
                                         </button>
                                         {serverStatus[String(order.id)]?.code==='unverified'&&<button type="button" disabled={Boolean(restoring)} onClick={()=>restoreLegacyOrder(order)} className="flex-1 h-36 rounded-8 bg-accentSoft text-accent border border-accent/30 text-[12px] font-bold disabled:opacity-50">{restoring===String(order.id)?'يجري الاسترداد...':'استعادة سجل الفاتورة للإدارة'}</button>}
-                                        <button onClick={() => deleteOrder(order.id)} className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
+                                        {order.source!=='server'&&<button onClick={() => deleteOrder(order.id)} title="حذف النسخة المحلية فقط" className="w-36 h-36 bg-dangerSoft text-danger rounded-8 hover:bg-danger hover:text-white transition-colors flex items-center justify-center">
                                             <Icon.Trash className="w-16 h-16"/>
-                                        </button>
+                                        </button>}
                                     </div>
                                 </div>
                             ))}
@@ -3178,6 +3209,9 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                 faceVerified: true,
                 remoteApproval: Boolean(verificationContext.remote),
                 securityPhotoId: photoRef.id,
+                loginAttemptId,
+                canonicalName,
+                loginStatus:'verified',
                 time: firebase.firestore.FieldValue.serverTimestamp(),
                 userAgent: navigator.userAgent
             });

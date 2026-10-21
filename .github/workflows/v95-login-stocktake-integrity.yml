@@ -1,0 +1,32 @@
+name: V95 login sales stocktake hardening
+on:
+  push:
+    branches: [main, 'hotfix/v95-login-invoice-stocktake-integrity-*']
+  pull_request:
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'stocktake.html'
+      - 'admin-stocktake.html'
+      - 'tests/v95-login-stocktake-integrity.cjs'
+      - '.github/workflows/v95-login-stocktake-integrity.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm install --no-save --no-package-lock --ignore-scripts jsdom@24.1.3
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v91-incident-audit.cjs
+      - run: node tests/v92-verified-attendance-feedback.cjs
+      - run: node tests/v93-invoice-rating.mjs
+      - run: node tests/v94-stocktake-safe-reset.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: npm run build

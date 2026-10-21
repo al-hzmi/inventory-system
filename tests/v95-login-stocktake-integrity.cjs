@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const read=p=>fs.readFileSync(p,'utf8');
+const employee=read('runtime/index-v37-source.txt'),admin=read('admin-dashboard.html'),stocktake=read('stocktake.html'),stockAdmin=read('admin-stocktake.html');
+const must=(text,terms,name)=>terms.forEach(x=>assert(text.includes(x),name+' missing '+x));
+const login=employee.slice(employee.indexOf('const finalizeEmployeeLogin ='),employee.indexOf('const finalizeAdminLogin ='));
+must(login,["db.collection('login_logs').add({","loginAttemptId,","securityPhotoId: photoRef.id,","faceVerified: true","loginLogId:verifiedLoginRef.id"],'employee login record');
+const section=admin.slice(admin.indexOf('const verifiedLoginRecords='),admin.indexOf('const employeeIsHere='));
+must(section,["x.faceVerified===true&&!x.isAdmin&&x.employeeId&&x.securityPhotoId","verifiedLoginById.get(String(s.loginLogId))","!log.loginAttemptId||String(log.loginAttemptId)===String(s.loginAttemptId)"],'admin legacy log join');
+assert(!section.includes('x.employeeId&&x.loginAttemptId&&x.securityPhotoId'),'old schema filter hides actual Firebase logs');
+must(employee,["const [remoteHistory,setRemoteHistory]=useState([])","setRemoteHistory(serverInvoices)","get({source:'server'})","displayHistory.map(order =>","order.source==='server'","فاتورة محفوظة في Firebase"],'employee server invoice list');
+const write=stocktake.slice(stocktake.indexOf('async function writeCount('),stocktake.indexOf('function saveActual(',stocktake.indexOf('async function writeCount(')));
+must(write,["await db.runTransaction(async tx=>","tx.get(campaignRef)","tx.get(controlRef)","tx.get(itemRef)","STOCKTAKE_NOT_ACTIVE","STOCKTAKE_DUPLICATE_SCOPE","STOCKTAKE_CHANGED_RETRY","tx.update(itemRef,patch)","tx.set(db.collection('stocktake_audit').doc(operationId)","تم تأكيد حفظ كمية الصنف على خادم Firebase"],'stocktake transaction');
+assert(!write.includes("batch.commit().then(()=>{accept()"),'offline enqueue is not server acknowledgement');
+assert(!write.includes('onSnapshot({includeMetadataChanges:true},snap=>'),'local snapshots may not confirm count');
+must(stockAdmin,["async function preflightStocktake(campaign)","get({source:'server'})","preflightProbeId:nonce","await db.runTransaction(async tx=>","await preflightStocktake(state.campaign)","فشل اختبار سلامة قاعدة البيانات"],'live preflight');
+console.log('V95 verified employee login schema / Firestore-first sales / atomic stocktake: PASS');

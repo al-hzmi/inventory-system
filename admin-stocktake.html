@@ -178,7 +178,40 @@ async function importRows(){const im=state.import;if(!state.campaign||!['draft',
 function campaignReadiness(){const problems=[];if(!itemsLoaded||itemsFromCache||itemsPending)problems.push('انتظر اكتمال مزامنة الأصناف مع الخادم');if((state.campaign?.sourceMode==='current_inventory'||state.campaign?.inventorySnapshotStatus)&&state.campaign?.inventorySnapshotStatus!=='ready')problems.push('لقطة المخزون لم تكتمل بعد');if(!state.teams.length)problems.push('لا يوجد فريق جرد');for(const t of state.teams){const count=state.items.length;if(!count)problems.push(`${t.name}: لا توجد أصناف`);if(!teamIds(t).length)problems.push(`${t.name}: لا يوجد عضو صاحب حساب يستطيع التسجيل`)}return problems}
 async function markReady(){if(!state.campaign)return;const p=campaignReadiness();if(p.length)return toast(`التجهيز غير مكتمل: ${p[0]}`);try{await db.collection('stocktake_campaigns').doc(state.campaign.id).set({status:'ready',preparedAt:firebase.firestore.FieldValue.serverTimestamp(),preparedBy:'مهند'},{merge:true});await syncAccess(false);await auditAdmin('campaign_ready',{campaignId:state.campaign.id});toast('تم اعتماد التجهيز — ابدأ صباحًا أو ليلًا بعد اكتمال تحديث المخزون')}catch{toast('تعذر اعتماد التجهيز')}}
 async function syncAccessFrom(teams,enable=true){const ids=[...new Set(teams.flatMap(teamIds))],names=[...new Set(teams.flatMap(teamNames).filter(Boolean))];await db.collection('system_controls').doc('stocktake_feature').set({enabled:Boolean(enable),accessMode:enable?'selected':'none',allowedEmployeeIds:ids,allowedEmployeeNames:names,activeCampaignId:state.campaign?.id||'',updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:'مهند'},{merge:true})}async function syncAccess(enable=true){return syncAccessFrom(state.teams,enable)}
-async function activateCampaign(){if(!state.campaign)return;const p=campaignReadiness();if(p.length)return toast(`لا يمكن البدء: ${p[0]}`);const otherActive=activeStocktakeCampaign();if(otherActive&&otherActive.id!==state.campaign.id)return toast('لا يمكن بدء تجربة أثناء وجود جرد نشط');const startMessage=state.campaign.isTest?'بدء تجربة الجرد الآن؟ ستستخدم نفس واجهة الجرد الحقيقية، لكن الحملة موسومة كتجربة ولا تغيّر المخزون الحقيقي.':'بدء الجرد الآن؟ ستظهر الميزة لأعضاء فريق الجرد، وتبقى لقطة المخزون المحفوظة هي المرجع حتى نهاية الجرد.';if(!confirm(startMessage))return;try{await db.collection('stocktake_campaigns').doc(state.campaign.id).set({status:'active',activatedAt:firebase.firestore.FieldValue.serverTimestamp(),activatedBy:'مهند'},{merge:true});await syncAccess(true);await auditAdmin('campaign_activated',{campaignId:state.campaign.id});toast('تم بدء الجرد وتفعيل الوصول للجان')}catch(e){console.error(e);toast('تعذر بدء الجرد')}}
+async function preflightStocktake(campaign){
+ const id=String(campaign?.id||'');
+ if(!id||!navigator.onLine)throw new Error('يجب الاتصال بالخادم قبل بدء الجرد');
+ const [campaignDoc,controlDoc,teamsSnap,itemsSnap]=await Promise.all([
+   db.collection('stocktake_campaigns').doc(id).get({source:'server'}),
+   db.collection('system_controls').doc('stocktake_feature').get({source:'server'}),
+   db.collection('stocktake_teams').where('campaignId','==',id).get({source:'server'}),
+   db.collection('stocktake_items').where('campaignId','==',id).get({source:'server'})
+ ]);
+ if([campaignDoc,controlDoc,teamsSnap,itemsSnap].some(d=>d.metadata?.fromCache))throw new Error('تعذر تأكيد بيانات الجرد مباشرة من الخادم');
+ if(!campaignDoc.exists||!['ready','draft'].includes(campaignDoc.data()?.status))throw new Error('حالة حملة الجرد تغيّرت على الخادم');
+ if(!teamsSnap.size||!itemsSnap.size)throw new Error('المجموعات أو أصناف الجرد غير مكتملة على الخادم');
+ const expected=Number(campaignDoc.data()?.inventorySnapshotCount);
+ if(Number.isFinite(expected)&&expected>0&&itemsSnap.size!==expected)throw new Error('عدد أصناف الجرد على الخادم ('+itemsSnap.size+') يختلف عن اللقطة المرجعية ('+expected+')');
+ const ids=new Set(),teams=new Set(teamsSnap.docs.map(d=>d.id));
+ for(const doc of itemsSnap.docs){
+   const row=doc.data(),normalized=norm(row.sku);
+   if(!normalized||ids.has(normalized))throw new Error('رقم صنف ناقص أو مكرر في الجرد: '+String(row.sku||doc.id));
+   ids.add(normalized);
+   if(!teams.has(row.teamId))throw new Error('الصنف '+row.sku+' يشير إلى مجموعة جرد غير موجودة');
+   if(!Number.isFinite(num(row.expectedQty)))throw new Error('كمية نظام غير صحيحة للصنف '+row.sku);
+ }
+ // Verify item UPDATE and read-after-write in a harmless metadata-only operation.
+ const sample=itemsSnap.docs[0].ref,nonce='v95_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+ await db.runTransaction(async tx=>{
+   const d=await tx.get(sample);
+   if(!d.exists||d.data()?.campaignId!==id)throw new Error('فقدنا سجل الصنف أثناء التحقق');
+   tx.update(sample,{preflightProbeId:nonce,preflightCheckedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ });
+ const verify=await sample.get({source:'server'});
+ if(!verify.exists||verify.data()?.preflightProbeId!==nonce||verify.metadata?.fromCache)throw new Error('فشل اختبار كتابة وقراءة خادم الجرد');
+ return {items:itemsSnap.size,teams:teamsSnap.size};
+}
+async function activateCampaign(){if(!state.campaign)return;const p=campaignReadiness();if(p.length)return toast(`لا يمكن البدء: ${p[0]}`);const otherActive=activeStocktakeCampaign();if(otherActive&&otherActive.id!==state.campaign.id)return toast('لا يمكن بدء تجربة أثناء وجود جرد نشط');let check;try{toast('جارٍ اختبار قراءة وكتابة قاعدة الجرد...');check=await preflightStocktake(state.campaign)}catch(e){console.error('[V95 stocktake preflight]',e);alert('لم يبدأ الجرد: فشل اختبار سلامة قاعدة البيانات. '+String(e?.message||e));return}const startMessage=state.campaign.isTest?'بدء تجربة الجرد الآن؟ ستستخدم نفس واجهة الجرد الحقيقية، لكن الحملة موسومة كتجربة ولا تغيّر المخزون الحقيقي.':'بدء الجرد الآن؟ ستظهر الميزة لأعضاء فريق الجرد، وتبقى لقطة المخزون المحفوظة هي المرجع حتى نهاية الجرد.';if(!confirm(startMessage))return;try{await db.collection('stocktake_campaigns').doc(state.campaign.id).set({status:'active',activatedAt:firebase.firestore.FieldValue.serverTimestamp(),activatedBy:'مهند'},{merge:true});await syncAccess(true);await auditAdmin('campaign_activated',{campaignId:state.campaign.id,preflightItems:check?.items,preflightTeams:check?.teams});toast('تم بدء الجرد بعد فحص الخادم والتأكد من '+check.items+' صنف')}catch(e){console.error(e);toast('تعذر بدء الجرد')}}
 async function closeCampaign(){if(!state.campaign||state.campaign.status!=='active')return;if(!itemsLoaded||itemsFromCache||itemsPending)return toast('انتظر اكتمال مزامنة الأصناف قبل الإغلاق');const pending=state.items.filter(i=>(i.countStatus||'pending')==='pending').length;if(pending&&!confirm(`باقي ${pending} صنف غير مجرود. هل تريد إنهاء الجرد رغم ذلك؟`))return;const overlaps=state.items.filter(i=>i.countConflict||i.countStatus==='conflict');if(overlaps.length){toast('لا يمكن إقفال الجرد: '+overlaps.length+' صنف بتعارض عدّ يحتاج مراجعة واعتماد');return}const closeMessage=state.campaign.isTest?'إنهاء تجربة الجرد؟ ستتوقف واجهة التجربة وتبقى النتائج محفوظة للمراجعة فقط.':'إنهاء الجرد وإقفاله للموظفين؟ ستبقى النتائج والفروقات محفوظة للمحاسب.';if(!confirm(closeMessage))return;try{const now=firebase.firestore.FieldValue.serverTimestamp(),b=db.batch();b.set(db.collection('stocktake_campaigns').doc(state.campaign.id),{status:'closed',closedAt:now,closedBy:'مهند'},{merge:true});b.set(db.collection('system_controls').doc('stocktake_feature'),{enabled:false,accessMode:'none',activeCampaignId:'',updatedAt:now,updatedBy:'مهند'},{merge:true});await b.commit();await auditAdmin('campaign_closed',{campaignId:state.campaign.id,pending});toast(state.campaign?.isTest?'تم إنهاء تجربة الجرد':'تم إغلاق الجرد — النتائج جاهزة للتسوية')}catch{toast('تعذر إغلاق الجرد')}}
 async function reopenCampaign(){if(!state.campaign||state.campaign.status!=='closed'||!confirm('إعادة فتح الجرد للتصحيح؟ سيعود أعضاء اللجان للوصول والتعديل وسيُسجل ذلك في سجل التدقيق.'))return;try{await db.collection('stocktake_campaigns').doc(state.campaign.id).set({status:'active',reopenedAt:firebase.firestore.FieldValue.serverTimestamp(),reopenedBy:'مهند'},{merge:true});await syncAccess(true);await auditAdmin('campaign_reopened',{campaignId:state.campaign.id});toast('تمت إعادة فتح الجرد')}catch{toast('تعذر إعادة فتح الجرد')}}
 function exportExcel(diffOnly){
