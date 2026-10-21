@@ -79,7 +79,7 @@ self.addEventListener('fetch',event=>{
        const fresh=await fetch(request,{cache:'no-store',signal:controller.signal});
        if(!fresh.ok)return fresh;
        if(String(fresh.headers.get('content-type')||'').includes('text/html')){
-         event.waitUntil((async()=>{const cache=await openCache(NAV_CACHE);await put(cache,'/admin-dashboard.html',fresh.clone())})().catch(()=>{}));
+         const freshCopy=fresh.clone();event.waitUntil((async()=>{const cache=await openCache(NAV_CACHE);await put(cache,'/admin-dashboard.html',freshCopy)})().catch(()=>{}));
        }
        return fresh;
      }catch(error){
