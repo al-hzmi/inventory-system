@@ -4314,16 +4314,20 @@ const App = () => {
         const interval = setInterval(() => {
             if (document.visibilityState === 'visible' && isTracking) {
                 getDb().then(db => {
+                    // Restore identity even when the initial session write failed on a transient quota/network error.
                     db.collection('site_sessions').doc(sessionId).set({
+                        name: sessionName,
+                        employeeId: isAdmin ? null : (localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || null),
+                        userAgent: navigator.userAgent,
                         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
                         durationMinutes: firebase.firestore.FieldValue.increment(5)
-                    }, { merge: true }).catch(()=>{});
-                    
+                    }, { merge: true }).catch(e=>console.warn('[Employee session heartbeat]',e?.code||e?.message||e));
+
                     db.collection('users').doc(toSafeDocId(sessionName)).set({
                         timeSpentMinutes: firebase.firestore.FieldValue.increment(5),
                         lastActive: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true }).catch(()=>{});
-                });
+                    }, { merge: true }).catch(e=>console.warn('[Employee profile heartbeat]',e?.code||e?.message||e));
+                }).catch(e=>console.warn('[Employee session init]',e?.code||e?.message||e));
             }
         }, 300000);
         
