@@ -1,0 +1,24 @@
+name: V97 admin freshness navigation
+on:
+  push:
+    branches: [main, 'hotfix/v97-fresh-admin-page-offline-guard-*']
+  pull_request:
+    paths:
+      - 'sw.js'
+      - 'tests/v97-admin-freshness.cjs'
+      - '.github/workflows/v97-admin-freshness.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v97-admin-freshness.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
+      - run: npm run build
