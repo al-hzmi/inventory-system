@@ -34,7 +34,7 @@ jobs:
           const out=fs.readdirSync('assets/build');
           const client=out.filter(f=>f.startsWith('employee.')&&f.endsWith('.js'));
           const admin=out.filter(f=>f.startsWith('admin-dashboard.')&&f.endsWith('.js'));
-          assert(client.some(f=>fs.readFileSync('assets/build/'+f,'utf8').includes('البائع:')),'seller string absent from compiled employee bundle');
+          assert(client.some(f=>fs.readFileSync('assets/build/'+f,'utf8').includes('INVOICE_WRITE_TIMEOUT')),'invoice save guarantee absent from compiled employee bundle');
           assert(admin.some(f=>fs.readFileSync('assets/build/'+f,'utf8').includes('verifiedLoginRecords')),'verified login counter absent from compiled admin bundle');
           console.log('V92 compiled frontend: PASS');
           NODE
