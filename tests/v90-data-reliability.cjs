@@ -20,9 +20,10 @@ for (const marker of [
   'orderRef.set(payload)',
   'timestamp: savedAt, createdAt: savedAt',
   "console.error('[Invoice save failed]'",
-  "disabled={items.length === 0 || submitting}",
-  "{submitting ? 'جاري تأكيد الحفظ...' : 'اعتماد (واتساب)'}"
+  "source: 'employee_invoice_v90'"
 ]) assert(invoice.includes(marker), 'missing invoice guarantee: ' + marker);
+assert(src.includes("disabled={items.length === 0 || submitting}"), 'submit button must lock');
+assert(src.includes("{submitting ? 'جاري تأكيد الحفظ...' : 'اعتماد (واتساب)'}"), 'submit button must show pending');
 assert(!invoice.includes("getDb().then(db => {"), 'fire-and-forget invoice');
 assert(invoice.indexOf('await Promise.race([') < invoice.indexOf('setCart({});'), 'clearing cart before ack');
 assert(invoice.indexOf('setCart({});') < invoice.indexOf('whatsappWindow.location.replace(waUrl)'), 'WhatsApp before save');
