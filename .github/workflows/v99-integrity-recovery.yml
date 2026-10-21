@@ -5,12 +5,16 @@ on:
     paths:
       - 'stocktake.html'
       - 'runtime/index-v37-source.txt'
+      - 'tests/v95-login-stocktake-integrity.cjs'
+      - 'tests/v96-live-employee-visibility.cjs'
       - 'tests/v99-integrity-recovery.cjs'
       - '.github/workflows/v99-integrity-recovery.yml'
   pull_request:
     paths:
       - 'stocktake.html'
       - 'runtime/index-v37-source.txt'
+      - 'tests/v95-login-stocktake-integrity.cjs'
+      - 'tests/v96-live-employee-visibility.cjs'
       - 'tests/v99-integrity-recovery.cjs'
       - '.github/workflows/v99-integrity-recovery.yml'
   workflow_dispatch:
@@ -28,5 +32,6 @@ jobs:
       - run: node tests/v90-data-reliability.cjs
       - run: node tests/v91-incident-audit.cjs
       - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
       - run: node tests/v99-integrity-recovery.cjs
       - run: npm run build
