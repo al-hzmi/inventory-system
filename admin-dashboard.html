@@ -90,7 +90,7 @@ const EMPLOYEE_SITE_CONTROL_DOC='employee_site_access';
 const DEFAULT_EMPLOYEE_SITE_CONTROL={mode:'open',allowedEmployeeIds:[],allowedEmployeeNames:[],maintenanceMessage:'النظام متوقف مؤقتًا من الإدارة.'};
 const COLLECTIONS={
   customers:'customers',customerDevices:'customer_devices',customerSessions:'customer_sessions',customerLogins:'customer_login_logs',customerActivity:'customer_activity_logs',customerOrders:'customer_orders',customerDrafts:'customer_drafts',customerSecurityPhotos:'customer_security_photos',
-  employeeUsers:'users',employeeAccounts:'employee_accounts',employeeAliases:'employee_aliases',employeeNotifications:'employee_notifications',employeeSecurityPhotos:'employee_security_photos',employeeLoginAttempts:'employee_login_attempts',employeeSessions:'site_sessions',employeeLogins:'login_logs',access:'access_requests',search:'search_logs',employeeOrders:'orders',employeeDrafts:'drafts',categoryAudit:'category_audit_logs',newArrivalReviews:'new_arrival_reviews',adminAudit:'security_admin_logs'
+  employeeUsers:'users',employeeAccounts:'employee_accounts',employeeAliases:'employee_aliases',employeeNotifications:'employee_notifications',employeeSecurityPhotos:'employee_security_photos',employeeLoginAttempts:'employee_login_attempts',employeeSessions:'site_sessions',employeeLogins:'login_logs',access:'access_requests',search:'search_logs',employeeOrders:'orders',employeeDrafts:'drafts',livePresence:'v44_presence',liveActivity:'v44_activity_logs',categoryAudit:'category_audit_logs',newArrivalReviews:'new_arrival_reviews',adminAudit:'security_admin_logs'
 };
 
 const PRODUCT_CATEGORY_META='catalog_categories';
@@ -175,10 +175,10 @@ const Icon=({name,className='w-5 h-5'})=>{const p={fill:'none',stroke:'currentCo
 };return <svg {...p}>{paths[name]||paths.file}</svg>};
 
 async function getRows(name,limit=750){try{const s=await db.collection(name).limit(limit).get();return s.docs.map(d=>({id:d.id,...d.data(),__collection:name}))}catch(e){console.warn('[Dashboard]',name,e);return[]}}
-const REALTIME_ORDER={customerDevices:'lastSeen',customerSessions:'lastActive',customerLogins:'createdAt',customerActivity:'createdAt',customerOrders:'createdAt',customerDrafts:'updatedAt',customerSecurityPhotos:'createdAt',employeeNotifications:'createdAt',employeeSecurityPhotos:'timestamp',employeeLoginAttempts:'time',employeeSessions:'lastActive',employeeLogins:'time',access:'timestamp',search:'time',categoryAudit:'timestamp',adminAudit:'timestamp'};
-const REALTIME_LIMIT={customers:350,customerDevices:180,customerSessions:160,customerLogins:100,customerActivity:140,customerOrders:300,customerDrafts:220,customerSecurityPhotos:80,employeeUsers:350,employeeAccounts:350,employeeAliases:350,employeeNotifications:120,employeeSecurityPhotos:80,employeeLoginAttempts:120,employeeSessions:180,employeeLogins:120,access:120,search:160,employeeOrders:300,employeeDrafts:220,categoryAudit:100,newArrivalReviews:120,adminAudit:120};
+const REALTIME_ORDER={employeeOrders:'timestamp',livePresence:'lastActive',liveActivity:'createdAt',customerDevices:'lastSeen',customerSessions:'lastActive',customerLogins:'createdAt',customerActivity:'createdAt',customerOrders:'createdAt',customerDrafts:'updatedAt',customerSecurityPhotos:'createdAt',employeeNotifications:'createdAt',employeeSecurityPhotos:'timestamp',employeeLoginAttempts:'time',employeeSessions:'lastActive',employeeLogins:'time',access:'timestamp',search:'time',categoryAudit:'timestamp',adminAudit:'timestamp'};
+const REALTIME_LIMIT={livePresence:300,liveActivity:300,customers:350,customerDevices:180,customerSessions:160,customerLogins:100,customerActivity:140,customerOrders:300,customerDrafts:220,customerSecurityPhotos:80,employeeUsers:350,employeeAccounts:350,employeeAliases:350,employeeNotifications:120,employeeSecurityPhotos:80,employeeLoginAttempts:120,employeeSessions:180,employeeLogins:120,access:120,search:160,employeeOrders:300,employeeDrafts:220,categoryAudit:100,newArrivalReviews:120,adminAudit:120};
 const LAZY_ADMIN_KEYS=new Set(['employeeSecurityPhotos','customerSecurityPhotos','adminAudit']);
-const REALTIME_KEYS=new Set(['customers','customerSessions','customerOrders','customerDrafts','employeeUsers','employeeAccounts','employeeNotifications','employeeSessions','employeeOrders','employeeDrafts','access']);
+const REALTIME_KEYS=new Set(['customers','customerSessions','customerOrders','customerDrafts','employeeUsers','employeeAccounts','employeeNotifications','employeeSessions','employeeOrders','employeeDrafts','access','livePresence','liveActivity']);
 async function adminAudit(action,data={}){try{await db.collection(COLLECTIONS.adminAudit).add({admin:'مهند',action,data,createdAt:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent||''})}catch(e){console.warn('[Admin audit]',e)}}
 
 function AdminGate({onPass}){
@@ -517,7 +517,8 @@ function AdminApp(){
   const [categoryManagerOpen,setCategoryManagerOpen]=useState(false);
   const [control,setControl]=useState(DEFAULT_PORTAL_CONTROL);
   const [employeeSiteControl,setEmployeeSiteControl]=useState(DEFAULT_EMPLOYEE_SITE_CONTROL);
-  const [data,setData]=useState({customers:[],customerDevices:[],customerSessions:[],customerLogins:[],customerActivity:[],customerOrders:[],customerDrafts:[],customerSecurityPhotos:[],employeeUsers:[],employeeAccounts:[],employeeAliases:[],employeeNotifications:[],employeeSecurityPhotos:[],employeeLoginAttempts:[],employeeSessions:[],employeeLogins:[],access:[],search:[],employeeOrders:[],employeeDrafts:[],categoryAudit:[],newArrivalReviews:[],adminAudit:[]});
+  const [data,setData]=useState({customers:[],customerDevices:[],customerSessions:[],customerLogins:[],customerActivity:[],customerOrders:[],customerDrafts:[],customerSecurityPhotos:[],employeeUsers:[],employeeAccounts:[],employeeAliases:[],employeeNotifications:[],employeeSecurityPhotos:[],employeeLoginAttempts:[],employeeSessions:[],employeeLogins:[],access:[],search:[],employeeOrders:[],employeeDrafts:[],categoryAudit:[],newArrivalReviews:[],adminAudit:[],livePresence:[],liveActivity:[]});
+   const [collectionErrors,setCollectionErrors]=useState({});
   const [lazyLoadState,setLazyLoadState]=useState({});
   const lazyLoaders=useRef({}),lazyRequested=useRef(new Set());
   const requestLazy=key=>{if(lazyRequested.current.has(key))return;const load=lazyLoaders.current[key];if(load){lazyRequested.current.add(key);load()}};
@@ -527,17 +528,17 @@ function AdminApp(){
     let stopped=false;const unsubs=[];const waiting=new Set(Object.keys(COLLECTIONS).filter(key=>!LAZY_ADMIN_KEYS.has(key)));let pendingData={},dataFrame=0;
     const markReady=key=>{waiting.delete(key);if(!waiting.size&&!stopped)setSyncing(false)};
     const flushData=()=>{dataFrame=0;if(stopped)return;const patch=pendingData;pendingData={};if(Object.keys(patch).length)setData(prev=>({...prev,...patch}))};
-    const apply=(key,name,snap)=>{if(stopped)return;const rows=snap.docs.map(d=>({id:d.id,...d.data(),__collection:name}));pendingData[key]=rows;if(LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'ready'}));if(!dataFrame)dataFrame=requestAnimationFrame(flushData);markReady(key)};
+    const apply=(key,name,snap)=>{if(stopped)return;setCollectionErrors(prev=>prev[key]?Object.fromEntries(Object.entries(prev).filter(([k])=>k!==key)):prev);const rows=snap.docs.map(d=>({id:d.id,...d.data(),__collection:name}));pendingData[key]=rows;if(LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'ready'}));if(!dataFrame)dataFrame=requestAnimationFrame(flushData);markReady(key)};
     const attach=(key,name)=>{
       const limit=REALTIME_LIMIT[key]||160;let unsubscribe=null,usingFallback=false;
       const field=REALTIME_ORDER[key];
       const needsIndexFallback=error=>Boolean(field&&(/failed-precondition/.test(String(error?.code||''))||/requires an index|index.*not ready/i.test(String(error?.message||''))));
       const ordered=()=>field?db.collection(name).orderBy(field,'desc').limit(limit):db.collection(name).limit(limit);
-      const fail=e=>{console.warn('[Dashboard snapshot]',name,e);if(!stopped&&LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'error'}));markReady(key)};
+      const fail=e=>{console.warn('[Dashboard snapshot]',name,e);if(!stopped)setCollectionErrors(prev=>({...prev,[key]:String(e?.code||e?.message||'unknown').slice(0,150)}));if(!stopped&&LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'error'}));markReady(key)};
       const loadOnce=async()=>{if(LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'loading'}));try{const s=await ordered().get();apply(key,name,s)}catch(e){if(stopped)return;if(!needsIndexFallback(e)){fail(e);return}try{const s=await db.collection(name).limit(limit).get();apply(key,name,s)}catch(err){fail(err)}}};
       if(!REALTIME_KEYS.has(key)){if(LAZY_ADMIN_KEYS.has(key))lazyLoaders.current[key]=loadOnce;else loadOnce();return()=>{delete lazyLoaders.current[key]}};
-      const fallback=()=>{if(stopped||usingFallback)return;usingFallback=true;try{unsubscribe?.()}catch{};unsubscribe=db.collection(name).limit(limit).onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime fallback]',name,e);markReady(key)})};
-      try{unsubscribe=ordered().onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);needsIndexFallback(e)?fallback():markReady(key)})}catch(e){needsIndexFallback(e)?fallback():markReady(key)}
+      const fallback=()=>{if(stopped||usingFallback)return;usingFallback=true;try{unsubscribe?.()}catch{};unsubscribe=db.collection(name).limit(limit).onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime fallback]',name,e);fail(e)})};
+      try{unsubscribe=ordered().onSnapshot(s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);needsIndexFallback(e)?fallback():fail(e)})}catch(e){needsIndexFallback(e)?fallback():fail(e)}
       return()=>{try{unsubscribe?.()}catch{}}
     };
     Object.entries(COLLECTIONS).forEach(([key,name])=>unsubs.push(attach(key,name)));
@@ -569,8 +570,11 @@ function AdminApp(){
   const accessDecision=async(r,status)=>{setBusy(true);try{await db.collection('access_requests').doc(r.id).update({status,reviewedAt:firebase.firestore.FieldValue.serverTimestamp(),reviewedBy:'مهند'});await adminAudit('employee_access_decision',{requestId:r.id,name:r.name||'',status});setData(d=>({...d,access:d.access.map(x=>x.id===r.id?{...x,status}:x)}))}catch(e){alert('تعذر تحديث الطلب.')}finally{setBusy(false)}};
   const deleteAccess=async r=>{if(!confirm(`حذف سجل دخول ${r.name||''} وصورته؟`))return;setBusy(true);try{await db.collection('access_requests').doc(r.id).delete();await adminAudit('employee_access_deleted',{requestId:r.id,name:r.name||''});setData(d=>({...d,access:d.access.filter(x=>x.id!==r.id)}))}catch(e){alert('تعذر حذف السجل.')}finally{setBusy(false)}};
 
-  const customers=data.customers||[],cDevices=data.customerDevices||[],cSessions=data.customerSessions||[],cLogins=data.customerLogins||[],cActivity=data.customerActivity||[],cOrdersAll=data.customerOrders||[],cDrafts=data.customerDrafts||[],cSecurityPhotos=data.customerSecurityPhotos||[];
-  const eUsers=data.employeeUsers||[],eAccounts=data.employeeAccounts||[],eAliases=data.employeeAliases||[],eNotifications=data.employeeNotifications||[],eSecurityPhotos=data.employeeSecurityPhotos||[],eLoginAttempts=data.employeeLoginAttempts||[],eSessions=data.employeeSessions||[],eLogins=data.employeeLogins||[],access=data.access||[],searches=data.search||[],eOrdersAll=data.employeeOrders||[],eDrafts=data.employeeDrafts||[],categoryAudit=data.categoryAudit||[],newArrivalReviews=data.newArrivalReviews||[],adminLogs=data.adminAudit||[];
+  const livePresence=data.livePresence||[],liveActivity=data.liveActivity||[],knownCustomerIds=new Set((data.customers||[]).map(c=>String(c.id)));
+   const presenceCustomers=livePresence.filter(p=>p.actorType==='customer').map(p=>({id:'presence_'+p.id,customerUid:knownCustomerIds.has(String(p.actorId||''))?String(p.actorId):'',visitorId:p.visitorId||'',name:p.actorName||'',company:p.company||'',lastActive:p.lastActive,startedAt:p.lastActive,device:p.device||{},__collection:'v44_presence',__presenceFallback:true}));
+   const presenceEmployees=livePresence.filter(p=>p.actorType==='employee').map(p=>({id:'presence_'+p.id,employeeId:p.employeeId||p.actorId||'',name:p.actorName||'',lastActive:p.lastActive,startTime:p.lastActive,device:p.device||{},__collection:'v44_presence',__presenceFallback:true}));
+   const customers=data.customers||[],cDevices=data.customerDevices||[],cSessions=[...(data.customerSessions||[]),...presenceCustomers],cLogins=data.customerLogins||[],cActivity=data.customerActivity||[],cOrdersAll=data.customerOrders||[],cDrafts=data.customerDrafts||[],cSecurityPhotos=data.customerSecurityPhotos||[];
+  const eUsers=data.employeeUsers||[],eAccounts=data.employeeAccounts||[],eAliases=data.employeeAliases||[],eNotifications=data.employeeNotifications||[],eSecurityPhotos=data.employeeSecurityPhotos||[],eLoginAttempts=data.employeeLoginAttempts||[],eSessions=[...(data.employeeSessions||[]),...presenceEmployees],eLogins=data.employeeLogins||[],access=data.access||[],searches=data.search||[],eOrdersAll=data.employeeOrders||[],eDrafts=data.employeeDrafts||[],categoryAudit=data.categoryAudit||[],newArrivalReviews=data.newArrivalReviews||[],adminLogs=data.adminAudit||[];
   const HAROUN_REDIRECT_DOC='employee_onboarding_redirects';
   useEffect(()=>{
     let cancelled=false;
@@ -621,8 +625,8 @@ function AdminApp(){
   const suspendedCustomers=customers.filter(c=>c.status==='suspended');
   const activityCustomerIds=new Set(cActivity.map(x=>x.customerUid).filter(Boolean));
   const customerProfileActivityFallback=customers.filter(c=>!activityCustomerIds.has(c.id)&&(c.lastActivityAt||c.lastSeenAt||c.lastLoginAt)).map(c=>({id:`profile_${c.id}`,customerUid:c.id,type:c.lastActivityType||'profile_activity',label:c.lastActivityLabel||'آخر نشاط محفوظ',name:c.name||'',company:c.company||'',createdAt:c.lastActivityAt||c.lastSeenAt||c.lastLoginAt,__fallback:true}));
-  const recentCustomerActivity=[...cActivity,...customerProfileActivityFallback].sort((a,b)=>tsMs(b.createdAt||b.timestamp)-tsMs(a.createdAt||a.timestamp));
-  const recentEmployeeActivity=[...eLogins.map(x=>({...x,__kind:'تسجيل دخول',__time:x.time})),...searches.map(x=>({...x,__kind:'عملية بحث',__time:x.time})),...eSessions.map(x=>({...x,__kind:'جلسة عمل',__time:x.lastActive}))].sort((a,b)=>tsMs(b.__time)-tsMs(a.__time));
+  const recentCustomerActivity=[...cActivity,...customerProfileActivityFallback,...liveActivity.filter(x=>x.actorType==='customer').map(x=>({...x,customerUid:knownCustomerIds.has(String(x.actorId||''))?String(x.actorId):'',name:x.actorName||'',type:x.action,label:x.label,query:x.action==='search_query'?x.label:'',__collection:'v44_activity_logs'}))].sort((a,b)=>tsMs(b.createdAt||b.timestamp)-tsMs(a.createdAt||a.timestamp));
+  const recentEmployeeActivity=[...eLogins.map(x=>({...x,__kind:'تسجيل دخول',__time:x.time})),...searches.map(x=>({...x,__kind:'عملية بحث',__time:x.time})),...eSessions.map(x=>({...x,__kind:'جلسة عمل',__time:x.lastActive})),...liveActivity.filter(x=>x.actorType==='employee').map(x=>({...x,name:x.actorName,__kind:x.action||'نشاط',__time:x.createdAt}))].sort((a,b)=>tsMs(b.__time)-tsMs(a.__time));
   const todayStart=new Date();todayStart.setHours(0,0,0,0);
   const todayCustomerOrders=cOrders.filter(o=>tsMs(o.createdAt||o.timestamp)>=todayStart.getTime());
   const todayEmployeeOrders=eOrders.filter(o=>tsMs(o.timestamp||o.createdAt)>=todayStart.getTime());
@@ -915,6 +919,7 @@ function AdminApp(){
   return <div className="min-h-[100dvh] bg-black/75 p-0 sm:p-4 safe-top safe-bottom">
     <div className="w-full max-w-[1080px] min-h-[100dvh] sm:min-h-[calc(100dvh-2rem)] mx-auto bg-white sm:rounded-2xl shadow-lift flex flex-col fade overflow-visible">
       <AdminView key="CommandHeader" render={CommandHeader}/>
+      {Object.keys(collectionErrors).length>0&&<div role="alert" className="mx-3 mt-3 p-3 rounded-xl border border-red-200 bg-red-50 text-red-900 text-xs leading-6"><b>بعض سجلات قاعدة البيانات لم تُحمّل، والأرقام المعروضة قد تكون ناقصة.</b><div className="mt-1" dir="ltr">{Object.entries(collectionErrors).map(([key,reason])=><div key={key}>{key}: {reason}</div>)}</div><button type="button" className="mt-2 border border-red-300 rounded-lg px-3 py-1 font-bold" onClick={()=>location.reload()}>إعادة الاتصال وتحميل السجلات</button></div>}
       <><AdminView key="TabsBar" render={TabsBar}/><AdminView key="ToolBar" render={ToolBar}/><div data-admin-scroll-root="1" className="flex-1 p-3 sm:p-4 bg-surface overflow-visible"><AdminView key="ActiveContent" render={ActiveContent}/></div></>
     </div>
     {categoryManagerOpen&&<ProductCategoryManager onClose={()=>setCategoryManagerOpen(false)}/>}
