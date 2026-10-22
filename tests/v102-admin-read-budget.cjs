@@ -1,9 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const src=fs.readFileSync('admin-dashboard.html','utf8');
-const a=src.indexOf('const COLLECTIONS='),b=src.indexOf('};',a),c=src.indexOf('function adminKeysForArea(area){'),d=src.indexOf('\n}',c);
+const a=src.indexOf('const COLLECTIONS='),b=src.indexOf('};',a),c=src.indexOf('function adminKeysForArea(area){'),d=src.indexOf('});}',c)+4;
 assert(a>=0&&b>a&&c>b&&d>c);
-const ctx={};vm.runInNewContext(src.slice(a,b+2)+';'+src.slice(c,d+2)+';result=["employees","customers","products"].map(adminKeysForArea)',ctx);
+const ctx={};vm.runInNewContext(src.slice(a,b+2)+';'+src.slice(c,d)+';result=["employees","customers","products"].map(adminKeysForArea)',ctx);
 const [employees,customers,products]=ctx.result;
 for(const k of ['employeeAccounts','employeeLogins','employeeSessions','employeeOrders','livePresence','liveActivity'])assert(employees.includes(k),'missing employee feed: '+k);
 for(const k of ['customers','customerLogins','customerSessions','customerOrders','livePresence','liveActivity'])assert(customers.includes(k),'missing customer feed: '+k);
