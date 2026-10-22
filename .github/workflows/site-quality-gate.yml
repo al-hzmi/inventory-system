@@ -66,6 +66,7 @@ jobs:
           node tests/v56-5-stocktake-direct-mobile.mjs
           node tests/v56-79-depleted-search-ios-images.mjs
           node tests/v102-attendance-integrity.cjs
+          node tests/v103-employee-session-engine.cjs
       - name: Parse every JavaScript and JSX script
         shell: bash
         run: |

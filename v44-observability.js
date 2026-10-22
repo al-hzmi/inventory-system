@@ -102,6 +102,8 @@ function presenceWarning(show){
  document.body.appendChild(warning);
 }
 async function heartbeat(state='online'){
+ // Employee online status is owned exclusively by the verified V103 engine.
+ if(me.type==='employee')return;
  if(!db||isQa()||!identityIsCurrent())return;
  try{
   const proof=me.type==='employee'?employeeProof():null;
