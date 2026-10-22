@@ -958,7 +958,8 @@ const resolveImageForItem = (imagesMap, item, collisionIndex, overrides = {}) =>
     const ownerToken=canonicalSkuToken(item.id);
     const eligible=candidates.filter(row=>{
       const token=canonicalSkuToken(row.declared);
-      return token===ownerToken||/^\d+$/.test(token);
+      const fileToken=canonicalSkuToken(imageStem(row.fileName));
+      return (token===ownerToken||/^\d+$/.test(token))&&(fileToken===ownerToken||/^\d+$/.test(fileToken));
     });
     const files=[...new Set(eligible.map(row=>row.fileName))];
     return files.length===1?files[0]:'';

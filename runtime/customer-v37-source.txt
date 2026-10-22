@@ -469,7 +469,8 @@ function resolveCustomerImage(images,item,collisions,bindings={}){
   const target=canonicalSkuToken(item.imageSku||item.id);
   const files=[...new Set(candidates.filter(row=>{
     const token=canonicalSkuToken(row.sku);
-    return token===target||/^\d+$/.test(token);
+    const fileToken=canonicalSkuToken(String(row.file||'').split('/').pop().split('?')[0].replace(/\.[^.]+$/,''));
+    return (token===target||/^\d+$/.test(token))&&(fileToken===target||/^\d+$/.test(fileToken));
   }).map(row=>row.file))];
   return files.length===1?files[0]:'';
 }
