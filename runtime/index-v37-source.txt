@@ -4510,21 +4510,28 @@ const App = () => {
     useEffect(() => {
         if (!sessionName || !isAdmin || !accessVerified) return;
         
-        let tracking=true;
-        const write=async()=>{
+        let tracking=true,firstWrite=true;
+        const write=async({addDuration=false}={})=>{
             if(!tracking||document.visibilityState!=='visible')return;
             try{
                 const db=await getDb();
                 if(!tracking)return;
-                await db.collection('site_sessions').doc(sessionId).set({
+                const stamp=firebase.firestore.FieldValue.serverTimestamp();
+                const payload={
                     name:sessionName,identitySource:'admin_session',employeeId:null,
-                    lastActive:firebase.firestore.FieldValue.serverTimestamp(),
-                    state:'online',userAgent:navigator.userAgent
-                },{merge:true});
+                    lastActive:stamp,state:'online',userAgent:navigator.userAgent
+                };
+                if(firstWrite){payload.startTime=stamp;payload.durationMinutes=0}
+                else if(addDuration)payload.durationMinutes=firebase.firestore.FieldValue.increment(1.5);
+                await db.collection('site_sessions').doc(sessionId).set(payload,{merge:true});
+                firstWrite=false;
+                if(addDuration)db.collection('users').doc(toSafeDocId(sessionName)).set({
+                    timeSpentMinutes:firebase.firestore.FieldValue.increment(1.5),lastActive:stamp
+                },{merge:true}).catch(e=>console.warn('[Admin usage totals]',e?.code||e?.message||e));
             }catch(e){console.warn('[Admin session activity]',e?.code||e?.message||e)}
         };
         write();
-        const interval=setInterval(write,90000);
+        const interval=setInterval(()=>write({addDuration:true}),90000);
         document.addEventListener('visibilitychange',write);
         window.addEventListener('pageshow',write);
         return()=>{tracking=false;clearInterval(interval);document.removeEventListener('visibilitychange',write);window.removeEventListener('pageshow',write)};
