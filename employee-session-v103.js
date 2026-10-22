@@ -3,7 +3,7 @@
 'use strict';
 if(window.__BATCO_EMPLOYEE_SESSION_V103)return;
 const KEY='inventory_login_photo_proof_v2';
-const HEARTBEAT_MS=20000, VERIFY_TTL_MS=5*60*1000;
+const HEARTBEAT_MS=60000, VERIFY_TTL_MS=5*60*1000;
 let lastVerified=null, inFlight=false, failures=0, retryAfter=0;
 const read=key=>{try{return localStorage.getItem(key)||''}catch{return''}};
 function identity(){
