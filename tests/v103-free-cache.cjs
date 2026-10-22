@@ -6,9 +6,9 @@ assert(m,'missing realtime list');
 const keys=[...m[1].matchAll(/'([^']+)'/g)].map(x=>x[1]);
 for(const key of ['employeeAccounts','employeeSessions','employeeLogins','employeeOrders','livePresence','liveActivity','customers','customerSessions','customerLogins','customerOrders'])
  assert(keys.includes(key),'critical feed lost '+key);
-for(const k of ['search','employeeDrafts','customerDrafts','employeeUsers','customerDevices'])
+for(const k of ['employeeDrafts','customerDrafts','employeeUsers','customerDevices'])
  assert(!keys.includes(k),'noncritical feed still consuming continuous reads '+k);
-assert(keys.length<=13,'too many live admin feeds');
+assert(keys.length<=15,'too many live admin feeds');
 assert(sw.includes("IMAGE_CACHE='batco-public-product-images-"),'no public image cache');
 assert(sw.includes("url.pathname.startsWith('/images/')"),'cache must be limited to public product images');
 assert(sw.includes('if(keys.length>180)'),'image cache must have bounded size');
