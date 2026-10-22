@@ -1,0 +1,27 @@
+name: V102 Firestore read budget
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-dashboard.html'
+      - 'tests/v102-admin-read-budget.cjs'
+      - '.github/workflows/v102-read-budget.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v91-incident-audit.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: node tests/v102-admin-read-budget.cjs
+      - run: npm run build
