@@ -1,0 +1,27 @@
+name: V103 employee session integrity
+on:
+  push:
+    branches: [main, 'fix/v103-*']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - name: Employee login, presence and navigation regressions
+        run: |
+          node tests/v95-login-stocktake-integrity.cjs
+          node tests/v96-live-employee-visibility.cjs
+          node tests/v97-admin-freshness.cjs
+          node tests/v102-attendance-integrity.cjs
+          node tests/v103-employee-session-engine.cjs
+      - name: Production build
+        run: npm run build
