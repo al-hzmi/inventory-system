@@ -9,13 +9,20 @@ const invoice=employee.slice(employee.indexOf('const OrderInvoiceModal = memo(')
 assert(invoice.includes('msg += `البائع: ${sessionName}\\n`;'),'WhatsApp invoice must label seller');
 assert(!invoice.includes('msg += `المندوب:'),'old seller label must not return');
 requireAll(employee,[
- "const verifiedLoginRef = await db.collection('login_logs').add({",
+ "const verifiedLoginRef = db.collection('login_logs').doc();",
  'loginLogId:verifiedLoginRef.id',
- 'if (!sessionName || (!isAdmin && !accessVerified)) return;',
- "identitySource:!isAdmin?'employee_login_photo_record':'admin_session'",
- "loginAttemptId:!isAdmin?proof?.loginAttemptId||'':''",
- '}, 90000);'
-],'employee login proof');
+ 'loginBatch.set(verifiedLoginRef, {',
+ 'await loginBatch.commit();',
+ "if (!sessionName || !isAdmin || !accessVerified) return;",
+ "window.dispatchEvent(new Event('batco:employee-login'))"
+],'employee login and admin isolation');
+const engine=read('employee-session-v103.js');
+requireAll(engine,[
+ "get({source:'server'})",
+ "identitySource:'verified_login_server_v103'",
+ "window.addEventListener('pageshow',wake)",
+ "document.addEventListener('visibilitychange',wake)"
+],'employee attendance engine');
 requireAll(presence,[
  'const employeeSessionValid=()',
  "p.role==='employee'",
