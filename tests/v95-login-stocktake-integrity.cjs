@@ -4,7 +4,7 @@ const read=p=>fs.readFileSync(p,'utf8');
 const employee=read('runtime/index-v37-source.txt'),admin=read('admin-dashboard.html'),stocktake=read('stocktake.html'),stockAdmin=read('admin-stocktake.html');
 const must=(text,terms,name)=>terms.forEach(x=>assert(text.includes(x),name+' missing '+x));
 const login=employee.slice(employee.indexOf('const finalizeEmployeeLogin ='),employee.indexOf('const finalizeAdminLogin ='));
-must(login,["db.collection('login_logs').add({","loginAttemptId,","securityPhotoId: photoRef.id,","faceVerified: true","loginLogId:verifiedLoginRef.id"],'employee login record');
+must(login,["db.collection('login_logs').doc();","loginBatch.set(verifiedLoginRef, {","await loginBatch.commit();","loginAttemptId,","securityPhotoId: photoRef.id,","faceVerified: true","loginLogId:verifiedLoginRef.id"],'employee login record');
 const section=admin.slice(admin.indexOf('const verifiedLoginRecords='),admin.indexOf('const employeeIsHere='));
 must(section,["x.faceVerified===true&&!x.isAdmin&&x.employeeId&&x.securityPhotoId","verifiedLoginById.get(String(s.loginLogId))","!log.loginAttemptId||String(log.loginAttemptId)===String(s.loginAttemptId)"],'admin legacy log join');
 assert(!section.includes('x.employeeId&&x.loginAttemptId&&x.securityPhotoId'),'old schema filter hides actual Firebase logs');
