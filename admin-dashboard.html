@@ -534,6 +534,8 @@ function AdminApp(){
 
   useEffect(()=>{
     let stopped=false;const unsubs=[];const activeKeys=adminKeysForArea(area);const waiting=new Set(activeKeys.filter(key=>!LAZY_ADMIN_KEYS.has(key)));let pendingData={},dataFrame=0;
+    setSyncing(true);
+    setCollectionErrors({});
     const markReady=key=>{waiting.delete(key);if(!waiting.size&&!stopped)setSyncing(false)};
     const flushData=()=>{dataFrame=0;if(stopped)return;const patch=pendingData;pendingData={};if(Object.keys(patch).length)setData(prev=>({...prev,...patch}))};
     const apply=(key,name,snap)=>{if(stopped)return;
