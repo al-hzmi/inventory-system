@@ -24,7 +24,7 @@ has(login,'loginAttemptId,','attempt correlation persisted');
 has(login,".doc('employee_login_'+verifiedLoginRef.id).set({",'persist initial login session');
 has(login,"loginLogId:verifiedLoginRef.id",'link same verified login');
 assert(!login.includes('SESSION_PROBE_TIMEOUT'),'attendance heartbeat must not delay successful login');
-has(app,"?'employee_login_'+String(proof.loginLogId)",'stable reloaded session');
+has(app,"?'employee_login_'+String(activeSessionProof.loginLogId)",'stable identity across login and reload');
 has(section,'مصادر العرض: {verifiedLoginRecords.length}', 'real JSX count');
 assert(!section.includes('مصادر العرض: ${verifiedLoginRecords.length}'),'raw interpolation should not render to customers');
 const fg=app.slice(app.indexOf('const onForeground = () =>'),app.indexOf('window.removeEventListener(\'pageshow\',onForeground)'));

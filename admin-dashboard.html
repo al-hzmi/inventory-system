@@ -543,7 +543,10 @@ function AdminApp(){
       const fail=e=>{console.warn('[Dashboard snapshot]',name,e);if(!stopped)setCollectionErrors(prev=>({...prev,[key]:String(e?.code||e?.message||'unknown').slice(0,150)}));if(!stopped&&LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'error'}));markReady(key)};
       const loadOnce=async()=>{if(LAZY_ADMIN_KEYS.has(key))setLazyLoadState(prev=>({...prev,[key]:'loading'}));try{const s=await ordered().get();apply(key,name,s)}catch(e){if(stopped)return;if(!needsIndexFallback(e)){fail(e);return}try{const s=await db.collection(name).limit(limit).get();apply(key,name,s)}catch(err){fail(err)}}};
       if(!REALTIME_KEYS.has(key)){if(LAZY_ADMIN_KEYS.has(key))lazyLoaders.current[key]=loadOnce;else loadOnce();return()=>{delete lazyLoaders.current[key]}};
-      const fallback=()=>{if(stopped||usingFallback)return;usingFallback=true;try{unsubscribe?.()}catch{};unsubscribe=db.collection(name).limit(limit).onSnapshot({includeMetadataChanges:true},s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime fallback]',name,e);fail(e)})};
+      const fallback=()=>{if(stopped||usingFallback)return;usingFallback=true;try{unsubscribe?.()}catch{};
+        // An unordered limited sample can silently omit the newest verified employee records.
+        if(key==='employeeLogins'||key==='employeeSessions'){fail({code:'failed-precondition',message:'ordered employee history unavailable'});return}
+        unsubscribe=db.collection(name).limit(limit).onSnapshot({includeMetadataChanges:true},s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime fallback]',name,e);fail(e)})};
       try{unsubscribe=ordered().onSnapshot({includeMetadataChanges:true},s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);needsIndexFallback(e)?fallback():fail(e)})}catch(e){needsIndexFallback(e)?fallback():fail(e)}
       return()=>{try{unsubscribe?.()}catch{}}
     };
@@ -581,6 +584,26 @@ function AdminApp(){
    const presenceEmployees=livePresence.filter(p=>p.actorType==='employee').map(p=>({id:'presence_'+p.id,employeeId:p.employeeId||p.actorId||'',name:p.actorName||'',lastActive:p.lastActive,startTime:p.lastActive,state:p.state||'',loginLogId:p.loginLogId||'',loginAttemptId:p.loginAttemptId||'',securityPhotoId:p.securityPhotoId||'',device:p.device||{},__collection:'v44_presence',__presenceFallback:true}));
    const customers=data.customers||[],cDevices=data.customerDevices||[],cSessions=[...(data.customerSessions||[]),...presenceCustomers],cLogins=data.customerLogins||[],cActivity=data.customerActivity||[],cOrdersAll=data.customerOrders||[],cDrafts=data.customerDrafts||[],cSecurityPhotos=data.customerSecurityPhotos||[];
   const eUsers=data.employeeUsers||[],eAccounts=data.employeeAccounts||[],eAliases=data.employeeAliases||[],eNotifications=data.employeeNotifications||[],eSecurityPhotos=data.employeeSecurityPhotos||[],eLoginAttempts=data.employeeLoginAttempts||[],eSessions=[...(data.employeeSessions||[]),...presenceEmployees],eLogins=data.employeeLogins||[],access=data.access||[],searches=data.search||[],eOrdersAll=data.employeeOrders||[],eDrafts=data.employeeDrafts||[],categoryAudit=data.categoryAudit||[],newArrivalReviews=data.newArrivalReviews||[],adminLogs=data.adminAudit||[];
+  // Resolve active sessions against their exact server login document. A rolling
+  // 120-row login query is a feed, not a complete authentication lookup.
+  const [recoveredVerifiedLogins,setRecoveredVerifiedLogins]=useState([]);
+  const verifiedLoginLookupAttempts=useRef(new Map());
+  useEffect(()=>{
+    const known=new Set([...eLogins,...recoveredVerifiedLogins].map(x=>String(x.id)));
+    const candidates=[...new Set(eSessions.filter(s=>s.loginLogId&&s.loginAttemptId&&s.securityPhotoId&&online(s.lastActive)).map(s=>String(s.loginLogId)))].filter(id=>!known.has(id)).slice(0,30);
+    candidates.forEach(id=>{
+      const lastTry=verifiedLoginLookupAttempts.current.get(id)||0;
+      if(Date.now()-lastTry<60000)return;
+      verifiedLoginLookupAttempts.current.set(id,Date.now());
+      db.collection('login_logs').doc(id).get({source:'server'}).then(doc=>{
+        if(!doc.exists)return;
+        const log={id:doc.id,...doc.data(),__collection:'login_logs'};
+        if(log.faceVerified!==true||log.isAdmin||!log.employeeId||!log.securityPhotoId)return;
+        setRecoveredVerifiedLogins(prev=>prev.some(x=>x.id===id)?prev:[...prev,log]);
+      }).catch(e=>console.warn('[Employee exact login lookup]',id,e?.code||e?.message||e));
+    });
+  },[eSessions,eLogins,recoveredVerifiedLogins]);
+
   const HAROUN_REDIRECT_DOC='employee_onboarding_redirects';
   useEffect(()=>{
     let cancelled=false;
@@ -619,7 +642,7 @@ function AdminApp(){
   // Raw presence, visits and localStorage claims are NOT successful logins.
   // V95: Before this release, successful log writes accidentally omitted loginAttemptId.
   // Never discard a server-persisted photo-verified login merely because of that old schema.
-  const verifiedLoginRecords=eLogins.filter(x=>x.faceVerified===true&&!x.isAdmin&&x.employeeId&&x.securityPhotoId);
+  const verifiedLoginRecords=eLogins.filter(x=>x.faceVerified===true&&!x.isAdmin&&x.employeeId&&x.securityPhotoId).concat(recoveredVerifiedLogins.filter(x=>!eLogins.some(log=>log.id===x.id)&&x.faceVerified===true&&!x.isAdmin&&x.employeeId&&x.securityPhotoId));
   const verifiedLoginById=new Map(verifiedLoginRecords.map(x=>[String(x.id),x]));
   const verifiedLoginByAttempt=new Map(verifiedLoginRecords.filter(x=>x.loginAttemptId).map(x=>[String(x.loginAttemptId),x]));
   const authenticatedSession=s=>{
@@ -795,9 +818,9 @@ function AdminApp(){
       }
     });
     // Legacy profile activity is clearly distinguished from photo-verified login.
-    eAccounts.filter(a=>a.status!=='merged'&&a.status!=='suspended').forEach(account=>{
-      const key=identityKey(account);
-      if(!seen.has(key)&&account.lastLoginAt)put(key,{id:account.id,name:account.canonicalName||account.name||account.id,time:account.lastLoginAt,session:null,log:null,kind:'profile_history'});
+    employeeDirectory.rows.filter(row=>!row.account||!['merged','suspended'].includes(row.account.status)).forEach(row=>{
+      const lastProfileTime=[row.account?.lastLoginAt,...row.userRecords.map(u=>u.lastLogin)].reduce((latest,time)=>tsMs(time)>tsMs(latest)?time:latest,null);
+      if(!seen.has(row.identity)&&lastProfileTime)put(row.identity,{id:row.account?.id||row.user?.id||row.identity,name:row.name||row.account?.canonicalName||'موظف',time:lastProfileTime,session:null,log:null,kind:'profile_history'});
     });
     const presence=[...seen.values()].sort((a,b)=>tsMs(b.time)-tsMs(a.time));
     const allOnline=eSessions.filter(employeeIsHere);

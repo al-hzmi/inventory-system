@@ -15,7 +15,7 @@ const path=location.pathname.split('/').pop()||'index.html';
 const employeeName=()=>{try{return String(localStorage.getItem('inventory_user_name_v2')||'').trim()}catch{return''}};
 const employeeId=()=>{try{return String(localStorage.getItem('inventory_employee_id_v2')||'').trim()}catch{return''}};
 const employeeProof=()=>{try{return safeJson(localStorage.getItem('inventory_login_photo_proof_v2')||'null',{})||{}}catch{return{}}};
-const employeeSessionValid=()=>{try{const id=employeeId(),p=employeeProof();return Boolean(employeeName()&&id&&localStorage.getItem('inventory_employee_auth_version_v2')==='2'&&p.role==='employee'&&p.employeeId===id&&p.photoId&&p.loginAttemptId)}catch{return false}};
+const employeeSessionValid=()=>{try{const id=employeeId(),p=employeeProof();return Boolean(employeeName()&&id&&localStorage.getItem('inventory_employee_auth_version_v2')==='2'&&p.role==='employee'&&p.employeeId===id&&p.photoId&&p.loginAttemptId&&p.loginLogId)}catch{return false}};
 const quickProfile=()=>{try{return safeJson(localStorage.getItem('batco_quick_customer_profile_v1')||'null')}catch{return null}};
 const visitorId=()=>{try{return String(localStorage.getItem('batco_customer_visitor_id_v1')||'').trim()}catch{return''}};
 const guestName=()=>{try{return String(localStorage.getItem('customer_guest_name_v1')||'').trim()}catch{return''}};
