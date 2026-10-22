@@ -11,7 +11,7 @@ function sourceBetween(src,start,end){const i=src.indexOf(start),j=src.indexOf(e
 const archiveSrc=sourceBetween(emp,'const canonicalSkuToken =','// V56.25');
 const resolveSrc=sourceBetween(emp,'const resolveImageForItem =','const buildResolvedImagesMap =');
 const customerResolve=sourceBetween(cust,'function resolveCustomerImage(','function parseCategories(');
-const context={toEnglishDigits:x=>String(x),normalizeCleanId:digits,normalizeImageSku:norm};
+const context={toEnglishDigits:x=>String(x),normalizeCleanId:digits,normalizeImageSku:norm,imageStem:x=>String(x||'').split('/').pop().split('?')[0].replace(/\.[^.]+$/,'')};
 vm.createContext(context);
 vm.runInContext(archiveSrc+'\n'+resolveSrc+'\n'+customerResolve+'\nexports={safeDepletedCatalog,resolveImageForItem,resolveCustomerImage};',context);
 const {safeDepletedCatalog,resolveImageForItem,resolveCustomerImage}=context.exports;
