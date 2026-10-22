@@ -1,0 +1,37 @@
+name: V103 Inventory catalog integrity and quota
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'runtime/customer-v37-source.txt'
+      - 'data/images_list.txt'
+      - 'data/depleted_inventory.tsv'
+      - 'data/jeddah.tsv'
+      - 'data/riyadh.tsv'
+      - 'admin-dashboard.html'
+      - 'sw.js'
+      - 'tests/v103-sku-identity.cjs'
+      - 'tests/v103-free-cache.cjs'
+      - '.github/workflows/v103-catalog-integrity.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v103-sku-identity.cjs
+      - run: node tests/v103-free-cache.cjs
+      - run: node tests/v102-admin-read-budget.cjs
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: node --check sw.js
+      - run: npm run build

@@ -1,7 +1,8 @@
 /* Cache only the stocktake shell. Never cache API, identity or Firestore traffic. */
 const STOCKTAKE_CACHE='stocktake-shell-v89';
 const RESOURCE_CACHE='batco-static-resources-v102';
-const NAV_CACHE='batco-navigation-shell-v102-attendance';
+const NAV_CACHE='batco-navigation-shell-v103-sku';
+const IMAGE_CACHE='batco-public-product-images-v103';
 const PAGES=['/admin-branch-presence.html','/branch-presence.html','/branch-stocktake.html','/stocktake.html','/admin-stocktake.html','/stocktake-accountant.html','/accountant-stocktake.html'];
 const ASSETS=['/employee-attendance.js','/batco-scan-pro.js','/branch-scan-audio.js','/branch-barcode-fallback.js','/branch-camera-pro.js','/batco-brand-footer.js','/branch-presence-core.js','/branch-presence.js','/branch-presence-main-launcher.js','/branch-presence-page.css','/branch-presence-admin.css','/branch-presence-admin.js','/branch-presence-entry.js','/branch-presence.css','/branch-stocktake-core.js','/branch-stocktake.js','/branch-stocktake.css','/stocktake-core.js','/stocktake-workspace.css','/stocktake-workbook.js','/v71-brand.css','/v56-39-site-identity.js','/assets/batco-logo.svg','/assets/batco-app-icon.svg'];
 const VENDORS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js','https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js'];
@@ -57,12 +58,31 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
  // Previous tabs may still request their content-addressed scripts after an update.
  const resources=names.filter(n=>n.startsWith('batco-static-resources-'));
  const keep=new Set([RESOURCE_CACHE,...resources.filter(n=>n!==RESOURCE_CACHE).slice(-1)]);
- for(const name of names)if((name.startsWith('batco-static-resources-')&&!keep.has(name))||(name.startsWith('stocktake-shell-')&&name!==STOCKTAKE_CACHE)||(name.startsWith('batco-navigation-shell-')&&name!==NAV_CACHE))await bounded(caches.delete(name),700,null);
+ for(const name of names)if((name.startsWith('batco-static-resources-')&&!keep.has(name))||(name.startsWith('stocktake-shell-')&&name!==STOCKTAKE_CACHE)||(name.startsWith('batco-navigation-shell-')&&name!==NAV_CACHE)||(name.startsWith('batco-public-product-images-')&&name!==IMAGE_CACHE))await bounded(caches.delete(name),700,null);
  await self.clients.claim();
 })()));
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);if(request.method!=='GET')return;
  const local=url.origin===self.location.origin,eligible=local&&(PAGES.includes(url.pathname)||ASSETS.includes(url.pathname));
+ // Public product images: reuse only images explicitly opened by the user.
+ // Never cache Firestore, APIs, employee images, session state, or stock quantities.
+ if(local&&url.pathname.startsWith('/images/')&&/\.(?:webp|png|jpe?g|avif)$/i.test(url.pathname)){
+   event.respondWith((async()=>{
+     const cache=await openCache(IMAGE_CACHE),key=url.href,hit=await match(cache,key);
+     const update=async()=>{
+       const response=await fetch(request);
+       if(response.ok&&response.type!=='opaque'&&cache){
+         await put(cache,key,response.clone());
+         const keys=await bounded(cache.keys(),900,[]);
+         if(keys.length>180)await Promise.allSettled(keys.slice(0,keys.length-180).map(entry=>cache.delete(entry)));
+       }
+       return response;
+     };
+     if(hit){event.waitUntil(update().catch(()=>{}));return hit;}
+     return update();
+   })());
+   return;
+ }
  // Content-addressed code and public static resources only; data and API requests never enter this cache.
  if(local&&(STATIC_FILES.has(url.pathname)||/^\/assets\/build\/[a-z0-9-]+\.[a-f0-9]{20}\.(js|html|css)$/.test(url.pathname))){
    event.respondWith((async()=>{const cache=await openCache(RESOURCE_CACHE),key=url.href;const immutable=url.pathname.startsWith('/assets/build/');const hit=(await match(cache,key))||(immutable?await bounded(caches.match(key),700,null):null);

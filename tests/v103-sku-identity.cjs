@@ -1,0 +1,38 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const read=p=>fs.readFileSync(p,'utf8');
+const emp=read('runtime/index-v37-source.txt'),cust=read('runtime/customer-v37-source.txt');
+const parse=p=>read(p).replace(/^\uFEFF/,'').trim().split(/\r?\n/).slice(1).filter(Boolean).map(line=>line.split('\t'));
+const inventory=[...parse('data/jeddah.tsv'),...parse('data/riyadh.tsv')].map(r=>({id:r[0],name:r[1],qty:Number(r[3])||0}));
+const archive=parse('data/depleted_inventory.tsv').map(r=>({id:r[0],name:r[1],imageFile:r[4]}));
+const imageRows=read('data/images_list.txt').trim().split(/\r?\n/).map(s=>s.split('\t'));
+const norm=x=>String(x||'').toUpperCase().replace(/[^A-Z0-9_-]/g,''),token=x=>String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,''),digits=x=>String(x||'').replace(/\D/g,'');
+function sourceBetween(src,start,end){const i=src.indexOf(start),j=src.indexOf(end,i+start.length);assert(i>=0&&j>i,start+' missing');return src.slice(i,j)}
+const archiveSrc=sourceBetween(emp,'const canonicalSkuToken =','// V56.25');
+const resolveSrc=sourceBetween(emp,'const resolveImageForItem =','const buildResolvedImagesMap =');
+const customerResolve=sourceBetween(cust,'function resolveCustomerImage(','function parseCategories(');
+const context={toEnglishDigits:x=>String(x),normalizeCleanId:digits,normalizeImageSku:norm};
+vm.createContext(context);
+vm.runInContext(archiveSrc+'\n'+resolveSrc+'\n'+customerResolve+'\nexports={safeDepletedCatalog,resolveImageForItem,resolveCustomerImage};',context);
+const {safeDepletedCatalog,resolveImageForItem,resolveCustomerImage}=context.exports;
+const cleaned=safeDepletedCatalog(archive,{all:inventory});
+const ids=new Set(cleaned.map(x=>x.id));
+assert(!ids.has('25557'),'25557 must not appear as a phantom image-only item');
+assert(ids.has('225'),'ambiguous BA/AR numeric archive must stay unresolved');
+assert(ids.has('301'),'ambiguous MS/BA numeric archive must stay unresolved');
+assert(archive.length-cleaned.length>=110,'aliases not deduplicated across inventory');
+const images={exact:new Map(),legacy:new Map()};
+for(const [id,file] of imageRows){if(!id||!file)continue;images.exact.set(norm(id),file);const key=digits(id);if(!images.legacy.has(key))images.legacy.set(key,[]);images.legacy.get(key).push({declared:norm(id),fileName:file});}
+const owners=new Map();
+for(const item of inventory){const d=digits(item.id);if(!owners.has(d))owners.set(d,new Set());owners.get(d).add(norm(item.id));}
+const shoe=inventory.find(x=>x.id==='OSG_25557');
+assert(shoe,'shoe source missing');
+assert.equal(resolveImageForItem(images,{...shoe,cleanId:'25557'},owners),'25557.webp','shoe photo must attach to warehouse SKU');
+const customerImages={exact:images.exact,legacy:new Map([...images.legacy].map(([k,list])=>[k,list.map(x=>({sku:x.declared,file:x.fileName}))]))};
+assert.equal(resolveCustomerImage(customerImages,{id:'OSG_25557',cleanId:'25557'},owners,{}),'25557.webp');
+for(const id of ['BA_225','AR_M225'])assert.equal(resolveImageForItem(images,{id,cleanId:'225'},owners),'','different owners sharing digits must not borrow photo');
+const sameToken={exact:new Map(),legacy:new Map([['123',[{declared:'AR-123',fileName:'AR123.webp'}]]])};
+assert.equal(resolveImageForItem(sameToken,{id:'AR_123',cleanId:'123'},new Map([['123',new Set(['AR_123'])]])),'AR123.webp','separator aliases should connect');
+const ambiguousImages={exact:new Map(),legacy:new Map([['25557',[{declared:'25557',fileName:'a.webp'},{declared:'25557',fileName:'b.webp'}]]])};
+assert.equal(resolveImageForItem(ambiguousImages,{id:'OSG_25557',cleanId:'25557'},owners),'','two distinct image candidates must not be guessed');
+console.log('V103 image and catalog identity PASS '+JSON.stringify({archiveTotal:archive.length,aliasesSuppressed:archive.length-cleaned.length,archiveRemaining:cleaned.length,activeRows:inventory.length,shoeImage:'25557.webp'}));

@@ -401,6 +401,7 @@ function parsePricingMap(rawText){
 }
 
 const normalizeImageSku = raw => toEnglishDigits(String(raw||'')).trim().toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9_-]/g,'');
+const canonicalSkuToken = raw => toEnglishDigits(String(raw||'')).toUpperCase().replace(/[^A-Z0-9]/g,'');
 
 function parseInventory(raw){
   if(!raw) return [];
@@ -465,7 +466,12 @@ function resolveCustomerImage(images,item,collisions,bindings={}){
   if(sku&&images.exact.has(sku))return images.exact.get(sku)||'';
   const candidates=images.legacy.get(item.cleanId)||[],owners=collisions.get(item.cleanId)||new Set();
   if(owners.size!==1)return'';
-  return candidates[0]?.file||'';
+  const target=canonicalSkuToken(item.imageSku||item.id);
+  const files=[...new Set(candidates.filter(row=>{
+    const token=canonicalSkuToken(row.sku);
+    return token===target||/^\d+$/.test(token);
+  }).map(row=>row.file))];
+  return files.length===1?files[0]:'';
 }
 function parseCategories(text){
   const out={}; if(!text)return out;

@@ -871,6 +871,21 @@ const parseDepletedArchive = (raw) => {
 };
 
 const reportCleanIdCollisions = (items, warehouseKey) => {};
+const canonicalSkuToken = raw => toEnglishDigits(String(raw||'')).toUpperCase().replace(/[^A-Z0-9]/g,'');
+const safeDepletedCatalog = (archived,databases) => {
+ const owners=new Map(),tokens=new Set();
+ Object.values(databases||{}).flat().forEach(item=>{
+  const token=canonicalSkuToken(item.id),number=normalizeCleanId(item.id);
+  if(!token||!number)return;
+  tokens.add(token);
+  if(!owners.has(number))owners.set(number,new Set());
+  owners.get(number).add(token);
+ });
+ return (archived||[]).filter(item=>{
+  const token=canonicalSkuToken(item.id),number=normalizeCleanId(item.id),matches=owners.get(number);
+  return !tokens.has(token)&&!(/^\d+$/.test(token)&&matches?.size===1);
+ });
+};
 
 // V56.25 — هوية الصورة مستقلة عن هوية البحث الرقمية.
 // مثال: BA_209 و AR_M209 قد يشتركان في cleanId=209 للبحث، لكن لا يجوز أن يشتركا في الصورة تلقائياً.
@@ -940,7 +955,13 @@ const resolveImageForItem = (imagesMap, item, collisionIndex, overrides = {}) =>
     if (!candidates.length) return '';
     const owners = collisionIndex?.get(item.cleanId) || new Set();
     if (owners.size !== 1) return '';
-    return candidates[0]?.fileName || '';
+    const ownerToken=canonicalSkuToken(item.id);
+    const eligible=candidates.filter(row=>{
+      const token=canonicalSkuToken(row.declared);
+      return token===ownerToken||/^\d+$/.test(token);
+    });
+    const files=[...new Set(eligible.map(row=>row.fileName))];
+    return files.length===1?files[0]:'';
 };
 
 const buildResolvedImagesMap = (imagesMap, databases, overrides = {}) => {
@@ -4666,7 +4687,7 @@ const App = () => {
                 reportCleanIdCollisions(riyadh, WAREHOUSES.riyadh.key);
 
                 const nextDatabases = { jeddah, riyadh };
-                const depleted = parseDepletedArchive(dT);
+                const depleted = safeDepletedCatalog(parseDepletedArchive(dT),nextDatabases);
                 setDatabases(nextDatabases);
                 setDepletedCatalog(depleted);
                 const rawImgMap = buildImagesMap(iT);
