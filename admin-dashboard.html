@@ -179,6 +179,13 @@ const REALTIME_ORDER={employeeOrders:'timestamp',livePresence:'lastActive',liveA
 const REALTIME_LIMIT={livePresence:300,liveActivity:300,customers:350,customerDevices:180,customerSessions:160,customerLogins:100,customerActivity:140,customerOrders:300,customerDrafts:220,customerSecurityPhotos:80,employeeUsers:350,employeeAccounts:350,employeeAliases:350,employeeNotifications:120,employeeSecurityPhotos:80,employeeLoginAttempts:120,employeeSessions:180,employeeLogins:120,access:120,search:160,employeeOrders:300,employeeDrafts:220,categoryAudit:100,newArrivalReviews:120,adminAudit:120};
 const LAZY_ADMIN_KEYS=new Set(['employeeSecurityPhotos','customerSecurityPhotos','adminAudit']);
 const REALTIME_KEYS=new Set(['customers','customerDevices','customerSessions','customerLogins','customerActivity','customerOrders','customerDrafts','employeeUsers','employeeAccounts','employeeNotifications','employeeLoginAttempts','employeeSessions','employeeLogins','employeeOrders','employeeDrafts','search','access','livePresence','liveActivity']);
+function adminKeysForArea(area){return Object.keys(COLLECTIONS).filter(key=>{
+  if(key==='customers'||key.startsWith('customer'))return area==='customers';
+  if(key==='categoryAudit'||key==='newArrivalReviews')return area==='products';
+  if(key==='adminAudit'||key==='livePresence'||key==='liveActivity')return area!=='products';
+  return area==='employees';
+});}
+
 async function adminAudit(action,data={}){try{await db.collection(COLLECTIONS.adminAudit).add({admin:'مهند',action,data,createdAt:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent||''})}catch(e){console.warn('[Admin audit]',e)}}
 
 function AdminGate({onPass}){
@@ -526,7 +533,7 @@ function AdminApp(){
   const [newArrivalCatalog,setNewArrivalCatalog]=useState({meta:{items:[]},images:new Set(),prices:new Set(),categorized:new Set(),error:'',loading:true});
 
   useEffect(()=>{
-    let stopped=false;const unsubs=[];const waiting=new Set(Object.keys(COLLECTIONS).filter(key=>!LAZY_ADMIN_KEYS.has(key)));let pendingData={},dataFrame=0;
+    let stopped=false;const unsubs=[];const activeKeys=adminKeysForArea(area);const waiting=new Set(activeKeys.filter(key=>!LAZY_ADMIN_KEYS.has(key)));let pendingData={},dataFrame=0;
     const markReady=key=>{waiting.delete(key);if(!waiting.size&&!stopped)setSyncing(false)};
     const flushData=()=>{dataFrame=0;if(stopped)return;const patch=pendingData;pendingData={};if(Object.keys(patch).length)setData(prev=>({...prev,...patch}))};
     const apply=(key,name,snap)=>{if(stopped)return;
@@ -550,11 +557,11 @@ function AdminApp(){
       try{unsubscribe=ordered().onSnapshot({includeMetadataChanges:true},s=>apply(key,name,s),e=>{console.warn('[Dashboard realtime]',name,e);needsIndexFallback(e)?fallback():fail(e)})}catch(e){needsIndexFallback(e)?fallback():fail(e)}
       return()=>{try{unsubscribe?.()}catch{}}
     };
-    Object.entries(COLLECTIONS).forEach(([key,name])=>unsubs.push(attach(key,name)));
+    activeKeys.forEach(key=>unsubs.push(attach(key,COLLECTIONS[key])));
     const settle=setTimeout(()=>{if(!stopped)setSyncing(false)},2200);
-    adminAudit('admin_dashboard_open');
     return()=>{stopped=true;clearTimeout(settle);if(dataFrame)cancelAnimationFrame(dataFrame);unsubs.forEach(fn=>fn())}
-  },[]);
+  },[area]);
+  useEffect(()=>{adminAudit('admin_dashboard_open')},[]);
   useEffect(()=>{
     if(module==='security_photos'||module==='raw')requestLazy(area==='employees'?'employeeSecurityPhotos':'customerSecurityPhotos');
     if(module==='raw')requestLazy('adminAudit');
