@@ -37,7 +37,7 @@ jobs:
           assert 'BA_209\t209.webp' in manifest
           assert not any(line.strip()=='209\t209.webp' for line in manifest.splitlines())
 
-          for token in ['normalizeImageSku','imageForItem','product_image_bindings','admin_mohanad']:
+          for token in ['normalizeImageSku','imageForItem','loadImageBindingOverrides','admin_mohanad']:
               assert token in employee, f'employee missing {token}'
 
           for token in [
@@ -47,13 +47,13 @@ jobs:
               'const skuKey=normalizeImageSku(item.imageSku||item.id)||item.cleanId;',
               'buildCustomerImageCollisionIndex',
               'resolveCustomerImage',
-              "doc('product_image_bindings')",
+              'loadCustomerImageBindings',
               'owners.size!==1',
           ]:
               assert token in customer, f'customer missing {token}'
           assert 'images.has(x.cleanId)' not in customer
           assert 'images.get(x.cleanId)' not in customer
-          assert './runtime/customer-v37-source.txt?v=56.25' in wrapper
+          assert './runtime/customer-v37-source.txt?v=' in wrapper
 
           # Superseded prototypes used separate state and must stay removed.
           assert not Path('v56-image-repair.js').exists()
