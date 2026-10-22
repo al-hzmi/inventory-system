@@ -180,7 +180,7 @@
 
 const EMPLOYEE_DIRECT_SESSION = { nameKey:'inventory_user_name_v2', employeeIdKey:'inventory_employee_id_v2', authVersionKey:'inventory_employee_auth_version_v2', authVersion:'2', photoProofKey:'inventory_login_photo_proof_v2' };
 const readLoginPhotoProof = () => { try { return JSON.parse(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.photoProofKey)||'null')||null; } catch { return null; } };
-const hasRememberedEmployeeSession = () => { try { const name=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.nameKey)||'').trim(); const employeeId=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.employeeIdKey)||'').trim(); const authVersion=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.authVersionKey)||''); const proof=readLoginPhotoProof(); return Boolean(name&&employeeId&&authVersion===EMPLOYEE_DIRECT_SESSION.authVersion&&proof?.role==='employee'&&proof?.employeeId===employeeId&&proof?.photoId); } catch { return false; } };
+const hasRememberedEmployeeSession = () => { try { const name=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.nameKey)||'').trim(); const employeeId=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.employeeIdKey)||'').trim(); const authVersion=String(localStorage.getItem(EMPLOYEE_DIRECT_SESSION.authVersionKey)||''); const proof=readLoginPhotoProof(); return Boolean(name&&employeeId&&authVersion===EMPLOYEE_DIRECT_SESSION.authVersion&&proof?.role==='employee'&&proof?.employeeId===employeeId&&proof?.photoId&&proof?.loginAttemptId&&proof?.loginLogId); } catch { return false; } };
 
 const EntryChooser = () => {
     const goCustomer = () => { window.location.href = './customer.html'; };
@@ -3222,21 +3222,23 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
             });
             // These historical counters are non-critical. The verified Firebase login
             // record above is what authorizes the session and powers the live dashboard.
+            // Update the canonical employee record independently of legacy user counters.
+            // A denied users write must not erase the latest-login fallback on the dashboard.
+            db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).set({
+                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastEnteredAlias: enteredAlias,
+                loginCount: firebase.firestore.FieldValue.increment(1),
+                passwordResetRequiresPhoto: false,
+                passwordResetPhotoCompletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                passwordResetPhotoId: photoRef.id,
+                lastPhotoVerifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).catch(statsError=>console.warn('[Employee account login statistics]',statsError?.code||statsError?.message||statsError));
             (async()=>{try{
                 const userRef = db.collection('users').doc(toSafeDocId(canonicalName));
                 const userDoc = await userRef.get();
                 const info = { employeeId: employeeAccount.id, name: canonicalName, lastLogin: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent };
                 if (userDoc.exists) await userRef.update({ ...info, loginCount: firebase.firestore.FieldValue.increment(1) });
                 else await userRef.set({ ...info, loginCount: 1, firstJoined: firebase.firestore.FieldValue.serverTimestamp(), timeSpentMinutes: 0 });
-                await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).set({
-                    lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastEnteredAlias: enteredAlias,
-                    loginCount: firebase.firestore.FieldValue.increment(1),
-                    passwordResetRequiresPhoto: false,
-                    passwordResetPhotoCompletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    passwordResetPhotoId: photoRef.id,
-                    lastPhotoVerifiedAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
             }catch(statsError){console.warn('[Employee optional login statistics]',statsError?.code||statsError?.message||statsError)}})();
             db.collection('employee_login_attempts').doc(loginAttemptId).set({
                 photoCaptured:true,securityPhotoId:photoRef.id,status:'completed',
@@ -4466,13 +4468,12 @@ const App = () => {
         setAccessVerified(Boolean(employeeId) && authVersion === EMPLOYEE_AUTH_VERSION);
     }, [sessionName, isAdmin]);
 
-    // Keep the same session across reloads of a single authenticated login.
-    const [sessionId] = useState(() => {
-        const proof=readLoginPhotoProof();
-        return proof?.role==='employee'&&proof?.loginLogId
-            ?'employee_login_'+String(proof.loginLogId)
-            :Date.now().toString()+Math.random().toString(36).substr(2,5);
-    });
+    // A new photo-verified login needs its own durable session, even without reloading the SPA.
+    const [sessionFallbackId] = useState(() => Date.now().toString()+Math.random().toString(36).substr(2,5));
+    const activeSessionProof = readLoginPhotoProof();
+    const sessionId = activeSessionProof?.role==='employee'&&activeSessionProof?.loginLogId
+        ?'employee_login_'+String(activeSessionProof.loginLogId)
+        :sessionFallbackId;
     
     const [cart, setCart] = useState(() => {
         const name = localStorage.getItem(STORAGE_KEYS.NAME) || '';
@@ -4519,11 +4520,12 @@ const App = () => {
                     identitySource:!isAdmin?'employee_login_photo_record':'admin_session',
                     name: sessionName,
                     employeeId: isAdmin ? null : (localStorage.getItem(STORAGE_KEYS.EMPLOYEE_ID) || null),
-                    startTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    ...(isAdmin ? { startTime: firebase.firestore.FieldValue.serverTimestamp() } : {}),
                     lastActive: firebase.firestore.FieldValue.serverTimestamp(),
                     durationMinutes: 0,
-                    userAgent: navigator.userAgent
-                });
+                    userAgent: navigator.userAgent,
+                    state:'online'
+                }, { merge: true });
             } catch (e) { console.warn('[V91 employee initial session]', e?.code || e?.message || e); }
         };
         initSession();

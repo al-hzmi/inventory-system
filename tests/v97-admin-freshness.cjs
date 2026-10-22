@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('sw.js','utf8');
-assert.match(source,/const NAV_CACHE='batco-navigation-shell-v98-rollback'/);
+assert.match(source,/const NAV_CACHE='batco-navigation-shell-v102-attendance'/);
 assert.match(source,/NAV_PAGES\.has\(navPath\(url\)\)/);
 assert.doesNotMatch(source,/cache:'no-store',signal:controller\.signal/);
 assert.match(source,/\['\/admin-branch-presence\.html'/);
