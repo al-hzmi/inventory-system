@@ -19,7 +19,7 @@ assert(/\.customer-product-rail\{[^}]*-webkit-overflow-scrolling:touch;/.test(st
 assert(/\.customer-product-rail>\*\{flex:0 0 auto;/.test(style),'product cards might shrink to fit with no scroll overflow');
 assert(!style.includes('touch-action:pan-y'),'pan-y blocks Safari native horizontal gestures');
 assert(customer.includes('<ProductRail label="جديدنا">'),'new arrivals carousel missing');
-assert(customer.includes("<ProductRail label={'منتجات '+section.name}>"),'category carousel missing');
+assert(customer.includes("<ProductRail label={'منتجات '+section.name} onScroll={loadOnScroll}>"),'category carousel missing');
 assert(customer.includes("window.__customerPortalControl?.categoryOrder"),'client must react to live ordering control');
 assert(customer.includes("const aFirst=/^الأواني/.test(a)"),'default housewares first');
 assert(customer.includes('categoryShowcases.map(section=>'),'customer sections missing');

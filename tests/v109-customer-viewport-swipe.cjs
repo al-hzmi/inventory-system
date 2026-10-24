@@ -14,8 +14,8 @@ assert(styles.includes('.customer-showcase-section{min-width:0;max-width:100%}')
 assert(source.includes('className="grid gap-4 customer-showcase-grid"'),'customer home must use constrained grid');
 assert(source.includes('className="customer-showcase-section bg-white'),'category section must allow shrinking');
 assert(styles.includes('touch-action:auto;'),'native touch gestures must remain enabled');
-assert(shell.includes('rail-viewport=109'),'live customer bootstrap must request refreshed rail source');
-assert(worker.includes('batco-navigation-shell-v109-customer-rail-viewport'),'navigation cache must refresh for the fix');
+assert(shell.includes('all-category-products=110'),'live customer bootstrap must request refreshed rail source');
+assert(worker.includes('batco-navigation-shell-v110-progressive-category-products'),'navigation cache must refresh for the fix');
 
 function fixture(){
  const cards=Array.from({length:7},(_,i)=>`<article style="flex:0 0 168px;min-width:168px;height:270px;border:1px solid #ddd;background:#fff"><button style="width:100%;height:160px">صورة ${i}</button><div>سعر الكرتون ${i+1}</div></article>`).join('');

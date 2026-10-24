@@ -847,15 +847,30 @@ function NewArrivalCard({item,onAdd,onZoom,onImageMissing}){
 }
 
 
-function ProductRail({children,label='منتجات القسم'}){
+function ProductRail({children,label='منتجات القسم',onScroll}){
   // Keep horizontal touch gestures native: Safari handles the finger velocity,
   // inertia and RTL scroll offset without JavaScript scrollLeft handlers.
   return <div className="min-w-0 w-full max-w-full overflow-hidden">
     <div dir="rtl" className="customer-product-rail flex gap-3 no-scrollbar pb-1"
-      role="region" aria-label={label} tabIndex={0}>
+      role="region" aria-label={label} tabIndex={0} onScroll={onScroll}>
       {children}
     </div>
   </div>;
+}
+function ProgressiveCategoryRail({section,onAdd,onZoom,onImageMissing}){
+  // Large categories can contain hundreds of products. Keep every product
+  // reachable by swiping while mounting only the next small batch near the end.
+  const [visibleCount,setVisibleCount]=useState(10);
+  const loadOnScroll=e=>{
+    if(visibleCount>=section.items.length)return;
+    const rail=e.currentTarget;
+    const remaining=Math.max(0,rail.scrollWidth-rail.clientWidth-Math.abs(rail.scrollLeft));
+    if(remaining<=Math.max(220,rail.clientWidth))
+      setVisibleCount(current=>Math.min(section.items.length,current+12));
+  };
+  return <ProductRail label={'منتجات '+section.name} onScroll={loadOnScroll}>
+    {section.items.slice(0,visibleCount).map(item=><CategoryPreviewCard key={item.imageSku||item.cleanId} item={item} onAdd={onAdd} onImageMissing={()=>onImageMissing(item.cleanId)} onZoom={onZoom}/>)}
+  </ProductRail>;
 }
 function CategoryPreviewCard({item,onAdd,onZoom,onImageMissing}){
   return <article className="w-[168px] sm:w-[190px] shrink-0 bg-white border border-border rounded-16 overflow-hidden shadow-card snap-start flex flex-col">
@@ -1330,7 +1345,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
         {loading?<div className="py-24 flex justify-center"><Spinner/></div>:query.trim()?<section className="bg-white border border-border rounded-16 p-3 sm:p-4 shadow-card"><div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-bold text-sm">نتائج البحث</h2><span className="text-[10px] text-muted">{filtered.length} صنف</span></div>{filtered.length===0?<Empty title="لا توجد منتجات مطابقة" note="جرّب رقم صنف آخر أو اسمًا مختلفًا." icon="search"/>:<><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{filtered.slice(0,pageCount).map(item=><ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-4 w-full h-11 rounded-12 border border-border bg-white font-bold text-xs">عرض المزيد</button>}</>}</section>:categoryShowcases.length===0?<Empty title="لا توجد منتجات متاحة الآن" icon="grid"/>:<div className="grid gap-4 customer-showcase-grid">
           {categoryShowcases.map(section=><section key={section.name} className="customer-showcase-section bg-white border border-border rounded-16 p-3 sm:p-4 shadow-card" aria-label={'قسم '+section.name}>
             <div className="flex items-center justify-between gap-2 mb-3"><div className="min-w-0"><h2 className="font-bold text-[16px] truncate">{section.name}</h2><p className="text-[10px] text-muted mt-1">{section.count} صنف · اسحب لاستعراض المنتجات</p></div><button type="button" onClick={()=>{setCategoryBrowse(section.name);setQuery('');setPageCount(PAGE_SIZE);setPage('categories')}} className="text-[11px] font-bold text-primary border border-border bg-surface rounded-10 px-3 h-9 shrink-0">عرض القسم</button></div>
-            <ProductRail label={'منتجات '+section.name}>{section.items.slice(0,7).map(item=><CategoryPreviewCard key={item.imageSku||item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</ProductRail>
+            <ProgressiveCategoryRail section={section} onAdd={requestProduct} onImageMissing={markImageMissing} onZoom={setZoom}/>
           </section>)}
         </div>}
       </div>}

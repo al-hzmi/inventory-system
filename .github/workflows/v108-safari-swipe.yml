@@ -1,4 +1,4 @@
-name: V109 Customer rail viewport and mobile touch regression
+name: V110 Customer category rail and mobile touch regression
 on:
   push:
     branches: [main]
@@ -9,6 +9,7 @@ on:
       - 'tests/v107-customer-swipe-category-order.cjs'
       - 'tests/v108-mobile-webkit-scroller.cjs'
       - 'tests/v109-customer-viewport-swipe.cjs'
+      - 'tests/v110-progressive-category-rail.cjs'
       - '.github/workflows/v108-safari-swipe.yml'
   workflow_dispatch:
 permissions:
@@ -25,6 +26,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: node tests/v107-customer-swipe-category-order.cjs
+      - run: node tests/v110-progressive-category-rail.cjs
       - run: node tests/v105-customer-catalog-quota.cjs
       - run: node tests/v103-sku-identity.cjs
       - run: node tests/v90-data-reliability.cjs
