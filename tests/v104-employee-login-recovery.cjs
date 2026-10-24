@@ -16,7 +16,21 @@ assert(lookup.includes('for(const key of variants)'),'single alias should cost o
 assert(!lookup.includes('Promise.all(variants.map'),'must not read all alias variants by default');
 assert(lookup.includes("if(!/failed-precondition|invalid-argument|unimplemented/.test"),'quota error must not be retried by unrelated legacy fallback');
 const calls=[];
-const db={collection(name){return {doc(key){return {get:async()=>{calls.push(name+':'+key);if(name==='employee_aliases')return key==='primary'?{exists:true,data:()=>({employeeId:'worker-id'})}:{exists:false};return {exists:true,id:key,data:()=>({canonicalName:'Test Employee',status:'active'})}}}};}}};
+const db={
+ collection(name){
+  return {
+   doc(key){
+    return {
+     async get(){
+      calls.push(name+':'+key);
+      if(name==='employee_aliases')return key==='primary'?{exists:true,data:()=>({employeeId:'worker-id'})}:{exists:false};
+      return {exists:true,id:key,data:()=>({canonicalName:'Test Employee',status:'active'})};
+     }
+    };
+   }
+  };
+ }
+};
 const lookupCtx={
   getDb:async()=>db,employeeAliasVariants:()=>['primary','secondary'],
   EMPLOYEE_ALIAS_COLLECTION:'employee_aliases',EMPLOYEE_ACCOUNT_COLLECTION:'employee_accounts',
