@@ -7,6 +7,7 @@ on:
       - 'customer.html'
       - 'sw.js'
       - 'tests/v107-customer-swipe-category-order.cjs'
+      - 'tests/v105-customer-catalog-quota.cjs'
       - 'tests/v108-mobile-webkit-scroller.cjs'
       - 'tests/v109-customer-viewport-swipe.cjs'
       - 'tests/v110-progressive-category-rail.cjs'

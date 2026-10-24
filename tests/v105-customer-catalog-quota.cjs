@@ -10,7 +10,7 @@ const compiled=Babel.transform(s.slice(start+'<script type="text/babel">'.length
 assert(compiled.code.length>0,'customer JSX did not compile');
 for(const term of [
  'function CategoryPreviewCard(', 'categoryShowcases.map(section=>',
- 'section.items.slice(0,7)', 'setCategoryBrowse(section.name)',
+ 'function ProgressiveCategoryRail(', 'section.items.slice(0,visibleCount)', 'setCategoryBrowse(section.name)',
  'function ProductMeta(', 'item.cartonPrice>0', 'item.approxPrice>0',
  'const categoryCards=useMemo(()=>categoryShowcases.map', 'page===\'categories\'',
  'const cartItems=useMemo(', 'async function submitOrder(', 'async function saveDraft(',
