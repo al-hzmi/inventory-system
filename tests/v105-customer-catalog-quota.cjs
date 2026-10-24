@@ -24,6 +24,10 @@ assert(s.includes('const CUSTOMER_EVENT_THROTTLE_MS='),'nonessential telemetry n
 assert(s.includes('const customerSessionTouchAt=new Map()'),'visitor heartbeats not throttled');
 assert(s.includes('setInterval(refresh,300000)'),'new-arrivals API still polled too frequently');
 assert(s.includes('CATEGORY_RULES_CACHE'),'catalog category configuration not cached');
+assert(s.includes("localStorage.getItem(CATEGORY_RULES_CACHE)"),'category cache must be reusable across tabs');
+assert(s.includes('TTL=60*60*1000'),'category settings should not refetch every few minutes');
+assert(!s.includes('const rulesTimer=setInterval'),'full catalog collection reads must not be scheduled in the background');
+
 assert(s.includes("db.collection(CATEGORY_OVERRIDES).get({source:'server'})"),'category server refresh not present');
 assert(!s.includes('db.collection(CATEGORY_OVERRIDES).onSnapshot('),'full category collection listener still active');
 assert(!s.includes('db.collection(CATEGORY_META).onSnapshot('),'full category meta collection listener still active');

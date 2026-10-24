@@ -1060,15 +1060,15 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json'),loadCustomerImageBindings(),loadCustomerNewArrivalOverrides()]).then(([j,r,imgs,cats,pricingText,arrivals,bindings,arrivalOverrides])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const inventory=mergeInventories(parseInventory(j),parseInventory(r));const collisions=buildCustomerImageCollisionIndex(inventory);const merged=inventory.filter(x=>x.allowedMax>=CART_STEP).map(x=>{const imageFile=resolveCustomerImage(images,x,collisions,bindings);const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile,cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}}).filter(x=>Boolean(x.imageFile));setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setNewArrivalOverrides(arrivalOverrides||{include:[],exclude:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});
     // Cache public category labels, not customer/account/session records.
     // One server fetch every 15 minutes, instead of full Firestore listeners per visitor.
-    const CATEGORY_RULES_CACHE='batco_customer_category_rules_v2',TTL=15*60*1000;
+    const CATEGORY_RULES_CACHE='batco_customer_category_rules_v2',TTL=60*60*1000;
     let lastRead=0,reading=false;
     const applyCached=()=>{
       try{
-        const row=JSON.parse(sessionStorage.getItem(CATEGORY_RULES_CACHE)||'null');
-        if(!row?.at||Date.now()-row.at>TTL)return false;
+        const row=JSON.parse(localStorage.getItem(CATEGORY_RULES_CACHE)||'null');
+        if(!row?.at)return false;
         lastRead=row.at;
         if(alive){setOverrides(row.overrides||{});setMeta(row.meta||{})}
-        return true;
+        return Date.now()-row.at<TTL;
       }catch{return false}
     };
     const refresh=async(force=false)=>{
@@ -1085,15 +1085,14 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
         lastRead=Date.now();
         if(!alive)return;
         setOverrides(next);setMeta(nextMeta);
-        try{sessionStorage.setItem(CATEGORY_RULES_CACHE,JSON.stringify({at:lastRead,overrides:next,meta:nextMeta}))}catch{}
-      }catch(err){console.warn('[Customer category configuration]',err?.code||err?.message||err)}
+        try{localStorage.setItem(CATEGORY_RULES_CACHE,JSON.stringify({at:lastRead,overrides:next,meta:nextMeta}))}catch{}
+      }catch(err){lastRead=Date.now();console.warn('[Customer category configuration]',err?.code||err?.message||err)}
       finally{reading=false}
     };
     if(!applyCached())refresh(true);
     const onVisible=()=>{if(document.visibilityState==='visible')refresh()};
     document.addEventListener('visibilitychange',onVisible);
-    const rulesTimer=setInterval(()=>{if(document.visibilityState==='visible')refresh()},TTL);
-    return()=>{alive=false;document.removeEventListener('visibilitychange',onVisible);clearInterval(rulesTimer)};
+    return()=>{alive=false;document.removeEventListener('visibilitychange',onVisible)};
   },[]);
   useEffect(()=>{
     let alive=true,last=Date.now();
