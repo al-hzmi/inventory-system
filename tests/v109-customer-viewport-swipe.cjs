@@ -57,7 +57,9 @@ async function verify(type,deviceName){
    await page.locator('.customer-product-rail').evaluate(el=>{el.scrollLeft=0});
    const box=await page.locator('.customer-product-rail').boundingBox();
    const session=await context.newCDPSession(page);
-   const x1=box.x+box.width-55,x2=box.x+35,y=box.y+80;
+   // RTL starts at its right edge (scrollLeft=0). Dragging the finger to the
+   // right reveals cards on the left and must make scrollLeft negative.
+   const x1=box.x+55,x2=box.x+box.width-35,y=box.y+80;
    await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x1,y,id:1}]});
    for(let i=1;i<=12;i++){
     await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x1+(x2-x1)*i/12,y,id:1}]});
