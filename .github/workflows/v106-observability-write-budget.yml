@@ -1,0 +1,29 @@
+name: V106 Lightweight observability
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'v44-observability.js'
+      - 'tests/v106-observability-write-budget.cjs'
+      - '.github/workflows/v106-observability-write-budget.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v106-observability-write-budget.cjs
+      - run: node tests/v105-customer-catalog-quota.cjs
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v91-incident-audit.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
+      - run: npm run build

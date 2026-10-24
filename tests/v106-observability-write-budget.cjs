@@ -1,0 +1,20 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const tracker=fs.readFileSync('v44-observability.js','utf8');
+new vm.Script(tracker,{filename:'v44-observability.js'});
+assert(tracker.includes('LOW_VALUE_EVENT_WINDOW_MS'),'telemetry per-action throttle not present');
+for(const e of ['button_click','search_query','product_image_open','category_select'])
+ assert(tracker.includes(e+':'),'missing low-priority throttle '+e);
+assert(tracker.includes("eventWindow=LOW_VALUE_EVENT_WINDOW_MS[action]||0"),'critical invoice/security logs must not have a rate cap');
+assert(tracker.includes("db.collection('v44_activity_logs').add(basePayload("),'audit trail must remain');
+assert(tracker.includes("presenceTimer=setInterval(()=>{if(document.visibilityState==='visible')heartbeat('online')},90000)"),'hidden tabs should not repeatedly write presence records');
+assert(tracker.includes("if(state==='online'&&now()-lastOnlinePresenceAt<60000)return"),'rapid visibility events not throttled');
+assert(tracker.includes("if(state==='online')lastOnlinePresenceAt=0"),'failed presence updates must be retryable');
+assert(tracker.includes("heartbeat(document.visibilityState==='visible'?'online':'away')"),'visibility changes must still record away state');
+assert(tracker.includes("heartbeat('left')"),'leaving the website should still record departure');
+assert(tracker.includes("setInterval(syncCart,2500)"),'cart CPU polling not reduced');
+assert(tracker.includes("lastCartHash=sig;await log"),'cart changes must be saved to server');
+assert(tracker.includes("presenceFailures>=2")&&tracker.includes("presenceWarning(true)"),'write failures must warn user');
+const employee=fs.readFileSync('employee-attendance.js','utf8');
+assert(employee.includes('pulseTimer=setInterval(pulse,45000)'),'verified employee presence must not be weakened');
+console.log('V106 low-write observability and verified employee attendance PASS');
