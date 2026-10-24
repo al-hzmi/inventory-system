@@ -1,0 +1,33 @@
+name: V107 Customer swipe and category ordering
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'runtime/customer-v37-source.txt'
+      - 'admin-dashboard.html'
+      - 'sw.js'
+      - 'tests/v107-customer-swipe-category-order.cjs'
+      - '.github/workflows/v107-swipe-order.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v107-customer-swipe-category-order.cjs
+      - run: node tests/v105-customer-catalog-quota.cjs
+      - run: node tests/v106-observability-write-budget.cjs
+      - run: node tests/v103-sku-identity.cjs
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: npm run build

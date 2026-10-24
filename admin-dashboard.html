@@ -171,6 +171,8 @@ const Icon=({name,className='w-5 h-5'})=>{const p={fill:'none',stroke:'currentCo
   box:<><path d="m21 8-9 5-9-5 9-5 9 5Z"/><path d="m3 8 9 5 9-5v8l-9 5-9-5Z"/></>,
   history:<><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></>,
   eye:<><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></>,
+  'chevron-up':<path d="m6 15 6-6 6 6"/>,
+  'chevron-down':<path d="m6 9 6 6 6-6"/>,
   chevron:<path d="m9 18 6-6-6-6"/>
 };return <svg {...p}>{paths[name]||paths.file}</svg>};
 
@@ -249,7 +251,7 @@ function PortalControlCard({control,onSave,busy}){
 
 
 
-function ProductCategoryManager({onClose}){
+function ProductCategoryManager({onClose,control}){
   useBodyScrollLock();
   const [baseNames,setBaseNames]=useState([]);
   const [metaRows,setMetaRows]=useState([]);
@@ -258,6 +260,8 @@ function ProductCategoryManager({onClose}){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
   const [notice,setNotice]=useState('');
+  const [draftOrder,setDraftOrder]=useState([]);
+  const [orderDirty,setOrderDirty]=useState(false);
 
   useEffect(()=>{
     let alive=true,unsub=null;
@@ -283,6 +287,51 @@ function ProductCategoryManager({onClose}){
     return [...byKey.values()].sort((a,b)=>a.localeCompare(b,'ar'));
   },[baseNames,metaRows]);
 
+  const currentOrder=useMemo(()=>{
+    const configured=Array.isArray(control?.categoryOrder)?control.categoryOrder:[];
+    const rank=new Map(configured.map((x,i)=>[normalizeText(x),i]));
+    return [...activeNames].sort((a,b)=>{
+      const ia=rank.get(normalizeText(a)),ib=rank.get(normalizeText(b));
+      if(ia!==undefined||ib!==undefined)return (ia??Infinity)-(ib??Infinity);
+      const aFirst=/^الأواني/.test(a),bFirst=/^الأواني/.test(b);
+      if(aFirst!==bFirst)return aFirst?-1:1;
+      return a.localeCompare(b,'ar');
+    });
+  },[activeNames,control?.categoryOrder]);
+  useEffect(()=>{if(!orderDirty)setDraftOrder(currentOrder)},[currentOrder,orderDirty]);
+  const orderedCategories=useMemo(()=>{
+    const known=new Set(activeNames);
+    return [...draftOrder.filter(x=>known.has(x)),...activeNames.filter(x=>!draftOrder.includes(x))];
+  },[activeNames,draftOrder]);
+  const moveCategory=(category,delta)=>{
+    const current=orderedCategories.indexOf(category),target=current+delta;
+    if(current<0||target<0||target>=orderedCategories.length)return;
+    const next=[...orderedCategories];
+    [next[current],next[target]]=[next[target],next[current]];
+    setDraftOrder(next);setOrderDirty(true);setNotice('');
+  };
+  const placeCategoryFirst=category=>{
+    setDraftOrder([category,...orderedCategories.filter(x=>x!==category)]);
+    setOrderDirty(true);setNotice('');
+  };
+  const saveCategoryOrder=async()=>{
+    if(!orderDirty||busy)return;
+    setError('');setBusy(true);
+    try{
+      const sorted=orderedCategories.filter(x=>activeNames.includes(x));
+      await db.collection(CONTROL_COLLECTION).doc(CONTROL_DOC).set({
+        categoryOrder:sorted,
+        categoryOrderUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      },{merge:true});
+      setOrderDirty(false);
+      setNotice('تم حفظ ترتيب الأقسام. سيظهر للعملاء مباشرة.');
+      adminAudit('product_categories_reordered',{categories:sorted}).catch(()=>{});
+    }catch(e){
+      console.error('[Product category ordering]',e);
+      setError('تعذر حفظ الترتيب في قاعدة البيانات. لا تغلق النافذة وأعد المحاولة.');
+    }finally{setBusy(false)}
+  };
+
   const addCategory=async()=>{
     const clean=name.trim().replace(/\s+/g,' '),key=normalizeText(name);
     setError('');setNotice('');
@@ -306,6 +355,23 @@ function ProductCategoryManager({onClose}){
       <header className="p-4 border-b border-border flex items-center justify-between gap-3"><div><div className="text-[10px] text-accent font-bold">مشترك بين الواجهتين</div><b className="text-base block mt-1">إدارة أقسام المنتجات</b><div className="text-[10px] text-muted mt-1">أي قسم تضيفه هنا يظهر تلقائيًا للموظفين والعملاء.</div></div><button onClick={onClose} className="w-11 h-11 rounded-xl border border-border flex items-center justify-center bg-white"><Icon name="x" className="w-4 h-4"/></button></header>
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-surface grid gap-4">
         <section className="bg-white border border-border rounded-2xl p-4 shadow-card"><label className="text-xs font-bold">اسم القسم الجديد<input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!busy)addCategory()}} placeholder="مثال: أدوات المطبخ" className="mt-2 w-full h-12 rounded-xl border border-border px-3 outline-none focus:border-accent bg-white"/></label>{error&&<div className="mt-3 bg-dangerSoft text-danger rounded-xl p-3 text-xs font-bold">{error}</div>}{notice&&<div className="mt-3 bg-successSoft text-success rounded-xl p-3 text-xs font-bold">{notice}</div>}<button disabled={busy||!name.trim()} onClick={addCategory} className="mt-3 w-full h-11 rounded-xl bg-primary text-white text-xs font-bold disabled:opacity-40">{busy?'جاري الإضافة...':'إضافة القسم'}</button></section>
+        <section className="bg-white border border-border rounded-2xl shadow-card overflow-hidden">
+          <div className="p-4 border-b border-border flex items-center justify-between gap-2">
+            <div><b className="text-sm">ترتيب الأقسام في بوابة العملاء</b><div className="text-[10px] text-muted mt-1">استخدم الأسهم لترتيب الأقسام. الأعلى يظهر أولًا بالصفحة الرئيسية.</div></div>
+            <Pill tone="info">{orderedCategories.length}</Pill>
+          </div>
+          <div className="p-3 sm:p-4 grid gap-2">
+            {loading?<span className="text-xs text-muted">جاري تحميل الأقسام...</span>:orderedCategories.map((category,i)=><div key={category} className="border border-border rounded-xl bg-white px-3 py-2 flex items-center gap-2">
+              <span className="w-7 h-7 shrink-0 rounded-lg bg-surface flex items-center justify-center text-[11px] font-bold text-muted">{i+1}</span>
+              <span className="flex-1 min-w-0 text-xs font-bold truncate">{category}</span>
+              <button type="button" disabled={busy||i===0} onClick={()=>moveCategory(category,-1)} className="w-9 h-9 shrink-0 border border-border rounded-lg disabled:opacity-30 flex items-center justify-center" aria-label={'رفع '+category+' للأعلى'} title="للأعلى"><Icon name="chevron-up" className="w-4 h-4"/></button>
+              <button type="button" disabled={busy||i===orderedCategories.length-1} onClick={()=>moveCategory(category,1)} className="w-9 h-9 shrink-0 border border-border rounded-lg disabled:opacity-30 flex items-center justify-center" aria-label={'خفض '+category+' للأسفل'} title="للأسفل"><Icon name="chevron-down" className="w-4 h-4"/></button>
+              {i>0&&<button type="button" disabled={busy} onClick={()=>placeCategoryFirst(category)} className="px-2 h-9 shrink-0 text-[10px] border border-border rounded-lg bg-surface">الأول</button>}
+            </div>)}
+            <button type="button" disabled={busy||!orderDirty||!orderedCategories.length} onClick={saveCategoryOrder} className="h-11 w-full rounded-xl bg-primary text-white text-xs font-bold disabled:opacity-40">{busy?'جاري الحفظ...':orderDirty?'حفظ الترتيب':'الترتيب محفوظ'}</button>
+            {orderDirty&&<div role="status" className="text-[10px] text-secondary">التغييرات غير منشورة بعد. اضغط حفظ الترتيب لاعتمادها.</div>}
+          </div>
+        </section>
         <section className="bg-white border border-border rounded-2xl shadow-card overflow-hidden"><div className="p-4 border-b border-border flex items-center justify-between"><div><b className="text-sm">الأقسام الحالية</b><div className="text-[10px] text-muted mt-1">تتضمن الأقسام الأساسية والمضافة من Firebase.</div></div><Pill tone="info">{activeNames.length}</Pill></div><div className="p-4 flex flex-wrap gap-2">{loading?<span className="text-xs text-muted">جاري التحميل...</span>:activeNames.length?activeNames.map(category=><span key={category} className="px-3 py-2 rounded-full border border-border bg-surface text-[11px] font-bold">{category}</span>):<span className="text-xs text-muted">لا توجد أقسام بعد.</span>}</div></section>
       </div>
     </div>
@@ -1095,7 +1161,7 @@ function AdminApp(){
       {Object.keys(collectionErrors).length>0&&<div role="alert" className="mx-3 mt-3 p-3 rounded-xl border border-red-200 bg-red-50 text-red-900 text-xs leading-6"><b>بعض سجلات قاعدة البيانات لم تُحمّل، والأرقام المعروضة قد تكون ناقصة.</b><div className="mt-1" dir="ltr">{Object.entries(collectionErrors).map(([key,reason])=><div key={key}>{key}: {reason}</div>)}</div><button type="button" className="mt-2 border border-red-300 rounded-lg px-3 py-1 font-bold" onClick={()=>location.reload()}>إعادة الاتصال وتحميل السجلات</button></div>}
       <><AdminView key="TabsBar" render={TabsBar}/><AdminView key="ToolBar" render={ToolBar}/><div data-admin-scroll-root="1" className="flex-1 p-3 sm:p-4 bg-surface overflow-visible"><AdminView key="ActiveContent" render={ActiveContent}/></div></>
     </div>
-    {categoryManagerOpen&&<ProductCategoryManager onClose={()=>setCategoryManagerOpen(false)}/>}
+    {categoryManagerOpen&&<ProductCategoryManager onClose={()=>setCategoryManagerOpen(false)} control={control}/>}
     {detail&&<DetailDrawer row={detail} onClose={()=>setDetail(null)} onCustomerMessage={target=>{setDetail(null);setCustomerMessageTarget(target)}}/>}
     {employeeEditor&&<EmployeeAccountEditor value={employeeEditor} onClose={()=>setEmployeeEditor(null)} onSaved={()=>setEmployeeEditor(null)}/>}
     {employeeMerge&&<EmployeeMergeModal source={employeeMerge} accounts={eAccounts} onClose={()=>setEmployeeMerge(null)} onSaved={()=>setEmployeeMerge(null)}/>}
