@@ -91,10 +91,10 @@
   .ui-success-dot{width:54px;height:54px;margin:0 auto 12px;border-radius:50%;background:#F0FDF4;color:#15803D;display:flex;align-items:center;justify-content:center}
   .ui-section-head{margin-bottom:14px}.ui-section-head h2{font-size:20px;font-weight:700;line-height:1.45}.ui-section-head p{font-size:12px;color:#57534E;line-height:1.75;margin-top:4px}
   @keyframes uiSheet{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-  .customer-product-rail{width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-behavior:auto;touch-action:pan-y;scrollbar-width:none;cursor:grab}
+  /* Native Safari carousel: pan-y blocked horizontal flicks on iPhone. Let the browser own the gesture and momentum. */
+  .customer-product-rail{display:flex;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-behavior:auto;touch-action:auto;scrollbar-width:none}
   .customer-product-rail::-webkit-scrollbar{display:none}
-  .customer-product-rail:active{cursor:grabbing}
-  .customer-product-rail>*{scroll-snap-align:start}
+  .customer-product-rail>*{flex:0 0 auto;scroll-snap-align:start}
   .customer-product-rail img{-webkit-user-drag:none;user-select:none;pointer-events:none}
   .catalog-media{aspect-ratio:1/1;background:#fff;overflow:hidden;position:relative}
   .catalog-media img{width:100%;height:100%;object-fit:contain;display:block;background:#FAFAF9}
@@ -843,43 +843,12 @@ function NewArrivalCard({item,onAdd,onZoom,onImageMissing}){
 
 
 function ProductRail({children,label='منتجات القسم'}){
-  const ref=useRef(null),gesture=useRef(null),blockClick=useRef(false);
-  const down=e=>{
-    if(e.touches.length!==1)return;
-    const t=e.touches[0];
-    gesture.current={x:t.clientX,y:t.clientY,start:ref.current?.scrollLeft||0,axis:null};
-  };
-  const move=e=>{
-    const g=gesture.current,t=e.touches[0],el=ref.current;
-    if(!g||!t||!el)return;
-    const dx=t.clientX-g.x,dy=t.clientY-g.y;
-    if(!g.axis&&Math.max(Math.abs(dx),Math.abs(dy))>7)g.axis=Math.abs(dx)>Math.abs(dy)*1.15?'x':'y';
-    if(g.axis==='x'){el.scrollLeft=g.start+dx;blockClick.current=true;}
-  };
-  const finish=()=>{gesture.current=null;if(blockClick.current)setTimeout(()=>{blockClick.current=false},350)};
-  const mouseStart=e=>{
-    if(e.button!==0)return;
-    gesture.current={x:e.clientX,start:ref.current?.scrollLeft||0,mouse:true};
-  };
-  const mouseMove=e=>{
-    const g=gesture.current,el=ref.current;
-    if(!g?.mouse||!el)return;
-    const dx=e.clientX-g.x;
-    if(Math.abs(dx)>6)blockClick.current=true;
-    el.scrollLeft=g.start+dx;
-  };
-  const scroll=sign=>ref.current?.scrollBy({left:sign*240,behavior:'smooth'});
-  return <div className="min-w-0 max-w-full relative">
-    <div ref={ref} dir="rtl" className="customer-product-rail flex gap-3 no-scrollbar pb-1 snap-x"
-      role="region" aria-label={label}
-      onTouchStart={down} onTouchMove={move} onTouchEnd={finish} onTouchCancel={finish}
-      onMouseDown={mouseStart} onMouseMove={mouseMove} onMouseUp={finish} onMouseLeave={finish}
-      onClickCapture={e=>{if(blockClick.current){e.preventDefault();e.stopPropagation();blockClick.current=false}}}>
+  // Keep horizontal touch gestures native: Safari handles the finger velocity,
+  // inertia and RTL scroll offset without JavaScript scrollLeft handlers.
+  return <div className="min-w-0 w-full max-w-full overflow-hidden">
+    <div dir="rtl" className="customer-product-rail flex gap-3 no-scrollbar pb-1"
+      role="region" aria-label={label} tabIndex={0}>
       {children}
-    </div>
-    <div className="flex justify-end gap-1.5 mt-2" dir="ltr">
-      <button type="button" onClick={()=>scroll(-1)} className="w-8 h-8 rounded-lg border border-border bg-white text-secondary text-base" aria-label="عرض المنتجات التالية">‹</button>
-      <button type="button" onClick={()=>scroll(1)} className="w-8 h-8 rounded-lg border border-border bg-white text-secondary text-base" aria-label="عرض المنتجات السابقة">›</button>
     </div>
   </div>;
 }

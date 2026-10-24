@@ -11,14 +11,15 @@ for(const [name,html] of [['customer',customer],['admin',admin]]){
  const compiled=Babel.transform(html.slice(i+marker.length,j),{presets:['react'],ast:false,comments:false});
  assert(compiled.code.length>100,'Babel compilation failed '+name);
 }
-assert(customer.includes('function ProductRail({children,label='),'swipe rail component missing');
-for(const term of ['onTouchStart={down}','onTouchMove={move}','onTouchEnd={finish}','onTouchCancel={finish}',
- 'el.scrollLeft=g.start+dx','onClickCapture={e=>','blockClick.current','touch-action:pan-y',
- '-webkit-overflow-scrolling:touch','overscroll-behavior-x:contain','snap-x',
- '<ProductRail label="جديدنا">',"<ProductRail label={'منتجات '+section.name}>",
- 'onClick={()=>scroll(-1)}','onClick={()=>scroll(1)}']){
- assert(customer.includes(term),'touch/rail behavior missing: '+term);
-}
+assert(customer.includes('function ProductRail({children,label='),'native carousel component missing');
+const style=customer.slice(customer.indexOf('<style>'),customer.indexOf('</style>'));
+assert(/\.customer-product-rail\{[^}]*overflow-x:auto;/.test(style),'native horizontal overflow missing');
+assert(/\.customer-product-rail\{[^}]*touch-action:auto;/.test(style),'Safari must own both horizontal and vertical touch panning');
+assert(/\.customer-product-rail\{[^}]*-webkit-overflow-scrolling:touch;/.test(style),'Safari inertia is disabled');
+assert(/\.customer-product-rail>\*\{flex:0 0 auto;/.test(style),'product cards might shrink to fit with no scroll overflow');
+assert(!style.includes('touch-action:pan-y'),'pan-y blocks Safari native horizontal gestures');
+assert(customer.includes('<ProductRail label="جديدنا">'),'new arrivals carousel missing');
+assert(customer.includes("<ProductRail label={'منتجات '+section.name}>"),'category carousel missing');
 assert(customer.includes("window.__customerPortalControl?.categoryOrder"),'client must react to live ordering control');
 assert(customer.includes("const aFirst=/^الأواني/.test(a)"),'default housewares first');
 assert(customer.includes('categoryShowcases.map(section=>'),'customer sections missing');
@@ -36,26 +37,20 @@ assert(!admin.includes('await db.collection(PRODUCT_CATEGORY_META).doc(productCa
 const railStart=customer.indexOf('function ProductRail({children,label=');
 const railEnd=customer.indexOf('function CategoryPreviewCard(',railStart);
 assert(railStart>=0&&railEnd>railStart);
-const refs=[],React={createElement:(type,props,...children)=>({type,props:{...props,children}})};
-const vm=require('node:vm');
-const context={React,useRef:()=>{const value={current:null};refs.push(value);return value},setTimeout:()=>{}};
-vm.createContext(context);
-const snippet=Babel.transform(customer.slice(railStart,railEnd),{presets:['react']}).code;
-vm.runInContext(snippet+';testRail=ProductRail',context);
-const tree=context.testRail({children:['one','two','three'],label:'اختبار'});
+const railSource=customer.slice(railStart,railEnd);
+for(const obsolete of ['onTouchStart','onTouchMove','onTouchEnd','onTouchCancel','onMouseDown','onMouseMove','onClickCapture','scrollBy(','blockClick.current'])
+  assert(!railSource.includes(obsolete),'custom scrolling must not interfere with iOS: '+obsolete);
+assert(!railSource.includes('عرض المنتجات التالية')&&!railSource.includes('عرض المنتجات السابقة'),'arrows must be removed');
+const React={createElement:(type,props,...children)=>({type,props:{...props,children}})};
+const vm=require('node:vm');const context={React};vm.createContext(context);
+vm.runInContext(Babel.transform(railSource,{presets:['react']}).code+';testRail=ProductRail',context);
+const tree=context.testRail({children:['one','two','three'],label:'منتجات الأحذية'});
+assert.equal(tree.type,'div');
 const rail=tree.props.children[0];
-const scroller={scrollLeft:0,scrollBy({left}){this.scrollLeft+=left}};
-refs[0].current=scroller;
-rail.props.onTouchStart({touches:[{clientX:260,clientY:70}]});
-rail.props.onTouchMove({touches:[{clientX:130,clientY:72}]});
-assert.equal(scroller.scrollLeft,-130,'RTL finger swipe to the left must move to negative scrollLeft');
-rail.props.onTouchEnd();
-const click={preventDefault(){this.prevented=true},stopPropagation(){this.stopped=true}};
-rail.props.onClickCapture(click);
-assert.equal(click.prevented,true,'drag should not accidentally open product image');
-const offset=scroller.scrollLeft;
-rail.props.onTouchStart({touches:[{clientX:120,clientY:100}]});
-rail.props.onTouchMove({touches:[{clientX:123,clientY:155}]});
-assert.equal(scroller.scrollLeft,offset,'vertical movement must preserve normal page scrolling');
-
-console.log('V107 mobile touch rails, category order and guarded Firestore save: PASS');
+assert.equal(rail.type,'div');
+assert.equal(rail.props.dir,'rtl');
+assert.equal(rail.props.role,'region');
+assert.equal(rail.props['aria-label'],'منتجات الأحذية');
+assert.equal(rail.props.children.length,1);
+assert.equal(rail.props.children[0].length,3);
+console.log('V108 Safari-native horizontal carousel and category order PASS');
