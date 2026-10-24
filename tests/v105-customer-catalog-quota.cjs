@@ -34,5 +34,6 @@ assert(!s.includes('db.collection(CATEGORY_META).onSnapshot('),'full category me
 const telemetry=s.slice(s.indexOf('async function logCustomerEvent('),s.indexOf('async function touchCustomerSession('));
 assert(telemetry.includes('CUSTOMER_EVENT_THROTTLE_MS[type]||0'),'only low-priority event types should be throttled');
 assert(s.includes("logCustomerEvent(user,'order_submitted'"),'confirmed orders must still be audited');
-assert(worker.includes("batco-navigation-shell-v105-customer-sections"),'old navigation shell cache may hide new customer layout');
+const shellVersion=Number(worker.match(/const NAV_CACHE='batco-navigation-shell-v(\d+)-/)?.[1]||0);
+assert(shellVersion>=105,'old navigation shell cache may hide new customer layout');
 console.log('V105 customer category-first homepage, product prices, order integrity, and quota controls: PASS');
