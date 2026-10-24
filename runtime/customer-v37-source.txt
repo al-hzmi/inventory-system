@@ -225,6 +225,7 @@ const customerIdentity=user=>user?.uid
   ? {key:`u_${user.uid}`,customerUid:user.uid,visitorId:customerVisitorId,identityType:'account'}
   : {key:`g_${customerVisitorId}`,customerUid:'',visitorId:customerVisitorId,identityType:'guest'};
 const CUSTOMER_DEVICE_INSTALL_KEY='batco_customer_device_install_v1';
+const customerSessionTouchAt=new Map();
 const compactHash=str=>{let h=2166136261>>>0;for(const ch of String(str||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}return h.toString(36)};
 function customerInstallId(){
   try{let id=localStorage.getItem(CUSTOMER_DEVICE_INSTALL_KEY);if(!id){id=`dev_${Date.now().toString(36)}_${uidPart()}_${uidPart()}`;localStorage.setItem(CUSTOMER_DEVICE_INSTALL_KEY,id)}return id}catch{return `dev_${compactHash(navigator.userAgent||'browser')}`}
@@ -254,8 +255,15 @@ async function ensureCustomerDeviceAllowed(user,profile){
   }
   return {allowed:true,deviceId:ref.id,info};
 }
+const CUSTOMER_EVENT_THROTTLE_MS={page_view:900000,search:300000,category_view:900000,product_image_view:900000,new_arrival_view:900000,product_add_open:120000};
+const customerEventLastSeen=new Map();
 async function logCustomerEvent(user,type,label='',data={}){
   if(!user?.uid && window.__employeeCustomerView) return {activity:false,profile:false,skipped:'employee_view'};
+  // Keep critical security, login and order events, rate-limit navigation telemetry only.
+  const interval=CUSTOMER_EVENT_THROTTLE_MS[type]||0;
+  const key=type+':'+(type==='search'?'':String(label||'').slice(0,140));
+  if(interval&&Date.now()-(customerEventLastSeen.get(key)||0)<interval)return {activity:false,profile:false,skipped:'rate_limited'};
+  if(interval)customerEventLastSeen.set(key,Date.now());
   const identity=customerIdentity(user),device=customerDeviceInfo(),guestName=currentGuestName();
   const activityWrite=db.collection(CUSTOMER_ACTIVITY_COLLECTION).add({
     customerUid:identity.customerUid,visitorId:identity.visitorId,identityType:identity.identityType,
@@ -278,6 +286,9 @@ async function logCustomerEvent(user,type,label='',data={}){
 async function touchCustomerSession(user,profile,event='active'){
   if(!user?.uid && window.__employeeCustomerView) return {skipped:'employee_view'};
   const identity=customerIdentity(user),device=customerDeviceInfo();
+  const periodic=event==='guest_active'||event==='heartbeat'||event==='active';
+  if(periodic&&Date.now()-(customerSessionTouchAt.get(identity.key)||0)<130000)return {skipped:'recent_session_touch'};
+  if(periodic)customerSessionTouchAt.set(identity.key,Date.now());
   try{
     const key='batco_customer_session_started_'+identity.key+'_'+customerSessionId;
     const first=!sessionStorage.getItem(key);
@@ -293,6 +304,7 @@ async function touchCustomerSession(user,profile,event='active'){
       },{merge:true}));
     }
     const results=await Promise.allSettled(writes);
+    if(periodic&&results[0]?.status==='rejected')customerSessionTouchAt.delete(identity.key);
     results.forEach((r,i)=>{if(r.status==='rejected')console.warn('[Customer session]',i,r.reason?.message||r.reason)});
     return {session:results[0]?.status==='fulfilled',profile:user?.uid?(results[1]?.status==='fulfilled'):false};
   }catch(e){console.warn('[Customer session]',e?.message||e);return {session:false,profile:false}}
@@ -823,6 +835,24 @@ function ProductCard({item,onAdd,onZoom,onImageMissing}){
 function NewArrivalCard({item,onAdd,onZoom,onImageMissing}){
   return <article className="w-[154px] sm:w-[184px] shrink-0 bg-white border border-border rounded-16 overflow-hidden shadow-card snap-start"><button onClick={()=>onZoom(item)} className="relative w-full aspect-square block bg-surface"><ProductImage file={item.imageFile} alt={item.name} onMissing={onImageMissing} className="w-full h-full object-contain bg-surface"/><span className="absolute top-2 right-2 px-2 py-1 rounded-full bg-accent text-white text-[9px] font-bold shadow-card">جديد</span></button><div className="p-2.5"><div className="text-[10px] font-bold ltr text-right truncate">{item.id}</div><div className="text-[9px] text-secondary mt-1 line-clamp-1">{item.name||'---'}</div><div className="flex items-center justify-between gap-2 mt-2"><span className="text-[9px] text-muted">{item.newDaysRemaining||30} يوم متبقي</span><button onClick={()=>onAdd(item)} className="w-8 h-8 rounded-9 bg-primary text-white flex items-center justify-center" title="إضافة للطلب"><Icon name="plus" className="w-3.5 h-3.5"/></button></div></div></article>
 }
+
+function CategoryPreviewCard({item,onAdd,onZoom,onImageMissing}){
+  return <article className="w-[168px] sm:w-[190px] shrink-0 bg-white border border-border rounded-16 overflow-hidden shadow-card snap-start flex flex-col">
+    <button type="button" onClick={()=>onZoom(item)} className="relative block w-full aspect-square bg-surface" aria-label={'عرض صورة '+(item.name||item.id)}>
+      <ProductImage file={item.imageFile} alt={item.name} onMissing={onImageMissing} className="w-full h-full object-contain bg-surface"/>
+    </button>
+    <div className="p-2.5 flex-1 flex flex-col">
+      <ProductMeta item={item}/>
+      <h3 className="text-[10px] text-secondary leading-4 line-clamp-1 mt-1">{item.name||'---'}</h3>
+      <div className="mt-2 text-[9px] text-muted">سعر الكرتون</div>
+      <div className="flex items-end justify-between gap-1 mt-0.5">
+        <b className="text-[12px] text-accent ltr">{item.cartonPrice>0?PRICE_NF.format(item.cartonPrice)+' ر.س':'—'}</b>
+        <button type="button" onClick={()=>onAdd(item)} className="w-9 h-9 rounded-10 bg-primary text-white flex items-center justify-center shrink-0" aria-label={'إضافة '+(item.name||item.id)+' للطلب'}><Icon name="plus" className="w-4 h-4"/></button>
+      </div>
+      <div className="mt-1 text-[9px] text-muted">الحبة تقريبًا: <span className="text-secondary ltr">{item.approxPrice>0?PRICE_NF.format(item.approxPrice)+' ر.س':'—'}</span></div>
+    </div>
+  </article>;
+}
 function ProductListCard({item,onAdd,onZoom,onImageMissing}){
   return <article className="catalog-card bg-white border border-border rounded-20 overflow-hidden shadow-card w-full max-w-[760px] mx-auto"><button onClick={()=>onZoom(item)} className="catalog-media w-full border-b border-border"><ProductImage file={item.imageFile} alt={item.name} onMissing={onImageMissing} className="w-full h-full object-contain bg-surface"/></button><div className="p-4 sm:p-5 text-center"><div className="flex items-center justify-center"><ProductMeta item={item}/></div><h3 className="text-[11px] sm:text-[12px] font-medium leading-5 line-clamp-1 text-secondary mt-2">{item.name||'---'}</h3><div className="max-w-[320px] mx-auto mt-2"><ApproxPrice item={item}/></div><button onClick={()=>onAdd(item)} className="mt-4 min-w-[170px] h-11 px-6 rounded-12 border border-border bg-white text-primary text-[12px] font-bold inline-flex items-center justify-center gap-2 shadow-card"><Icon name="cart" className="w-4 h-4"/>إضافة للطلب</button></div></article>
 }
@@ -953,7 +983,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   const safeProfile=profile||{name:'',company:'',phone:'',branches:[]};
   const employeeViewNotice='أنت تستعرض بوابة العملاء بحساب موظف. إنشاء الطلبات وحفظها يتم من نظام الموظفين.';
   const showNewArrivals=resolveCustomerNewArrivals(window.__customerPortalControl,safeProfile);
-  const [loading,setLoading]=useState(true),[products,setProducts]=useState([]),[newArrivalsMeta,setNewArrivalsMeta]=useState({items:[]}),[newArrivalOverrides,setNewArrivalOverrides]=useState({include:[],exclude:[]}),[baseCategories,setBaseCategories]=useState({}),[overrides,setOverrides]=useState({}),[meta,setMeta]=useState({}),[query,setQuery]=useState(''),[activeCategory,setActiveCategory]=useState('الكل'),[categoryBrowse,setCategoryBrowse]=useState(null),[page,setPage]=useState('home'),[pageCount,setPageCount]=useState(PAGE_SIZE),[viewMode,setViewMode]=useState(()=>{try{return localStorage.getItem('customer_catalog_view_v2')||'grid'}catch{return'grid'}}),[missingImages,setMissingImages]=useState(()=>new Set()),[cart,setCart]=useState({}),[guestBranches,setGuestBranches]=useState(()=>{try{return JSON.parse(localStorage.getItem('customer_guest_branches_v1')||'[]')}catch{return[]}}),[allocItem,setAllocItem]=useState(null),[firstBranchItem,setFirstBranchItem]=useState(null),[zoom,setZoom]=useState(null),[toast,setToast]=useState(null),[checkout,setCheckout]=useState(()=>{try{return !guestMode&&sessionStorage.getItem('customer_pending_after_auth')==='checkout'}catch{return false}}),[orders,setOrders]=useState([]),[drafts,setDrafts]=useState([]),[historyLoading,setHistoryLoading]=useState(false),[savingDraft,setSavingDraft]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[validationErrors,setValidationErrors]=useState([]);
+  const [loading,setLoading]=useState(true),[products,setProducts]=useState([]),[newArrivalsMeta,setNewArrivalsMeta]=useState({items:[]}),[newArrivalOverrides,setNewArrivalOverrides]=useState({include:[],exclude:[]}),[baseCategories,setBaseCategories]=useState({}),[overrides,setOverrides]=useState({}),[meta,setMeta]=useState({}),[query,setQuery]=useState(''),[categoryBrowse,setCategoryBrowse]=useState(null),[page,setPage]=useState('home'),[pageCount,setPageCount]=useState(PAGE_SIZE),[viewMode,setViewMode]=useState(()=>{try{return localStorage.getItem('customer_catalog_view_v2')||'grid'}catch{return'grid'}}),[missingImages,setMissingImages]=useState(()=>new Set()),[cart,setCart]=useState({}),[guestBranches,setGuestBranches]=useState(()=>{try{return JSON.parse(localStorage.getItem('customer_guest_branches_v1')||'[]')}catch{return[]}}),[allocItem,setAllocItem]=useState(null),[firstBranchItem,setFirstBranchItem]=useState(null),[zoom,setZoom]=useState(null),[toast,setToast]=useState(null),[checkout,setCheckout]=useState(()=>{try{return !guestMode&&sessionStorage.getItem('customer_pending_after_auth')==='checkout'}catch{return false}}),[orders,setOrders]=useState([]),[drafts,setDrafts]=useState([]),[historyLoading,setHistoryLoading]=useState(false),[savingDraft,setSavingDraft]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[validationErrors,setValidationErrors]=useState([]);
   const [submittedOrder,setSubmittedOrder]=useState(()=>{try{return JSON.parse(sessionStorage.getItem(LAST_SUBMITTED_ORDER_KEY)||'null')}catch{return null}});
   const [guestName,setGuestName]=useState(()=>{try{return String(localStorage.getItem(GUEST_NAME_KEY)||'').trim()}catch{return''}}),[showGuestNamePrompt,setShowGuestNamePrompt]=useState(false);
   useEffect(()=>{if(!guestMode||guestName)return;const t=setTimeout(()=>setShowGuestNamePrompt(true),900);return()=>clearTimeout(t)},[guestMode,guestName]);
@@ -977,7 +1007,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
         logCustomerEvent(null,'guest_enter','فتح بوابة العملاء',{source:'customer_portal'});
       }else touchCustomerSession(null,profileNow(),'guest_active');
     }catch{touchCustomerSession(null,profileNow(),'guest_enter')}
-    const heartbeat=setInterval(()=>touchCustomerSession(null,profileNow(),'guest_active'),45000);
+    const heartbeat=setInterval(()=>{if(document.visibilityState==='visible')touchCustomerSession(null,profileNow(),'guest_active')},150000);
     const onVisible=()=>{if(document.visibilityState==='visible')touchCustomerSession(null,profileNow(),'guest_active')};
     const onPageHide=()=>{touchCustomerSession(null,profileNow(),'guest_exit')};
     document.addEventListener('visibilitychange',onVisible);
@@ -1026,32 +1056,91 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   useEffect(()=>{if(guestMode||!user?.uid)return;touchCustomerSession(user,safeProfile,'active');const t=setInterval(()=>{if(document.visibilityState==='visible')touchCustomerSession(user,safeProfile,'heartbeat')},300000);return()=>clearInterval(t)},[guestMode,user?.uid,safeProfile.name,safeProfile.company,safeProfile.phone]);
   useEffect(()=>{if(!guestMode)logCustomerEvent(user,'page_view',page,{company:safeProfile.company})},[page,guestMode]);
   useEffect(()=>{
-    let alive=true,unsubO=null,unsubM=null;
+    let alive=true;
     Promise.all([fetchText(DATA_PATH+'jeddah.tsv'),fetchText(DATA_PATH+'riyadh.tsv'),fetchText(DATA_PATH+'images_list.txt'),fetchText(DATA_PATH+'categories.tsv'),fetchText(DATA_PATH+'pricing.tsv'),fetchJson(DATA_PATH+'new-arrivals.json'),loadCustomerImageBindings(),loadCustomerNewArrivalOverrides()]).then(([j,r,imgs,cats,pricingText,arrivals,bindings,arrivalOverrides])=>{if(!alive)return;const images=buildImagesMap(imgs);const pricing=parsePricingMap(pricingText);const inventory=mergeInventories(parseInventory(j),parseInventory(r));const collisions=buildCustomerImageCollisionIndex(inventory);const merged=inventory.filter(x=>x.allowedMax>=CART_STEP).map(x=>{const imageFile=resolveCustomerImage(images,x,collisions,bindings);const cartonPrice=Number(pricing[x.cleanId]||0);const packNum=parseFloat(toEnglishDigits(x.pack||'').replace(/[^0-9.]/g,''));return {...x,imageFile,cartonPrice,approxPrice:cartonPrice>0&&Number.isFinite(packNum)&&packNum>0?cartonPrice/packNum:0}}).filter(x=>Boolean(x.imageFile));setProducts(merged);setNewArrivalsMeta(arrivals&&Array.isArray(arrivals.items)?arrivals:{items:[]});setNewArrivalOverrides(arrivalOverrides||{include:[],exclude:[]});setBaseCategories(parseCategories(cats));setLoading(false)}).catch(err=>{console.error(err);if(alive){setLoading(false);setToast({type:'error',message:'تعذر تحميل بيانات المعرض.'})}});
-    unsubO=db.collection(CATEGORY_OVERRIDES).onSnapshot(s=>{const x={};s.forEach(d=>{const v=d.data();const id=normalizeCleanId(v.cleanId||d.id);if(id)x[id]=v});if(alive)setOverrides(x)},()=>{});
-    unsubM=db.collection(CATEGORY_META).onSnapshot(s=>{const x={};s.forEach(d=>x[d.id]=d.data());if(alive)setMeta(x)},()=>{});
-    return()=>{alive=false;unsubO?.();unsubM?.()};
+    // Cache public category labels, not customer/account/session records.
+    // One server fetch every 15 minutes, instead of full Firestore listeners per visitor.
+    const CATEGORY_RULES_CACHE='batco_customer_category_rules_v2',TTL=15*60*1000;
+    let lastRead=0,reading=false;
+    const applyCached=()=>{
+      try{
+        const row=JSON.parse(sessionStorage.getItem(CATEGORY_RULES_CACHE)||'null');
+        if(!row?.at||Date.now()-row.at>TTL)return false;
+        lastRead=row.at;
+        if(alive){setOverrides(row.overrides||{});setMeta(row.meta||{})}
+        return true;
+      }catch{return false}
+    };
+    const refresh=async(force=false)=>{
+      if(!alive||reading||(!force&&Date.now()-lastRead<TTL))return;
+      reading=true;
+      try{
+        const [rows,metadata]=await Promise.all([
+          db.collection(CATEGORY_OVERRIDES).get({source:'server'}),
+          db.collection(CATEGORY_META).get({source:'server'})
+        ]);
+        const next={},nextMeta={};
+        rows.forEach(doc=>{const value=doc.data(),id=normalizeCleanId(value.cleanId||doc.id);if(id)next[id]=value});
+        metadata.forEach(doc=>nextMeta[doc.id]=doc.data());
+        lastRead=Date.now();
+        if(!alive)return;
+        setOverrides(next);setMeta(nextMeta);
+        try{sessionStorage.setItem(CATEGORY_RULES_CACHE,JSON.stringify({at:lastRead,overrides:next,meta:nextMeta}))}catch{}
+      }catch(err){console.warn('[Customer category configuration]',err?.code||err?.message||err)}
+      finally{reading=false}
+    };
+    if(!applyCached())refresh(true);
+    const onVisible=()=>{if(document.visibilityState==='visible')refresh()};
+    document.addEventListener('visibilitychange',onVisible);
+    const rulesTimer=setInterval(()=>{if(document.visibilityState==='visible')refresh()},TTL);
+    return()=>{alive=false;document.removeEventListener('visibilitychange',onVisible);clearInterval(rulesTimer)};
   },[]);
-  useEffect(()=>{let alive=true;const t=setInterval(()=>{if(document.visibilityState!=='visible')return;loadCustomerNewArrivalOverrides().then(x=>{if(alive)setNewArrivalOverrides(x)})},15000);return()=>{alive=false;clearInterval(t)}},[]);
-  // الطلبات والمسودات لحظية: التنقل لصفحة «طلباتي» لا ينتظر أي جلب جديد.
+  useEffect(()=>{
+    let alive=true,last=Date.now();
+    const refresh=()=>{if(!alive||document.visibilityState!=='visible'||Date.now()-last<300000)return;last=Date.now();loadCustomerNewArrivalOverrides().then(x=>{if(alive)setNewArrivalOverrides(x)})};
+    const timer=setInterval(refresh,300000);
+    document.addEventListener('visibilitychange',refresh);
+    return()=>{alive=false;clearInterval(timer);document.removeEventListener('visibilitychange',refresh)}
+  },[]);
+  // Live order/draft streams are required only while viewing the order history.
   useEffect(()=>{
     if(guestMode||!user?.uid){setOrders([]);setDrafts([]);setHistoryLoading(false);return;}
+    if(page!=='orders')return;
     let firstOrders=false,firstDrafts=false;setHistoryLoading(true);
     const done=()=>{if(firstOrders&&firstDrafts)setHistoryLoading(false)};
     const cv=x=>x?.toMillis?.()||0;
     const unsubOrders=db.collection(ORDER_COLLECTION).where('customerUid','==',user.uid).limit(100).onSnapshot(snap=>{firstOrders=true;setOrders(snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.recordStatus!=='deleted'&&!x.deletedAt).sort((a,b)=>cv(b.createdAt)-cv(a.createdAt)));done()},e=>{console.warn('[Orders realtime]',e);firstOrders=true;done()});
     const unsubDrafts=db.collection(DRAFT_COLLECTION).where('customerUid','==',user.uid).limit(60).onSnapshot(snap=>{firstDrafts=true;setDrafts(snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>cv(b.updatedAt||b.createdAt)-cv(a.updatedAt||a.createdAt)));done()},e=>{console.warn('[Drafts realtime]',e);firstDrafts=true;done()});
     return()=>{unsubOrders();unsubDrafts()};
-  },[user?.uid]);
+  },[user?.uid,page]);
   const categories=useMemo(()=>effectiveCategories(baseCategories,overrides,meta),[baseCategories,overrides,meta]);const catLookup=useMemo(()=>categoryLookup(categories),[categories]);
   const enriched=useMemo(()=>products.filter(p=>p.imageFile&&!missingImages.has(p.cleanId)).map(p=>({...p,category:catLookup[p.cleanId]||SPECIAL_UNCATEGORIZED})),[products,catLookup,missingImages]);
   const newArrivalProducts=useMemo(()=>{const byId=new Map(enriched.map(p=>[p.cleanId,p]));const metaById=new Map((newArrivalsMeta.items||[]).map(row=>[normalizeCleanId(row.sku),row]));const excluded=new Set((newArrivalOverrides.exclude||[]).map(normalizeCleanId).filter(Boolean));const manual=(newArrivalOverrides.include||[]).map(normalizeCleanId).filter(id=>id&&!excluded.has(id));const automatic=[...metaById.keys()].filter(id=>id&&!excluded.has(id)&&!manual.includes(id));return [...manual,...automatic].map(id=>{const product=byId.get(id),row=metaById.get(id);return product?{...product,newFirstSeenAt:row?.firstSeenAt||null,newDaysRemaining:row?.daysRemaining||30}:null}).filter(Boolean)},[enriched,newArrivalsMeta,newArrivalOverrides]);
   const categoryNames=useMemo(()=>Object.keys(categories).filter(Boolean).sort((a,b)=>a.localeCompare(b,'ar')),[categories]);
-  const catalogCategory=page==='categories'?(categoryBrowse||'الكل'):activeCategory;
-  const filtered=useMemo(()=>{let rows=enriched;if(catalogCategory!== 'الكل') rows=catalogCategory===SPECIAL_UNCATEGORIZED?rows.filter(p=>!catLookup[p.cleanId]):rows.filter(p=>catLookup[p.cleanId]===catalogCategory);const q=query.trim();if(q){const clean=normalizeCleanId(q),text=normalizeText(q);rows=rows.filter(p=>(clean&&p.cleanId.includes(clean))||(text&&p.searchName.includes(text))||p.searchId.includes(toEnglishDigits(q).toLowerCase()))}return rows},[enriched,catalogCategory,query,catLookup]);
-  const categoryCards=useMemo(()=>{const rows=categoryNames.map(name=>({name,count:enriched.filter(p=>catLookup[p.cleanId]===name).length})).filter(x=>x.count>0);const other=enriched.filter(p=>!catLookup[p.cleanId]).length;if(other>0)rows.push({name:SPECIAL_UNCATEGORIZED,count:other});return rows},[categoryNames,enriched,catLookup]);
+
+  const catalogCategory=page==='categories'&&categoryBrowse?categoryBrowse:'';
+  const categoryShowcases=useMemo(()=>{
+    const groups=new Map();
+    enriched.forEach(item=>{
+      const name=catLookup[item.cleanId]||SPECIAL_UNCATEGORIZED;
+      if(!groups.has(name))groups.set(name,[]);
+      groups.get(name).push(item);
+    });
+    return [...categoryNames,SPECIAL_UNCATEGORIZED].filter(name=>groups.has(name)).map(name=>({name,items:groups.get(name),count:groups.get(name).length}));
+  },[enriched,categoryNames,catLookup]);
+  const filtered=useMemo(()=>{
+    let rows=enriched;
+    if(catalogCategory)rows=rows.filter(p=>(catLookup[p.cleanId]||SPECIAL_UNCATEGORIZED)===catalogCategory);
+    const q=query.trim();
+    if(q){
+      const clean=normalizeCleanId(q),text=normalizeText(q),raw=toEnglishDigits(q).toLowerCase();
+      rows=rows.filter(p=>(clean&&p.cleanId.includes(clean))||(text&&p.searchName.includes(text))||p.searchId.includes(raw));
+    }else if(page==='home')return [];
+    return rows;
+  },[enriched,catalogCategory,query,catLookup,page]);
+  const categoryCards=useMemo(()=>categoryShowcases.map(({name,count})=>({name,count})),[categoryShowcases]);
   useEffect(()=>{const q=query.trim();if(q.length<2)return;const t=setTimeout(()=>logCustomerEvent(user,'search',q,{results:filtered.length,category:catalogCategory}),1200);return()=>clearTimeout(t)},[query,catalogCategory,filtered.length]);
-  useEffect(()=>{if(catalogCategory&&catalogCategory!=='الكل')logCustomerEvent(user,'category_view',catalogCategory)},[catalogCategory]);
+  useEffect(()=>{if(catalogCategory)logCustomerEvent(user,'category_view',catalogCategory)},[catalogCategory]);
   useEffect(()=>setPageCount(PAGE_SIZE),[query,catalogCategory,viewMode]);
   const branches=guestMode?guestBranches:(safeProfile.branches||guestBranches||[]);
   const cartItems=useMemo(()=>Object.values(cart).map(c=>{const product=enriched.find(p=>p.cleanId===c.cleanId);const branchQuantities=c.branchQuantities||{};return {...(product||c),...c,cartonPrice:Number(c.cartonPrice)||Number(product?.cartonPrice)||0,pack:c.pack||product?.pack||'',approxPrice:Number(c.approxPrice)||Number(product?.approxPrice)||0,allowedMax:product?.allowedMax??0,branchQuantities,totalQty:roundHalf(sum(Object.values(branchQuantities)))}}).filter(i=>i.totalQty>0),[cart,enriched]);
@@ -1202,12 +1291,17 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   return <div className="min-h-[100dvh] bg-surface pb-[92px]">
     <header className="bg-white border-b border-border sticky top-0 z-30 safe-top"><div className="rights-bar bg-primary text-white"><div className="max-w-[1100px] mx-auto h-8 px-4 flex items-center justify-between gap-3 text-[10px]"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link text-white font-bold truncate">تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><div className="flex items-center gap-1.5 shrink-0"><span className="text-white/55">ضمن منظومة</span><b className="text-[#6EE7B7] ltr tracking-wide">Korvi</b></div></div></div><div className="max-w-[1100px] mx-auto px-4 py-3 flex items-center justify-between gap-3"><div className="min-w-0"><div className="text-[10px] text-muted">بوابة العملاء</div><b className="text-sm block truncate">{guestMode?'المعرض الرقمي':safeProfile.company}</b></div><div className="flex items-center gap-2"><div className="hidden sm:block text-left"><div className="text-[10px] text-muted">مرحبًا</div><div className="text-xs font-bold">{EMPLOYEE_CUSTOMER_VIEW?(EMPLOYEE_CUSTOMER_SESSION.name||'موظف'):(guestMode?'تصفح مباشر':(safeProfile.name||'عميل'))}</div></div>{EMPLOYEE_CUSTOMER_VIEW&&<button onClick={()=>{window.location.href='./index.html?employee=1'}} title="العودة لنظام الموظفين" className="h-9 px-3 rounded-10 border border-border bg-surface text-[10px] font-bold text-secondary hover:text-accent whitespace-nowrap">الموظفين</button>}<button onClick={()=>setPage('cart')} className="relative w-11 h-11 rounded-12 border border-border bg-white flex items-center justify-center"><Icon name="cart"/>{cartCount>0&&<span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[10px] flex items-center justify-center">{cartCount}</span>}</button></div></div></header>
     <main className="max-w-[1100px] mx-auto p-4 sm:p-5">
+
       {page==='home'&&<div className="fade-in">
-        <div className="mb-4 bg-white border border-border rounded-16 p-4 shadow-card"><div className="flex items-end justify-between gap-3"><div><h1 className="text-[20px] sm:text-[22px] font-bold">المعرض الرقمي</h1></div><div className="text-left text-[10px] text-muted"><div>{cartCount} صنف في السلة</div><b className="ltr text-primary">{NF.format(totalCartons)} كرتون</b></div></div></div>
-        {showNewArrivals&&!loading&&newArrivalProducts.length>0&&<section className="mb-4 bg-white border border-border rounded-16 p-3 sm:p-4 shadow-card" aria-labelledby="new-arrivals-title"><div className="flex items-center justify-between gap-3 mb-3"><div><div className="text-[10px] text-accent font-bold">وصل حديثًا</div><h2 id="new-arrivals-title" className="text-[17px] font-bold">جديدنا</h2></div><span className="text-[10px] text-muted">اسحب للتصفح ←</span></div><div dir="rtl" className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory overscroll-x-contain pb-1">{newArrivalProducts.map(item=><NewArrivalCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={x=>{setZoom(x);logCustomerEvent(user,'new_arrival_view',x.id,{cleanId:x.cleanId,name:x.name})}}/>)}</div></section>}
-        <div className="sticky top-[92px] z-20 bg-surface/95 backdrop-blur py-2"><div className="relative"><Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="ابحث برقم الصنف أو اسم المنتج..." className="w-full h-[52px] pr-12 pl-4 bg-white border border-border rounded-16 outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 shadow-card"/></div><div className="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1"><button onClick={()=>setActiveCategory('الكل')} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory==='الكل'?'bg-primary border-primary text-white':'bg-white border-border'}`}>الكل</button>{categoryNames.slice(0,8).map(c=><button key={c} onClick={()=>setActiveCategory(c)} className={`h-9 px-4 rounded-full border text-xs font-bold whitespace-nowrap ${activeCategory===c?'bg-primary border-primary text-white':'bg-white border-border'}`}>{c}</button>)}<button onClick={()=>{setPage('categories');setCategoryBrowse(null);setQuery('')}} className="h-9 px-4 rounded-full border border-accent/20 bg-accentSoft text-accent text-xs font-bold whitespace-nowrap">كل الأقسام</button></div></div>
-        <div className="flex items-center justify-between mt-4 mb-3 gap-3"><div><b className="text-sm">{activeCategory==='الكل'?'جميع المنتجات':activeCategory}</b></div><div className="flex p-1 bg-white border border-border rounded-10 shrink-0"><button onClick={()=>setViewMode('grid')} title="عرض شبكي" className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='grid'?'bg-primary text-white':'text-muted'}`}><Icon name="grid" className="w-4 h-4"/></button><button onClick={()=>setViewMode('list')} title="عرض طولي" className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='list'?'bg-primary text-white':'text-muted'}`}><Icon name="list" className="w-4 h-4"/></button></div></div>
-        {loading?<div className="py-24 flex justify-center"><Spinner/></div>:filtered.length===0?<Empty title="لا توجد منتجات مطابقة" note="جرّب رقم صنف آخر أو قسمًا مختلفًا." icon="search"/>:<><div className={viewMode==='grid'?'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4':'grid gap-3'}>{filtered.slice(0,pageCount).map(item=>viewMode==='grid'?<ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={x=>{setZoom(x);logCustomerEvent(user,'product_image_view',x.id,{cleanId:x.cleanId,name:x.name})}}/>:<ProductListCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={x=>{setZoom(x);logCustomerEvent(user,'product_image_view',x.id,{cleanId:x.cleanId,name:x.name})}}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-5 w-full h-12 rounded-12 border border-border bg-white font-bold text-sm">عرض المزيد</button>}</>}
+        <div className="mb-4 bg-white border border-border rounded-16 p-4 shadow-card"><div className="flex items-end justify-between gap-3"><h1 className="text-[20px] sm:text-[22px] font-bold">المعرض الرقمي</h1><div className="text-left text-[10px] text-muted"><div>{cartCount} صنف في السلة</div><b className="ltr text-primary">{NF.format(totalCartons)} كرتون</b></div></div><p className="text-xs text-secondary mt-2">تصفّح المنتجات حسب القسم، أو ابحث عن صنف بعينه.</p></div>
+        {showNewArrivals&&!loading&&newArrivalProducts.length>0&&<section className="mb-4 bg-white border border-border rounded-16 p-3 sm:p-4 shadow-card" aria-labelledby="new-arrivals-title"><div className="flex items-center justify-between gap-3 mb-3"><div><div className="text-[10px] text-accent font-bold">وصل حديثًا</div><h2 id="new-arrivals-title" className="text-[17px] font-bold">جديدنا</h2></div><span className="text-[10px] text-muted">اسحب للتصفح ←</span></div><div dir="rtl" className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory overscroll-x-contain pb-1">{newArrivalProducts.slice(0,16).map(item=><NewArrivalCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</div></section>}
+        <div className="sticky top-[92px] z-20 bg-surface/95 backdrop-blur py-2 mb-4"><div className="relative"><Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="ابحث برقم الصنف أو اسمه في جميع الأقسام..." aria-label="البحث عن صنف" className="w-full h-[52px] pr-12 pl-4 bg-white border border-border rounded-16 outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 shadow-card"/></div></div>
+        {loading?<div className="py-24 flex justify-center"><Spinner/></div>:query.trim()?<section className="bg-white border border-border rounded-16 p-3 sm:p-4 shadow-card"><div className="flex items-center justify-between gap-2 mb-3"><h2 className="font-bold text-sm">نتائج البحث</h2><span className="text-[10px] text-muted">{filtered.length} صنف</span></div>{filtered.length===0?<Empty title="لا توجد منتجات مطابقة" note="جرّب رقم صنف آخر أو اسمًا مختلفًا." icon="search"/>:<><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{filtered.slice(0,pageCount).map(item=><ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-4 w-full h-11 rounded-12 border border-border bg-white font-bold text-xs">عرض المزيد</button>}</>}</section>:categoryShowcases.length===0?<Empty title="لا توجد منتجات متاحة الآن" icon="grid"/>:<div className="grid gap-4">
+          {categoryShowcases.map(section=><section key={section.name} className="bg-white border border-border rounded-16 p-3 sm:p-4 shadow-card" aria-label={'قسم '+section.name}>
+            <div className="flex items-center justify-between gap-2 mb-3"><div className="min-w-0"><h2 className="font-bold text-[16px] truncate">{section.name}</h2><p className="text-[10px] text-muted mt-1">{section.count} صنف · اسحب لاستعراض المنتجات</p></div><button type="button" onClick={()=>{setCategoryBrowse(section.name);setQuery('');setPageCount(PAGE_SIZE);setPage('categories')}} className="text-[11px] font-bold text-primary border border-border bg-surface rounded-10 px-3 h-9 shrink-0">عرض القسم</button></div>
+            <div dir="rtl" className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory overscroll-x-contain pb-1">{section.items.slice(0,7).map(item=><CategoryPreviewCard key={item.imageSku||item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</div>
+          </section>)}
+        </div>}
       </div>}
       {page==='categories'&&<div className="fade-in">
         {!categoryBrowse?<><div className="ui-section-head"><h2>الأقسام</h2><p>اختر القسم أولًا لعرض محتواه بصورة مباشرة ومنظمة.</p></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{categoryCards.map(c=><button key={c.name} onClick={()=>{setCategoryBrowse(c.name);setQuery('');setPageCount(PAGE_SIZE)}} className="category-tile shadow-card"><div className="flex items-start justify-between gap-2"><div className="w-10 h-10 rounded-12 bg-accentSoft text-accent flex items-center justify-center"><Icon name="grid" className="w-5 h-5"/></div><Icon name="chevron" className="w-4 h-4 text-muted"/></div><div><b className="text-[14px] block line-clamp-2">{c.name}</b><span className="text-[10px] text-muted mt-1 block">فتح القسم</span></div></button>)}</div></>:<><div className="flex items-center justify-between gap-3 mb-4"><button onClick={()=>{setCategoryBrowse(null);setQuery('')}} className="h-10 px-3 rounded-10 border border-border bg-white text-xs font-bold flex items-center gap-2"><Icon name="back" className="w-4 h-4"/>كل الأقسام</button><div className="text-left"><b className="text-sm block">{categoryBrowse}</b><span className="text-[10px] text-muted">تصفح القسم</span></div></div><div className="sticky top-[92px] z-20 bg-surface/95 backdrop-blur py-2"><div className="relative"><Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`ابحث داخل ${categoryBrowse}...`} className="w-full h-[52px] pr-12 pl-4 bg-white border border-border rounded-16 outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 shadow-card"/></div></div><div className="flex items-center justify-end mb-3"><div className="flex p-1 bg-white border border-border rounded-10"><button onClick={()=>setViewMode('grid')} className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='grid'?'bg-primary text-white':'text-muted'}`}><Icon name="grid" className="w-4 h-4"/></button><button onClick={()=>setViewMode('list')} className={`w-9 h-8 rounded-8 flex items-center justify-center ${viewMode==='list'?'bg-primary text-white':'text-muted'}`}><Icon name="list" className="w-4 h-4"/></button></div></div>{loading?<div className="py-24 flex justify-center"><Spinner/></div>:filtered.length===0?<Empty title="لا توجد منتجات في هذا القسم" note="قد تكون المنتجات بانتظار إضافة صور أو تحديث التصنيف." icon="grid"/>:<><div className={viewMode==='grid'?'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4':'grid gap-3'}>{filtered.slice(0,pageCount).map(item=>viewMode==='grid'?<ProductCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>:<ProductListCard key={item.cleanId} item={item} onAdd={requestProduct} onImageMissing={()=>markImageMissing(item.cleanId)} onZoom={setZoom}/>)}</div>{pageCount<filtered.length&&<button onClick={()=>setPageCount(n=>n+PAGE_SIZE)} className="mt-5 w-full h-12 rounded-12 border border-border bg-white font-bold text-sm">عرض المزيد</button>}</>}</>}
@@ -1217,7 +1311,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
       {page==='account'&&!guestMode&&<div className="fade-in"><div className="ui-section-head"><h2>حسابي</h2><p>بيانات الحساب، الفروع، ورمز الدخول.</p></div><AccountView profile={safeProfile} onLogout={()=>{logCustomerEvent(user,'logout','تسجيل خروج');touchCustomerSession(user,safeProfile,'logout');auth.signOut()}} onSaveBranches={saveBranches} onChangePin={changePin}/></div>}
     </main>
     <footer className="rights-footer max-w-[1100px] mx-auto px-4 sm:px-5 pb-5"><div className="border-t border-border pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] text-muted"><a href="https://wa.me/966506762257" target="_blank" rel="noopener noreferrer" className="developer-link font-bold text-secondary">© 2026 تطوير مهند الحزمي <span aria-hidden="true" className="text-[11px]">↗</span></a><span>بوابة العملاء · جزء من منظومة <b className="text-[#047857] ltr tracking-wide">Korvi</b></span></div></footer>
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-border safe-bottom"><div className="max-w-[700px] mx-auto grid grid-cols-5 px-1 pt-2">{nav.map(([id,icon,label])=><button key={id} onClick={()=>{if(EMPLOYEE_CUSTOMER_VIEW&&(id==='orders'||id==='account')){setToast({type:'info',message:employeeViewNotice});return;}if(guestMode&&(id==='orders'||id==='account')){onRequireAuth?.(id);return;}setCheckout(false);setPage(id);if(id==='categories'){setCategoryBrowse(null);setQuery('')}if(id==='home'&&!activeCategory)setActiveCategory('الكل')}} className={`h-14 flex flex-col items-center justify-center gap-1 rounded-10 text-[10px] font-bold ${page===id?'text-accent':'text-muted'}`}><div className="relative"><Icon name={icon} className="w-5 h-5"/>{id==='cart'&&cartCount>0&&<span className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-accent text-white text-[8px] flex items-center justify-center">{cartCount}</span>}</div>{label}</button>)}</div></nav>
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-border safe-bottom"><div className="max-w-[700px] mx-auto grid grid-cols-5 px-1 pt-2">{nav.map(([id,icon,label])=><button key={id} onClick={()=>{if(EMPLOYEE_CUSTOMER_VIEW&&(id==='orders'||id==='account')){setToast({type:'info',message:employeeViewNotice});return;}if(guestMode&&(id==='orders'||id==='account')){onRequireAuth?.(id);return;}setCheckout(false);setPage(id);if(id==='categories'){setCategoryBrowse(null);setQuery('')}if(id==='home')setQuery('')}} className={`h-14 flex flex-col items-center justify-center gap-1 rounded-10 text-[10px] font-bold ${page===id?'text-accent':'text-muted'}`}><div className="relative"><Icon name={icon} className="w-5 h-5"/>{id==='cart'&&cartCount>0&&<span className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-accent text-white text-[8px] flex items-center justify-center">{cartCount}</span>}</div>{label}</button>)}</div></nav>
     {!guestMode&&!String(safeProfile.name||'').trim()&&<NamePromptModal company={safeProfile.company} onSave={saveCustomerName}/>}
     {!EMPLOYEE_CUSTOMER_VIEW&&guestMode&&showGuestNamePrompt&&!guestName&&<GuestNamePromptModal onSave={saveGuestName}/>}
     {firstBranchItem&&<FirstBranchModal item={firstBranchItem} onClose={()=>setFirstBranchItem(null)} onCreate={createFirstBranch}/>}

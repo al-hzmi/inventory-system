@@ -1,0 +1,32 @@
+name: V105 Customer catalog and Firestore quota
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'runtime/customer-v37-source.txt'
+      - 'sw.js'
+      - 'tests/v105-customer-catalog-quota.cjs'
+      - '.github/workflows/v105-customer-catalog-quota.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v105-customer-catalog-quota.cjs
+      - run: node tests/v103-sku-identity.cjs
+      - run: node tests/v103-free-cache.cjs
+      - run: node tests/v90-data-reliability.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: node --check sw.js
+      - run: npm run build
