@@ -854,7 +854,7 @@ function ProductRail({children,label='منتجات القسم'}){
     if(!g||!t||!el)return;
     const dx=t.clientX-g.x,dy=t.clientY-g.y;
     if(!g.axis&&Math.max(Math.abs(dx),Math.abs(dy))>7)g.axis=Math.abs(dx)>Math.abs(dy)*1.15?'x':'y';
-    if(g.axis==='x'){el.scrollLeft=g.start-dx;blockClick.current=true;}
+    if(g.axis==='x'){el.scrollLeft=g.start+dx;blockClick.current=true;}
   };
   const finish=()=>{gesture.current=null;if(blockClick.current)setTimeout(()=>{blockClick.current=false},350)};
   const mouseStart=e=>{
@@ -866,7 +866,7 @@ function ProductRail({children,label='منتجات القسم'}){
     if(!g?.mouse||!el)return;
     const dx=e.clientX-g.x;
     if(Math.abs(dx)>6)blockClick.current=true;
-    el.scrollLeft=g.start-dx;
+    el.scrollLeft=g.start+dx;
   };
   const scroll=sign=>ref.current?.scrollBy({left:sign*240,behavior:'smooth'});
   return <div className="min-w-0 max-w-full relative">
