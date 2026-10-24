@@ -861,12 +861,15 @@ function ProgressiveCategoryRail({section,onAdd,onZoom,onImageMissing}){
   // Large categories can contain hundreds of products. Keep every product
   // reachable by swiping while mounting only the next small batch near the end.
   const [visibleCount,setVisibleCount]=useState(10);
+  const queuedFromCount=useRef(-1);
   const loadOnScroll=e=>{
     if(visibleCount>=section.items.length)return;
     const rail=e.currentTarget;
     const remaining=Math.max(0,rail.scrollWidth-rail.clientWidth-Math.abs(rail.scrollLeft));
-    if(remaining<=Math.max(220,rail.clientWidth))
+    if(remaining<=Math.max(220,rail.clientWidth)&&queuedFromCount.current!==visibleCount){
+      queuedFromCount.current=visibleCount;
       setVisibleCount(current=>Math.min(section.items.length,current+12));
+    }
   };
   return <ProductRail label={'منتجات '+section.name} onScroll={loadOnScroll}>
     {section.items.slice(0,visibleCount).map(item=><CategoryPreviewCard key={item.imageSku||item.cleanId} item={item} onAdd={onAdd} onImageMissing={()=>onImageMissing(item.cleanId)} onZoom={onZoom}/>)}

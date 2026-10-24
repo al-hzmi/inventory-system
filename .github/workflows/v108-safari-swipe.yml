@@ -1,4 +1,4 @@
-name: V110 Customer category rail and mobile touch regression
+name: V111 Customer category rail and mobile touch regression
 on:
   push:
     branches: [main]

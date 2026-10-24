@@ -19,8 +19,9 @@ assert(source.includes('onScroll={onScroll}'),'native scroll event must reach th
 
 function exercise(total){
  let count=10,missing='';
+ const queuedFromCount={current:-1};
  const React={createElement:(type,props,...children)=>({type,props:{...props,children}})};
- const context={React,ProductRail:'rail',CategoryPreviewCard:'card',
+ const context={React,ProductRail:'rail',CategoryPreviewCard:'card',useRef:()=>queuedFromCount,
   useState:()=>[count,update=>{count=typeof update==='function'?update(count):update}]};
  vm.createContext(context);
  vm.runInContext(Babel.transform(snippet,{presets:['react']}).code+';renderRail=ProgressiveCategoryRail',context);
@@ -41,7 +42,11 @@ function exercise(total){
  while(count<total){
   view=render();
   const loaded=view.cards.length,width=loaded*180,clientWidth=350;
-  view.rail.props.onScroll({currentTarget:{scrollWidth:width,clientWidth,scrollLeft:-(width-clientWidth-30)}});
+  const event={currentTarget:{scrollWidth:width,clientWidth,scrollLeft:-(width-clientWidth-30)}};
+  view.rail.props.onScroll(event);
+  const next=count;
+  view.rail.props.onScroll(event);
+  assert.equal(count,next,'multiple scroll events before repaint must add only one batch');
   assert(++attempts<30,'infinite progressive loading loop');
  }
  view=render();
