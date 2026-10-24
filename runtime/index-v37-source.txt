@@ -582,15 +582,23 @@ const verifyEmployeePassword = async (account, password) => {
     const derived = await deriveEmployeePasswordHash(password, account.passwordSalt, account.passwordIterations || 120000);
     return constantTimeStringEqual(derived, account.passwordHash);
 };
+const employeeAccountLookupsInFlight=new Map();
 const resolveEmployeeAccount = async (alias) => {
+    const lookupKey=employeeAliasVariants(alias)[0]||String(alias||'');
+    if(employeeAccountLookupsInFlight.has(lookupKey))return employeeAccountLookupsInFlight.get(lookupKey);
+    const lookup=(async()=>{
     const db = await getDb();
     const variants = employeeAliasVariants(alias);
     if (!variants.length) return null;
     // كل صيغ الاسم تُفحص بالتوازي؛ النسخة السابقة كانت تنتظر عدة رحلات شبكة متتابعة.
-    const aliasDocs = await Promise.all(variants.map(key =>
-        db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)).get().then(doc => ({ key, doc }))
-    ));
-    const linked = aliasDocs.find(row => row.doc.exists && row.doc.data()?.employeeId);
+    // Most employees have a direct alias. Read it first to avoid charging
+    // two alias documents for every login; check the no-space variant only
+    // when the canonical alias is absent.
+    let linked = null;
+    for(const key of variants){
+        const doc = await db.collection(EMPLOYEE_ALIAS_COLLECTION).doc(employeeAliasDocId(key)).get();
+        if(doc.exists&&doc.data()?.employeeId){ linked={key,doc}; break; }
+    }
     if (linked) {
         const accountDoc = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(String(linked.doc.data().employeeId)).get();
         if (accountDoc.exists) return cacheEmployeeAccount({ id: accountDoc.id, ...accountDoc.data(), matchedAlias: linked.key }, [alias]);
@@ -600,11 +608,17 @@ const resolveEmployeeAccount = async (alias) => {
         const snap = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).where('aliasKeys', 'array-contains-any', variants.slice(0, 10)).limit(1).get();
         if (!snap.empty) return cacheEmployeeAccount({ id: snap.docs[0].id, ...snap.docs[0].data(), matchedAlias: variants[0] }, [alias]);
     } catch (e) {
-        // بعض مشاريع Firestore القديمة قد لا تقبل array-contains-any؛ محاولة واحدة متوافقة تكفي.
+        // Do not hide actual quota/network/security errors with another read.
+        if(!/failed-precondition|invalid-argument|unimplemented/.test(String(e?.code||'')))throw e;
         const snap = await db.collection(EMPLOYEE_ACCOUNT_COLLECTION).where('aliasKeys', 'array-contains', variants[0]).limit(1).get();
         if (!snap.empty) return cacheEmployeeAccount({ id: snap.docs[0].id, ...snap.docs[0].data(), matchedAlias: variants[0] }, [alias]);
     }
     return null;
+    })();
+    employeeAccountLookupsInFlight.set(lookupKey,lookup);
+    try{return await lookup}finally{
+        if(employeeAccountLookupsInFlight.get(lookupKey)===lookup)employeeAccountLookupsInFlight.delete(lookupKey);
+    }
 };
 
 // العثور على سجل موظف قديم لم يُفعّل له حساب بعد.
@@ -2948,8 +2962,21 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
     </div>;
 };
 
-const LOGIN_LOOKUP_TIMEOUT_MS = 5000;
-const LOGIN_TOTAL_DEADLINE_MS = 9000;
+// Allow Firebase SDK startup and real mobile networks without aborting identity lookup prematurely.
+const LOGIN_LOOKUP_TIMEOUT_MS = 12000;
+const LOGIN_TOTAL_DEADLINE_MS = 26000;
+const loginErrorMessage=(error,fallback='تعذر التحقق من حساب الموظف. حاول مرة أخرى.')=>{
+  const code=String(error?.code||error?.message||'').toLowerCase();
+  if(/resource-exhausted|quota-exceeded|daily quota|quota exceeded/.test(code))
+    return 'تجاوزت قاعدة البيانات حد القراءات المجانية. تعذر تأكيد الدخول من الخادم الآن. راجع الإدارة؛ لا تحتاج حذف التطبيق أو تغيير الرمز.';
+  if(/permission-denied|unauthenticated/.test(code))
+    return 'رفضت قاعدة البيانات طلب الدخول بسبب الصلاحيات. أبلغ الإدارة لمراجعة إعدادات النظام.';
+  if(/unavailable|network-request-failed|failed to fetch|offline/.test(code))
+    return 'تعذر الاتصال بقاعدة البيانات. تحقق من الشبكة ثم اضغط متابعة مرة أخرى.';
+  if(/login_lookup_timeout|script_timeout/.test(code))
+    return 'تأخر رد قاعدة البيانات. اضغط متابعة مرة أخرى؛ لا تحتاج تحديث الصفحة.';
+  return fallback;
+};
 const loginLookupTimeout = (promise, ms = LOGIN_LOOKUP_TIMEOUT_MS) => new Promise((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
@@ -3095,9 +3122,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
         catch (err) {
             if (attemptId !== verifyAttemptRef.current) return;
             console.error(err);
-            setError(err?.code === 'LOGIN_LOOKUP_TIMEOUT' || err?.code === 'SCRIPT_TIMEOUT'
-                ? 'الاتصال تأخر قليلًا. اضغط متابعة مرة أخرى — لا تحتاج تحديث الصفحة.'
-                : 'تعذر التحقق من حساب الموظف. حاول مرة أخرى.');
+            setError(loginErrorMessage(err));
         }
         finally { clearTimeout(deadline); if (attemptId === verifyAttemptRef.current) setLoading(false); }
     };
@@ -3113,7 +3138,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
                 if (attemptId !== verifyAttemptRef.current) return;
                 console.warn('[Employee auto verify]', err?.message || err);
                 setStep('name');
-                if (err?.code === 'LOGIN_LOOKUP_TIMEOUT' || err?.code === 'SCRIPT_TIMEOUT') setError('الاتصال تأخر قليلًا. اضغط متابعة مرة أخرى.');
+                setError(loginErrorMessage(err));
             })
             .finally(() => { if (attemptId === verifyAttemptRef.current) setLoading(false); });
     }, []);
@@ -3133,7 +3158,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
             setStep('face');
         } catch (err) {
             console.error(err);
-            setError(err?.code === 'ALIAS_CONFLICT' ? 'هذا الاسم مرتبط بحساب آخر. راجع مهند لدمج الحسابات.' : 'تعذر تفعيل الحساب الآن. حاول مرة أخرى أو راجع مهند.');
+            setError(err?.code === 'ALIAS_CONFLICT' ? 'هذا الاسم مرتبط بحساب آخر. راجع الإدارة لدمج الحسابات.' : loginErrorMessage(err,'تعذر تفعيل الحساب الآن. حاول مرة أخرى أو راجع الإدارة.'));
         } finally { setLoading(false); }
     };
 
@@ -3170,7 +3195,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
             setStep('face');
         } catch (err) {
             console.error(err);
-            setError(err?.code === 'LOGIN_LOOKUP_TIMEOUT' ? 'تأخر الاتصال أثناء التحقق. حاول مرة أخرى — لا تحتاج تحديث الصفحة.' : 'تعذر التحقق من كلمة المرور. حاول مرة أخرى.');
+            setError(loginErrorMessage(err,'تعذر التحقق من كلمة المرور. حاول مرة أخرى.'));
         } finally { setLoading(false); }
     };
 

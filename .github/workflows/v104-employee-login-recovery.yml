@@ -1,0 +1,30 @@
+name: V104 employee login recovery
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'sw.js'
+      - 'tests/v104-employee-login-recovery.cjs'
+      - '.github/workflows/v104-employee-login-recovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v104-employee-login-recovery.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v96-live-employee-visibility.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: node --check sw.js
+      - run: npm run build
