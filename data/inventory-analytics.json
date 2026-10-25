@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-25T14:59:05.250513Z",
+  "generatedAt": "2026-10-25T16:20:44.336902Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
     "jeddah": {
       "skuCount": 908,
       "inStock": 908,
-      "totalQty": 32848.029912
+      "totalQty": 32833.779912
     },
     "riyadh": {
       "skuCount": 682,
@@ -16,6 +16,102 @@
     }
   },
   "events": [
+    {
+      "id": "173b6a02ba8f",
+      "commit": "173b6a02ba8f2edd13e2507f62020292446b12c9",
+      "timestamp": "2026-10-25T19:20:10+03:00",
+      "message": "admin: import data/jeddah.tsv and update inventory timestamp",
+      "paths": [
+        "data/jeddah.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "100",
+          "name": "حافظة 168 لتر",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 4.16674,
+          "after": 1.16674,
+          "delta": -3,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "7289",
+          "name": "مناشف مطبخ قطعتين",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 6.5,
+          "after": 6,
+          "delta": -0.5,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "7290",
+          "name": "مناشف مطبخ 3 قطع",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 2,
+          "after": 1.75,
+          "delta": -0.25,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "7291",
+          "name": "مناشف مطبخ 3 قطع",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 4.75,
+          "after": 4.5,
+          "delta": -0.25,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "7292",
+          "name": "مناشف مطبخ 4 قطع",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 2,
+          "after": 1.75,
+          "delta": -0.25,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00137",
+          "name": "مرايات بيضاوي وسط",
+          "unit": "كرتون",
+          "branch": "jeddah",
+          "branchLabel": "جدة",
+          "before": 26,
+          "after": 16,
+          "delta": -10,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "3e46143249c3",
       "commit": "3e46143249c3b9ba02b38b07238cc5017242fd99",
