@@ -15,7 +15,7 @@ assert(source.includes('className="grid gap-4 customer-showcase-grid"'),'custome
 assert(source.includes('className="customer-showcase-section bg-white'),'category section must allow shrinking');
 assert(styles.includes('touch-action:auto;'),'native touch gestures must remain enabled');
 assert(shell.includes('all-category-products=111'),'live customer bootstrap must request refreshed rail source');
-assert(worker.includes('batco-navigation-shell-v111-progressive-batch-guard'),'navigation cache must refresh for the fix');
+assert(Number(worker.match(/const NAV_CACHE='batco-navigation-shell-v(\d+)-/)?.[1]||0)>=112,'navigation cache must refresh for the latest importer and customer fix');
 
 function fixture(){
  const cards=Array.from({length:7},(_,i)=>`<article style="flex:0 0 168px;min-width:168px;height:270px;border:1px solid #ddd;background:#fff"><button style="width:100%;height:160px">صورة ${i}</button><div>سعر الكرتون ${i+1}</div></article>`).join('');
