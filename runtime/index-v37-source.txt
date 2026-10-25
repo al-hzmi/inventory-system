@@ -1197,14 +1197,14 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock, depletedDb = []) => {
     if (!cleanQuery && nameTokens.length === 0) return { visible: [], availableVisible: [], depletedVisible: [], total: 0, availableTotal: 0, depletedTotal: 0, exact: null };
 
     const rankItem = item => {
-        if (directSku && canonicalSkuToken(item.id) === skuToken) return -1;
-        if (cleanQuery && item.cleanId && item.cleanId.startsWith(cleanQuery)) return item.cleanId === cleanQuery ? 0 : 1;
+        if (directSku && canonicalSkuToken(item.id) === skuToken) return 0;
+        if (cleanQuery && item.cleanId && item.cleanId.startsWith(cleanQuery)) return item.cleanId === cleanQuery ? 1 : 2;
         if (nameTokens.length && item.searchName) {
             let all = true;
             for (let t = 0; t < nameTokens.length; t++) {
                 if (!item.searchName.includes(nameTokens[t])) { all = false; break; }
             }
-            if (all) return item.searchName.startsWith(nameTokens[0]) ? 2 : 3;
+            if (all) return item.searchName.startsWith(nameTokens[0]) ? 3 : 4;
         }
         return -1;
     };
@@ -1226,15 +1226,15 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock, depletedDb = []) => {
     const cap = (ranked, skuMax, nameMax) => {
         const sku=[], nm=[];
         for (const r of ranked) {
-            if (r.rank <= 1) { if (sku.length < skuMax) sku.push(r.item); }
+            if (r.rank <= 2) { if (sku.length < skuMax) sku.push(r.item); }
             else if (nm.length < nameMax) nm.push(r.item);
         }
         return sku.concat(nm);
     };
     const availableVisible = cap(availableRanked, MAX_SKU_RESULTS, MAX_NAME_RESULTS);
     const depletedVisible = cap(depletedRanked, MAX_DEPLETED_SKU_RESULTS, MAX_DEPLETED_NAME_RESULTS);
-    const availableExact = availableRanked.find(r => r.rank <= 0) || null;
-    const depletedExact = depletedRanked.find(r => r.rank <= 0) || null;
+    const availableExact = availableRanked.find(r => r.rank <= 1) || null;
+    const depletedExact = depletedRanked.find(r => r.rank <= 1) || null;
     // A truly exact archived SKU outranks merely similar available SKU numbers.
     const exact = !depletedExact || (availableExact && availableExact.rank <= depletedExact.rank)
         ? (availableExact?.item || null) : depletedExact.item;
