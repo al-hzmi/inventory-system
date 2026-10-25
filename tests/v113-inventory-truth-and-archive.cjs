@@ -29,7 +29,7 @@ assert.equal(result.summary.zeroExamples[0],'BA_727');
 assert.match(result.content,/BA_727\tابريق وضوء صغير \* 2\tكرتون\t0\t8\t/);
 assert.match(result.content,/ARM_10005\tصنف منتهي\tكرتون\t0\t48\t/);
 assert.throws(()=>prepare('jeddah','رقم الصنف\tالكمية المتوفرة\nARM_10004\t6\n',stock,{fullSnapshot:true}),/منعنا تصفير البقية/);
-assert.throws(()=>prepare('pricing','رقم الصنف\tسعر البيع\nBA_727\t32','رقم الصنف\tسعر البيع\nBA_727\t32',{fullSnapshot:true}),/المخزون فقط/);
+assert.throws(()=>prepare('pricing','رقم الصنف\tسعر البيع\nBA_727\t32','رقم الصنف\tسعر البيع\nBA_727\t32',{fullSnapshot:true}),/للمخزون فقط/);
 assert.match(ui,/v113-full-snapshot/);
 assert.match(ui,/fullSnapshot:fullSnapshot\.checked/);
 assert.match(ui,/zeroed/);
