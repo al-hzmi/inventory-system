@@ -1,4 +1,4 @@
-/* V112: secure PDF stock reports + existing Excel import review. Existing admin guard runs first. */
+/* V113: secure PDF/Excel imports with explicit full-report reconciliation. Admin guard runs first. */
 (()=>{
 'use strict';
 const root=document.getElementById('app');
@@ -11,7 +11,7 @@ root.innerHTML=[
 '<div class="v59-steps"><span id="v59-step-input" class="active">١ · إدخال البيانات</span><span id="v59-step-review">٢ · مراجعة التغييرات</span><span id="v59-step-save">٣ · اعتماد التحديث</span></div>',
 '<section class="v59-form" aria-label="إدخال بيانات الاستيراد">',
 '<div class="v59-section-title"><span class="v59-index">01</span><div><h3>مصدر البيانات</h3><p>حدّد الفرع أو التسعيرة قبل الرفع.</p></div></div>',
-'<div class="v59-layout"><div class="v59-field"><label for="kind">نوع البيانات</label><select id="kind"><option value="jeddah">كميات ومعلومات أصناف جدة</option><option value="riyadh">كميات ومعلومات أصناف الرياض</option><option value="pricing">تسعيرة البيع — الفرعان</option></select></div><div class="v59-field"><span class="v59-label">طريقة التحديث</span><div class="v59-static">تحديث المحدد فقط، دون حذف الأصناف الأخرى</div></div></div>',
+'<div class="v59-layout"><div class="v59-field"><label for="kind">نوع البيانات</label><select id="kind"><option value="jeddah">كميات ومعلومات أصناف جدة</option><option value="riyadh">كميات ومعلومات أصناف الرياض</option><option value="pricing">تسعيرة البيع — الفرعان</option></select></div><div class="v59-field"><span class="v59-label">طريقة مطابقة المخزون</span><label class="v113-snapshot-option"><input type="checkbox" id="v113-full-snapshot"><span><strong>مطابقة كشف كامل للفرع</strong><small>أي صنف قديم غير وارد في الكشف تصبح كميته صفرًا بعد المعاينة والموافقة. اتركه غير محدد للتحديث الجزئي.</small></span></label></div></div>',
 '<label for="file" id="v59-drop" class="v59-drop"><span class="v59-upload-icon">⇧</span><strong>اختيار ملف PDF أو Excel أو سحبه هنا</strong><small>PDF تقارير المخزون، أو XLSX وXLS وCSV وTSV وTXT</small><input id="file" type="file" accept=".pdf,.xlsx,.xls,.csv,.tsv,.txt,application/pdf"><span id="v59-filename" class="v59-filename">لم يتم اختيار ملف</span></label>',
 '<div class="v59-or">أو</div>',
 '<div class="v59-field"><label for="data">لصق الجدول مباشرة من Excel</label><textarea id="data" spellcheck="false" dir="ltr" placeholder="رقم الصنف    اسم الصنف    الوحدة    الكمية المتوفرة    الشد"></textarea><p id="v59-hint" class="v59-hint">من تقرير PDF نقرأ رقم الصنف والكمية المتوفرة فقط. ملفات Excel تُعامل حسب أعمدتها، وتُراجع كل التغييرات قبل الحفظ.</p></div>',
@@ -19,7 +19,7 @@ root.innerHTML=[
 '</section>',
 '<div id="result" class="v59-notice" role="status" aria-live="polite">لم تبدأ المعاينة بعد. الفحص لا يغيّر أي بيانات.</div>',
 '<section id="v59-review" class="v59-review" hidden><div class="v59-section-title"><span class="v59-index">02</span><div><h3>مراجعة التغييرات</h3><p>الكمية قبل التعديل وبعده، لكل صنف تغير.</p></div></div>',
-'<div id="v59-stats" class="v59-stats"></div>',
+'<div id="v59-stats" class="v59-stats"></div><p id="v113-coverage" class="v113-coverage" hidden></p>',
 '<div class="v59-table-heading"><strong>الأصناف المتغيرة</strong><span id="v59-shown"></span></div>',
 '<div class="v59-table-wrap"><table class="v59-table"><thead><tr><th>رقم الصنف</th><th>الحقل</th><th>قبل</th><th>بعد</th></tr></thead><tbody id="v59-rows"></tbody></table></div>',
 '<p class="v59-hint" id="v59-truncated" hidden></p>',
@@ -27,13 +27,13 @@ root.innerHTML=[
 '<footer class="v59-footer"><a href="./admin-home.html">← العودة للإدارة</a><span>بياناتك لا تتغير بمجرد الفحص.</span></footer>'
 ].join('');
 const el=id=>document.getElementById(id);
-const kind=el('kind'),upload=el('file'),paste=el('data'),preview=el('preview'),save=el('save'),result=el('result'),review=el('v59-review'),stats=el('v59-stats'),rows=el('v59-rows'),shown=el('v59-shown'),clear=el('v59-clear'),count=el('v59-count');
+const kind=el('kind'),fullSnapshot=el('v113-full-snapshot'),upload=el('file'),paste=el('data'),preview=el('preview'),save=el('save'),result=el('result'),review=el('v59-review'),stats=el('v59-stats'),rows=el('v59-rows'),shown=el('v59-shown'),clear=el('v59-clear'),count=el('v59-count');
 let snapshot=null,loading=false,source='لصق مباشر';
 const number=x=>Number(x||0).toLocaleString('ar-SA');
 function message(text,type=''){result.className='v59-notice'+(type?' v59-'+type:'');result.textContent=text}
 function stage(value){for(const s of ['input','review','save'])el('v59-step-'+s).classList.toggle('active',s===value)}
 function invalidate(){snapshot=null;save.disabled=true;review.hidden=true;stage('input')}
-function setBusy(state){loading=state;preview.disabled=state;clear.disabled=state;kind.disabled=state;upload.disabled=state;paste.readOnly=state;if(state)save.disabled=true;preview.textContent=state?'جارٍ الفحص…':'فحص ومعاينة التغييرات ←'}
+function setBusy(state){loading=state;preview.disabled=state;clear.disabled=state;kind.disabled=state;upload.disabled=state;fullSnapshot.disabled=state||kind.value==='pricing';paste.readOnly=state;if(state)save.disabled=true;preview.textContent=state?'جارٍ الفحص…':'فحص ومعاينة التغييرات ←'}
 function updateCount(){count.textContent=paste.value.trim()?number(paste.value.replace(/\r\n?/g,'\n').split('\n').filter(line=>line.trim()).length)+' صف غير فارغ':'بانتظار بيانات'}
 function stat(label,value,featured=false){const div=document.createElement('div');div.className='v59-stat'+(featured?' featured':'');const strong=document.createElement('strong');strong.textContent=number(value);const title=document.createElement('span');title.textContent=label;div.append(strong,title);stats.append(div)}
 function show(summary){
@@ -43,6 +43,12 @@ function show(summary){
  for(const item of examples){const tr=document.createElement('tr');for(const [label,value] of [['رقم الصنف',item.sku],['الحقل',item.field],['قبل',item.before],['بعد',item.after]]){const td=document.createElement('td');td.dataset.label=label;td.textContent=value===undefined||value===null||value===''?'—':String(value);tr.append(td)}rows.append(tr)}
  if(!examples.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.className='v59-empty';td.textContent='لا توجد تغييرات. البيانات المدخلة مطابقة لملف المستودع.';tr.append(td);rows.append(tr)}
  shown.textContent=number(examples.length)+' تغيير معروض';
+ const coverage=el('v113-coverage'),missing=Number(s.unreported||0),zeroed=Number(s.zeroed||0);
+ coverage.hidden=missing===0;
+ coverage.className='v113-coverage'+(s.fullSnapshot?' is-complete':'');
+ coverage.textContent=s.fullSnapshot
+  ? 'كشف كامل: '+number(missing)+' صنف لم يرد في الملف؛ سيُصفّر منها '+number(zeroed)+' صنف كان برصيد موجب بعد اعتمادك. '+(s.zeroExamples?.length?'أمثلة: '+s.zeroExamples.slice(0,5).join('، '):'')
+  : 'تنبيه: '+number(missing)+' صنف قديم لم يرد في الملف وستبقى كمياته السابقة كما هي. إذا كان التقرير شاملًا، فعّل «مطابقة كشف كامل للفرع» ثم أعد الفحص.';
  const total=Number(s.changed||0)+Number(s.added||0)+Number(s.detailChanges||0);
  el('v59-truncated').hidden=examples.length>=total;
  el('v59-truncated').textContent='يُعرض أول '+number(examples.length)+' تغيير في الجدول. إجمالي تغييرات الأصناف ظاهر أعلاه.';
@@ -54,7 +60,7 @@ function show(summary){
 }
 function proof(){try{return JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null')}catch{return null}}
 async function request(action){
- const response=await fetch('./api/inventory-import',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,kind:kind.value,text:paste.value,sha:snapshot?.sha,adminToken:localStorage.getItem('inventory_admin_token_v2'),adminProof:proof()})});
+ const response=await fetch('./api/inventory-import',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,kind:kind.value,fullSnapshot:fullSnapshot.checked&&kind.value!=='pricing',text:paste.value,sha:snapshot?.sha,adminToken:localStorage.getItem('inventory_admin_token_v2'),adminProof:proof()})});
  const body=await response.json().catch(()=>null);
  if(!response.ok)throw Error(body?.error||'خدمة الاستيراد لم تستجب (HTTP '+response.status+').');
  if(!body)throw Error('استجابة الخدمة غير صالحة؛ حاول مرة أخرى.');
@@ -104,7 +110,8 @@ async function importFile(file){
 }
 upload.addEventListener('change',async()=>{try{await importFile(upload.files?.[0])}catch(e){message('تعذرت قراءة الملف: '+e.message,'error')}});
 paste.addEventListener('input',()=>{invalidate();source='لصق مباشر';el('v59-filename').textContent='بيانات ملصقة';updateCount()});
-kind.addEventListener('change',()=>{invalidate();message('تم تغيير الوجهة؛ أعد الفحص قبل الحفظ.');el('v59-hint').textContent=kind.value==='pricing'?'التسعيرة: المطلوب رقم الصنف وسعر البيع، ويمكن لصق جدول جدة والرياض كاملًا.':'المخزون: يستخرج PDF رقم الصنف والكمية فقط؛ وتبقى بيانات الاسم والوحدة والشد دون تغيير.'});
+fullSnapshot.addEventListener('change',()=>{invalidate();message(fullSnapshot.checked?'سيتعامل النظام مع الملف ككشف كامل: الأصناف الغائبة ستُراجع لتصفيرها.':'تحديث جزئي: الأصناف غير الموجودة في الملف تحتفظ برصيدها السابق.');});
+kind.addEventListener('change',()=>{invalidate();if(kind.value==='pricing')fullSnapshot.checked=false;fullSnapshot.disabled=kind.value==='pricing';message('تم تغيير الوجهة؛ أعد الفحص قبل الحفظ.');el('v59-hint').textContent=kind.value==='pricing'?'التسعيرة: المطلوب رقم الصنف وسعر البيع، ويمكن لصق جدول جدة والرياض كاملًا.':'المخزون: يستخرج PDF رقم الصنف والكمية فقط؛ وتبقى بيانات الاسم والوحدة والشد دون تغيير.'});
 clear.addEventListener('click',()=>{upload.value='';paste.value='';source='لصق مباشر';el('v59-filename').textContent='لم يتم اختيار ملف';invalidate();updateCount();message('تم مسح البيانات المدخلة فقط؛ المخزون لم يتغير.')});
 const drop=el('v59-drop');
 for(const e of ['dragover','dragenter'])drop.addEventListener(e,event=>{event.preventDefault();drop.classList.add('dragging')});
@@ -121,7 +128,8 @@ preview.addEventListener('click',async()=>{
 save.addEventListener('click',async()=>{
  if(loading||!snapshot)return;
  const count=Number(snapshot.summary?.changed||0)+Number(snapshot.summary?.added||0);
- if(!confirm('تأكيد اعتماد '+count+' صنف متغير أو جديد في '+kind.selectedOptions[0].textContent+'؟'))return;
+ const zeros=Number(snapshot.summary?.zeroed||0);
+ if(!confirm((snapshot.summary?.fullSnapshot?'تأكيد مطابقة الكشف الكامل: سيتم تصفير '+zeros+' صنف لم يرد في الملف، مع اعتماد باقي التغييرات.\n\n':'')+'تأكيد اعتماد '+count+' صنف متغير أو جديد في '+kind.selectedOptions[0].textContent+'؟'))return;
  loading=true;save.disabled=true;preview.disabled=true;message('جارٍ حفظ التغييرات في GitHub…');
  try{const response=await request('save');snapshot=null;review.hidden=true;stage('save');message('تم حفظ التحديث وتحديث وقت آخر تعديل للمخزون'+(response.lastUpdate?' إلى '+response.lastUpdate+' بتوقيت السعودية':'')+'. سيظهر الوقت الجديد في النظام بعد اكتمال النشر ثم تحديث صفحة المخزون.'+(response.commit?' رقم العملية: '+response.commit:''),'success')}
  catch(e){invalidate();message('تعذر الحفظ: '+e.message+' أعد المعاينة للمحاولة مجددًا.','error')}

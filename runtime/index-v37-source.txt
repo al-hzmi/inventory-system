@@ -1191,11 +1191,13 @@ const bulkSaveProductCategory = async ({ items, category, currentCategoryById, s
 const runSearch = (activeDb, rawQuery, hideOutOfStock, depletedDb = []) => {
     const cleanQuery = normalizeCleanId(rawQuery);
     const textQuery  = normalizeText(rawQuery);
+    const skuToken = canonicalSkuToken(rawQuery), directSku = /[A-Z]/.test(skuToken);
     const nameTokens = textQuery.length >= MIN_NAME_QUERY_LENGTH ? textQuery.split(' ').filter(Boolean) : [];
 
     if (!cleanQuery && nameTokens.length === 0) return { visible: [], availableVisible: [], depletedVisible: [], total: 0, availableTotal: 0, depletedTotal: 0, exact: null };
 
     const rankItem = item => {
+        if (directSku && canonicalSkuToken(item.id) === skuToken) return -1;
         if (cleanQuery && item.cleanId && item.cleanId.startsWith(cleanQuery)) return item.cleanId === cleanQuery ? 0 : 1;
         if (nameTokens.length && item.searchName) {
             let all = true;
@@ -1231,9 +1233,11 @@ const runSearch = (activeDb, rawQuery, hideOutOfStock, depletedDb = []) => {
     };
     const availableVisible = cap(availableRanked, MAX_SKU_RESULTS, MAX_NAME_RESULTS);
     const depletedVisible = cap(depletedRanked, MAX_DEPLETED_SKU_RESULTS, MAX_DEPLETED_NAME_RESULTS);
-    const availableExact = availableRanked.find(r => r.rank === 0)?.item || null;
-    const depletedExact = depletedRanked.find(r => r.rank === 0)?.item || null;
-    const exact = availableExact || (availableVisible.length === 0 ? depletedExact : null);
+    const availableExact = availableRanked.find(r => r.rank <= 0) || null;
+    const depletedExact = depletedRanked.find(r => r.rank <= 0) || null;
+    // A truly exact archived SKU outranks merely similar available SKU numbers.
+    const exact = !depletedExact || (availableExact && availableExact.rank <= depletedExact.rank)
+        ? (availableExact?.item || null) : depletedExact.item;
     return {
         visible: availableVisible.concat(depletedVisible),
         availableVisible, depletedVisible,
@@ -5153,7 +5157,7 @@ const App = () => {
                 {query.trim() && search && (
                     <div className="max-w-[520px] mx-auto mt-24 flex flex-col gap-8">
                         {search.total === 0 && <StateBlock icon={<Icon.Search className="w-20 h-20" />} title="لم يتم العثور على الصنف" note="لا يوجد صنف بهذا الرقم أو الاسم في المخزون الحالي أو أرشيف الأصناف السابقة." />}
-                        {search.depletedTotal > 0 && <div className="rounded-10 border border-warn/20 bg-warnSoft px-12 py-8 text-[11px] text-secondary">المتوفر بالأولوية دائمًا · توجد <b className="text-primary numeric">{NUMBER_FORMATTER.format(search.depletedTotal)}</b> نتيجة منتهية للاستفادة من بياناتها وصورها.</div>}
+                        {search.depletedTotal > 0 && <button type="button" onClick={() => { setSelectedSearchItem(null); setTimeout(() => document.getElementById('batco-depleted-results')?.scrollIntoView({behavior:'smooth',block:'center'}), 40); }} className="w-full text-right rounded-10 border border-warn/20 bg-warnSoft px-12 py-8 text-[11px] text-secondary">توجد <b className="text-primary numeric">{NUMBER_FORMATTER.format(search.depletedTotal)}</b> نتيجة منتهية للاطلاع على بياناتها وصورها. <span className="font-bold underline">عرض الأصناف المنتهية ←</span></button>}
 
                         {selectedSearchItem ? (
                             <React.Fragment>
@@ -5168,7 +5172,11 @@ const App = () => {
                         ) : (
                             <React.Fragment>
                                 {search.exact && <FullResultCard item={search.exact} warehouseName={search.exact.isDepletedArchive ? 'أرشيف سابق' : activeWarehouseName} showImage={showImageInSearch && hasImageForItem(imagesList, search.exact)} imageFileName={imageForItem(imagesList, search.exact)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} isAdmin={isAdmin} currentCategory={currentCategoryById[search.exact.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />}
-                                {search.visible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
+                                {search.availableVisible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
+                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
+                                ))}
+                                {search.depletedVisible.length > 0 && <div id="batco-depleted-results" className="mt-12 rounded-10 border border-border bg-surface px-12 py-10"><h3 className="text-[13px] font-bold text-primary">الأصناف المنتهية أو المؤرشفة</h3><p className="text-[11px] text-muted mt-2">للاطلاع على صور الأصناف وبياناتها فقط؛ لا يمكن إضافتها إلى الطلب.</p></div>}
+                                {search.depletedVisible.map(item => (
                                     <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                                 ))}
                                 {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — اضغط على أي نتيجة لفتح بطاقتها كاملة</p>}

@@ -9,6 +9,8 @@ on:
       - 'v59-admin-import-ui.js'
       - 'pdf-inventory-import.js'
       - 'tests/v112-pdf-inventory-import.cjs'
+      - 'tests/v113-inventory-truth-and-archive.cjs'
+      - 'runtime/index-v37-source.txt'
       - 'v59-admin-import.css'
       - 'admin-inventory-import.html'
       - 'tests/v58-inventory-import.mjs'
@@ -33,8 +35,9 @@ jobs:
           node --check v59-admin-import-ui.js
           node --check pdf-inventory-import.js
           node tests/v112-pdf-inventory-import.cjs
-          grep -q 'v59-admin-import-ui.js?v=112.0' admin-inventory-import.html
-          grep -q 'v59-admin-import.css?v=59.1' admin-inventory-import.html
+          node tests/v113-inventory-truth-and-archive.cjs
+          grep -q 'v59-admin-import-ui.js?v=113.0' admin-inventory-import.html
+          grep -q 'v59-admin-import.css?v=113.0' admin-inventory-import.html
           grep -q 'v59-review' v59-admin-import-ui.js
           node tests/v58-inventory-import.mjs
           node tests/v60-inventory-import-version.mjs

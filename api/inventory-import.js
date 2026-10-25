@@ -8,7 +8,9 @@ async function remote(c,path,body,ref){const url='https://api.github.com/repos/'
 const readLines=text=>String(text||'').replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').split('\n').map((line,i)=>({line:i+1,cells:line.split('\t')})).filter(r=>r.cells.some(c=>c.trim()));
 const skuOf=x=>String(x||'').trim().toUpperCase();
 const numeric=(x,line,name,zero=true)=>{const s=String(x??'').trim().replace(/,/g,'');if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(s)||!Number.isFinite(Number(s))||Number(s)<0||(!zero&&Number(s)===0))throw Error('السطر '+line+': '+name+' غير صالح ('+s+')');return String(Number(s))};
-function prepare(kind,input,current){
+function prepare(kind,input,current,options={}){
+ const fullSnapshot=options.fullSnapshot===true;
+ if(fullSnapshot&&kind==='pricing')throw Error('مطابقة الكشف الكامل متاحة للمخزون فقط، وليست للتسعيرة');
  const source=readLines(input);if(source.length<2)throw Error('الصق صف العناوين وصفًا واحدًا على الأقل');
  const inputLines=String(input||'').replace(/\r\n?/g,'\n').split('\n');if(inputLines.at(-1)==='')inputLines.pop();const blankRowsSkipped=inputLines.filter(l=>!l.trim()).length;
  const price=kind==='pricing',two=price&&source[0].cells[0].includes('مخزون جدة');
@@ -45,12 +47,37 @@ function prepare(kind,input,current){
    for(const [k,value,field] of fields)if(old[i][k]!==value){changes.push({sku:id,field,before:old[i][k]||'',after:value});modified.add(id);if(k!==3)metadata.add(id);old[i][k]=value}
   }
  }
+ let unreported=0,zeroed=0,matched=0,inventoryRows=0;
+ const zeroExamples=[];
+ if(!price){
+  const existing=old.slice(1).filter(c=>skuOf(c[0]));
+  inventoryRows=existing.length;
+  const missing=existing.filter(c=>!values.has(skuOf(c[0])));
+  unreported=missing.length;matched=inventoryRows-unreported;
+  if(fullSnapshot){
+   // A short selection must never zero the rest of a real branch.
+   if(matched<Math.ceil(inventoryRows*.5))
+    throw Error('الكشف يغطي '+matched+' من '+inventoryRows+' صنف فقط. منعنا تصفير البقية: ارفع كشفًا كاملًا يغطي نصف الأصناف الحالية على الأقل، أو ألغِ خيار المطابقة الكاملة.');
+   for(const cells of missing){
+    const id=skuOf(cells[0]),before=String(cells[3]||'').trim();
+    const qty=Number(before.replace(/,/g,''));
+    if(!Number.isFinite(qty)||qty<0)throw Error('الكمية السابقة للصنف '+id+' غير صالحة؛ تعذرت مطابقة الكشف.');
+    if(qty<=0)continue;
+    cells[3]='0';zeroed++;modified.add(id);
+    const detail={sku:id,field:'الكمية (غير وارد بالكشف الكامل)',before,after:'0'};
+    changes.push(detail);
+    if(zeroExamples.length<8)zeroExamples.push(id);
+   }
+  }
+ }
  for(const row of values.values())if(!seen.has(row.id)){
   const cells=Array(Math.max(price?7:5,old[0].length)).fill('');
   if(price){cells[0]=row.id;cells[1]=row.value}else{if(!row.meta)throw Error('الصنف '+row.id+' جديد؛ الصق معه الاسم والوحدة والشد');[cells[0],cells[1],cells[2],cells[3],cells[4]]=[row.id,row.meta.name,row.meta.unit,row.value,row.meta.pack]}
   added.push(cells);changes.push({sku:row.id,field:'صنف جديد',before:'',after:row.value});
  }
- const summary={rows:values.size,changed:modified.size,added:added.length,unchanged:values.size-modified.size-added.length,blankRowsSkipped,detailChanges:metadata.size,examples:changes.slice(0,20)};
+ const changesFromInput=modified.size-zeroed;
+ const samples=fullSnapshot&&zeroed?[...changes.filter(c=>c.field!=='الكمية (غير وارد بالكشف الكامل)').slice(0,14),...changes.filter(c=>c.field==='الكمية (غير وارد بالكشف الكامل)').slice(0,6)]:changes.slice(0,20);
+ const summary={rows:values.size,changed:modified.size,added:added.length,unchanged:values.size-changesFromInput-added.length,blankRowsSkipped,detailChanges:metadata.size,unreported,matched,inventoryRows,zeroed,zeroExamples,fullSnapshot,examples:samples};
  return {summary,content:changes.length?[...old,...added].map(r=>r.join('\t')).join(ending)+ending:current};
 }
 
@@ -83,4 +110,4 @@ async function saveInventoryWithVersion(c,headSha,dataPath,text){
  return {sha:commit.sha,lastUpdate};
 }
 
-module.exports=async(req,res)=>{if(req.method==='GET'){const c=config();return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v60-atomic-last-update',imports:['jeddah','riyadh','pricing']})}if(req.method!=='POST')return respond(res,405,{error:'Method not allowed'});const c=config(),b=req.body||{};if(!c.token||!c.owner||!c.repo)return respond(res,503,{error:'GitHub غير مهيأ'});if(crypto.createHash('sha256').update(String(b.adminToken||'')).digest('hex')!==HASH||b.adminProof?.role!=='admin'||!b.adminProof?.photoId)return respond(res,401,{error:'صلاحيات المدير مطلوبة'});if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'مصدر غير مسموح'})}catch{return respond(res,403,{error:'مصدر غير صالح'})}}if(!paths[b.kind]||!['preview','save'].includes(b.action)||typeof b.text!=='string'||b.text.length>2000000)return respond(res,400,{error:'طلب غير صالح'});try{const head=b.action==='save'?await gitData(c,'git/ref/heads/'+c.branch):null;const file=await remote(c,paths[b.kind],undefined,head?.object?.sha),current=Buffer.from(file.content.replace(/\s/g,''),'base64').toString('utf8'),result=prepare(b.kind,b.text,current);if(b.action==='preview')return respond(res,200,{sha:file.sha,summary:result.summary});if(b.sha!==file.sha)return respond(res,409,{error:'تغيّرت البيانات. أعد المعاينة'});if(result.content===current)return respond(res,200,{ok:true,summary:result.summary});const saved=await saveInventoryWithVersion(c,head.object.sha,paths[b.kind],result.content);return respond(res,200,{ok:true,summary:result.summary,commit:saved.sha,lastUpdate:saved.lastUpdate,versionUpdated:true})}catch(e){return respond(res,e.status===409?409:400,{error:e.message})}};
+module.exports=async(req,res)=>{if(req.method==='GET'){const c=config();return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v60-atomic-last-update',imports:['jeddah','riyadh','pricing']})}if(req.method!=='POST')return respond(res,405,{error:'Method not allowed'});const c=config(),b=req.body||{};if(!c.token||!c.owner||!c.repo)return respond(res,503,{error:'GitHub غير مهيأ'});if(crypto.createHash('sha256').update(String(b.adminToken||'')).digest('hex')!==HASH||b.adminProof?.role!=='admin'||!b.adminProof?.photoId)return respond(res,401,{error:'صلاحيات المدير مطلوبة'});if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'مصدر غير مسموح'})}catch{return respond(res,403,{error:'مصدر غير صالح'})}}if(!paths[b.kind]||!['preview','save'].includes(b.action)||typeof b.text!=='string'||b.text.length>2000000)return respond(res,400,{error:'طلب غير صالح'});try{const head=b.action==='save'?await gitData(c,'git/ref/heads/'+c.branch):null;const file=await remote(c,paths[b.kind],undefined,head?.object?.sha),current=Buffer.from(file.content.replace(/\s/g,''),'base64').toString('utf8'),result=prepare(b.kind,b.text,current,{fullSnapshot:b.fullSnapshot===true});if(b.action==='preview')return respond(res,200,{sha:file.sha,summary:result.summary});if(b.sha!==file.sha)return respond(res,409,{error:'تغيّرت البيانات. أعد المعاينة'});if(result.content===current)return respond(res,200,{ok:true,summary:result.summary});const saved=await saveInventoryWithVersion(c,head.object.sha,paths[b.kind],result.content);return respond(res,200,{ok:true,summary:result.summary,commit:saved.sha,lastUpdate:saved.lastUpdate,versionUpdated:true})}catch(e){return respond(res,e.status===409?409:400,{error:e.message})}};
