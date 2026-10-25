@@ -1,4 +1,4 @@
-/* V59: clean, accessible Excel import review. Existing admin guard runs first. */
+/* V112: secure PDF stock reports + existing Excel import review. Existing admin guard runs first. */
 (()=>{
 'use strict';
 const root=document.getElementById('app');
@@ -12,9 +12,9 @@ root.innerHTML=[
 '<section class="v59-form" aria-label="إدخال بيانات الاستيراد">',
 '<div class="v59-section-title"><span class="v59-index">01</span><div><h3>مصدر البيانات</h3><p>حدّد الفرع أو التسعيرة قبل الرفع.</p></div></div>',
 '<div class="v59-layout"><div class="v59-field"><label for="kind">نوع البيانات</label><select id="kind"><option value="jeddah">كميات ومعلومات أصناف جدة</option><option value="riyadh">كميات ومعلومات أصناف الرياض</option><option value="pricing">تسعيرة البيع — الفرعان</option></select></div><div class="v59-field"><span class="v59-label">طريقة التحديث</span><div class="v59-static">تحديث المحدد فقط، دون حذف الأصناف الأخرى</div></div></div>',
-'<label for="file" id="v59-drop" class="v59-drop"><span class="v59-upload-icon">⇧</span><strong>اختيار ملف Excel أو سحبه هنا</strong><small>يدعم ملفات XLSX وXLS وCSV وTSV وTXT</small><input id="file" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt"><span id="v59-filename" class="v59-filename">لم يتم اختيار ملف</span></label>',
+'<label for="file" id="v59-drop" class="v59-drop"><span class="v59-upload-icon">⇧</span><strong>اختيار ملف PDF أو Excel أو سحبه هنا</strong><small>PDF تقارير المخزون، أو XLSX وXLS وCSV وTSV وTXT</small><input id="file" type="file" accept=".pdf,.xlsx,.xls,.csv,.tsv,.txt,application/pdf"><span id="v59-filename" class="v59-filename">لم يتم اختيار ملف</span></label>',
 '<div class="v59-or">أو</div>',
-'<div class="v59-field"><label for="data">لصق الجدول مباشرة من Excel</label><textarea id="data" spellcheck="false" dir="ltr" placeholder="رقم الصنف    اسم الصنف    الوحدة    الكمية المتوفرة    الشد"></textarea><p id="v59-hint" class="v59-hint">يدعم الأعمدة الخمسة الأصلية والأعمدة الزائدة والصفوف الفارغة. تغييرات الاسم والوحدة والشد تُعرض أيضًا للمراجعة.</p></div>',
+'<div class="v59-field"><label for="data">لصق الجدول مباشرة من Excel</label><textarea id="data" spellcheck="false" dir="ltr" placeholder="رقم الصنف    اسم الصنف    الوحدة    الكمية المتوفرة    الشد"></textarea><p id="v59-hint" class="v59-hint">من تقرير PDF نقرأ رقم الصنف والكمية المتوفرة فقط. ملفات Excel تُعامل حسب أعمدتها، وتُراجع كل التغييرات قبل الحفظ.</p></div>',
 '<div class="v59-actions"><button type="button" id="preview" class="v59-button v59-button-primary">فحص ومعاينة التغييرات ←</button><button type="button" id="v59-clear" class="v59-button v59-button-outline">مسح</button><span id="v59-count" class="v59-counter">بانتظار بيانات</span></div>',
 '</section>',
 '<div id="result" class="v59-notice" role="status" aria-live="polite">لم تبدأ المعاينة بعد. الفحص لا يغيّر أي بيانات.</div>',
@@ -76,19 +76,35 @@ async function xlsxLibrary(){
 }
 async function importFile(file){
  if(!file||loading)return;
- invalidate();if(file.size>5*1024*1024)throw Error('حجم الملف أكبر من 5 ميجابايت.');
+ invalidate();
+ paste.value='';updateCount();source='لصق مباشر';
+ el('v59-filename').textContent='لم يتم اختيار ملف';
  const ext=file.name.split('.').pop().toLowerCase();
- if(!['xlsx','xls','csv','tsv','txt'].includes(ext))throw Error('امتداد الملف غير مدعوم.');
- message('جارٍ قراءة الملف: '+file.name);
- let data;
- if(ext==='xlsx'||ext==='xls'){const x=await xlsxLibrary(),book=x.read(await file.arrayBuffer(),{type:'array'});if(!book.SheetNames.length)throw Error('ملف Excel لا يحتوي على ورقة بيانات.');data=x.utils.sheet_to_csv(book.Sheets[book.SheetNames[0]],{FS:'\t',RS:'\n',blankrows:false})}
- else{data=await file.text();if(ext==='csv')data=csvToTsv(data)}
- if(data.length>1900000)throw Error('حجم بيانات الملف كبير؛ قسمه إلى دفعات.');
- paste.value=data;source=file.name;el('v59-filename').textContent=file.name;updateCount();message('تم تحميل الملف. اضغط فحص ومعاينة التغييرات.','success');
+ if(!['pdf','xlsx','xls','csv','tsv','txt'].includes(ext))throw Error('امتداد الملف غير مدعوم.');
+ const limit=(ext==='pdf'?20:5)*1024*1024;
+ if(file.size>limit)throw Error('حجم الملف أكبر من '+(ext==='pdf'?20:5)+' ميجابايت.');
+ if(ext==='pdf'&&kind.value==='pricing')throw Error('تقرير المخزون PDF لا يتضمن سعر بيع. اختر كميات جدة أو الرياض.');
+ setBusy(true);
+ try {
+  message('جارٍ قراءة الملف: '+file.name);
+  let data,details='';
+  if(ext==='pdf'){
+   if(!window.BatcoPdfInventory)throw Error('قارئ PDF غير متاح. أعد تحميل الصفحة.');
+   const parsed=await window.BatcoPdfInventory.readFile(file,(page,total)=>message('جارٍ قراءة تقرير PDF: صفحة '+page+' من '+total+'…'));
+   data=parsed.text;details=' تم استخراج '+number(parsed.rows)+' صنف من '+number(parsed.pages)+' صفحة — رقم الصنف والكمية فقط.';
+  }else if(ext==='xlsx'||ext==='xls'){
+   const x=await xlsxLibrary(),book=x.read(await file.arrayBuffer(),{type:'array'});
+   if(!book.SheetNames.length)throw Error('ملف Excel لا يحتوي على ورقة بيانات.');
+   data=x.utils.sheet_to_csv(book.Sheets[book.SheetNames[0]],{FS:'\t',RS:'\n',blankrows:false});
+  }else{data=await file.text();if(ext==='csv')data=csvToTsv(data)}
+  if(data.length>1900000)throw Error('حجم بيانات الملف كبير؛ قسمه إلى دفعات.');
+  paste.value=data;source=file.name;el('v59-filename').textContent=file.name;updateCount();
+  message('تمت قراءة الملف بنجاح.'+details+' اضغط فحص ومعاينة التغييرات قبل الاعتماد.','success');
+ } finally {setBusy(false)}
 }
 upload.addEventListener('change',async()=>{try{await importFile(upload.files?.[0])}catch(e){message('تعذرت قراءة الملف: '+e.message,'error')}});
 paste.addEventListener('input',()=>{invalidate();source='لصق مباشر';el('v59-filename').textContent='بيانات ملصقة';updateCount()});
-kind.addEventListener('change',()=>{invalidate();message('تم تغيير الوجهة؛ أعد الفحص قبل الحفظ.');el('v59-hint').textContent=kind.value==='pricing'?'التسعيرة: المطلوب رقم الصنف وسعر البيع، ويمكن لصق جدول جدة والرياض كاملًا.':'المخزون: تقبل الأعمدة الخمسة الأصلية والصفوف الفارغة؛ تُعرض تغييرات الكمية والاسم والوحدة والشد عند وجودها.'});
+kind.addEventListener('change',()=>{invalidate();message('تم تغيير الوجهة؛ أعد الفحص قبل الحفظ.');el('v59-hint').textContent=kind.value==='pricing'?'التسعيرة: المطلوب رقم الصنف وسعر البيع، ويمكن لصق جدول جدة والرياض كاملًا.':'المخزون: يستخرج PDF رقم الصنف والكمية فقط؛ وتبقى بيانات الاسم والوحدة والشد دون تغيير.'});
 clear.addEventListener('click',()=>{upload.value='';paste.value='';source='لصق مباشر';el('v59-filename').textContent='لم يتم اختيار ملف';invalidate();updateCount();message('تم مسح البيانات المدخلة فقط؛ المخزون لم يتغير.')});
 const drop=el('v59-drop');
 for(const e of ['dragover','dragenter'])drop.addEventListener(e,event=>{event.preventDefault();drop.classList.add('dragging')});
