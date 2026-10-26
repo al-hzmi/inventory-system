@@ -2,6 +2,7 @@
    Run consistent decoding BEFORE any accept/success cue. A verified read never implies cloud sync. */
 (function(root){
 'use strict';
+const trustedArabRiverPrefixes=new Set(['5469835','6864553']);
 const formatKeys=['CODE_128','CODE_39','CODE_93','EAN_13','EAN_8','UPC_A','UPC_E','ITF','CODABAR','QR_CODE','DATA_MATRIX'];
 const digits=s=>String(s??'').trim().replace(/[٠-٩۰-۹]/g,d=>String(('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹'.indexOf(d))%10));
 function checksum(code){
@@ -48,12 +49,12 @@ function createVerifier({onConfirm,now=()=>Date.now(),windowMs=1300,minGapMs=55}
  }
  return {push,reset(){candidates.clear();lastConfirmed='';confirmedAt=-Infinity}};
 }
-/* Manufacturer label observed on actual BATCO ARAB RIVER products.
+/* Manufacturer labels observed on actual BATCO ARAB RIVER products (5469835 and 6864553 prefixes).
    Use ONLY verified five digits and an EAN checksum, never random substring.
    For codes not recognized, return original text for manual review. */
 function skuFromBarcode(raw){
  const value=normalize(raw);
- if(/^5469835\d{6}$/.test(value)&&checksum(value))
+ if(/^\d{13}$/.test(value)&&trustedArabRiverPrefixes.has(value.slice(0,7))&&checksum(value))
    return 'AR_'+String(Number(value.slice(7,12)));
  return value;
 }

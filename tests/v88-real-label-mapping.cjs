@@ -23,8 +23,20 @@ assert.equal(C.resolveScan('AR_25978',products).item.sku,'AR_25978','manual SKU 
 assert.equal(C.resolveScan('25978',products).item.sku,'AR_25978','manual numeric SKU still works');
 assert.equal(C.resolveScan('ARM_10004',products).item.sku,'ARM_10004','legacy SKU still works');
 assert.equal(C.resolveScan('5469835001128',products).reason,'unlinked-ean','other label cannot resolve without SKU');
+for(const [barcode,sku] of [['6864553215977','AR_21597'],['6864553217773','AR_21777']]){
+ assert.equal(C.checkEAN(barcode),true,barcode+' is a real valid EAN-13');
+ for(const warehouseFile of ['data/jeddah.tsv','data/riyadh.tsv']){
+  const warehouseProducts=C.inventory(fs.readFileSync(warehouseFile,'utf8')).filter(p=>p.warehouseQty>0);
+  assert.ok(warehouseProducts.some(p=>p.sku===sku),sku+' must be in '+warehouseFile);
+  const found=C.resolveScan(barcode,warehouseProducts);
+  assert.equal(found.item?.sku,sku,barcode+' must resolve to '+sku+' in '+warehouseFile);
+  assert.equal(found.reason,'verified-manufacturer-ean');
+ }
+}
+assert.equal(C.resolveScan('6864553215978',products).reason,'invalid-ean','bad checksum must be rejected');
+assert.equal(C.resolveScan('6469131259789',products).reason,'unlinked-ean','unverified supplier prefix must still be rejected');
 const html=fs.readFileSync('branch-presence.html','utf8'),css=fs.readFileSync('branch-presence.css','utf8'),audio=fs.readFileSync('branch-scan-audio.js','utf8');
-assert.match(html,/branch-presence-core\.js\?v=88\.0/);
+assert.match(html,/branch-presence-core\.js\?v=114\.0/);
 assert.match(html,/branch-scan-audio\.js\?v=88\.0/);
 assert.match(css,/#cameraReader video,#cameraReader__scan_region video/);
 assert.match(css,/object-fit:cover!important/);

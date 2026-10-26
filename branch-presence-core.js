@@ -58,10 +58,12 @@ function checkEAN(value){
 /* BARCODE-TO-SKU: manufacturer-verified label pattern, never arbitrary substring.
    A real ARAB RIVER product label photographed in Jeddah shows:
    AR: 25978 => EAN 5469835|25978|9. Verify EAN check digit first.
-   Only the observed fixed 7-digit manufacturer prefix is trusted. */
+   AR: 21597 => EAN 6864553|21597|7; AR: 21777 => EAN 6864553|21777|3.
+   Only these observed fixed 7-digit manufacturer prefixes are trusted. */
+const trustedArabRiverPrefixes=new Set(['5469835','6864553']);
 function manufacturerEAN(raw,products){
  const q=key(raw);
- if(!/^5469835\d{6}$/.test(q)||!checkEAN(q))return {item:null,reason:'unlinked-ean'};
+ if(!/^\d{13}$/.test(q)||!trustedArabRiverPrefixes.has(q.slice(0,7))||!checkEAN(q))return {item:null,reason:'unlinked-ean'};
  const itemDigits=q.slice(7,12);
  const candidates=products.filter(p=>{
    const sku=key(p.sku);
