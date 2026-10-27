@@ -12,6 +12,7 @@ on:
       - 'admin-stocktake.html'
       - 'sw.js'
       - 'tests/v73-*'
+      - 'tests/v75-shared-counts.cjs'
       - '.github/workflows/v73-stocktake-quality.yml'
   pull_request:
     paths:

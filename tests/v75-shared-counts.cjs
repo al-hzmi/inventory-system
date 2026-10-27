@@ -3,7 +3,11 @@ const a=C.teamKey('right'),b=C.teamKey('left');
 let item={sku:'001',teamId:'right',teamName:'يمين',expectedQty:12.5,actualQty:null,countStatus:'pending'};
 assert.equal(C.forTeam(item,'left').countStatus,'pending');
 // Independent field updates commute even when two teams started from the same snapshot.
-for(const order of [[a,b],[b,a]]){const x={...item,teamCounts:{}};for(const k of order)x.teamCounts[k]={quantity:k===a?10.25:2.25};assert.equal(C.aggregate(x).actualQty,12.5);assert.equal(C.aggregate(x).countStatus,'matched');assert.equal(C.result(C.aggregate(x)).actual,12.5)}
+for(const order of [[a,b],[b,a]]){const x={...item,teamCounts:{}};for(const k of order)x.teamCounts[k]={quantity:k===a?10.25:2.25,scope:k===a?'يمين':'يسار'};assert.equal(C.aggregate(x).actualQty,12.5);assert.equal(C.aggregate(x).countStatus,'matched');assert.equal(C.result(C.aggregate(x)).actual,12.5)}
+// The exact same area cannot be counted by two members without explicit resolution.
+const overlap={...item,teamCounts:{[a]:{quantity:10.25,scope:'الممر أ'},[b]:{quantity:2.25,scope:'الممر أ'}}};
+assert.equal(C.aggregate(overlap).countStatus,'conflict');
+assert.equal(C.result(C.aggregate(overlap)).actual,'');
 item.teamCounts={[a]:{quantity:10.25},[b]:{quantity:2.25}};
 item.teamCounts[b]={quantity:3.25};assert.equal(C.aggregate(item).actualQty,13.5);assert.equal(C.forTeam(item,'left')._teamActual,3.25);assert.equal(C.forTeam(item,'right')._teamActual,10.25);
 item.teamCounts[b]={quantity:0};assert.equal(C.aggregate(item).actualQty,10.25);assert.notEqual(C.forTeam(item,'left').countStatus,'pending');
