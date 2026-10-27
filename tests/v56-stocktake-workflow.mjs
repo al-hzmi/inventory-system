@@ -27,7 +27,7 @@ has(employee,'data-entry=','single quantity entry/edit action must be available'
 has(employee,'manual_revision','revisions must be recorded using the same counting action');
 has(employee,'window.confirm(message)','later changes require explicit confirmation');
 assert.ok(!employee.includes('data-found='),'obsolete found-quantity button must be absent');
-has(employee,"action:wasCounted?'count_revised':'count_created'",'first count and revisions must be distinguishable');
+has(employee,"action:Number.isFinite(previousActual)?'count_revised':'count_created'",'first count and revisions must be distinguished by the current committed team count');
 
 // Flexible team model and admin root control.
 has(admin,'عضو / أعضاء اللجنة (أصحاب الحسابات)','committee member terminology must match the stocktake form');
