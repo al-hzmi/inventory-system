@@ -1,4 +1,4 @@
-/* V112 — PDF stock report import. Only trusted SKU and quantity columns leave the device. */
+/* V114 — PDF stock report import. Only trusted SKU and quantity columns leave the device. */
 (function (host) {
   'use strict';
   const SKU = /[A-Z]{1,10}[_-][A-Z0-9][A-Z0-9_./-]{1,79}/g;
@@ -92,7 +92,11 @@
     pages.forEach((page, index) => {
       const items = page && page.items || [];
       if (items.length < 3) throw Error('صفحة ' + (index+1) + ' لا تحتوي نصًا يمكن استخراجه. ملفات PDF المصورة تحتاج نسخة نصية أصلية.');
-      for (const row of extractPage(page,index+1)) {
+      const extracted = extractPage(page,index+1);
+      // A lost middle page must not silently erase yesterday's stock on a full snapshot.
+      if (pages.length > 2 && index > 0 && index < pages.length - 1 && !extracted.length && items.length > 25)
+        throw Error('صفحة ' + (index+1) + ' لم تُقرأ منها أصناف رغم وجود نصوص كثيرة؛ منعنا استيراد تقرير ناقص.');
+      for (const row of extracted) {
         if (rows.has(row.sku)) throw Error('رقم الصنف ' + row.sku + ' مكرر في PDF؛ راجع التقرير قبل الاستيراد.');
         rows.set(row.sku,row.quantity);
       }

@@ -65,8 +65,14 @@ check('Add new full product and keep all existing rows',()=>{
  assert.ok(x.content.includes('TEST_9981\tصنف اختبار\tكرتون\t0.5\t24\t\t\t'));
  assert.ok(x.content.includes('ARM_10004\t'));
 });
-check('Reject incomplete new item',()=>{
- assert.throws(()=>prepare('jeddah','رقم الصنف\tالكمية المتوفرة\nTEST_9981\t1',stockFixture),/الاسم والوحدة والشد/);
+check('New quantity-only item requires metadata before save',()=>{
+ const input='رقم الصنف\tالكمية المتوفرة\nTEST_9981\t1';
+ const preview=prepare('jeddah',input,stockFixture);
+ assert.equal(preview.summary.metadataNeeded,1);
+ assert.equal(preview.summary.pendingNew[0],'TEST_9981');
+ const complete=prepare('jeddah',input,stockFixture,{metadataOverrides:{TEST_9981:{name:'اختبار',unit:'كرتون',pack:12}}});
+ assert.equal(complete.summary.metadataNeeded,0);
+ assert.ok(complete.content.includes('TEST_9981\tاختبار\tكرتون\t1\t12'));
 });
 check('Ignore true blank rows in pricing paste',()=>{
  const x=prepare('pricing','رقم الصنف\tسعر البيع\n\n\t\t\t\nARM_10004\t245\n',priceFixture);
