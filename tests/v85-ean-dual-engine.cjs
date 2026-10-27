@@ -28,7 +28,7 @@ const page=fs.readFileSync('branch-presence.html','utf8'),worker=fs.readFileSync
 assert.match(page,/branch-barcode-fallback\.js/);
 assert.match(page,/id="cameraDecoded"/);
 assert.match(worker,/alternateDecoder=window\.BranchBarcodeFallback\.create/);
-assert.match(worker,/تم التعرف على الباركود/);
+assert.match(worker,/باركود مؤكد:/);
 assert.match(worker,/resolveScan/);
-assert.match(fs.readFileSync('sw.js','utf8'),/stocktake-shell-v8[568]/);
+assert.match(fs.readFileSync('sw.js','utf8'),/stocktake-shell-v89/);
 console.log('PASS V85: verified EAN from uploaded clip, independent Quagga decoder, safe SKU matching and explicit barcode metadata');
