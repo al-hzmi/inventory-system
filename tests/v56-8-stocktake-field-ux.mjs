@@ -32,7 +32,7 @@ has(employee,'function completedCardHtml','completed items must use compact oper
 has(employee,'let stocktakeAudioCtx=null','audio context must persist across asynchronous Firestore save');
 has(employee,'function ensureFeedbackAudio()','audio must be unlocked from a user gesture');
 has(employee,"window.addEventListener('pointerdown',ensureFeedbackAudio",'audio context must be primed before async save');
-has(employee,'feedback(status,finishedAll)','save must trigger sound/haptic feedback after success');
+has(employee,'feedback(result.status,finishedAll)','save must trigger sound/haptic feedback after success');
 has(employee,'counted?`<div class="qtygrid"','system quantity must remain behind counted condition');
 has(employee,'`:`<div class="blind"></div>`','uncounted card must hide system quantity');
 assert.ok(!employee.includes('class="panel mission"'),'AI-like dark mission scoreboard must be removed from employee render');

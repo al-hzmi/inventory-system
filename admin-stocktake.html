@@ -559,15 +559,14 @@ function exportExcel(diffOnly){
 async function resetAllPreviousStocktakes(){
  const all=await db.collection('stocktake_campaigns').get({source:'server'});
  if(all.metadata?.fromCache)throw new Error('CACHE_ONLY');
- if(!all.size){toast('لا توجد حملات جرد سابقة');return}
- const campaigns=all.docs.map(d=>({id:d.id,...d.data()}));
- const active=campaigns.filter(c=>c.status==='active');
- if(active.length&&!confirm('تحذير: توجد '+active.length+' حملات نشطة. حذفها سيوقف الموظفين والمحاسب فورًا. هل تريد مواصلة المعاينة؟'))return;
+ const campaigns=all.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.isTest||c.testMode);
+ if(!campaigns.length){toast('لا توجد تجارب جرد سابقة للحذف');return}
+ if(campaigns.some(c=>c.status==='active')){
+  toast('يوجد جرد تجريبي نشط. أغلق التجربة أولًا؛ لن يتوقف أي جرد أثناء التنظيف.');return;
+ }
  const phrase='حذف تجارب الجرد';
- if(!confirm('سيتم حذف '+campaigns.length+' حملة وجميع أصنافها ومجموعاتها وسجل تدقيقها، دون لمس المخزون أو الفواتير. لا يمكن التراجع. متابعة؟'))return;
+ if(!confirm('سيتم حذف '+campaigns.length+' تجربة جرد فقط وجميع سجلاتها، دون لمس جرد جدة أو الرياض الفعلي أو المخزون والفواتير. متابعة؟'))return;
  if(prompt('اكتب النص حرفيًا للتأكيد النهائي: '+phrase,'')!==phrase){toast('لم يتم الحذف: التأكيد غير مطابق');return}
- const control=db.collection('system_controls').doc('stocktake_feature');
- const audit=db.collection('stocktake_audit');
  const names=['stocktake_items','stocktake_teams','stocktake_audit'];
  const snapshot=[];
  for(const campaign of campaigns){
@@ -580,9 +579,16 @@ async function resetAllPreviousStocktakes(){
   snapshot.push({campaign,collections});
  }
  const count=snapshot.reduce((n,x)=>n+x.collections.reduce((n,y)=>n+y.docs.length,0),0);
- if(!confirm('مراجعة نهائية: حذف '+campaigns.length+' حملة و'+count+' سجل تابع من قاعدة Firebase؟'))return;
- // Disable access FIRST; avoid showing a deleted campaign as still active.
- await control.set({enabled:false,accessMode:'none',allowedEmployeeIds:[],allowedEmployeeNames:[],activeCampaignId:'',activeCampaigns:{jeddah:null,riyadh:null},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:ROOT_ID},{merge:true});
+ if(!confirm('مراجعة نهائية: حذف '+campaigns.length+' تجربة فقط و'+count+' سجل تابع؟ لن تتأثر الحملات الحقيقية.'))return;
+ // The test reset NEVER updates stocktake_feature; the two real warehouses stay enabled.
+ const liveControl=await db.collection('system_controls').doc('stocktake_feature').get({source:'server'});
+ if(liveControl.metadata?.fromCache)throw new Error('CACHE_ONLY_CONTROL');
+ const controlData=liveControl.data()||{},liveMap=StocktakeBranch.activeMap(controlData);
+ const liveIds=new Set(Object.values(liveMap).map(x=>x.campaignId));
+ if(controlData.enabled&&controlData.activeCampaignId)liveIds.add(String(controlData.activeCampaignId));
+ const fresh=await Promise.all(campaigns.map(c=>db.collection('stocktake_campaigns').doc(c.id).get({source:'server'})));
+ if(fresh.some(d=>d.metadata?.fromCache||!d.exists||d.data()?.status==='active'||!(d.data()?.isTest||d.data()?.testMode))||
+    campaigns.some(c=>liveIds.has(c.id)))throw new Error('ACTIVE_OR_CHANGED_STOCKTAKE_PROTECTED');
  const allRefs=[];
  for(const entry of snapshot){for(const collection of entry.collections)for(const doc of collection.docs)allRefs.push(doc.ref);allRefs.push(db.collection('stocktake_campaigns').doc(entry.campaign.id))}
  const unique=new Map(allRefs.map(ref=>[ref.path,ref]));
@@ -593,11 +599,11 @@ async function resetAllPreviousStocktakes(){
    const batch=db.batch();for(const ref of refs.slice(i,i+350))batch.delete(ref);
    await batch.commit();deleted+=Math.min(350,refs.length-i);
   }
-  state.campaign=null;state.items=[];state.teams=[];state.audit=[];
-  toast('اكتمل حذف '+campaigns.length+' حملة و'+deleted+' سجل. تحقق من صفحة الجرد.');
+  if(state.campaign?.isTest||state.campaign?.testMode){state.campaign=null;state.items=[];state.teams=[];state.audit=[]}
+  toast('اكتمل حذف '+campaigns.length+' تجربة و'+deleted+' سجل؛ الجرد الحقيقي لم يُمس.');
  }catch(error){
-  console.error('[V94 reset]',error);
-  alert('الحذف جزئي أو فشل: حُذف '+deleted+' سجل من '+unique.size+'. لا تبدأ جردًا جديدًا قبل إكمال التنظيف. '+String(error?.code||error?.message||error));
+  console.error('[V116 reset-tests-only]',error);
+  alert('الحذف جزئي أو فشل: حُذف '+deleted+' سجل من '+unique.size+'. راجع الحملات التجريبية قبل إعادة المحاولة. '+String(error?.code||error?.message||error));
  }
 }
 async function auditAdmin(action,data){try{await db.collection('stocktake_audit').add({campaignId:state.campaign?.id||data?.campaignId||'',action,actorName:'مهند',actorEmployeeId:ROOT_ID,data,createdAt:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent||''})}catch(e){console.warn(e)}}
