@@ -11,6 +11,8 @@ on:
       - 'tests/v112-pdf-inventory-import.cjs'
       - 'tests/v113-inventory-truth-and-archive.cjs'
       - 'tests/v114-daily-inventory-snapshot.cjs'
+      - 'tests/v115-stocktake-source.cjs'
+      - 'admin-stocktake.html'
       - 'runtime/index-v37-source.txt'
       - 'v59-admin-import.css'
       - 'admin-inventory-import.html'
@@ -38,8 +40,9 @@ jobs:
           node tests/v112-pdf-inventory-import.cjs
           node tests/v113-inventory-truth-and-archive.cjs
           node tests/v114-daily-inventory-snapshot.cjs
-          grep -q 'v59-admin-import-ui.js?v=114.0' admin-inventory-import.html
-          grep -q 'v59-admin-import.css?v=114.0' admin-inventory-import.html
+          node tests/v115-stocktake-source.cjs
+          grep -q 'v59-admin-import-ui.js?v=115.0' admin-inventory-import.html
+          grep -q 'v59-admin-import.css?v=115.0' admin-inventory-import.html
           grep -q 'v59-review' v59-admin-import-ui.js
           node tests/v58-inventory-import.mjs
           node tests/v60-inventory-import-version.mjs
@@ -55,8 +58,8 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 24); do
             body="$(curl -fsSL --connect-timeout 5 --max-time 12 -H 'Cache-Control: no-cache' "https://inventory-system-coral-nu.vercel.app/api/inventory-import?verify=$GITHUB_SHA-$attempt" 2>/dev/null || true)"
-            if echo "$body" | grep -Fq '"version":"v114-authoritative-daily-snapshot"' && echo "$body" | grep -Fq '"configured":true'; then
-              echo 'Production inventory importer is configured and serving V114: PASS'
+            if echo "$body" | grep -Fq '"version":"v115-stocktake-source-verified"' && echo "$body" | grep -Fq '"configured":true'; then
+              echo 'Production inventory importer is configured and serving V115: PASS'
               exit 0
             fi
             echo "Waiting for production importer (attempt $attempt/24)"

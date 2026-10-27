@@ -65,8 +65,8 @@ assert.throws(()=>prepare('jeddah',newInput,jed,{fullSnapshot:true,metadataOverr
 assert.match(ui,/id="v113-full-snapshot" checked/,'Daily authoritative import must be the default');
 assert.match(ui,/metadataOverrides:action==='save'/,'New SKU details must reach the API only on save');
 assert.match(ui,/isMetadataReady/,'Save must be blocked until all new SKU details are complete');
-assert.match(html,/v59-admin-import-ui\.js\?v=114\.0/);
-assert.match(html,/v59-admin-import\.css\?v=114\.0/);
+assert.match(html,/v59-admin-import-ui\.js\?v=115\.0/);
+assert.match(html,/v59-admin-import\.css\?v=115\.0/);
 assert.match(api,/typeof b\.fullSnapshot!=='boolean'/,'Old clients must not silently keep stale stock');
 assert.match(api,/if\(result\.summary\.metadataNeeded\)/,'Backend must reject saving incomplete new SKUs');
 console.log('V114_AUTHORITATIVE_DAILY_IMPORT_PASS: no carry-over, partial safety, cross-branch SKU details, manual details, no accidental partial snapshot');

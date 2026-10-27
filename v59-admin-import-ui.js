@@ -1,9 +1,17 @@
 /* V114: authoritative daily stock import, guarded reconciliation, and new SKU metadata. */
 (()=>{
 'use strict';
+const stocktakeParams=new URLSearchParams(window.location.search);
+const stocktakeMode=stocktakeParams.get('stocktake')==='1'&&window.parent!==window;
+const stocktakeBranch=stocktakeParams.get('branch')==='riyadh'?'riyadh':'jeddah';
+const stocktakeSession=stocktakeParams.get('session')||'';
 const root=document.getElementById('app');
 if(!root||!root.querySelector('#preview')||!root.querySelector('#data'))return;
 root.classList.add('v59-import');
+if(stocktakeMode){
+ document.body.classList.add('v115-stocktake-embed');
+ const hero=document.querySelector('.v57-import-hero');if(hero)hero.hidden=true;
+}
 const duplicateBack=document.querySelector('.v57-import-main > a');
 if(duplicateBack)duplicateBack.hidden=true;
 root.innerHTML=[
@@ -27,6 +35,21 @@ root.innerHTML=[
 '<footer class="v59-footer"><a href="./admin-home.html">← العودة للإدارة</a><span>بياناتك لا تتغير بمجرد الفحص.</span></footer>'
 ].join('');
 const el=id=>document.getElementById(id);
+if(stocktakeMode){
+ const selected=el('kind');
+ selected.value=stocktakeBranch;
+ selected.querySelector('option[value="pricing"]')?.remove();
+ el('v113-full-snapshot').checked=true;
+ el('v113-full-snapshot').disabled=true;
+ const header=root.querySelector('.v59-header');
+ if(header){
+  header.querySelector('h2').textContent='استيراد مرجع خاص للجرد';
+  header.querySelector('p').textContent='نفس فحص المخزون الرئيسي؛ الملف يُعتمد لمرجع الجرد فقط ولا يغيّر مخزون العملاء.';
+ }
+ const fieldLabel=root.querySelector('label[for="kind"]');if(fieldLabel)fieldLabel.textContent='الفرع المحدد للجرد';
+ const footer=root.querySelector('.v59-footer');if(footer)footer.hidden=true;
+ el('save').textContent='اعتماد الملف كمرجع لهذا الجرد';
+}
 const kind=el('kind'),fullSnapshot=el('v113-full-snapshot'),upload=el('file'),paste=el('data'),preview=el('preview'),save=el('save'),result=el('result'),review=el('v59-review'),stats=el('v59-stats'),rows=el('v59-rows'),shown=el('v59-shown'),clear=el('v59-clear'),count=el('v59-count');
 let snapshot=null,loading=false,source='لصق مباشر';
 const newMetadata=el('v114-new-metadata'),newFields=el('v114-new-fields');
@@ -34,7 +57,7 @@ const number=x=>Number(x||0).toLocaleString('ar-SA');
 function message(text,type=''){result.className='v59-notice'+(type?' v59-'+type:'');result.textContent=text}
 function stage(value){for(const s of ['input','review','save'])el('v59-step-'+s).classList.toggle('active',s===value)}
 function invalidate(){snapshot=null;save.disabled=true;review.hidden=true;newMetadata.hidden=true;newFields.replaceChildren();stage('input')}
-function setBusy(state){loading=state;preview.disabled=state;clear.disabled=state;kind.disabled=state;upload.disabled=state;fullSnapshot.disabled=state||kind.value==='pricing';paste.readOnly=state;if(state)save.disabled=true;preview.textContent=state?'جارٍ الفحص…':'فحص ومعاينة التغييرات ←';if(!state)updateSaveAvailability()}
+function setBusy(state){loading=state;preview.disabled=state;clear.disabled=state;kind.disabled=state||stocktakeMode;upload.disabled=state;fullSnapshot.disabled=state||stocktakeMode||kind.value==='pricing';paste.readOnly=state;if(state)save.disabled=true;preview.textContent=state?'جارٍ الفحص…':'فحص ومعاينة التغييرات ←';if(!state)updateSaveAvailability()}
 function updateCount(){count.textContent=paste.value.trim()?number(paste.value.replace(/\r\n?/g,'\n').split('\n').filter(line=>line.trim()).length)+' صف غير فارغ':'بانتظار بيانات'}
 function stat(label,value,featured=false){const div=document.createElement('div');div.className='v59-stat'+(featured?' featured':'');const strong=document.createElement('strong');strong.textContent=number(value);const title=document.createElement('span');title.textContent=label;div.append(strong,title);stats.append(div)}
 function show(summary){
@@ -58,7 +81,7 @@ function show(summary){
  showNewMetadata(s);
  updateSaveAvailability();
  const hasChanges=Number(s.changed||0)+Number(s.added||0)>0;
- message(hasChanges?'تم الفحص. راجع فروقات مخزون اليوم'+(s.metadataNeeded?' وأكمل بيانات الأصناف الجديدة':'')+' قبل الاعتماد.':'الفحص ناجح، والملف مطابق لما هو موجود؛ لا حاجة للحفظ.','success');
+ message(stocktakeMode?'تم فحص المرجع للجرد؛ راجع الأعداد والكميات ثم اعتمد الملف كمرجع مستقل.':hasChanges?'تم الفحص. راجع فروقات مخزون اليوم'+(s.metadataNeeded?' وأكمل بيانات الأصناف الجديدة':'')+' قبل الاعتماد.':'الفحص ناجح، والملف مطابق لما هو موجود؛ لا حاجة للحفظ.','success');
 }
 function showNewMetadata(s){
  newFields.replaceChildren();
@@ -92,12 +115,13 @@ function isMetadataReady(){
 }
 function updateSaveAvailability(){
  const s=snapshot?.summary||{};
- save.disabled=loading||!snapshot||Number(s.changed||0)+Number(s.added||0)===0||!isMetadataReady();
+ save.disabled=loading||!snapshot||(!stocktakeMode&&Number(s.changed||0)+Number(s.added||0)===0)||!isMetadataReady();
 }
 newFields.addEventListener('input',updateSaveAvailability);
 function proof(){try{return JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null')}catch{return null}}
 async function request(action){
- const response=await fetch('./api/inventory-import',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,kind:kind.value,fullSnapshot:fullSnapshot.checked&&kind.value!=='pricing',text:paste.value,sha:snapshot?.sha,metadataOverrides:action==='save'?metadataOverrides():undefined,adminToken:localStorage.getItem('inventory_admin_token_v2'),adminProof:proof()})});
+ const effectiveAction=stocktakeMode?(action==='preview'?'stocktake_preview':'stocktake_prepare'):action;
+ const response=await fetch('./api/inventory-import',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:effectiveAction,kind:kind.value,fullSnapshot:fullSnapshot.checked&&kind.value!=='pricing',text:paste.value,sha:snapshot?.sha,metadataOverrides:action==='save'?metadataOverrides():undefined,adminToken:localStorage.getItem('inventory_admin_token_v2'),adminProof:proof()})});
  const body=await response.json().catch(()=>null);
  if(!response.ok)throw Error(body?.error||'خدمة الاستيراد لم تستجب (HTTP '+response.status+').');
  if(!body)throw Error('استجابة الخدمة غير صالحة؛ حاول مرة أخرى.');
@@ -168,10 +192,25 @@ save.addEventListener('click',async()=>{
  const count=Number(snapshot.summary?.changed||0)+Number(snapshot.summary?.added||0);
  const zeros=Number(snapshot.summary?.zeroed||0);
  if(!isMetadataReady()){message('أكمل اسم ووحدة وشد الأصناف الجديدة قبل الحفظ.','error');return}
- if(!confirm((snapshot.summary?.fullSnapshot?'اعتماد مخزون اليوم باعتباره المرجع الوحيد: سيتم تصفير '+zeros+' صنف لم يرد في التقرير، واستبدال بقية الكميات.\n\n':'⚠️ هذا تحديث جزئي وسيحتفظ بالأرصدة القديمة للأصناف غير الواردة.\n\n')+'هل تعتمد '+count+' صنف متغير أو جديد في '+kind.selectedOptions[0].textContent+'؟'))return;
+ if(!confirm(stocktakeMode?'هل تعتمد هذا الملف كمرجع خاص بالجرد؟ سيُصفّر '+zeros+' صنف غير وارد، ولن يتغير مخزون النظام العام.':(snapshot.summary?.fullSnapshot?'اعتماد مخزون اليوم باعتباره المرجع الوحيد: سيتم تصفير '+zeros+' صنف لم يرد في التقرير، واستبدال بقية الكميات.\n\n':'⚠️ هذا تحديث جزئي وسيحتفظ بالأرصدة القديمة للأصناف غير الواردة.\n\n')+'هل تعتمد '+count+' صنف متغير أو جديد في '+kind.selectedOptions[0].textContent+'؟'))return;
  if(snapshot.summary?.fullSnapshot&&zeros>Math.max(30,Number(snapshot.summary?.activeRows||0)*.10)&&!confirm('تنبيه إضافي: أكثر من 10٪ من الأصناف المتوفرة سابقًا ستصبح صفرًا. تأكد أن تقرير الفرع كامل وصحيح. متابعة الاعتماد؟'))return;
- loading=true;save.disabled=true;preview.disabled=true;message('جارٍ حفظ التغييرات في GitHub…');
- try{const response=await request('save');snapshot=null;review.hidden=true;stage('save');message('تم حفظ التحديث وتحديث وقت آخر تعديل للمخزون'+(response.lastUpdate?' إلى '+response.lastUpdate+' بتوقيت السعودية':'')+'. سيظهر الوقت الجديد في النظام بعد اكتمال النشر ثم تحديث صفحة المخزون.'+(response.commit?' رقم العملية: '+response.commit:''),'success')}
+ loading=true;save.disabled=true;preview.disabled=true;message(stocktakeMode?'جارٍ تجهيز المرجع الخاص بالجرد…':'جارٍ حفظ التغييرات في GitHub…');
+ try{
+  const response=await request('save');
+  if(stocktakeMode){
+   if(!response.content||!response.contentHash)throw Error('تعذر إعداد مرجع الجرد بصورة كاملة');
+   window.parent.postMessage({
+    type:'batco-stocktake-source-v115',session:stocktakeSession,kind:kind.value,
+    text:paste.value,overrides:metadataOverrides(),sha:response.sha,
+    contentHash:response.contentHash,summary:response.summary,filename:source
+   },window.location.origin);
+   snapshot=null;review.hidden=true;stage('save');
+   message('تم اعتماد المرجع للجرد. ارجع إلى نافذة الجرد لإنشاء الملف؛ لم يتغير المخزون العام.','success');
+  }else{
+   snapshot=null;review.hidden=true;stage('save');
+   message('تم حفظ التحديث وتحديث وقت آخر تعديل للمخزون'+(response.lastUpdate?' إلى '+response.lastUpdate+' بتوقيت السعودية':'')+'. سيظهر الوقت الجديد في النظام بعد اكتمال النشر ثم تحديث صفحة المخزون.'+(response.commit?' رقم العملية: '+response.commit:''),'success');
+  }
+ }
  catch(e){invalidate();message('تعذر الحفظ: '+e.message+' أعد المعاينة للمحاولة مجددًا.','error')}
  finally{loading=false;preview.disabled=false}
 });

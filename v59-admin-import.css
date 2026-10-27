@@ -133,3 +133,10 @@ body.v57-import-layout{background:#f5f8f6;color:#19382c}
  #app.v59-import .v114-new-item{grid-template-columns:1fr 1fr}
  #app.v59-import .v114-new-item>strong{grid-column:1/-1}
 }
+
+/* V115: the exact import UI can be embedded fullscreen for a stocktake-only source. */
+body.v115-stocktake-embed .v57-import-hero,
+body.v115-stocktake-embed .v57-import-main>a,
+body.v115-stocktake-embed .v59-footer{display:none!important}
+body.v115-stocktake-embed .v57-import-main{padding-top:12px;padding-bottom:28px;max-width:1050px}
+body.v115-stocktake-embed #app.v59-import .v113-snapshot-option{opacity:.85;cursor:default}

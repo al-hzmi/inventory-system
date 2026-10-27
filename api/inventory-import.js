@@ -198,7 +198,7 @@ async function saveInventoryWithVersion(c,headSha,dataPath,text){
 module.exports=async(req,res)=>{
  if(req.method==='GET'){
   const c=config();
-  return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v114-authoritative-daily-snapshot',imports:['jeddah','riyadh','pricing']});
+  return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v115-stocktake-source-verified',imports:['jeddah','riyadh','pricing'],stocktakeSource:true});
  }
  if(req.method!=='POST')return respond(res,405,{error:'Method not allowed'});
  const c=config(),b=req.body||{};
@@ -209,29 +209,42 @@ module.exports=async(req,res)=>{
   try{if(new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'مصدر غير مسموح'})}
   catch{return respond(res,403,{error:'مصدر غير صالح'})}
  }
- if(!paths[b.kind]||!['preview','save'].includes(b.action)||typeof b.text!=='string'||b.text.length>2000000)
+ const stocktakeActions=['stocktake_source','stocktake_preview','stocktake_prepare'];
+ const isStocktake=stocktakeActions.includes(b.action);
+ if(!paths[b.kind]||!['preview','save',...stocktakeActions].includes(b.action)||
+    (b.action!=='stocktake_source'&&(typeof b.text!=='string'||b.text.length>2000000)))
   return respond(res,400,{error:'طلب غير صالح'});
+ if(isStocktake&&(b.kind==='pricing'||(b.action!=='stocktake_source'&&b.fullSnapshot!==true)))
+  return respond(res,400,{error:'الجرد يقبل كشف مخزون كاملًا لفرع واحد فقط.'});
  // Legacy cached clients must refresh, rather than accidentally retaining yesterday's quantities.
- if(b.kind!=='pricing'&&typeof b.fullSnapshot!=='boolean')
+ if(!isStocktake&&b.kind!=='pricing'&&typeof b.fullSnapshot!=='boolean')
   return respond(res,400,{error:'حدّث صفحة الاستيراد لاختيار التحديث اليومي الكامل أو الجزئي صراحةً.'});
  try{
   const head=b.action==='save'?await gitData(c,'git/ref/heads/'+c.branch):null;
   const other=b.kind==='jeddah'?'riyadh':b.kind==='riyadh'?'jeddah':null;
   const [file,referenceFile]=await Promise.all([
    remote(c,paths[b.kind],undefined,head?.object?.sha),
-   other?remote(c,paths[other],undefined,head?.object?.sha):Promise.resolve(null)
+   other&&b.action!=='stocktake_source'?remote(c,paths[other],undefined,head?.object?.sha):Promise.resolve(null)
   ]);
   const current=Buffer.from(file.content.replace(/\s/g,''),'base64').toString('utf8');
+  const checksum=text=>crypto.createHash('sha256').update(text,'utf8').digest('hex');
+  if(b.action==='stocktake_source')return respond(res,200,{
+   sha:file.sha,content:current,contentHash:checksum(current),source:'latest_inventory',kind:b.kind
+  });
   const referenceInventory=referenceFile?Buffer.from(referenceFile.content.replace(/\s/g,''),'base64').toString('utf8'):null;
   const result=prepare(b.kind,b.text,current,{
-   fullSnapshot:b.fullSnapshot===true,
+   fullSnapshot:isStocktake||b.fullSnapshot===true,
    referenceInventory,
-   metadataOverrides:b.action==='save'?b.metadataOverrides:null
+   metadataOverrides:['save','stocktake_prepare'].includes(b.action)?b.metadataOverrides:null
   });
-  if(b.action==='preview')return respond(res,200,{sha:file.sha,summary:result.summary});
+  if(['preview','stocktake_preview'].includes(b.action))return respond(res,200,{sha:file.sha,summary:result.summary});
   if(b.sha!==file.sha)return respond(res,409,{error:'تغيّرت بيانات الفرع منذ المعاينة؛ أعد المعاينة'});
   if(result.summary.metadataNeeded)
    throw Error('هناك '+result.summary.metadataNeeded+' صنف جديد يحتاج الاسم والوحدة والشد. أكملها في المعاينة قبل الاعتماد.');
+  if(b.action==='stocktake_prepare')return respond(res,200,{
+   ok:true,summary:result.summary,content:result.content,contentHash:checksum(result.content),
+   sha:file.sha,source:'stocktake_upload',kind:b.kind
+  });
   if(result.content===current)return respond(res,200,{ok:true,summary:result.summary});
   const saved=await saveInventoryWithVersion(c,head.object.sha,paths[b.kind],result.content);
   return respond(res,200,{ok:true,summary:result.summary,commit:saved.sha,lastUpdate:saved.lastUpdate,versionUpdated:true});
