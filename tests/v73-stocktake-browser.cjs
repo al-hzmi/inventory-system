@@ -14,7 +14,7 @@ const f=window.__fixture,store={stocktake_campaigns:{[f.cp.id]:f.cp},stocktake_t
 let serial=0;
 function doc(c,id){return {id,collection:c,data:()=>store[c]?.[id],exists:!!store[c]?.[id],metadata:{hasPendingWrites:!!store[c]?.[id]?._pending,fromCache:window.__cache},ref:ref(c,id)}}
 function ref(c,id){return {id,collection:c,get:async()=>doc(c,id),set:async(data)=>{store[c]??={};store[c][id]={...store[c][id],...data};emit()},delete:async()=>{delete store[c][id];__writes.push({delete:id});emit()},onSnapshot:(opt,cb)=>listen({c,id},typeof opt==='function'?opt:cb)}}
-function snap(q){if(q.id)return doc(q.c,q.id);const docs=Object.keys(store[q.c]||{}).filter(id=>!q.field||store[q.c][id][q.field]===q.value).map(id=>doc(q.c,id));return {docs,size:docs.length,metadata:{hasPendingWrites:docs.some(d=>d.metadata.hasPendingWrites),fromCache:window.__cache}}}
+function snap(q){if(q.id)return doc(q.c,q.id);const docs=Object.keys(store[q.c]||{}).filter(id=>!q.field||store[q.c][id][q.field]===q.value).map(id=>doc(q.c,id));return {docs,size:docs.length,docChanges:()=>docs.map(d=>({type:'modified',doc:d})),metadata:{hasPendingWrites:docs.some(d=>d.metadata.hasPendingWrites),fromCache:window.__cache}}}
 function listen(q,cb){const l={q,cb};__listeners.push(l);setTimeout(()=>{if(__listeners.includes(l))cb(snap(q))},0);return ()=>{window.__listeners=__listeners.filter(x=>x!==l)}}
 function emit(){for(const l of [...__listeners])if(__listeners.includes(l))l.cb(snap(l.q))}
 window.__emit=emit;window.__store=store;

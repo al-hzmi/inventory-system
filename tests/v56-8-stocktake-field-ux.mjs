@@ -14,12 +14,14 @@ has(admin,"b.closest('.tabs')",'admin tab click must capture strip position befo
 
 has(employee,'function cleanDigits(value)','stocktake must normalize numeric barcode content');
 has(employee,'function resolveStocktakeSearch(raw)','stocktake must resolve scanned barcodes to SKUs');
-has(employee,'clean.includes(d)','barcode must support SKU embedded inside a long barcode');
-has(employee,'cleanDigits(b.sku).length-cleanDigits(a.sku).length','embedded barcode resolution must prefer the longest SKU match');
+has(employee,'mapper.checksum(clean)','verified retail barcode must pass a checksum before any successful match');
+has(employee,'mapper.lookup(clean,state.items,item=>item.sku)','stocktake must share the verified barcode-to-SKU resolver');
 has(employee,'const resolved=resolveStocktakeSearch(value)','camera scanner must use the same barcode resolver');
 has(employee,'const resolved=resolveStocktakeSearch(e.target.value)','manual/pasted barcode search must use the same resolver');
-has(employee,'fps:10','scanner must retain the proven inventory scanning cadence');
-has(employee,'disableFlip:true','scanner must retain proven decode behavior');
+has(employee,'Pro?.cameraOptions(false)','scanner must use the common fast validated camera configuration');
+const scanPro=fs.readFileSync('batco-scan-pro.js','utf8');
+has(scanPro,'fps:16','shared scanner must retain the responsive camera cadence');
+has(scanPro,'disableFlip:true','shared scanner must retain stable image orientation');
 
 has(employee,'id="v56-9-operator-ux"','employee stocktake must use the V56.9 operator UX');
 has(employee,'class="searchWrap"','scanner/search control must mirror inventory search composition');
