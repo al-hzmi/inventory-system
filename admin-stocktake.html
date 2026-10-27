@@ -96,7 +96,7 @@ html:has(.modalbg.open),body:has(.modalbg.open){overflow:hidden!important;oversc
 .modalbg.open .modal{overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 </style>
 <script src="./v56-39-site-identity.js?v=56.39" defer></script>
-<link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.0"><link rel="stylesheet" href="./stocktake-workspace.css?v=75.0"><script src="./stocktake-core.js?v=75.0"></script><script src="./stocktake-workbook.js?v=75.0"></script><style id="v115-stocktake-import-css">
+<link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.0"><link rel="stylesheet" href="./stocktake-workspace.css?v=75.0"><script src="./stocktake-core.js?v=75.0"></script><script src="./stocktake-branches.js?v=116.0"></script><script src="./stocktake-workbook.js?v=75.0"></script><style id="v115-stocktake-import-css">
 #campaignModal .v115-source-options{display:grid;gap:9px}
 #campaignModal .v115-source-card{display:flex;align-items:flex-start;gap:10px;border:1px solid #d6d6d3;background:#fff;border-radius:12px;padding:12px;cursor:pointer}
 #campaignModal .v115-source-card:has(input:checked){border-color:#171717;background:#f6f6f5}
@@ -136,7 +136,7 @@ html:has(.modalbg.open),body:has(.modalbg.open){overflow:hidden!important;oversc
 <script>
 const firebaseConfig={apiKey:'AIzaSyCCvNlnZDxL5P4cPQrHYkOh3C8wJ6yl4Bw',authDomain:'inventory-system-ca3dc.firebaseapp.com',projectId:'inventory-system-ca3dc',storageBucket:'inventory-system-ca3dc.firebasestorage.app',messagingSenderId:'139575913885',appId:'1:139575913885:web:110648e07345b36da15374',measurementId:'G-ZGF5DT9D0K'};if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);const db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 const STORAGE={NAME:'inventory_user_name_v2',TOKEN:'inventory_admin_token_v2',PHOTO:'inventory_login_photo_proof_v2'};const ADMIN_HASH='1jh297-spgf2z',ROOT_ID='admin_mohanad';const adminName=(localStorage.getItem(STORAGE.NAME)||'').trim(),adminToken=localStorage.getItem(STORAGE.TOKEN)||'',localQa=['localhost','127.0.0.1'].includes(location.hostname);let adminPhoto=null;try{adminPhoto=JSON.parse(localStorage.getItem(STORAGE.PHOTO)||'null')}catch{}if(adminName!=='مهند'||adminToken!==ADMIN_HASH||(!localQa&&(adminPhoto?.role!=='admin'||adminPhoto?.employeeId!==ROOT_ID||!adminPhoto?.photoId)))location.href='./index.html?employee=1';
-const $=s=>document.querySelector(s),root=$('#root');const state={control:{enabled:false,accessMode:'none',allowedEmployeeIds:[],allowedEmployeeNames:[],activeCampaignId:''},accountantControl:{enabled:false,accessMode:'none',allowedEmployeeIds:[],allowedEmployeeNames:[]},employees:[],campaigns:[],campaign:null,teams:[],items:[],audit:[],tab:'all',search:'',editTeamId:'',tabScroll:0,import:{file:null,rows:[],headers:[],map:{sku:'',qty:'',pack:'',name:''},teamId:'',errors:[],headerRow:0},unsubs:[]};
+const $=s=>document.querySelector(s),root=$('#root');const state={control:{enabled:false,accessMode:'none',allowedEmployeeIds:[],allowedEmployeeNames:[],activeCampaignId:'',activeCampaigns:{}},accountantControl:{enabled:false,accessMode:'none',allowedEmployeeIds:[],allowedEmployeeNames:[]},employees:[],campaigns:[],campaign:null,teams:[],items:[],audit:[],tab:'all',search:'',editTeamId:'',tabScroll:0,import:{file:null,rows:[],headers:[],map:{sku:'',qty:'',pack:'',name:''},teamId:'',errors:[],headerRow:0},unsubs:[]};
 const ar='٠١٢٣٤٥٦٧٨٩',fa='۰۱۲۳۴۵۶۷۸۹';const eng=s=>String(s??'').replace(/[٠-٩۰-۹]/g,d=>{let i=ar.indexOf(d);return i>=0?String(i):String(fa.indexOf(d))});const norm=s=>eng(String(s??'')).toLowerCase().replace(/[\u064B-\u065F\u0670]/g,'').replace(/ـ/g,'').replace(/[أإآٱ]/g,'ا').replace(/[ىئ]/g,'ي').replace(/ؤ/g,'و').replace(/ة/g,'ه').replace(/[^\u0600-\u06ffa-z0-9\s._-]/g,' ').replace(/\s+/g,' ').trim();const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const num=StocktakeCore.quantity;const fmt=v=>new Intl.NumberFormat('en-US',{maximumFractionDigits:12}).format(Number(v)||0);const ms=v=>{try{return v?.toMillis?v.toMillis():v?.seconds?v.seconds*1000:new Date(v).getTime()||0}catch{return 0}};const dt=v=>ms(v)?new Date(ms(v)).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';const toast=m=>{const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)};const hash=s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return(h>>>0).toString(36)};const itemId=(campaignId,sku)=>`st_${hash(campaignId+'|'+norm(sku))}_${hash(norm(sku))}`;const empName=e=>String(e?.canonicalName||e?.aliases?.[0]||e?.id||'');const itemStatus=s=>({pending:'غير مجرود',matched:'مطابق',shortage:'ناقص',surplus:'زائد',conflict:'تعارض عدّ — يحتاج مراجعة'}[s]||'غير مجرود');const campaignStatus=s=>({draft:'تجهيز',ready:'جاهز للجرد',active:'الجرد جارٍ',closed:'مغلق للتسوية'}[s]||'تجهيز');
 $('#back').onclick=()=>location.href='./admin-dashboard.html';$('#employeeView').onclick=()=>location.href='./stocktake.html?v=56.12';
 function start(){
@@ -179,7 +179,24 @@ function bindUi(){$('#reviewMore')?.addEventListener('click',()=>{state.reviewVi
 const TEST_INVENTORY_SOURCES={jeddah:{label:'جدة',url:'./data/jeddah.tsv'},riyadh:{label:'الرياض',url:'./data/riyadh.tsv'}};
 function parseTestInventoryTsv(text){const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)return[];const headers=lines[0].split('\t').map(x=>String(x||'').trim()),find=tests=>headers.findIndex(h=>tests.some(rx=>rx.test(h))),skuIdx=find([/رقم\s*الصنف/i,/كود\s*الصنف/i,/item\s*(?:no|code)/i,/sku/i]),qtyIdx=find([/الكمية\s*المتوفرة/i,/كمية\s*النظام/i,/الكمية/i,/الرصيد/i,/qty/i,/quantity/i]),nameIdx=find([/اسم\s*الصنف/i,/الوصف/i,/description/i,/name/i]),packIdx=find([/الشد/i,/pack/i]);if(skuIdx<0||qtyIdx<0)return[];return lines.slice(1).map((line,i)=>{const c=line.split('\t'),sku=String(c[skuIdx]??'').trim(),qty=num(c[qtyIdx]);return{row:i+2,sku,qty,name:nameIdx>=0?String(c[nameIdx]??'').trim():'',pack:packIdx>=0?String(c[packIdx]??'').trim():''}}).filter(r=>r.sku&&Number.isFinite(r.qty)&&r.qty>=0)}
 function pickTestInventoryRows(rows){const dedup=new Map();for(const r of rows){const k=norm(r.sku);if(k)dedup.set(k,r)}return [...dedup.values()]}
-function activeStocktakeCampaign(){const activeId=String(state.control?.activeCampaignId||'').trim();return activeId?state.campaigns.find(c=>c.id===activeId&&c.status==='active')||null:null}
+const StocktakeBranch=window.StocktakeBranches;
+function activeStocktakeCampaign(branch=''){
+ const entries=StocktakeBranch.activeMap(state.control);
+ const ids=branch?(entries[branch]?[entries[branch].campaignId]:[]):Object.values(entries).map(e=>e.campaignId);
+ const legacy=String(state.control?.activeCampaignId||'').trim();
+ if(!ids.length&&!Object.keys(entries).length&&state.control?.enabled&&legacy)ids.push(legacy);
+ return state.campaigns.find(c=>ids.includes(c.id)&&c.status==='active')||null;
+}
+function campaignBranch(c){return StocktakeBranch.branchOf(c)}
+function campaignAccessEntry(c,teams){
+ return {campaignId:c.id,
+  allowedEmployeeIds:[...new Set(teams.flatMap(teamIds))],
+  allowedEmployeeNames:[...new Set(teams.flatMap(teamNames).filter(Boolean))]};
+}
+function assertLegacySafe(control,map,id){
+ if(!Object.keys(map).length&&control?.enabled&&String(control.activeCampaignId||'')&&String(control.activeCampaignId)!==String(id))
+  throw Error('LEGACY_ACTIVE_STOCKTAKE_EXISTS');
+}
 /* V115: authoritative, immutable stocktake reference — shared inventory importer. */
 let pendingStocktakeUpload=null,stocktakeImportSession='';
 function stocktakeSourceChoice(){return document.querySelector('input[name="campaignSourceMode"]:checked')?.value==='uploaded'?'uploaded':'latest'}
@@ -265,9 +282,9 @@ window.addEventListener('message',event=>{
  closeStocktakeImport();
  toast('تم فحص الملف. سيُستخدم لمرجع هذا الجرد فقط.');
 });
-function openTestModal(){const active=activeStocktakeCampaign();if(active)return toast(`أنه الجرد النشط «${active.name||'الحالي'}» أولًا قبل إنشاء تجربة`);$('#testWarehouse').value='jeddah';$('#testModal').classList.add('open');setTimeout(()=>$('#testWarehouse').focus(),60)}
+function openTestModal(){$('#testWarehouse').value='jeddah';$('#testModal').classList.add('open');setTimeout(()=>$('#testWarehouse').focus(),60)}
 $('#testCancel').onclick=()=>$('#testModal').classList.remove('open');$('#testModal').onclick=e=>{if(e.target.id==='testModal')$('#testCancel').click()};$('#testCreate').onclick=()=>runAdmin('createTestCampaign',createTestCampaign);
-async function createTestCampaign(){const key=$('#testWarehouse').value,source=TEST_INVENTORY_SOURCES[key]||TEST_INVENTORY_SOURCES.jeddah,button=$('#testCreate');button.disabled=true;button.textContent='جاري نسخ كامل المخزون...';let campaignRef=null;try{const active=activeStocktakeCampaign();if(active)throw new Error('ACTIVE_STOCKTAKE_EXISTS');const response=await fetch(`${source.url}?test=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`INVENTORY_HTTP_${response.status}`);const rows=pickTestInventoryRows(parseTestInventoryTsv(await response.text()));if(!rows.length)throw new Error('NO_TEST_INVENTORY_ROWS');campaignRef=db.collection('stocktake_campaigns').doc();const teamRef=db.collection('stocktake_teams').doc(),now=firebase.firestore.FieldValue.serverTimestamp(),stocktakeDate=new Date(Date.now()+3*3600*1000).toISOString().slice(0,10),name=`🧪 تجربة الجرد — ${source.label}`,scope=`تجربة كاملة من المخزون الحالي — ${source.label}`,campaignPayload={name,warehouse:source.label,stocktakeDate,status:'draft',isTest:true,testMode:true,testSource:'current_inventory_full',testWarehouseKey:key,testSampleSize:rows.length,inventorySnapshotStatus:'loading',inventorySnapshotCount:rows.length,schemaVersion:4,createdAt:now,createdBy:'مهند'},teamPayload={campaignId:campaignRef.id,name:'🧪 مجموعة الاختبار',scope,zone:scope,memberEmployeeIds:[ROOT_ID],memberEmployeeNames:['مهند'],extraMemberNames:[],status:'active',isTest:true,testMode:true,testSource:'current_inventory_full',orderIndex:0,updatedAt:now,updatedBy:'مهند',createdAt:now,createdBy:'مهند',schemaVersion:4};const first=db.batch();first.set(campaignRef,campaignPayload);first.set(teamRef,teamPayload);await first.commit();for(let x=0;x<rows.length;x+=350){const b=db.batch();rows.slice(x,x+350).forEach((r,j)=>b.set(db.collection('stocktake_items').doc(itemId(campaignRef.id,r.sku)),{campaignId:campaignRef.id,campaignName:name,teamId:teamRef.id,teamName:teamPayload.name,scope,zone:scope,sku:r.sku,normalizedSku:norm(r.sku),name:r.name,expectedQty:Number(r.qty),pack:r.pack,countStatus:'pending',actualQty:null,difference:null,note:'',hasNote:false,revision:0,orderIndex:x+j,updatedAt:now,importedAt:now,importedBy:'مهند',importFileName:'',sourceMode:'current_inventory',isTest:true,testMode:true,schemaVersion:4}));await b.commit()}await campaignRef.set({inventorySnapshotStatus:'ready'},{merge:true});state.campaign={id:campaignRef.id,...campaignPayload,inventorySnapshotStatus:'ready',createdAt:null};state.import={file:null,rows:[],headers:[],map:{sku:'',qty:'',pack:'',name:''},teamId:'',errors:[],headerRow:0};$('#testCancel').click();bindSelected();render();await auditAdmin('test_campaign_created',{campaignId:campaignRef.id,teamId:teamRef.id,warehouse:source.label,testSource:'current_inventory_full',itemCount:rows.length});toast(`تم إنشاء تجربة كاملة من ${source.label}: ${rows.length} صنف`)}catch(e){console.error(e);if(campaignRef)campaignRef.set({inventorySnapshotStatus:'error'},{merge:true}).catch(()=>{});toast(e.message==='ACTIVE_STOCKTAKE_EXISTS'?'لا يمكن إنشاء تجربة أثناء وجود جرد نشط':e.message==='NO_TEST_INVENTORY_ROWS'?'لا توجد أصناف صالحة للتجربة في المخزون الحالي':'تعذر تجهيز تجربة الجرد الكاملة')}finally{button.disabled=false;button.textContent='إنشاء تجربة كاملة'}}
+async function createTestCampaign(){const key=$('#testWarehouse').value,source=TEST_INVENTORY_SOURCES[key]||TEST_INVENTORY_SOURCES.jeddah,button=$('#testCreate');button.disabled=true;button.textContent='جاري نسخ كامل المخزون...';let campaignRef=null;try{const active=activeStocktakeCampaign(key);if(active)throw new Error('ACTIVE_STOCKTAKE_SAME_BRANCH');const response=await fetch(`${source.url}?test=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`INVENTORY_HTTP_${response.status}`);const rows=pickTestInventoryRows(parseTestInventoryTsv(await response.text()));if(!rows.length)throw new Error('NO_TEST_INVENTORY_ROWS');campaignRef=db.collection('stocktake_campaigns').doc();const teamRef=db.collection('stocktake_teams').doc(),now=firebase.firestore.FieldValue.serverTimestamp(),stocktakeDate=new Date(Date.now()+3*3600*1000).toISOString().slice(0,10),name=`🧪 تجربة الجرد — ${source.label}`,scope=`تجربة كاملة من المخزون الحالي — ${source.label}`,campaignPayload={name,warehouse:source.label,stocktakeDate,status:'draft',isTest:true,testMode:true,testSource:'current_inventory_full',testWarehouseKey:key,warehouseKey:key,testSampleSize:rows.length,inventorySnapshotStatus:'loading',inventorySnapshotCount:rows.length,schemaVersion:4,createdAt:now,createdBy:'مهند'},teamPayload={campaignId:campaignRef.id,name:'🧪 مجموعة الاختبار',scope,zone:scope,memberEmployeeIds:[ROOT_ID],memberEmployeeNames:['مهند'],extraMemberNames:[],status:'active',isTest:true,testMode:true,testSource:'current_inventory_full',orderIndex:0,updatedAt:now,updatedBy:'مهند',createdAt:now,createdBy:'مهند',schemaVersion:4};const first=db.batch();first.set(campaignRef,campaignPayload);first.set(teamRef,teamPayload);await first.commit();for(let x=0;x<rows.length;x+=350){const b=db.batch();rows.slice(x,x+350).forEach((r,j)=>b.set(db.collection('stocktake_items').doc(itemId(campaignRef.id,r.sku)),{campaignId:campaignRef.id,campaignName:name,teamId:teamRef.id,teamName:teamPayload.name,scope,zone:scope,sku:r.sku,normalizedSku:norm(r.sku),name:r.name,expectedQty:Number(r.qty),pack:r.pack,countStatus:'pending',actualQty:null,difference:null,note:'',hasNote:false,revision:0,orderIndex:x+j,updatedAt:now,importedAt:now,importedBy:'مهند',importFileName:'',sourceMode:'current_inventory',isTest:true,testMode:true,schemaVersion:4}));await b.commit()}await campaignRef.set({inventorySnapshotStatus:'ready'},{merge:true});state.campaign={id:campaignRef.id,...campaignPayload,inventorySnapshotStatus:'ready',createdAt:null};state.import={file:null,rows:[],headers:[],map:{sku:'',qty:'',pack:'',name:''},teamId:'',errors:[],headerRow:0};$('#testCancel').click();bindSelected();render();await auditAdmin('test_campaign_created',{campaignId:campaignRef.id,teamId:teamRef.id,warehouse:source.label,testSource:'current_inventory_full',itemCount:rows.length});toast(`تم إنشاء تجربة كاملة من ${source.label}: ${rows.length} صنف`)}catch(e){console.error(e);if(campaignRef)campaignRef.set({inventorySnapshotStatus:'error'},{merge:true}).catch(()=>{});toast(e.message==='ACTIVE_STOCKTAKE_EXISTS'?'لا يمكن إنشاء تجربة أثناء وجود جرد نشط':e.message==='NO_TEST_INVENTORY_ROWS'?'لا توجد أصناف صالحة للتجربة في المخزون الحالي':'تعذر تجهيز تجربة الجرد الكاملة')}finally{button.disabled=false;button.textContent='إنشاء تجربة كاملة'}}
 function openCampaignModal(){
  const d=new Date(Date.now()+3*3600*1000).toISOString().slice(0,10);
  $('#campaignDate').value=d;$('#campaignWarehouse').value='jeddah';$('#campaignName').value='';
@@ -292,7 +309,7 @@ async function createCurrentInventoryCampaign(){
  button.disabled=true;button.textContent='جارٍ التحقق من المرجع...';
  let campaignRef=null;
  try{
-  if(activeStocktakeCampaign())throw Error('ACTIVE_STOCKTAKE_EXISTS');
+  if(activeStocktakeCampaign(key))throw Error('ACTIVE_STOCKTAKE_SAME_BRANCH');
   const data=choice==='latest'
    ?await stocktakeSourceRequest('stocktake_source',key)
    :await stocktakeSourceRequest('stocktake_prepare',key,{
@@ -362,7 +379,7 @@ async function createCurrentInventoryCampaign(){
    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   },{merge:true}).catch(()=>{});
   const code=String(e?.message||'');
-  toast(code==='ACTIVE_STOCKTAKE_EXISTS'?'أنه الجرد النشط أولًا':
+  toast(code==='ACTIVE_STOCKTAKE_SAME_BRANCH'?'يوجد جرد نشط لهذا المستودع؛ اختر المستودع الآخر أو أغلق جرده أولًا':
    code==='REFERENCE_CONTENT_CHANGED'?'تغير محتوى الملف المستورد؛ أعد معاينته':
    code==='NO_REFERENCE_CONTENT'?'تعذر قراءة مرجع المخزون المعتمد':
    'تعذر إنشاء الجرد: '+code.slice(0,120));
@@ -371,7 +388,15 @@ async function createCurrentInventoryCampaign(){
  }
 }
 function openTeam(id){if(!state.campaign||state.campaign.status==='closed')return;state.editTeamId=id||'';const t=state.teams.find(x=>x.id===id)||null;$('#teamModalTitle').textContent=t?'تعديل مجموعة الجرد':'إضافة مجموعة جرد';$('#teamName').value=t?.name||`المجموعة ${state.teams.length+1}`;$('#teamScope').value=t?.scope||t?.zone||'';$('#teamExtraNames').value=(t?.extraMemberNames||[]).join('\n');const selected=new Set(t?teamIds(t):[]);$('#teamMembers').innerHTML=state.employees.map(e=>`<label><input type="checkbox" data-team-member="${e.id}" ${selected.has(e.id)?'checked':''}><span>${esc(empName(e))}</span></label>`).join('')||'<div class="muted">لا توجد حسابات موظفين متاحة.</div>';$('#teamModal').classList.add('open')}
-$('#teamCancel').onclick=()=>{$('#teamModal').classList.remove('open');state.editTeamId=''};$('#teamModal').onclick=e=>{if(e.target.id==='teamModal')$('#teamCancel').click()};$('#teamSave').onclick=async()=>{if(!state.campaign)return;const name=$('#teamName').value.trim(),scope=$('#teamScope').value.trim(),memberEmployeeIds=[...document.querySelectorAll('[data-team-member]:checked')].map(x=>x.dataset.teamMember),memberEmployeeNames=memberEmployeeIds.map(id=>empName(state.employees.find(e=>e.id===id))).filter(Boolean),extraMemberNames=$('#teamExtraNames').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!name)return toast('اكتب اسم المجموعة');if(!scope)return toast('اكتب نطاق الجرد');if(!memberEmployeeIds.length&&!extraMemberNames.length)return toast('أضف عضوًا واحدًا على الأقل للجنة');const now=firebase.firestore.FieldValue.serverTimestamp(),payload={campaignId:state.campaign.id,name,scope,zone:scope,memberEmployeeIds,memberEmployeeNames,extraMemberNames,status:'active',updatedAt:now,updatedBy:'مهند',schemaVersion:2};try{let id=state.editTeamId,action='team_updated',before=null;if(id){const old=state.teams.find(x=>x.id===id);before=old?{name:old.name,scope:old.scope||old.zone,memberEmployeeIds:teamIds(old),memberEmployeeNames:teamNames(old),extraMemberNames:old.extraMemberNames||[]}:null;await db.collection('stocktake_teams').doc(id).set(payload,{merge:true});const affected=state.items.filter(i=>i.teamId===id);for(let x=0;x<affected.length;x+=400){const b=db.batch();affected.slice(x,x+400).forEach(i=>b.set(db.collection('stocktake_items').doc(i.id),{teamName:name,scope,zone:scope,updatedAt:now},{merge:true}));await b.commit()}}else{action='team_created';const r=await db.collection('stocktake_teams').add({...payload,orderIndex:state.teams.length,createdAt:now,createdBy:'مهند'});id=r.id}await auditAdmin(action,{campaignId:state.campaign.id,teamId:id,before,after:{name,scope,memberEmployeeIds,memberEmployeeNames,extraMemberNames}});const wasEdit=Boolean(state.editTeamId);if(state.campaign.status==='active'){const changed={id,...payload};const nextTeams=wasEdit?state.teams.map(x=>x.id===id?{...x,...changed}:x):[...state.teams,changed];await syncAccessFrom(nextTeams,true)}$('#teamCancel').click();toast(wasEdit?'تم تحديث المجموعة':'تم إنشاء المجموعة')}catch(e){console.error(e);toast('تعذر حفظ المجموعة')}};
+$('#teamCancel').onclick=()=>{$('#teamModal').classList.remove('open');state.editTeamId=''};$('#teamModal').onclick=e=>{if(e.target.id==='teamModal')$('#teamCancel').click()};$('#teamSave').onclick=async()=>{if(!state.campaign)return;const name=$('#teamName').value.trim(),scope=$('#teamScope').value.trim(),memberEmployeeIds=[...document.querySelectorAll('[data-team-member]:checked')].map(x=>x.dataset.teamMember),memberEmployeeNames=memberEmployeeIds.map(id=>empName(state.employees.find(e=>e.id===id))).filter(Boolean),extraMemberNames=$('#teamExtraNames').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!name)return toast('اكتب اسم المجموعة');if(!scope)return toast('اكتب نطاق الجرد');if(state.campaign.status==='active'&&state.editTeamId){const original=state.teams.find(t=>t.id===state.editTeamId);if(original&&(name!==original.name||norm(scope)!==norm(original.scope||original.zone||'')))return toast('أثناء الجرد يمكنك تعديل الأعضاء فقط؛ تغيير اسم المجموعة أو نطاقها قد يسبب ازدواج العد')}if(!memberEmployeeIds.length&&!extraMemberNames.length)return toast('أضف عضوًا واحدًا على الأقل للجنة');
+ if(state.campaign.status==='active'){
+  const candidate={id:state.editTeamId||'__new__',memberEmployeeIds,memberEmployeeNames,extraMemberNames};
+  const proposedTeams=state.editTeamId?state.teams.map(t=>t.id===state.editTeamId?{...t,...candidate}:t):[...state.teams,candidate];
+  try{
+   StocktakeBranch.assertNoCollision(StocktakeBranch.activeMap(state.control),campaignBranch(state.campaign),campaignAccessEntry(state.campaign,proposedTeams),norm);
+  }catch(e){console.warn('[V116 membership guard]',e);return toast('هذا الموظف مسند بالفعل لجرد المستودع الآخر؛ لا يمكن إسناده إلى جردين نشطين')}
+ }
+ const now=firebase.firestore.FieldValue.serverTimestamp(),payload={campaignId:state.campaign.id,name,scope,zone:scope,memberEmployeeIds,memberEmployeeNames,extraMemberNames,status:'active',updatedAt:now,updatedBy:'مهند',schemaVersion:2};try{let id=state.editTeamId,action='team_updated',before=null;if(id){const old=state.teams.find(x=>x.id===id);before=old?{name:old.name,scope:old.scope||old.zone,memberEmployeeIds:teamIds(old),memberEmployeeNames:teamNames(old),extraMemberNames:old.extraMemberNames||[]}:null;await db.collection('stocktake_teams').doc(id).set(payload,{merge:true});const affected=state.campaign.status==='active'?[]:state.items.filter(i=>i.teamId===id);for(let x=0;x<affected.length;x+=400){const b=db.batch();affected.slice(x,x+400).forEach(i=>b.set(db.collection('stocktake_items').doc(i.id),{teamName:name,scope,zone:scope,updatedAt:now},{merge:true}));await b.commit()}}else{action='team_created';const r=await db.collection('stocktake_teams').add({...payload,orderIndex:state.teams.length,createdAt:now,createdBy:'مهند'});id=r.id}await auditAdmin(action,{campaignId:state.campaign.id,teamId:id,before,after:{name,scope,memberEmployeeIds,memberEmployeeNames,extraMemberNames}});const wasEdit=Boolean(state.editTeamId);if(state.campaign.status==='active'){const changed={id,...payload};const nextTeams=wasEdit?state.teams.map(x=>x.id===id?{...x,...changed}:x):[...state.teams,changed];await syncAccessFrom(nextTeams,true)}$('#teamCancel').click();toast(wasEdit?'تم تحديث المجموعة':'تم إنشاء المجموعة')}catch(e){console.error(e);toast('تعذر حفظ المجموعة')}};
 const saveTeamHandler=$('#teamSave').onclick;$('#teamSave').onclick=()=>runAdmin('saveTeam',saveTeamHandler);
 async function deleteTeam(id){
  const cp=state.campaign,t=state.teams.find(x=>x.id===id);if(!cp||!t||!requireOnline())return;
@@ -391,8 +416,21 @@ function mappedRows(){const im=state.import;if(!im.map.sku||!im.map.qty)return[]
 function validateImport(){const im=state.import,errors=[];if(!im.map.sku||!im.map.qty){im.errors=errors;return}const rows=mappedRows(),seen=new Map();for(const r of rows){const k=norm(r.sku),q=num(r.qty);if(!k){errors.push(`صف ${r.row}: رقم الصنف فارغ`);continue}if(!Number.isFinite(q)||q<0)errors.push(`صف ${r.row}: كمية غير صحيحة للصنف ${r.sku}`);if(seen.has(k))errors.push(`الصنف ${r.sku} مكرر داخل نفس الملف`);else seen.set(k,r.row)}const existing=new Map(state.items.map(i=>[norm(i.sku),i]));for(const r of rows){const e=existing.get(norm(r.sku));if(e&&e.teamId!==im.teamId)errors.push(`الصنف ${r.sku} موجود مسبقًا في المجموعة: ${teamName(e.teamId)}`)}im.errors=[...new Set(errors)].slice(0,30)}
 async function importRows(){const im=state.import;if(!state.campaign||!['draft','ready'].includes(state.campaign.status))return toast('الاستيراد متاح أثناء التجهيز فقط');if(!im.teamId)return toast('اختر المجموعة');validateImport();if(im.errors.length)return render();const team=state.teams.find(t=>t.id===im.teamId),rows=mappedRows();if(!team)return toast('المجموعة غير موجودة');if(!rows.length)return toast('الملف لا يحتوي أصنافًا');if(!confirm(`اعتماد ${rows.length} صنف كملف ${team.name}؟ سيتم استبدال قائمة المجموعة السابقة إن وجدت.`))return;try{const fresh=await db.collection('stocktake_items').where('campaignId','==',state.campaign.id).get({source:'server'}),freshItems=fresh.docs.map(d=>({id:d.id,...d.data()})),freshMap=new Map(freshItems.map(x=>[norm(x.sku),x])),conflicts=rows.filter(r=>{const e=freshMap.get(norm(r.sku));return e&&e.teamId!==team.id});if(conflicts.length)return toast(`مرفوض: ${conflicts.length} صنف موجود في مجموعات أخرى`);const newKeys=new Set(rows.map(r=>norm(r.sku))),oldTeam=freshItems.filter(i=>i.teamId===team.id),remove=oldTeam.filter(i=>!newKeys.has(norm(i.sku)));if(oldTeam.some(i=>(i.countStatus||'pending')!=='pending'||i.actualQty!=null||Object.keys(i.teamCounts||{}).length>0||String(i.note||'').trim()))throw new Error('COUNTED_ITEM_DURING_IMPORT');const freshCampaign=await db.collection('stocktake_campaigns').doc(state.campaign.id).get({source:'server'});if(!['draft','ready'].includes(freshCampaign.data()?.status))throw new Error('COUNTED_ITEM_DURING_IMPORT');for(let x=0;x<oldTeam.length;x+=200){const backup=db.batch();oldTeam.slice(x,x+200).forEach(i=>backup.set(db.collection('stocktake_audit').doc(),{campaignId:state.campaign.id,teamId:team.id,itemId:i.id,sku:i.sku,action:'item_before_import',before:i,actorName:'مهند',actorEmployeeId:ROOT_ID,createdAt:firebase.firestore.FieldValue.serverTimestamp()}));await backup.commit()}for(let x=0;x<rows.length;x+=350){const b=db.batch();rows.slice(x,x+350).forEach((r,j)=>{const id=itemId(state.campaign.id,r.sku),existing=freshMap.get(norm(r.sku)),ref=db.collection('stocktake_items').doc(id),base={campaignId:state.campaign.id,campaignName:state.campaign.name,teamId:team.id,teamName:team.name,scope:team.scope||team.zone||'',zone:team.scope||team.zone||'',sku:r.sku,normalizedSku:norm(r.sku),name:r.name,expectedQty:num(r.qty),pack:r.pack,countStatus:'pending',actualQty:null,difference:null,note:'',hasNote:false,revision:0,orderIndex:x+j,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),importedAt:firebase.firestore.FieldValue.serverTimestamp(),importedBy:'مهند',importFileName:im.file?.name||'',schemaVersion:2};if(existing&&(existing.countStatus||'pending')!=='pending')throw new Error('COUNTED_ITEM_DURING_IMPORT');b.set(ref,base)});await b.commit()}for(let x=0;x<remove.length;x+=400){const b=db.batch();remove.slice(x,x+400).forEach(i=>b.delete(db.collection('stocktake_items').doc(i.id)));await b.commit()}await auditAdmin('team_items_imported',{campaignId:state.campaign.id,teamId:team.id,count:rows.length,replaced:oldTeam.length,removed:remove.length,fileName:im.file?.name||''});state.import={file:null,rows:[],headers:[],map:{sku:'',qty:'',pack:'',name:''},teamId:im.teamId,errors:[],headerRow:0};toast(`تم اعتماد ملف ${team.name}: ${rows.length} صنف`)}catch(e){console.error(e);toast(e.message==='COUNTED_ITEM_DURING_IMPORT'?'لا يمكن استبدال ملف بعد بدء عد أحد أصنافه':'تعذر استيراد الأصناف')}}
 function campaignReadiness(){const problems=[];if(!itemsLoaded||itemsFromCache||itemsPending)problems.push('انتظر اكتمال مزامنة الأصناف مع الخادم');if((state.campaign?.sourceMode==='current_inventory'||state.campaign?.inventorySnapshotStatus)&&state.campaign?.inventorySnapshotStatus!=='ready')problems.push('لقطة المخزون لم تكتمل بعد');if(!state.teams.length)problems.push('لا يوجد فريق جرد');for(const t of state.teams){const count=state.items.length;if(!count)problems.push(`${t.name}: لا توجد أصناف`);if(!teamIds(t).length)problems.push(`${t.name}: لا يوجد عضو صاحب حساب يستطيع التسجيل`)}return problems}
-async function markReady(){if(!state.campaign)return;const p=campaignReadiness();if(p.length)return toast(`التجهيز غير مكتمل: ${p[0]}`);try{await db.collection('stocktake_campaigns').doc(state.campaign.id).set({status:'ready',preparedAt:firebase.firestore.FieldValue.serverTimestamp(),preparedBy:'مهند'},{merge:true});await syncAccess(false);await auditAdmin('campaign_ready',{campaignId:state.campaign.id});toast('تم اعتماد التجهيز — ابدأ صباحًا أو ليلًا بعد اكتمال تحديث المخزون')}catch{toast('تعذر اعتماد التجهيز')}}
-async function syncAccessFrom(teams,enable=true){const ids=[...new Set(teams.flatMap(teamIds))],names=[...new Set(teams.flatMap(teamNames).filter(Boolean))];await db.collection('system_controls').doc('stocktake_feature').set({enabled:Boolean(enable),accessMode:enable?'selected':'none',allowedEmployeeIds:ids,allowedEmployeeNames:names,activeCampaignId:state.campaign?.id||'',updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:'مهند'},{merge:true})}async function syncAccess(enable=true){return syncAccessFrom(state.teams,enable)}
+async function markReady(){if(!state.campaign)return;const p=campaignReadiness();if(p.length)return toast(`التجهيز غير مكتمل: ${p[0]}`);try{await db.collection('stocktake_campaigns').doc(state.campaign.id).set({status:'ready',preparedAt:firebase.firestore.FieldValue.serverTimestamp(),preparedBy:'مهند'},{merge:true});await auditAdmin('campaign_ready',{campaignId:state.campaign.id});toast('تم اعتماد التجهيز — ابدأ صباحًا أو ليلًا بعد اكتمال تحديث المخزون')}catch{toast('تعذر اعتماد التجهيز')}}
+async function syncAccessFrom(teams,enable=true){
+ const cp=state.campaign,branch=campaignBranch(cp);
+ if(!cp||cp.status!=='active'||!branch)return;
+ const ref=db.collection('system_controls').doc('stocktake_feature');
+ await db.runTransaction(async tx=>{
+  const snap=await tx.get(ref),control=snap.data()||{},map=StocktakeBranch.activeMap(control);
+  if(map[branch]?.campaignId!==cp.id)throw Error('STOCKTAKE_CONTROL_CHANGED');
+  if(enable)map[branch]=StocktakeBranch.assertNoCollision(map,branch,campaignAccessEntry(cp,teams),norm);
+  else delete map[branch];
+  tx.set(ref,{...StocktakeBranch.patchFor(map,control.activeCampaignId),
+   updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:'مهند'},{merge:true});
+ });
+}
+async function syncAccess(enable=true){return syncAccessFrom(state.teams,enable)}
 async function preflightStocktake(campaign){
  const id=String(campaign?.id||'');
  if(!id||!navigator.onLine)throw new Error('يجب الاتصال بالخادم قبل بدء الجرد');
@@ -438,25 +476,79 @@ async function preflightStocktake(campaign){
  if(!verify.exists||verify.data()?.preflightProbeId!==nonce||verify.metadata?.fromCache)throw new Error('فشل اختبار كتابة وقراءة خادم الجرد');
  return {items:itemsSnap.size,teams:teamsSnap.size};
 }
-async function activateCampaign(){if(!state.campaign)return;const p=campaignReadiness();if(p.length)return toast(`لا يمكن البدء: ${p[0]}`);const otherActive=activeStocktakeCampaign();if(otherActive&&otherActive.id!==state.campaign.id)return toast('لا يمكن بدء تجربة أثناء وجود جرد نشط');let check;try{toast('جارٍ اختبار قراءة وكتابة قاعدة الجرد...');check=await preflightStocktake(state.campaign)}catch(e){console.error('[V95 stocktake preflight]',e);alert('لم يبدأ الجرد: فشل اختبار سلامة قاعدة البيانات. '+String(e?.message||e));return}const startMessage=state.campaign.isTest?'بدء تجربة الجرد الآن؟ ستستخدم نفس واجهة الجرد الحقيقية، لكن الحملة موسومة كتجربة ولا تغيّر المخزون الحقيقي.':'بدء الجرد الآن؟ ستظهر الميزة لأعضاء فريق الجرد، وتبقى لقطة المخزون المحفوظة هي المرجع حتى نهاية الجرد.';if(!confirm(startMessage))return;try{
- const cpRef=db.collection('stocktake_campaigns').doc(state.campaign.id),controlRef=db.collection('system_controls').doc('stocktake_feature');
- const ids=[...new Set(state.teams.flatMap(teamIds))],names=[...new Set(state.teams.flatMap(teamNames).filter(Boolean))];
- await db.runTransaction(async tx=>{
-  const [freshCp,freshControl]=await Promise.all([tx.get(cpRef),tx.get(controlRef)]);
-  if(!freshCp.exists||!['ready','draft'].includes(freshCp.data()?.status))throw Error('STOCKTAKE_STATE_CHANGED');
-  const activeId=String(freshControl.data()?.activeCampaignId||'');
-  if(freshControl.data()?.enabled===true&&activeId&&activeId!==state.campaign.id)
-   throw Error('ACTIVE_STOCKTAKE_EXISTS');
-  const now=firebase.firestore.FieldValue.serverTimestamp();
-  tx.set(cpRef,{status:'active',activatedAt:now,activatedBy:'مهند'},{merge:true});
-  tx.set(controlRef,{enabled:true,accessMode:'selected',allowedEmployeeIds:ids,allowedEmployeeNames:names,
-   activeCampaignId:state.campaign.id,updatedAt:now,updatedBy:'مهند'},{merge:true});
- });
- await auditAdmin('campaign_activated',{campaignId:state.campaign.id,preflightItems:check?.items,preflightTeams:check?.teams});
- toast('تم بدء الجرد بعد فحص الخادم والتأكد من '+check.items+' صنف');
-}catch(e){console.error(e);toast('تعذر بدء الجرد')}}
-async function closeCampaign(){if(!state.campaign||state.campaign.status!=='active')return;if(!itemsLoaded||itemsFromCache||itemsPending)return toast('انتظر اكتمال مزامنة الأصناف قبل الإغلاق');const pending=state.items.filter(i=>(i.countStatus||'pending')==='pending').length;if(pending&&!confirm(`باقي ${pending} صنف غير مجرود. هل تريد إنهاء الجرد رغم ذلك؟`))return;const overlaps=state.items.filter(i=>i.countConflict||i.countStatus==='conflict');if(overlaps.length){toast('لا يمكن إقفال الجرد: '+overlaps.length+' صنف بتعارض عدّ يحتاج مراجعة واعتماد');return}const closeMessage=state.campaign.isTest?'إنهاء تجربة الجرد؟ ستتوقف واجهة التجربة وتبقى النتائج محفوظة للمراجعة فقط.':'إنهاء الجرد وإقفاله للموظفين؟ ستبقى النتائج والفروقات محفوظة للمحاسب.';if(!confirm(closeMessage))return;try{const now=firebase.firestore.FieldValue.serverTimestamp(),b=db.batch();b.set(db.collection('stocktake_campaigns').doc(state.campaign.id),{status:'closed',closedAt:now,closedBy:'مهند'},{merge:true});b.set(db.collection('system_controls').doc('stocktake_feature'),{enabled:false,accessMode:'none',activeCampaignId:'',updatedAt:now,updatedBy:'مهند'},{merge:true});await b.commit();await auditAdmin('campaign_closed',{campaignId:state.campaign.id,pending});toast(state.campaign?.isTest?'تم إنهاء تجربة الجرد':'تم إغلاق الجرد — النتائج جاهزة للتسوية')}catch{toast('تعذر إغلاق الجرد')}}
-async function reopenCampaign(){if(!state.campaign||state.campaign.status!=='closed'||!confirm('إعادة فتح الجرد للتصحيح؟ سيعود أعضاء اللجان للوصول والتعديل وسيُسجل ذلك في سجل التدقيق.'))return;try{await db.collection('stocktake_campaigns').doc(state.campaign.id).set({status:'active',reopenedAt:firebase.firestore.FieldValue.serverTimestamp(),reopenedBy:'مهند'},{merge:true});await syncAccess(true);await auditAdmin('campaign_reopened',{campaignId:state.campaign.id});toast('تمت إعادة فتح الجرد')}catch{toast('تعذر إعادة فتح الجرد')}}
+async function activateCampaign(){
+ const cp=state.campaign;if(!cp)return;
+ const branch=campaignBranch(cp),p=campaignReadiness();
+ if(!branch)return toast('حدد مستودع جدة أو الرياض لهذا الجرد');
+ if(p.length)return toast('لا يمكن البدء: '+p[0]);
+ if(activeStocktakeCampaign(branch))return toast('هناك جرد نشط لهذا المستودع؛ لا يمكن تشغيل حملتين له بالتزامن');
+ let check;
+ try{toast('جارٍ اختبار قراءة وكتابة قاعدة الجرد...');check=await preflightStocktake(state.campaign)}
+ catch(e){console.error('[V116 preflight]',e);alert('لم يبدأ الجرد: فشل اختبار سلامة قاعدة البيانات. '+String(e?.message||e));return}
+ const message=cp.isTest?'بدء تجربة الجرد على '+cp.warehouse+'؟ لن تتغير بيانات مخزون الشركة.':
+  'بدء '+cp.name+' الآن؟ ستعمل حملة '+cp.warehouse+' مستقلة عن جرد المستودع الآخر، مع تثبيت المرجع وحفظ كل عدّ.';
+ if(!confirm(message))return;
+ try{
+  const cpRef=db.collection('stocktake_campaigns').doc(cp.id),controlRef=db.collection('system_controls').doc('stocktake_feature');
+  const next=campaignAccessEntry(cp,state.teams);
+  await db.runTransaction(async tx=>{
+   const [freshCp,freshControl]=await Promise.all([tx.get(cpRef),tx.get(controlRef)]);
+   if(!freshCp.exists||!['ready','draft'].includes(freshCp.data()?.status))throw Error('STOCKTAKE_STATE_CHANGED');
+   const control=freshControl.data()||{},map=StocktakeBranch.activeMap(control);
+   assertLegacySafe(control,map,cp.id);
+   map[branch]=StocktakeBranch.assertNoCollision(map,branch,next,norm);
+   const now=firebase.firestore.FieldValue.serverTimestamp();
+   tx.set(cpRef,{status:'active',activatedAt:now,activatedBy:'مهند'},{merge:true});
+   tx.set(controlRef,{...StocktakeBranch.patchFor(map,cp.id),updatedAt:now,updatedBy:'مهند'},{merge:true});
+  });
+  await auditAdmin('campaign_activated',{campaignId:cp.id,warehouseKey:branch,preflightItems:check?.items,preflightTeams:check?.teams});
+  toast('بدأ جرد '+cp.warehouse+' بأمان، دون إيقاف المستودع الآخر');
+ }catch(e){console.error('[V116 activate]',e);toast('لم يبدأ الجرد: '+String(e?.message||e).slice(0,125))}
+}
+async function closeCampaign(){
+ const cp=state.campaign;if(!cp||cp.status!=='active')return;
+ if(!itemsLoaded||itemsFromCache||itemsPending)return toast('انتظر اكتمال مزامنة الأصناف قبل الإغلاق');
+ const pending=state.items.filter(i=>(i.countStatus||'pending')==='pending').length;
+ if(pending&&!confirm('باقي '+pending+' صنف غير مجرود. هل تريد إنهاء جرد '+cp.warehouse+' رغم ذلك؟'))return;
+ const overlaps=state.items.filter(i=>i.countConflict||i.countStatus==='conflict');
+ if(overlaps.length)return toast('لا يمكن إقفال الجرد: '+overlaps.length+' صنف بتعارض عدّ');
+ if(!confirm('إنهاء '+(cp.isTest?'التجربة':'الجرد')+' للمستودع '+cp.warehouse+' فقط؟ سيبقى جرد المستودع الآخر نشطًا، وتُحفظ النتائج للمراجعة.'))return;
+ const branch=campaignBranch(cp),ref=db.collection('stocktake_campaigns').doc(cp.id),ctrl=db.collection('system_controls').doc('stocktake_feature');
+ try{
+  await db.runTransaction(async tx=>{
+   const [fresh,controlDoc]=await Promise.all([tx.get(ref),tx.get(ctrl)]);
+   const control=controlDoc.data()||{},map=StocktakeBranch.activeMap(control);
+   if(!fresh.exists||fresh.data()?.status!=='active'||!StocktakeBranch.isActive(control,cp.id,branch))throw Error('STOCKTAKE_STATE_CHANGED');
+   if(map[branch]?.campaignId===cp.id)delete map[branch];
+   else if(Object.keys(map).length)throw Error('STOCKTAKE_CONTROL_CHANGED');
+   const now=firebase.firestore.FieldValue.serverTimestamp();
+   tx.set(ref,{status:'closed',closedAt:now,closedBy:'مهند'},{merge:true});
+   tx.set(ctrl,{...StocktakeBranch.patchFor(map,control.activeCampaignId),updatedAt:now,updatedBy:'مهند'},{merge:true});
+  });
+  await auditAdmin('campaign_closed',{campaignId:cp.id,warehouseKey:branch,pending});
+  toast('تم إغلاق جرد '+cp.warehouse+' فقط؛ النتائج محفوظة');
+ }catch(e){console.error('[V116 close]',e);toast('تعذر إغلاق جرد المستودع: '+String(e?.message||e).slice(0,110))}
+}
+async function reopenCampaign(){
+ const cp=state.campaign;if(!cp||cp.status!=='closed')return;
+ const branch=campaignBranch(cp);if(!branch)return toast('تعذر تحديد مستودع الجرد');
+ if(!confirm('إعادة فتح جرد '+cp.warehouse+' للتصحيح؟ سيتم تسجيل العملية، ولن يتأثر جرد المستودع الآخر.'))return;
+ const ref=db.collection('stocktake_campaigns').doc(cp.id),ctrl=db.collection('system_controls').doc('stocktake_feature');
+ try{
+  await db.runTransaction(async tx=>{
+   const [fresh,controlDoc]=await Promise.all([tx.get(ref),tx.get(ctrl)]);
+   if(!fresh.exists||fresh.data()?.status!=='closed')throw Error('STOCKTAKE_STATE_CHANGED');
+   const control=controlDoc.data()||{},map=StocktakeBranch.activeMap(control);
+   assertLegacySafe(control,map,cp.id);
+   map[branch]=StocktakeBranch.assertNoCollision(map,branch,campaignAccessEntry(cp,state.teams),norm);
+   const now=firebase.firestore.FieldValue.serverTimestamp();
+   tx.set(ref,{status:'active',reopenedAt:now,reopenedBy:'مهند'},{merge:true});
+   tx.set(ctrl,{...StocktakeBranch.patchFor(map,cp.id),updatedAt:now,updatedBy:'مهند'},{merge:true});
+  });
+  await auditAdmin('campaign_reopened',{campaignId:cp.id,warehouseKey:branch});
+  toast('تمت إعادة فتح جرد '+cp.warehouse+' دون تغيير الحملة الأخرى');
+ }catch(e){console.error('[V116 reopen]',e);toast('تعذر إعادة فتح الجرد: '+String(e?.message||e).slice(0,110))}
+}
 function exportExcel(diffOnly){
  if(!state.campaign||!itemsLoaded)return toast('انتظر تحميل بيانات الجرد');
  if(itemsPending)return toast('انتظر مزامنة التغييرات قبل استخراج التقرير');
@@ -490,7 +582,7 @@ async function resetAllPreviousStocktakes(){
  const count=snapshot.reduce((n,x)=>n+x.collections.reduce((n,y)=>n+y.docs.length,0),0);
  if(!confirm('مراجعة نهائية: حذف '+campaigns.length+' حملة و'+count+' سجل تابع من قاعدة Firebase؟'))return;
  // Disable access FIRST; avoid showing a deleted campaign as still active.
- await control.set({enabled:false,accessMode:'none',allowedEmployeeIds:[],allowedEmployeeNames:[],activeCampaignId:'',updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:ROOT_ID},{merge:true});
+ await control.set({enabled:false,accessMode:'none',allowedEmployeeIds:[],allowedEmployeeNames:[],activeCampaignId:'',activeCampaigns:{jeddah:null,riyadh:null},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:ROOT_ID},{merge:true});
  const allRefs=[];
  for(const entry of snapshot){for(const collection of entry.collections)for(const doc of collection.docs)allRefs.push(doc.ref);allRefs.push(db.collection('stocktake_campaigns').doc(entry.campaign.id))}
  const unique=new Map(allRefs.map(ref=>[ref.path,ref]));

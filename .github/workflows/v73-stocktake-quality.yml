@@ -13,6 +13,8 @@ on:
       - 'sw.js'
       - 'tests/v73-*'
       - 'tests/v75-shared-counts.cjs'
+      - 'stocktake-branches.js'
+      - 'tests/v116-dual-branch.cjs'
       - '.github/workflows/v73-stocktake-quality.yml'
   pull_request:
     paths:
@@ -40,6 +42,7 @@ jobs:
           node tests/v56-stocktake-workflow.mjs
           node tests/v73-stocktake-data.cjs
           node tests/v75-shared-counts.cjs
+          node tests/v116-dual-branch.cjs
           node tests/v73-stocktake-sw.cjs
           python tests/v73-workbook-readback.py
       - name: Mocked browser behavior and responsive screenshots

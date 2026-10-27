@@ -23,7 +23,7 @@ has(admin,'لا يغيّر المخزون الحقيقي','test UI must state th
 has(admin,"if(cp.isTest)return '<div",'test campaigns must bypass Excel upload');
 has(admin,"test_campaign_created:'إنشاء تجربة جرد'",'test creation must be auditable');
 has(admin,'activeStocktakeCampaign','test mode must detect an already-active real stocktake');
-has(admin,"otherActive&&otherActive.id!==state.campaign.id",'neither real nor test activation may replace another active stocktake');
+has(admin,"StocktakeBranch.assertNoCollision(map,branch,next,norm)",'real or test campaigns must not replace another campaign on the same warehouse or reuse cross-branch personnel');
 has(admin,"cp.isTest?'إنهاء التجربة'",'test campaign close action must not look like accountant settlement');
 
 const fn=admin.match(/async function createTestCampaign\(\)\{[\s\S]*?\nfunction openCampaignModal\(\)\{/);
