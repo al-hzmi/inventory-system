@@ -41,8 +41,8 @@ function prepare(kind,input,current,options={}) {
   }
   let meta=null;
   if(full){
-   meta={name:String(row.cells[name]||'').trim(),unit:String(row.cells[unit]||'').trim(),pack:numeric(row.cells[pack],row.line,'الشد',false)};
-   if(!meta.name||!meta.unit)throw Error('السطر '+row.line+': اسم الصنف والوحدة مطلوبان');
+   meta={name:String(row.cells[name]||''),unit:String(row.cells[unit]||''),pack:numeric(row.cells[pack],row.line,'الشد',false)};
+   if(!meta.name.trim()||!meta.unit.trim())throw Error('السطر '+row.line+': اسم الصنف والوحدة مطلوبان');
   }
   values.set(key,{id:key,value,meta,line:row.line});
  };
