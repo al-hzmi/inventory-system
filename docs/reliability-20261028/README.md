@@ -11,3 +11,5 @@
 7. [حالة النشر وخطة الرجوع](07-deployment.md)
 
 الأدلة: [نتائج المتصفح](browser-results.json)، [اختبارات التخزين والحضور](core-results.json)، [حصر مواضع الاتصال](firestore-call-sites.json).
+
+[متابعة الإغلاق والقراءات واختبارات Emulator](09-closure-and-read-followup.md)
