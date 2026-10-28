@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'stocktake.html'
+      - 'admin-stocktake.html'
+      - 'stocktake-closure-prototype.js'
+      - 'tests/closure-*.cjs'
       - 'stocktake-core.js'
       - 'batco-scan-pro.js'
       - 'tests/v87-scan-camera-browser.cjs'
@@ -27,6 +30,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: node tests/recovery-barcode-verifier.cjs
       - run: node tests/v87-scan-camera-browser.cjs
+      - run: node tests/closure-prototype.cjs
+      - run: node tests/closure-transaction-race.cjs
+      - run: node tests/recovery-admin-mobile.cjs
+      - run: node tests/recovery-audit-listener.cjs
       - run: node tests/recovery-core.cjs
       - run: node tests/recovery-browser.cjs
       - run: node tests/v73-stocktake-data.cjs
