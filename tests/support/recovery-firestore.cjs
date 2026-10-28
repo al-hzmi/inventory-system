@@ -5,7 +5,7 @@ function database(size=750){
  const put=(p,x)=>{rows.set(p,clone(x));versions.set(p,(versions.get(p)||0)+1)};
  put('system_controls/stocktake_feature',{enabled:true,accessMode:'all',activeCampaignId:'jeddah',activeCampaigns:{jeddah:{campaignId:'jeddah',accessMode:'all'},riyadh:{campaignId:'riyadh',accessMode:'all'}}});
  for(const branch of ['jeddah','riyadh']){
-  put('stocktake_campaigns/'+branch,{name:branch,warehouse:branch==='jeddah'?'جدة':'الرياض',warehouseKey:branch,status:'active'});
+  put('stocktake_campaigns/'+branch,{name:branch,warehouse:branch==='jeddah'?'جدة':'الرياض',warehouseKey:branch,status:'active',inventorySnapshotCount:size});
   for(let t=0;t<4;t++)put('stocktake_teams/'+branch+t,{campaignId:branch,name:branch+t,scope:'zone'+t,memberEmployeeIds:['admin_mohanad']});
   for(let i=0;i<size;i++)put('stocktake_items/'+branch+'_'+i,{campaignId:branch,teamId:branch+'0',sku:String(10000+i),name:'صنف اختبار '+i,expectedQty:100,actualQty:null,countStatus:'pending',orderIndex:i});
  }
@@ -24,7 +24,7 @@ function database(size=750){
 function client(){
  const listeners=[];window.__testListeners=listeners;window.__test={fail:'',ackDelay:0,receiptFail:false,receiptCache:false};
  const snap=r=>({...r,data:()=>r.value,metadata:{fromCache:__test.receiptCache,hasPendingWrites:false}});
- function ref(collection,id){const path=collection+'/'+id;return {id,path,get:async opts=>{if(__test.receiptFail)throw Error('unavailable');if(opts?.source!=='server')throw Error('test requires explicit server receipt');return snap(await __db({kind:'get',path}))},onSnapshot:cb=>listen({kind:'get',path},cb)}}
+ function ref(collection,id){const path=collection+'/'+id;return {id,path,get:async opts=>{if(__test.receiptFail)throw Error('unavailable');if(opts?.source!=='server')throw Error('test requires explicit server receipt');return snap(await __db({kind:'get',path}))},onSnapshot:(opt,cb)=>listen({kind:'get',path},typeof opt==='function'?opt:cb)}}
  function listen(query,cb){const l={query,cb,alive:true};listeners.push(l);__db(query).then(r=>{if(l.alive)cb(Array.isArray(r)?{docs:r.map(snap),metadata:{fromCache:false},docChanges:()=>r.map(d=>({type:'added',doc:snap(d)}))}:snap(r))});return()=>{l.alive=false}}
  function collection(c){return {doc:(id=crypto.randomUUID())=>ref(c,id),where:(field,op,value)=>({onSnapshot:(opt,cb)=>listen({kind:'query',collection:c,field,value},typeof opt==='function'?opt:cb)}),onSnapshot:cb=>listen({kind:'query',collection:c},cb)}}
  const db={collection,enablePersistence:async()=>{},runTransaction:async callback=>{

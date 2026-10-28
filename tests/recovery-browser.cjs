@@ -38,12 +38,16 @@ const root=path.resolve(__dirname,'..'),results=[];
  // A partial locally cached campaign with a known reference count cannot start.
  const partialDb=database(4),partial=await open(partialDb);await partial.page.evaluate(()=>{state.campaign.inventorySnapshotCount=5;state.enteredScope='';itemCacheOnly=true;render()});
  assert.equal(await partial.page.locator('#startStocktake').isDisabled(),true);assert.match(await partial.page.locator('.welcomeReadiness').innerText(),/لم يكتمل/);
+ await partial.page.evaluate(()=>{state.campaign.inventorySnapshotCount=4;render()});assert.equal(await partial.page.locator('#startStocktake').isDisabled(),true);
+ await partial.page.evaluate(()=>{delete state.campaign.inventorySnapshotCount;render()});assert.equal(await partial.page.locator('#startStocktake').isDisabled(),true);
+ await partial.page.evaluate(()=>{itemCacheOnly=false;itemSnapshotPending=true;render()});assert.equal(await partial.page.locator('#startStocktake').isDisabled(),true);
+ await partial.page.evaluate(()=>{itemSnapshotPending=false;render()});assert.equal(await partial.page.locator('#startStocktake').isDisabled(),true);
  await partial.page.evaluate(()=>{state.campaign.inventorySnapshotCount=4;render()});assert.equal(await partial.page.locator('#startStocktake').isDisabled(),false);
  results.push({test:'known reference count rejects partial cached campaign',passed:true});await partial.ctx.close();
  const db=database(105),{page,ctx}=await open(db);
  assert.equal(await count(page,'jeddah_0'),true);
- assert.equal(db.metrics.writes,2);assert.equal(await page.evaluate(()=>draftStore.list().length),0);
- results.push({test:'one count with receipt',passed:true,readsPerNewCount:5,writesPerNewCount:2});
+ assert.equal(db.metrics.writes,3);assert.equal(await page.evaluate(()=>draftStore.list().length),0);
+ results.push({test:'one count with receipt',passed:true,readsPerNewCount:6,writesPerNewCount:2,firstDeviceRegistrationWrites:1});
  // A single modified item is converted once; unrelated documents are not reprocessed.
  const workDb=database(30),work=await open(workDb);
  const processed=await work.page.evaluate(raw=>{const l=__testListeners.find(x=>x.query.collection==='stocktake_items'&&x.alive),original=StocktakeCore.forTeam;let conversions=0;StocktakeCore.forTeam=(...a)=>{conversions++;return original(...a)};
@@ -57,7 +61,7 @@ const root=path.resolve(__dirname,'..'),results=[];
  // No result refresh is required to prove immutable receipt-based replay.
  const receipt=[...db.rows].find(([p])=>p.startsWith('stocktake_audit/'));
  await page.evaluate(op=>draftStore.set('jeddah:jeddah0:jeddah_0:qty',{value:'1',operationId:op}),receipt[0].split('/')[1]);
- assert.equal(await count(page,'jeddah_0'),true);assert.equal(db.metrics.writes,2);
+ assert.equal(await count(page,'jeddah_0'),true);assert.equal(db.metrics.writes,3);
  results.push({test:'replay confirmed operation',passed:true});
  // Foreign actor / malformed number cannot clear a local draft.
  await page.evaluate(()=>draftStore.set('jeddah:jeddah0:jeddah_1:qty',{value:'2',operationId:'bad'}));
@@ -110,7 +114,7 @@ const root=path.resolve(__dirname,'..'),results=[];
  // Two browsers editing the same group's existing count: one wins, one retains a conflict.
  const concurrent=database(4),left=await open(concurrent),right=await open(concurrent);
  const pair=await Promise.all([count(left.page,'jeddah_0',2),count(right.page,'jeddah_0',3)]);
- assert.equal(pair.filter(Boolean).length,1);assert.equal(concurrent.metrics.writes,2);
+ assert.equal(pair.filter(Boolean).length,1);assert.equal(concurrent.metrics.writes,3);
  const loser=pair[0]?right:left;
  assert.equal(await loser.page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_0:qty').state),'conflict');
  results.push({test:'same group concurrent edits: one commit, one retained conflict',passed:true});
@@ -124,7 +128,7 @@ const root=path.resolve(__dirname,'..'),results=[];
  assert.equal(await count(second.page,'jeddah_0',3),true);
  const shared=scopes.rows.get('stocktake_items/jeddah_0');
  assert.deepEqual(Object.values(shared.teamCounts).map(x=>x.quantity).sort(),[2,3]);
- assert.equal(scopes.metrics.writes,4);
+ assert.equal(scopes.metrics.writes,6);
  results.push({test:'distinct scopes preserve both counts after stale view review',passed:true});
  await first.ctx.close();await second.ctx.close();
  // A lost reply / closed page keeps a durable intent that reconciles on reload.
@@ -132,17 +136,17 @@ const root=path.resolve(__dirname,'..'),results=[];
  await lost.page.evaluate(()=>{__test.ackDelay=2000;void writeCount(state.items.find(i=>i.id==='jeddah_0'),4,'first_manual_count')});
  await lost.page.waitForFunction(()=>draftStore.get('jeddah:jeddah0:jeddah_0:qty')?.operationId);
  await new Promise(resolve=>setTimeout(resolve,150));await lost.page.reload();await lost.page.waitForFunction(()=>state.itemsLoaded);
- await lost.page.waitForFunction(()=>draftStore.get('jeddah:jeddah0:jeddah_0:qty')===null);assert.equal(lostDb.metrics.writes,2);
+ await lost.page.waitForFunction(()=>draftStore.get('jeddah:jeddah0:jeddah_0:qty')===null);assert.equal(lostDb.metrics.writes,3);
  // Offline intents persist without a transaction or false success, then replay once.
  await lost.page.evaluate(()=>Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>false}));
- assert.equal(await count(lost.page,'jeddah_1',5),false);assert.equal(lostDb.metrics.writes,2);
- await lost.page.reload();await lost.page.waitForFunction(()=>state.itemsLoaded);assert.equal(await count(lost.page,'jeddah_1',5),true);assert.equal(lostDb.metrics.writes,4);
+ assert.equal(await count(lost.page,'jeddah_1',5),false);assert.equal(lostDb.metrics.writes,3);
+ await lost.page.reload();await lost.page.waitForFunction(()=>state.itemsLoaded);assert.equal(await count(lost.page,'jeddah_1',5),true);assert.equal(lostDb.metrics.writes,5);
  // Committed transaction but failed receipt read is not falsely confirmed.
  await lost.page.evaluate(()=>__test.receiptFail=true);assert.equal(await count(lost.page,'jeddah_2',6),false);
  assert.ok(await lost.page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_2:qty')));
  await lost.page.evaluate(()=>{__test.receiptFail=false;__test.receiptCache=true});
  assert.equal(await count(lost.page,'jeddah_2',6),false);
- await lost.page.evaluate(()=>__test.receiptCache=false);assert.equal(await count(lost.page,'jeddah_2',6),true);assert.equal(lostDb.metrics.writes,6);
+ await lost.page.evaluate(()=>__test.receiptCache=false);assert.equal(await count(lost.page,'jeddah_2',6),true);assert.equal(lostDb.metrics.writes,7);
  results.push({test:'reload during save, offline reload replay, failed/cache-only receipt retained',passed:true});
  await lost.ctx.close();
  // Distinct employee identities and branch/team routing; this does not emulate Firestore Rules.
@@ -156,14 +160,14 @@ const root=path.resolve(__dirname,'..'),results=[];
    assert.equal(await c.page.evaluate(()=>state.team.id),branch+team);
    assert.deepEqual(await c.page.evaluate(()=>StocktakeBranches.available(state.control,user,norm).map(x=>x.branch)),[branch]);clients.push(c)}
   const saves=await Promise.all(clients.map((c,i)=>count(c.page,(i%2?'riyadh':'jeddah')+'_'+i,1)));
-  assert.equal(saves.filter(Boolean).length,devices);assert.equal(employeesDb.metrics.writes,devices*2);
+  assert.equal(saves.filter(Boolean).length,devices);assert.equal(employeesDb.metrics.writes,devices*3);
   await clients[0].page.evaluate(()=>Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>false}));
   assert.equal(await count(clients[0].page,'jeddah_17',2),false);
   assert.equal(await count(clients[1].page,'riyadh_16',3),true);
   assert.ok(await clients[0].page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_17:qty')));
   await clients[0].page.evaluate(()=>Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>true}));
   assert.equal(await count(clients[0].page,'jeddah_17',2),true);
-  assert.equal(employeesDb.metrics.writes,devices*2+4);
+  assert.equal(employeesDb.metrics.writes,devices*3+4);
   results.push({test:'employee identity routing, concurrent saves and isolated offline device',devices,passed:true,limit:'client routing, not Firestore Rules'});
   for(const c of clients)await c.ctx.close();
  }
@@ -173,7 +177,7 @@ const root=path.resolve(__dirname,'..'),results=[];
   const start=performance.now(),before={...server.metrics};
   const counts=await Promise.all(clients.map(({page},d)=>page.evaluate(async({d,devices})=>{let ok=0;const slots=devices/2,slot=Math.floor(d/2);for(let i=slot;i<750;i+=slots){const item=state.items.find(x=>x.id===state.campaign.id+'_'+i);if(await writeCount(item,1,'first_manual_count'))ok++}return {ok,drafts:draftStore.list().length}},{d,devices})));
   assert.equal(counts.reduce((s,c)=>s+c.ok,0),1500);assert.ok(counts.every(c=>!c.drafts));
-  assert.equal(server.metrics.writes-before.writes,3000);assert.equal(server.metrics.reads-before.reads,7500);
+  assert.equal(server.metrics.writes-before.writes,3000+devices);assert.equal(server.metrics.reads-before.reads,9000);
   assert.equal([...server.rows.values()].filter(x=>x.action==='count_created').length,1500);
   results.push({test:'load',devices,items:1500,success:1500,pending:0,transactionAndReceiptReads:server.metrics.reads-before.reads,writes:server.metrics.writes-before.writes,initialQueryReads:before.reads,elapsedMs:Math.round(performance.now()-start),model:'Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing'});
   for(const c of clients)await c.ctx.close();

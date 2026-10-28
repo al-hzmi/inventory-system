@@ -26,4 +26,4 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm install --no-save --ignore-scripts --no-audit --no-fund firebase@10.8.0
-      - run: npx --yes firebase-tools@13.35.1 emulators:exec --only firestore --project demo-inventory-reliability --config tests/emulator/firebase.json 'node tests/emulator/firestore-concurrency.cjs && node tests/emulator/closure-race.cjs && node tests/emulator/stocktake-app.cjs'
+      - run: npx --yes firebase-tools@13.35.1 emulators:exec --only firestore --project demo-inventory-reliability --config tests/emulator/firebase.json 'node tests/emulator/firestore-concurrency.cjs && node tests/emulator/closure-race.cjs && node tests/emulator/stocktake-app.cjs && node tests/emulator/stocktake-closure-app.cjs'
