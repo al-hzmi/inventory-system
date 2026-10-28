@@ -3,10 +3,10 @@ const {database,client}=require('./support/recovery-firestore.cjs');
 const root=path.resolve(__dirname,'..'),results=[];
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
- async function open(server,branch='jeddah',team=0){
+ async function open(server,branch='jeddah',team=0,employee=null){
   const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});
   await ctx.exposeBinding('__db',(_,a)=>server.call(a));
-  await ctx.addInitScript(()=>{localStorage.setItem('inventory_user_name_v2','مهند');localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');localStorage.setItem('inventory_employee_id_v2','admin_mohanad');localStorage.setItem('inventory_employee_auth_version_v2','2');window.confirm=()=>true});
+  await ctx.addInitScript(employee=>{localStorage.setItem('inventory_user_name_v2',employee?.name||'مهند');if(!employee)localStorage.setItem('inventory_admin_token_v2','1jh297-spgf2z');localStorage.setItem('inventory_employee_id_v2',employee?.id||'admin_mohanad');localStorage.setItem('inventory_employee_auth_version_v2','2');window.confirm=()=>true},employee);
   await ctx.route('**/*',route=>{const u=new URL(route.request().url());
    if(u.pathname.includes('firebase-app-compat'))return route.fulfill({body:'('+client.toString()+')()',contentType:'application/javascript'});
    if(u.hostname!=='localhost')return route.fulfill({body:'',contentType:'application/javascript'});
@@ -16,10 +16,25 @@ const root=path.resolve(__dirname,'..'),results=[];
   const page=await ctx.newPage();page.on('pageerror',e=>{results.push({pageError:e.message})});
   await page.goto('http://localhost/stocktake.html?branch='+branch);
   await page.waitForFunction(()=>state.itemsLoaded&&state.team);
-  if(team)await page.evaluate(t=>pickTeam(t),branch+team);
+  if(team&&!employee)await page.evaluate(t=>pickTeam(t),branch+team);
   await page.locator('#startStocktake').click();return {page,ctx};
  }
  async function count(page,id,value=1){return page.evaluate(({id,value})=>writeCount(state.items.find(x=>x.id===id),value,'first_manual_count'),{id,value})}
+ // Prefix collisions must not select an item until explicit Enter or tap.
+ const searchDb=database(10);for(const [i,sku] of ['226','22639','123','12345','230','230086','00226','0022639'].entries())searchDb.put('stocktake_items/jeddah_'+i,{...searchDb.rows.get('stocktake_items/jeddah_'+i),sku});
+ const searchClient=await open(searchDb),sp=searchClient.page;
+ for(const [short,long] of [['226','22639'],['123','12345'],['230','230086'],['00226','0022639']]){
+  await sp.locator('#search').fill('');await sp.locator('#search').pressSequentially(short);
+  assert.equal(await sp.evaluate(()=>state.activeEditId),'');
+  assert.ok(await sp.locator('.skuSuggestion').count()>=2);
+  await sp.locator('#search').pressSequentially(long.slice(short.length));
+  assert.equal(await sp.locator('#search').inputValue(),long);assert.equal(await sp.evaluate(()=>state.activeEditId),'');
+  await sp.locator('#search').press('Enter');assert.equal(await sp.evaluate(()=>state.items.find(i=>i.id===state.activeEditId)?.sku),long);
+ }
+ await sp.locator('#search').fill('226');assert.equal(await sp.evaluate(()=>state.activeEditId),'');
+ await sp.locator('.skuSuggestion').filter({hasText:'22639'}).click();assert.equal(await sp.evaluate(()=>state.items.find(i=>i.id===state.activeEditId)?.sku),'22639');
+ for(const width of [320,390,412]){await sp.setViewportSize({width,height:800});await sp.locator('#search').fill('226');assert.ok(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'unexpected horizontal overflow at '+width)}
+ results.push({test:'manual typing, paste, Enter and selection across prefix and leading-zero collisions; three viewport widths',passed:true});await searchClient.ctx.close();
  const db=database(105),{page,ctx}=await open(db);
  assert.equal(await count(page,'jeddah_0'),true);
  assert.equal(db.metrics.writes,2);assert.equal(await page.evaluate(()=>draftStore.list().length),0);
@@ -68,6 +83,15 @@ const root=path.resolve(__dirname,'..'),results=[];
  db.put('stocktake_campaigns/jeddah',{...db.rows.get('stocktake_campaigns/jeddah'),status:'closed'});
  assert.equal(await count(page,'jeddah_6'),false);results.push({test:'note receipt and server-closed campaign',passed:true});
  await ctx.close();
+ // A conflicting receipt must not block reconciliation of subsequent drafts.
+ const sweepDb=database(4),sweep=await open(sweepDb);
+ sweepDb.put('stocktake_audit/sweep_bad',{campaignId:'jeddah',teamId:'jeddah0',itemId:'jeddah_0',actorEmployeeId:'other',action:'count_created',after:{teamActualQty:1}});
+ sweepDb.put('stocktake_audit/sweep_good',{campaignId:'jeddah',teamId:'jeddah0',itemId:'jeddah_1',actorEmployeeId:'admin_mohanad',action:'count_created',after:{teamActualQty:2}});
+ await sweep.page.evaluate(()=>{draftStore.set('jeddah:jeddah0:jeddah_0:qty',{value:'1',operationId:'sweep_bad'});draftStore.set('jeddah:jeddah0:jeddah_1:qty',{value:'2',operationId:'sweep_good'});lastReceiptSweep=0});
+ await sweep.page.evaluate(()=>reconcileVisibleDrafts());
+ assert.ok(await sweep.page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_0:qty')));
+ assert.equal(await sweep.page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_1:qty')),null);
+ results.push({test:'one conflicting receipt does not block other draft reconciliation',passed:true});await sweep.ctx.close();
  // Two browsers editing the same group's existing count: one wins, one retains a conflict.
  const concurrent=database(4),left=await open(concurrent),right=await open(concurrent);
  const pair=await Promise.all([count(left.page,'jeddah_0',2),count(right.page,'jeddah_0',3)]);
@@ -106,6 +130,28 @@ const root=path.resolve(__dirname,'..'),results=[];
  await lost.page.evaluate(()=>__test.receiptCache=false);assert.equal(await count(lost.page,'jeddah_2',6),true);assert.equal(lostDb.metrics.writes,6);
  results.push({test:'reload during save, offline reload replay, failed/cache-only receipt retained',passed:true});
  await lost.ctx.close();
+ // Distinct employee identities and branch/team routing; this does not emulate Firestore Rules.
+ for(const devices of [6,8]){
+  const employeesDb=database(18),control=employeesDb.rows.get('system_controls/stocktake_feature');
+  const clients=[],assigned={jeddah:[],riyadh:[]};
+  for(let i=0;i<devices;i++){const branch=i%2?'riyadh':'jeddah',team=Math.floor(i/2),id='employee'+i,name='موظف '+i;assigned[branch].push(id);employeesDb.put('stocktake_teams/'+branch+team,{...employeesDb.rows.get('stocktake_teams/'+branch+team),memberEmployeeIds:[id],memberEmployeeNames:[name]})}
+  for(const branch of ['jeddah','riyadh'])control.activeCampaigns[branch].allowedEmployeeIds=assigned[branch];
+  employeesDb.put('system_controls/stocktake_feature',control);
+  for(let i=0;i<devices;i++){const branch=i%2?'riyadh':'jeddah',team=Math.floor(i/2);const c=await open(employeesDb,branch,team,{id:'employee'+i,name:'موظف '+i});
+   assert.equal(await c.page.evaluate(()=>state.team.id),branch+team);
+   assert.deepEqual(await c.page.evaluate(()=>StocktakeBranches.available(state.control,user,norm).map(x=>x.branch)),[branch]);clients.push(c)}
+  const saves=await Promise.all(clients.map((c,i)=>count(c.page,(i%2?'riyadh':'jeddah')+'_'+i,1)));
+  assert.equal(saves.filter(Boolean).length,devices);assert.equal(employeesDb.metrics.writes,devices*2);
+  await clients[0].page.evaluate(()=>Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>false}));
+  assert.equal(await count(clients[0].page,'jeddah_17',2),false);
+  assert.equal(await count(clients[1].page,'riyadh_16',3),true);
+  assert.ok(await clients[0].page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_17:qty')));
+  await clients[0].page.evaluate(()=>Object.defineProperty(navigator,'onLine',{configurable:true,get:()=>true}));
+  assert.equal(await count(clients[0].page,'jeddah_17',2),true);
+  assert.equal(employeesDb.metrics.writes,devices*2+4);
+  results.push({test:'employee identity routing, concurrent saves and isolated offline device',devices,passed:true,limit:'client routing, not Firestore Rules'});
+  for(const c of clients)await c.ctx.close();
+ }
  // 6 and 8 independent browser contexts, 1500 distinct SKUs over two campaigns.
  for(const devices of [6,8]){
   const server=database(750),clients=[];for(let i=0;i<devices;i++)clients.push(await open(server,i%2?'riyadh':'jeddah',Math.floor(i/2)));

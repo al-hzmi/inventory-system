@@ -1,5 +1,9 @@
 [
   {
+    "test": "manual typing, paste, Enter and selection across prefix and leading-zero collisions; three viewport widths",
+    "passed": true
+  },
+  {
     "test": "one count with receipt",
     "passed": true,
     "readsPerNewCount": 5,
@@ -30,6 +34,10 @@
     "passed": true
   },
   {
+    "test": "one conflicting receipt does not block other draft reconciliation",
+    "passed": true
+  },
+  {
     "test": "same group concurrent edits: one commit, one retained conflict",
     "passed": true
   },
@@ -42,6 +50,18 @@
     "passed": true
   },
   {
+    "test": "employee identity routing, concurrent saves and isolated offline device",
+    "devices": 6,
+    "passed": true,
+    "limit": "client routing, not Firestore Rules"
+  },
+  {
+    "test": "employee identity routing, concurrent saves and isolated offline device",
+    "devices": 8,
+    "passed": true,
+    "limit": "client routing, not Firestore Rules"
+  },
+  {
     "test": "load",
     "devices": 6,
     "items": 1500,
@@ -50,7 +70,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 4542,
-    "elapsedMs": 5114,
+    "elapsedMs": 5143,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   },
   {
@@ -62,7 +82,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 6056,
-    "elapsedMs": 4803,
+    "elapsedMs": 4732,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   }
 ]

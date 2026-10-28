@@ -4811,22 +4811,6 @@ const App = () => {
 
     const isDbEmpty = useMemo(() => databases.jeddah.length === 0 && databases.riyadh.length === 0, [databases]);
 
-    useEffect(() => {
-        const cleanQ = normalizeCleanId(query);
-        if (cleanQ.length >= 8 && /^\d+$/.test(cleanQ)) {
-            const pool = databases[warehouse] || [];
-            const exactMatch = pool.find(item => item.cleanId === cleanQ);
-            if (exactMatch) return; 
-
-            const possibleMatches = pool.filter(item => item.cleanId && item.cleanId.length >= 3 && cleanQ.includes(item.cleanId));
-            if (possibleMatches.length > 0) {
-                possibleMatches.sort((a, b) => b.cleanId.length - a.cleanId.length);
-                const bestMatch = possibleMatches[0];
-                if (bestMatch.id !== query) setQuery(bestMatch.id); 
-            }
-        }
-    }, [query, warehouse, databases]);
-    
     const applyTaps = useCallback((uid, taps) => {
         setCardViews(prev => {
             const cur = prev[uid] || CARD_VIEW.IMAGE; let next = cur;
