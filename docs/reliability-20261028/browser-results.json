@@ -30,6 +30,10 @@
     "passed": true
   },
   {
+    "test": "distinct scopes preserve both counts after stale view review",
+    "passed": true
+  },
+  {
     "test": "reload during save, offline reload replay, failed/cache-only receipt retained",
     "passed": true
   },
@@ -42,7 +46,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 4542,
-    "elapsedMs": 5125,
+    "elapsedMs": 4818,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   },
   {
@@ -54,7 +58,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 6056,
-    "elapsedMs": 5172,
+    "elapsedMs": 4566,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   }
 ]

@@ -69,6 +69,18 @@ const root=path.resolve(__dirname,'..'),results=[];
  assert.equal(await loser.page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_0:qty').state),'conflict');
  results.push({test:'same group concurrent edits: one commit, one retained conflict',passed:true});
  await left.ctx.close();await right.ctx.close();
+ // Different physical scopes may contribute; stale concurrent totals require review before retry.
+ const scopes=database(4),first=await open(scopes,'jeddah',0),second=await open(scopes,'jeddah',1);
+ assert.equal(await count(first.page,'jeddah_0',2),true);
+ assert.equal(await count(second.page,'jeddah_0',3),false);
+ assert.equal(await second.page.evaluate(()=>draftStore.get('jeddah:jeddah1:jeddah_0:qty').state),'conflict');
+ await second.page.reload();await second.page.waitForFunction(()=>state.itemsLoaded);await second.page.evaluate(()=>pickTeam('jeddah1'));
+ assert.equal(await count(second.page,'jeddah_0',3),true);
+ const shared=scopes.rows.get('stocktake_items/jeddah_0');
+ assert.deepEqual(Object.values(shared.teamCounts).map(x=>x.quantity).sort(),[2,3]);
+ assert.equal(scopes.metrics.writes,4);
+ results.push({test:'distinct scopes preserve both counts after stale view review',passed:true});
+ await first.ctx.close();await second.ctx.close();
  // A lost reply / closed page keeps a durable intent that reconciles on reload.
  const lostDb=database(4),lost=await open(lostDb);
  await lost.page.evaluate(()=>{__test.ackDelay=2000;void writeCount(state.items.find(i=>i.id==='jeddah_0'),4,'first_manual_count')});
