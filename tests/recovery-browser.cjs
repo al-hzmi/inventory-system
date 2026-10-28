@@ -35,6 +35,11 @@ const root=path.resolve(__dirname,'..'),results=[];
  await sp.locator('.skuSuggestion').filter({hasText:'22639'}).click();assert.equal(await sp.evaluate(()=>state.items.find(i=>i.id===state.activeEditId)?.sku),'22639');
  for(const width of [320,390,412]){await sp.setViewportSize({width,height:800});await sp.locator('#search').fill('226');assert.ok(await sp.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'unexpected horizontal overflow at '+width)}
  results.push({test:'manual typing, paste, Enter and selection across prefix and leading-zero collisions; three viewport widths',passed:true});await searchClient.ctx.close();
+ // A partial locally cached campaign with a known reference count cannot start.
+ const partialDb=database(4),partial=await open(partialDb);await partial.page.evaluate(()=>{state.campaign.inventorySnapshotCount=5;state.enteredScope='';itemCacheOnly=true;render()});
+ assert.equal(await partial.page.locator('#startStocktake').isDisabled(),true);assert.match(await partial.page.locator('.welcomeReadiness').innerText(),/لم يكتمل/);
+ await partial.page.evaluate(()=>{state.campaign.inventorySnapshotCount=4;render()});assert.equal(await partial.page.locator('#startStocktake').isDisabled(),false);
+ results.push({test:'known reference count rejects partial cached campaign',passed:true});await partial.ctx.close();
  const db=database(105),{page,ctx}=await open(db);
  assert.equal(await count(page,'jeddah_0'),true);
  assert.equal(db.metrics.writes,2);assert.equal(await page.evaluate(()=>draftStore.list().length),0);
