@@ -74,7 +74,7 @@ html,body{overflow-x:hidden}
 @media(max-width:520px){.editrow{grid-template-columns:minmax(0,1fr)!important}.save{width:100%;min-width:0}.actual{width:100%;min-width:0}}
 </style>
 <script src="./v56-39-site-identity.js?v=56.39" defer></script>
-<link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.0"><link rel="stylesheet" href="./stocktake-workspace.css?v=75.2"><script src="./stocktake-core.js?v=75.0"></script><script src="./stocktake-branches.js?v=116.0"></script></head>
+<link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.0"><link rel="stylesheet" href="./stocktake-workspace.css?v=75.2"><script src="./stocktake-core.js?recovery=1&v=75.0"></script><script src="./stocktake-branches.js?v=116.0"></script></head>
 <body class="stocktake-floor">
 <div id="app" class="app"><div class="empty">جاري تحميل الجرد...</div></div>
 <div id="noteModal" class="modalbg"><div class="modal"><h3>ملاحظة على الصنف</h3><p id="noteSku"></p><textarea id="noteText" placeholder="الملاحظة اختيارية — اكتبها فقط عند الحاجة"></textarea><div class="modalactions"><button id="noteCancel">إلغاء</button><button id="noteSave" class="primary">حفظ الملاحظة</button></div></div></div>
@@ -124,9 +124,16 @@ const draftKey=(id,kind='qty')=>`${state.campaign?.id}:${state.team?.id}:${id}:$
 const draftValue=i=>draftStore.get(draftKey(i.id))?.value??((i.countStatus||'pending')!=='pending'?(Number.isFinite(i._teamActual)?i._teamActual:i.actualQty):'');
 function trackPendingDraft(id){if(draftStore.get(draftKey(id))||draftStore.get(draftKey(id,'note')))draftPendingIds.add(id);else draftPendingIds.delete(id)}
 function paintSyncStatus(){const node=$('.syncStatus');if(node)node.outerHTML=syncHtml()}
-function saveDraft(id,value,kind='qty',extra={}){const ok=draftStore.set(draftKey(id,kind),{value,...extra});if(ok){trackPendingDraft(id);paintSyncStatus()}else toast('تعذر حفظ المسودة على الجهاز؛ أبقِ الصفحة مفتوحة حتى تأكيد المزامنة');return ok}
-function syncHtml(){const pending=state.items.filter(i=>i._pending).length,drafts=draftPendingIds.size;const message=drafts?`${drafts} صنف به مسودة محلية لم يتأكد اعتمادها في Firebase · راجعها قبل مغادرة الجهاز`:!durableCache?'التخزين الدائم غير متاح على هذا المتصفح؛ انتظر تأكيد المزامنة قبل المغادرة':pending?`${pending} صنف محفوظ على الجهاز · بانتظار المزامنة`:!navigator.onLine?'بدون اتصال · يمكنك مواصلة الجرد على الأصناف المحمّلة':itemCacheOnly?'عرض البيانات المحفوظة على الجهاز · جارٍ التحقق من المزامنة':'تمت المزامنة مع الخادم';return `<div class="syncStatus ${drafts||!durableCache?'error':pending||itemCacheOnly||!navigator.onLine?'wait':''}" role="status">${message}</div>`}
-const destroy=()=>{if(itemListPaint)cancelAnimationFrame(itemListPaint);state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}});stopScanner()};window.addEventListener('beforeunload',destroy);window.addEventListener('online',render);window.addEventListener('offline',render);
+function saveDraft(id,value,kind='qty',extra={}){
+ const key=draftKey(id,kind),old=draftStore.get(key),item=state.items.find(i=>i.id===id);
+ if(old?.operationId&&!extra.operationId){
+  const same=kind==='qty'?n(old.value)===n(value):old.value===value;
+  if(!same){toast('تحقق من العملية المعلقة قبل تغييرها؛ القيمة السابقة محفوظة');return false}
+  return true;
+ }
+ const ok=draftStore.set(key,{...old,value,campaignId:state.campaign?.id,teamId:state.team?.id,itemId:id,kind,sku:item?.sku||old?.sku||id,name:item?.name||old?.name||'',branch:state.campaign?.warehouse||old?.branch||'',campaignName:state.campaign?.name||old?.campaignName||'',teamName:state.team?.name||old?.teamName||'',actorEmployeeId:user.employeeId||ROOT_ID,state:extra.operationId?'queued':'local_draft',updatedAt:Date.now(),...extra});if(ok){trackPendingDraft(id);paintSyncStatus()}else toast('تعذر حفظ المسودة على الجهاز؛ أبقِ الصفحة مفتوحة حتى تأكيد المزامنة');return ok}
+function syncHtml(){const pending=state.items.filter(i=>i._pending).length,drafts=draftPendingIds.size;const message=drafts?`${drafts} صنف به مسودة محلية لم يتأكد اعتمادها في Firebase · راجعها قبل مغادرة الجهاز`:!durableCache?'التخزين الدائم غير متاح على هذا المتصفح؛ انتظر تأكيد المزامنة قبل المغادرة':pending?`${pending} صنف محفوظ على الجهاز · بانتظار المزامنة`:!navigator.onLine?'بدون اتصال · يمكنك مواصلة الجرد على الأصناف المحمّلة':itemCacheOnly?'عرض البيانات المحفوظة على الجهاز · جارٍ التحقق من المزامنة':'تمت المزامنة مع الخادم';return `<div class="syncStatus ${drafts||!durableCache?'error':pending||itemCacheOnly||!navigator.onLine?'wait':''}" role="status">${message}<button type="button" class="btn" data-recovery-open>عرض المسودات واستعادتها</button></div>`}
+const destroy=()=>{unbindCampaign();if(itemListPaint)cancelAnimationFrame(itemListPaint);state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}});stopScanner()};window.addEventListener('beforeunload',destroy);window.addEventListener('online',render);window.addEventListener('offline',render);
 if(!user.name||(!user.isAdmin&&!user.validEmployee))location.href='./index.html?employee=1';else start();
 function cleanDigits(value){return eng(String(value??'')).replace(/\D/g,'')}
 function resolveStocktakeSearch(raw){
@@ -176,7 +183,50 @@ if(chosen&&itemsUnsub&&state.team?.campaignId===chosen.campaignId){
  state.team=chosen;state.enteredScope='';state.search='';state.activeEditId='';
  state.items=state.items.map(i=>StocktakeCore.forTeam(i,chosen.id));render();return;
 }
-state.team=chosen;draftPendingIds=new Set();state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly;state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);if(wasReady&&wasCacheOnly===itemCacheOnly&&!s.docChanges({includeMetadataChanges:true}).length)return;state.items=s.docs.map(d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},state.team?.id||chosen.id)).sort((a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en'));draftPendingIds=new Set();for(const i of state.items){let remains=false;for(const kind of ['qty','note']){const key=draftKey(i.id,kind),draft=draftStore.get(key),op=kind==='qty'?i.lastCountOperationId:i.lastNoteOperationId;if(draft?.operationId===op&&!i._pending&&!itemCacheOnly)draftStore.remove(key);else if(draft)remains=true}if(remains)draftPendingIds.add(i.id)}scheduleItemListPaint()},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
+state.team=chosen;draftPendingIds=new Set();state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly;state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);if(wasReady&&wasCacheOnly===itemCacheOnly&&!s.docChanges({includeMetadataChanges:true}).length)return;state.items=s.docs.map(d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},state.team?.id||chosen.id)).sort((a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en'));draftPendingIds=new Set();for(const i of state.items){let remains=false;for(const kind of ['qty','note']){const key=draftKey(i.id,kind),draft=draftStore.get(key),op=kind==='qty'?i.lastCountOperationId:i.lastNoteOperationId;if(draft)remains=true}if(remains)draftPendingIds.add(i.id)}scheduleItemListPaint()},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
+const receiptChecks=new Map();
+async function verifyDraftReceipt(key){
+ if(receiptChecks.has(key))return receiptChecks.get(key);
+ const work=(async()=>{
+  const draft=draftStore.get(key);if(!draft?.operationId)return false;
+  const snap=await db.collection('stocktake_audit').doc(draft.operationId).get({source:'server'});
+  if(snap.metadata?.fromCache||snap.metadata?.hasPendingWrites)throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED');
+  if(!snap.exists)return false;
+  if(!StocktakeCore.receiptMatches(key,draft,snap.data(),user.employeeId||ROOT_ID))throw Error('STOCKTAKE_OPERATION_CONFLICT');
+  const removed=draftStore.removeIf(key,draft);
+  if(removed){draftPendingIds=new Set(state.items.filter(i=>draftStore.get(draftKey(i.id))||draftStore.get(draftKey(i.id,'note'))).map(i=>i.id));paintSyncStatus()}
+  return removed;
+ })();
+ receiptChecks.set(key,work);try{return await work}finally{receiptChecks.delete(key)}
+}
+let lastReceiptSweep=0;
+async function reconcileVisibleDrafts(){
+ if(document.visibilityState!=='visible'||!navigator.onLine||Date.now()-lastReceiptSweep<60000)return;
+ lastReceiptSweep=Date.now();let pending;try{pending=draftStore.list().filter(r=>r.value?.operationId).slice(0,10)}catch{return}
+ // Bounded, read-only reconciliation. Unsent inputs and conflicts require employee review.
+ for(const row of pending){try{await verifyDraftReceipt(row.key)}catch{break}}
+}
+window.addEventListener('online',reconcileVisibleDrafts);
+window.addEventListener('pageshow',reconcileVisibleDrafts);
+document.addEventListener('visibilitychange',reconcileVisibleDrafts);
+function recoveryRows(){return draftStore.list().map(row=>{const [campaignId,teamId,itemId,kind]=row.key.split(':'),item=state.items.find(i=>i.id===itemId&&i.campaignId===campaignId);return {...row,campaignId,teamId,itemId,kind,item}})}
+function showRecovery(){
+ let modal=document.getElementById('draftRecovery');
+ if(!modal){modal=document.createElement('div');modal.id='draftRecovery';modal.className='modalbg open';document.body.appendChild(modal)}
+ let rows;try{rows=recoveryRows()}catch{toast('تعذر قراءة تخزين الجهاز؛ أبقِ الصفحة مفتوحة');return}
+ const labels={local_draft:'مسودة محلية',queued:'بانتظار الإرسال',saving:'جارٍ الحفظ',unconfirmed:'تعذر التأكيد',conflict:'تعارض يحتاج مراجعة'};
+ modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-label="استعادة المسودات" style="max-height:85vh;overflow:auto"><h3>أصناف بانتظار التأكيد (${new Set(rows.map(r=>r.campaignId+':'+r.itemId)).size})</h3><p>تصدير النسخة يحفظ المسودات كما هي. التحقق يقرأ سجل الخادم دون تعديل الجرد.</p><div class="actions"><button class="btn" id="exportDrafts">تصدير نسخة احتياطية</button><button class="btn" id="closeRecovery">إغلاق</button></div><div>${rows.map((r,j)=>{const d=r.value||{};return `<article class="card"><b>${esc(d.sku||r.item?.sku||r.itemId||r.key)}</b><div>${esc(d.name||r.item?.name||'')}</div><div>${r.kind==='note'?'الملاحظة':'الكمية'}: ${esc(d.value??'بيانات تحتاج مراجعة')}</div><small>الفرع: ${esc(d.branch||(state.campaign?.id===r.campaignId?state.campaign.warehouse:'غير متاح محليًا'))}<br>الحملة: ${esc(d.campaignName||r.campaignId)}<br>المجموعة: ${esc(d.teamName||r.teamId)}</small><div>${esc(labels[d.state]||(d.operationId?'تعذر التأكيد':'مسودة محلية'))}${d.error?' · تعذر الحفظ أو التحقق؛ أعد التحقق عند عودة الاتصال':''}</div><div class="actions"><button class="btn" data-check-draft="${j}" ${d.operationId?'':'disabled'}>تحقق من الخادم</button><button class="btn" data-retry-draft="${j}" ${r.item&&r.teamId===state.team?.id?'':'disabled'}>مراجعة وإعادة المحاولة</button></div></article>`}).join('')||'<p>لا توجد مسودات لهذا الحساب على هذا المتصفح.</p>'}</div></section>`;
+ modal.querySelector('#closeRecovery').onclick=()=>modal.remove();
+ modal.querySelector('#exportDrafts').onclick=()=>{
+  try{const payload={format:'stocktake-local-recovery-v1',exportedAt:new Date().toISOString(),origin:location.origin,actorId:user.employeeId||ROOT_ID,entries:draftStore.list()};const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='stocktake-drafts-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}catch{toast('تعذر التصدير؛ أبقِ الصفحة مفتوحة')}
+ };
+ modal.querySelectorAll('[data-check-draft]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{toast(await verifyDraftReceipt(rows[Number(b.dataset.checkDraft)].key)?'تم تأكيد العملية من الخادم':'لا يوجد سجل مؤكد لهذه العملية؛ احتفظ بالمسودة')}catch{toast('تعذر التأكيد؛ بقيت المسودة محفوظة')}showRecovery()});
+ modal.querySelectorAll('[data-retry-draft]').forEach(b=>b.onclick=()=>{const r=rows[Number(b.dataset.retryDraft)];modal.remove();state.enteredScope=state.campaign.id+':'+state.team.id;state.search=String(r.item.sku);state.activeEditId=r.itemId;render();if(r.kind==='note')openNote(r.itemId)});
+}
+document.addEventListener('click',event=>{if(event.target.closest('[data-recovery-open]'))showRecovery()});
+// Also accessible when a campaign is closed/unassigned or its item disappeared.
+const recoveryLauncher=document.createElement('button');recoveryLauncher.type='button';recoveryLauncher.className='btn';recoveryLauncher.textContent='المسودات المحلية';recoveryLauncher.setAttribute('data-recovery-open','');document.body.appendChild(recoveryLauncher);
+
 function lockHtml(title,note){return `<div class="lock"><h2>${esc(title)}</h2><p>${esc(note)}</p><button class="btn" style="padding:0 18px;margin-top:12px" onclick="location.href='./index.html?employee=1'">العودة للنظام</button></div>`}
 function completedMatches(i){if((i.countStatus||'pending')==='pending')return false;if(state.filter==='matched')return i.countStatus==='matched';if(state.filter==='variance')return ['shortage','surplus'].includes(i.countStatus);if(state.filter==='notes')return Boolean(String(i.note||'').trim());return true}
 function recentStamp(i){return Number(i.lastCountAt?.seconds||i.updatedAt?.seconds||i.firstCountAt?.seconds||0)}
@@ -186,7 +236,7 @@ function renderContent(){if(!state.control||!canAccess(state.control))return;if(
 function chip(id,label,count){return `<button class="chip ${state.filter===id?'active':''}" data-filter="${id}">${label} <span>${count}</span></button>`}
 function completedCardHtml(i){const st=i.countStatus||'pending',diff=Number(i.actualQty)-Number(i.expectedQty);return `<article class="completedRow"><button class="completedOpen" data-open="${i.id}" aria-label="فتح الصنف">‹</button><div><div class="completedSku">${esc(i.sku)}</div><div class="completedName">${esc(i.name||'')}${i.pack!==''&&i.pack!=null?` · الشد: ${esc(i.pack)}`:''}</div><div class="completedNumbers"><span class="mini">الفعلي ${fmt(i.actualQty)}</span><span class="mini">النظام ${fmt(i.expectedQty)}</span><span class="mini">الفرق ${diff>0?'+':''}${fmt(diff)}</span>${i.note?'<span class="mini">ملاحظة</span>':''}</div></div><span class="completedStatus ${st}">${statusLabel(st)}</span></article>`}
 function cardHtml(i,readonly){const st=i.countStatus||'pending',counted=st!=='pending',diff=counted?Number(i.actualQty)-Number(i.expectedQty):null;return `<article class="card ${st}" data-id="${i.id}"><div class="meta"><div class="grow"><div class="sku">${esc(i.sku)}</div><div class="name">${esc(i.name||'')}${i.pack!==''&&i.pack!=null?` · الشد: ${esc(i.pack)}`:''}</div></div><span class="pill ${st==='matched'?'ok':st==='shortage'?'bad':st==='surplus'?'info':''}">${statusLabel(st)}</span></div>${counted?`<div class="qtygrid"><div class="q"><span>كمية النظام</span><b>${fmt(i.expectedQty)}</b></div><div class="q"><span>إجمالي الجهات</span><b>${fmt(i.actualQty)}</b></div><div class="q"><span>الفرق</span><b>${diff>0?'+':''}${fmt(diff)}</b></div></div><div class="variance ${st}">${st==='matched'?'✓ مطابق':st==='shortage'?`نقص ${fmt(Math.abs(diff))}`:`زيادة ${fmt(diff)}`}${i.revision?` · تعديل رقم ${fmt(i.revision)}`:''}</div>`:`<div class="blind"></div>`}${i.note?`<div class="hint"><b>ملاحظة:</b> ${esc(i.note)}</div>`:''}${i._pending?'<div class="pendingmark">بانتظار المزامنة...</div>':''}<div class="actions"><button class="btn entry" data-entry="${i.id}" ${readonly?'disabled':''}>${counted?'تعديل الكمية':'إدخال الكمية'}</button><button class="btn note ${String(i.note||'').trim()?'has':''}" data-note="${i.id}" ${readonly?'disabled':''} title="ملاحظة" aria-label="ملاحظة على الصنف ${esc(i.sku)}">ملاحظة</button></div><div class="editbox ${state.activeEditId===i.id?'open':''}" id="edit_${i.id}"><div class="editrow"><input class="actual" id="actual_${i.id}" inputmode="decimal" value="${esc(draftValue(i))}" aria-label="كمية هذا الصنف لدى جهتك ${esc(i.sku)}" autocomplete="off" placeholder="كمية هذا الصنف" ${readonly||saving.has(i.id)?'disabled':''}><button class="save" data-save="${i.id}" ${readonly||saving.has(i.id)?'disabled':''}>${saving.has(i.id)?'جارٍ الحفظ':'اعتماد'}</button></div></div></article>`}
-function bindUi(readonly){$('#backBtn')?.addEventListener('click',()=>{state.enteredScope='';render()});$('#teamSelect')?.addEventListener('change',e=>{state.activeEditId='';state.search='';state.historyVisible=12;pickTeam(e.target.value)});document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{const strip=b.closest('.filters');if(strip)state.filterScroll=strip.scrollLeft;state.filter=b.dataset.filter;state.historyVisible=12;render()});const se=$('#search');if(se){se.oninput=e=>{const resolved=resolveStocktakeSearch(e.target.value);state.search=e.target.value;state.activeEditId=resolved.item?.id||'';if(resolved.item&&resolved.fromBarcode)state.search=resolved.query;render();const next=$('#search');if(next&&!state.activeEditId){next.focus();try{next.setSelectionRange(next.value.length,next.value.length)}catch{}}};se.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const resolved=resolveStocktakeSearch(se.value);if(resolved.item){state.search=resolved.query;state.activeEditId=resolved.item.id;render()}else toast('لم يتم العثور على الصنف')}}}$('#keyboardModeBtn')?.addEventListener('click',async()=>{if(!user.isAdmin)return;const next=state.control?.searchKeyboardMode==='text'?'numeric':'text';try{state.control.searchKeyboardMode=next;render();await db.collection('system_controls').doc(CONTROL_DOC).set({searchKeyboardMode:next,searchKeyboardUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),searchKeyboardUpdatedBy:ROOT_ID},{merge:true});toast(next==='numeric'?'لوحة الأرقام مفعلة':'لوحة الإدخال الكاملة مفعلة')}catch(e){console.error(e);toast('تعذر تغيير لوحة الإدخال')}});$('#scanBtn')?.addEventListener('click',()=>{ensureFeedbackAudio();startScanner()});$('#loadMoreHistory')?.addEventListener('click',()=>{state.historyVisible=(state.historyVisible||12)+12;render()});document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.activeEditId=b.dataset.open;state.search=String(state.items.find(i=>i.id===b.dataset.open)?.sku||'');render()});if(readonly)return;document.querySelectorAll('[data-entry]').forEach(b=>b.onclick=()=>{ensureFeedbackAudio();state.activeEditId=b.dataset.entry;render()});document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveActual(b.dataset.save));document.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>openNote(b.dataset.note));document.querySelectorAll('.actual').forEach(inp=>inp.oninput=()=>saveDraft(inp.id.replace('actual_',''),inp.value));document.querySelectorAll('.actual').forEach(inp=>inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=inp.id.replace('actual_','');saveActual(id)}})}
+function bindUi(readonly){$('#backBtn')?.addEventListener('click',()=>{state.enteredScope='';render()});$('#teamSelect')?.addEventListener('change',e=>{state.activeEditId='';state.search='';state.historyVisible=12;pickTeam(e.target.value)});document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{const strip=b.closest('.filters');if(strip)state.filterScroll=strip.scrollLeft;state.filter=b.dataset.filter;state.historyVisible=12;render()});const se=$('#search');if(se){se.oninput=e=>{const resolved=resolveStocktakeSearch(e.target.value);state.search=e.target.value;state.activeEditId=resolved.item?.id||'';if(resolved.item&&resolved.fromBarcode)state.search=resolved.query;render();const next=$('#search');if(next&&!state.activeEditId){next.focus();try{next.setSelectionRange(next.value.length,next.value.length)}catch{}}};se.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const resolved=resolveStocktakeSearch(se.value);if(resolved.item){state.search=resolved.query;state.activeEditId=resolved.item.id;render()}else toast('لم يتم العثور على الصنف')}}}$('#keyboardModeBtn')?.addEventListener('click',async()=>{if(!user.isAdmin)return;const next=state.control?.searchKeyboardMode==='text'?'numeric':'text';try{state.control.searchKeyboardMode=next;render();await db.collection('system_controls').doc(CONTROL_DOC).set({searchKeyboardMode:next,searchKeyboardUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),searchKeyboardUpdatedBy:ROOT_ID},{merge:true});toast(next==='numeric'?'لوحة الأرقام مفعلة':'لوحة الإدخال الكاملة مفعلة')}catch(e){console.error(e);toast('تعذر تغيير لوحة الإدخال')}});$('#scanBtn')?.addEventListener('click',()=>{ensureFeedbackAudio();startScanner()});$('#loadMoreHistory')?.addEventListener('click',()=>{state.historyVisible=(state.historyVisible||12)+12;render()});document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.activeEditId=b.dataset.open;state.search=String(state.items.find(i=>i.id===b.dataset.open)?.sku||'');render()});if(readonly)return;document.querySelectorAll('[data-entry]').forEach(b=>b.onclick=()=>{ensureFeedbackAudio();state.activeEditId=b.dataset.entry;render()});document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveActual(b.dataset.save));document.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>openNote(b.dataset.note));document.querySelectorAll('.actual').forEach(inp=>inp.oninput=()=>{const id=inp.id.replace('actual_','');if(!saveDraft(id,inp.value)){const prior=draftStore.get(draftKey(id));if(prior?.operationId)inp.value=prior.value}});document.querySelectorAll('.actual').forEach(inp=>inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=inp.id.replace('actual_','');saveActual(id)}})}
 function canEditItem(item){return Boolean(item&&state.campaign&&state.team&&item.campaignId===state.campaign.id&&state.campaign.status==='active'&&canAccess(state.control)&&isMember(state.team))}
 
 let surplusDialogActive=false;
@@ -225,7 +275,14 @@ function confirmSurplusCount(item,enteredQty,totalQty,expectedQty){
  });
 }
 async function writeCount(item,actual,source){
- if(!canEditItem(item))return false;
+ const retryScope=state.campaign?.id+':'+state.team?.id;
+ const retryKey=draftKey(item.id),retry=draftStore.get(retryKey);
+ if(retry?.operationId){
+  if(n(retry.value)!==actual){toast('راجع المسودة المعلقة قبل تغيير الكمية');return false}
+  try{if(await verifyDraftReceipt(retryKey)){toast('تم تأكيد العملية السابقة من الخادم');return true}}
+  catch(error){toast('تعذر التحقق من العملية السابقة؛ المسودة محفوظة');return false}
+ }
+ if(retryScope!==state.campaign?.id+':'+state.team?.id||!canEditItem(item))return false;
  const countingTeam={...state.team};
  if(!Number.isFinite(actual)||actual<0){toast('أدخل كمية صحيحة؛ اكتب 0 صراحةً إذا لم توجد كمية');return false}
  if(saving.has(item.id)||surplusDialogActive)return false;
@@ -264,8 +321,8 @@ async function writeCount(item,actual,source){
   item=fresh;
  }
  if(saving.has(item.id))return false;
- saving.add(item.id);await persistenceReady;if(!canEditItem(item)){saving.delete(item.id);return false}
- if(!durableCache&&!navigator.onLine){saving.delete(item.id);toast('التخزين الدائم غير متاح؛ اتصل بالإنترنت قبل الاعتماد');return false}
+ saving.add(item.id);await persistenceReady;if(state.team?.id!==entryTeamId||state.campaign?.id!==entryCampaignId||!canEditItem(item)){saving.delete(item.id);return false}
+ // Local drafts have their own verified storage; IndexedDB availability is independent.
  if(!Number.isFinite(StocktakeCore.quantity(item.expectedQty))){saving.delete(item.id);toast('كمية النظام غير صالحة؛ راجع الإدارة قبل الاعتماد');return false}
  const finishedAll=!((item.countStatus||'pending')!=='pending')&&state.items.length>0&&state.items.every(i=>i.id===item.id||(i.countStatus||'pending')!=='pending');
  const key=draftKey(item.id),previousDraft=draftStore.get(key);
@@ -273,9 +330,10 @@ async function writeCount(item,actual,source){
  // generate a second counted audit entry for the very same unconfirmed quantity.
  const operationId=previousDraft?.operationId&&String(previousDraft.value)===String(actual)
    ?String(previousDraft.operationId):db.collection('stocktake_audit').doc().id;
- if(!saveDraft(item.id,String(actual),'qty',{operationId})){saving.delete(item.id);return false}
+ if(!saveDraft(item.id,String(actual),'qty',{operationId,baseOperationId:previousDraft?.operationId?previousDraft.baseOperationId:(item.lastCountOperationId||''),baseTeamQty:previousDraft?.operationId?previousDraft.baseTeamQty:(Number.isFinite(item._teamActual)?item._teamActual:null)})){saving.delete(item.id);return false}
  // The local draft remains until the Firestore transaction actually commits.
  if(!navigator.onLine){saving.delete(item.id);toast('بدون اتصال: الكمية محفوظة كمسودة على الجهاز، ولم تُعتمد في Firebase');return false}
+ draftStore.set(key,{...draftStore.get(key),state:'saving'});
  const itemRef=db.collection('stocktake_items').doc(item.id),campaignRef=db.collection('stocktake_campaigns').doc(entryCampaignId),controlRef=db.collection('system_controls').doc(CONTROL_DOC),operationRef=db.collection('stocktake_audit').doc(operationId);
  let confirmTimer=null;
  try {
@@ -286,7 +344,7 @@ async function writeCount(item,actual,source){
      const campaign=campaignDoc.data()||{},control=controlDoc.data()||{},fresh=currentDoc.data();
      if(operationDoc.exists){
        const completed=operationDoc.data()||{},after=completed.after||{};
-       if(completed.campaignId!==entryCampaignId||completed.teamId!==countingTeam.id||completed.itemId!==item.id||Math.abs(Number(after.teamActualQty)-actual)>1e-9)throw new Error('STOCKTAKE_OPERATION_CONFLICT');
+       if(!StocktakeCore.receiptMatches(key,{value:String(actual),operationId},completed,user.employeeId||ROOT_ID))throw new Error('STOCKTAKE_OPERATION_CONFLICT');
        return {status:after.countStatus,total:after.actualQty,alreadyCommitted:true};
      }
      if(campaign.status!=='active'||!StocktakeBranches.isActive(control,entryCampaignId,StocktakeBranches.branchOf(campaign)))throw new Error('STOCKTAKE_NOT_ACTIVE');
@@ -299,6 +357,13 @@ async function writeCount(item,actual,source){
      if(otherEntries.some(x=>!ourScope||!norm(x.scope||'')||norm(x.scope||'')===ourScope))throw new Error('STOCKTAKE_DUPLICATE_SCOPE');
      const previous=fresh.teamCounts?.[entryKey];
      const previousActual=previous?StocktakeCore.quantity(previous.quantity):(fresh.teamId===countingTeam.id&&fresh.actualQty!=null?StocktakeCore.quantity(fresh.actualQty):NaN);
+     const intent=draftStore.get(key);
+     if(!intent||intent.operationId!==operationId)throw new Error('STOCKTAKE_DRAFT_CHANGED');
+     const currentOperation=previous?.operationId||(fresh.teamId===countingTeam.id?fresh.lastCountOperationId:'')||'';
+     if(intent.baseOperationId!==undefined&&currentOperation!==intent.baseOperationId)throw new Error('STOCKTAKE_CHANGED_RETRY');
+     if(intent.baseTeamQty!==undefined&&(Number.isFinite(previousActual)?previousActual:null)!==intent.baseTeamQty)throw new Error('STOCKTAKE_CHANGED_RETRY');
+     // Legacy unknown operations lack a concurrency baseline. Never overwrite an existing count silently.
+     if(intent.baseOperationId===undefined&&Number.isFinite(previousActual))throw new Error('STOCKTAKE_CONFLICT_REVIEW');
      const current=StocktakeCore.aggregate(fresh);
      if(current.countConflict)throw new Error('STOCKTAKE_CONFLICT_REVIEW');
      const aggregateQty=Number(current.actualQty)||0;
@@ -315,14 +380,15 @@ async function writeCount(item,actual,source){
    });
    // A temporary network stall is not a failed count. Keep the durable draft and
    // replay the same operation ID if the user retries after the timeout.
-   const result=await Promise.race([transaction,new Promise((_,reject)=>{confirmTimer=setTimeout(()=>reject(new Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
+   const acknowledged=transaction.then(async result=>{if(!await verifyDraftReceipt(key))throw new Error('STOCKTAKE_RECEIPT_UNCONFIRMED');return result});
+   const result=await Promise.race([acknowledged,new Promise((_,reject)=>{confirmTimer=setTimeout(()=>reject(new Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
    // A transaction is acknowledged by Firestore, never by a pending local snapshot.
-   if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);trackPendingDraft(item.id);paintSyncStatus();
+   trackPendingDraft(item.id);paintSyncStatus();
    if(state.team?.id===countingTeam.id&&state.campaign?.id===entryCampaignId&&state.activeEditId===item.id){state.activeEditId='';state.search=''}
    feedback(result.status,finishedAll);toast('تم تأكيد حفظ كمية الصنف على خادم Firebase');return true;
  } catch(error) {
    const code=String(error?.code||error?.message||error);
-   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:String(actual),operationId,failedAt:Date.now(),error:code});trackPendingDraft(item.id);paintSyncStatus();
+   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{...draftStore.get(key),value:String(actual),operationId,state:/CONFLICT|CHANGED|DUPLICATE|REFERENCE/.test(code)?'conflict':'unconfirmed',failedAt:Date.now(),error:code});trackPendingDraft(item.id);paintSyncStatus();
    const message=/STOCKTAKE_DUPLICATE_SCOPE/.test(code)?'تم رفض عدّ مكرر للصنف في النطاق نفسه'
      :/STOCKTAKE_CHANGED_RETRY|STOCKTAKE_REFERENCE_CHANGED/.test(code)?'تغير جرد الصنف بالتزامن؛ أعد فتحه وراجع أحدث قيمة'
      :/STOCKTAKE_NOT_ACTIVE/.test(code)?'الجرد غير مفعّل حاليًا على الخادم'
@@ -337,25 +403,44 @@ async function writeCount(item,actual,source){
 
 function saveActual(id){ensureFeedbackAudio();const it=state.items.find(x=>x.id===id),inp=$(`#actual_${CSS.escape(id)}`);if(!it||!inp||state.campaign?.status==='closed')return;if(!inp.value.trim())return toast('اكتب الكمية أولًا؛ الحقل الفارغ لا يعني صفرًا');writeCount(it,n(inp.value),(it.countStatus||'pending')==='pending'?'first_manual_count':'manual_revision')}
 function openNote(id){const it=state.items.find(x=>x.id===id);if(!it)return;state.noteItem=it;$('#noteSku').textContent=`الصنف ${it.sku}`;$('#noteText').value=draftStore.get(draftKey(id,'note'))?.value??(it.note||'');$('#noteModal').classList.add('open');setTimeout(()=>$('#noteText').focus(),80)}
-$('#noteText').oninput=()=>{if(state.noteItem)saveDraft(state.noteItem.id,$('#noteText').value,'note')};
-$('#noteCancel').onclick=()=>{$('#noteModal').classList.remove('open');state.noteItem=null};$('#noteModal').onclick=e=>{if(e.target.id==='noteModal')$('#noteCancel').click()};$('#noteSave').onclick=async()=>{
- const it=state.noteItem;if(!canEditItem(it)||saving.has('note:'+it.id))return;
- const note=$('#noteText').value.trim();if(!note&&it.note&&!confirm('مسح ملاحظة هذا الصنف؟ ستبقى الحركة في سجل التعديلات.'))return;
- saving.add('note:'+it.id);await persistenceReady;if(!canEditItem(it)){saving.delete('note:'+it.id);return}
- if(!durableCache&&!navigator.onLine){saving.delete('note:'+it.id);return toast('اتصل بالإنترنت لحفظ الملاحظة')}
- const key=draftKey(it.id,'note'),operationId=db.collection('stocktake_audit').doc().id,now=firebase.firestore.FieldValue.serverTimestamp();
- if(!saveDraft(it.id,note,'note',{operationId})){saving.delete('note:'+it.id);return}
- const batch=db.batch();batch.update(db.collection('stocktake_items').doc(it.id),{note,hasNote:!!note,noteUpdatedAt:now,noteUpdatedBy:user.name,lastNoteOperationId:operationId});
- batch.set(db.collection('stocktake_audit').doc(operationId),{campaignId:it.campaignId,teamId:it.teamId,itemId:it.id,sku:it.sku,action:'note_updated',before:{note:it.note||''},after:{note},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
- batch.commit().then(()=>{
-   saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);
-   if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تم تأكيد حفظ الملاحظة على خادم Firebase');
- }).catch(e=>{
-   console.warn('[V95 stocktake note]',e?.code||e?.message||e);saving.delete('note:'+it.id);
-   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:note,failedAt:Date.now()});
-   toast('فشل حفظ الملاحظة بالخادم؛ بقيت مسودة لإعادة المحاولة');
- });
-};
+$('#noteText').oninput=()=>{if(state.noteItem&&!saveDraft(state.noteItem.id,$('#noteText').value,'note')){const prior=draftStore.get(draftKey(state.noteItem.id,'note'));if(prior?.operationId)$('#noteText').value=prior.value}};
+$('#noteCancel').onclick=()=>{$('#noteModal').classList.remove('open');state.noteItem=null};
+$('#noteModal').onclick=e=>{if(e.target.id==='noteModal')$('#noteCancel').click()};
+$('#noteSave').onclick=()=>saveNote();
+async function saveNote(){
+ const it=state.noteItem;if(!it)return false;
+ const key=draftKey(it.id,'note'),old=draftStore.get(key),note=$('#noteText').value.trim(),team={...state.team},campaignId=state.campaign?.id;
+ if(saving.has('note:'+it.id))return false;
+ if(old?.operationId){
+  if(old.value!==note){toast('تحقق من الملاحظة المعلقة قبل تغييرها');return false}
+  try{if(await verifyDraftReceipt(key)){toast('تم تأكيد الملاحظة السابقة من الخادم');return true}}catch{toast('تعذر التحقق؛ الملاحظة محفوظة محليًا');return false}
+ }
+ if(state.team?.id!==team.id||state.campaign?.id!==campaignId||!canEditItem(it))return false;
+ if(!note&&it.note&&!confirm('مسح ملاحظة هذا الصنف؟ ستبقى الحركة في سجل التعديلات.'))return false;
+ const operationId=old?.operationId||db.collection('stocktake_audit').doc().id;
+ if(!saveDraft(it.id,note,'note',{operationId,baseNoteOperationId:old?.operationId?old.baseNoteOperationId:(it.lastNoteOperationId||''),baseNote:old?.operationId?old.baseNote:(it.note||'')}))return false;
+ if(!navigator.onLine){toast('الملاحظة محفوظة محليًا بانتظار الإرسال');return false}
+ saving.add('note:'+it.id);draftStore.set(key,{...draftStore.get(key),state:'saving'});let timer;
+ try{
+  const ref=db.collection('stocktake_items').doc(it.id),opRef=db.collection('stocktake_audit').doc(operationId);
+  const transaction=db.runTransaction(async tx=>{
+   const [cp,control,item,op]=await Promise.all([tx.get(db.collection('stocktake_campaigns').doc(campaignId)),tx.get(db.collection('system_controls').doc(CONTROL_DOC)),tx.get(ref),tx.get(opRef)]);
+   if(op.exists){if(!StocktakeCore.receiptMatches(key,{value:note,operationId},op.data(),user.employeeId||ROOT_ID))throw Error('STOCKTAKE_OPERATION_CONFLICT');return}
+   if(cp.data()?.status!=='active'||!StocktakeBranches.isActive(control.data()||{},campaignId,StocktakeBranches.branchOf(cp.data()||{})))throw Error('STOCKTAKE_NOT_ACTIVE');
+   if(!item.exists||item.data().campaignId!==campaignId)throw Error('STOCKTAKE_ITEM_NOT_FOUND');
+   const fresh=item.data(),intent=draftStore.get(key);
+   if(!intent||intent.operationId!==operationId)throw Error('STOCKTAKE_DRAFT_CHANGED');
+   if(intent.baseNoteOperationId===undefined||(fresh.lastNoteOperationId||'')!==intent.baseNoteOperationId||(fresh.note||'')!==intent.baseNote)throw Error('STOCKTAKE_CONFLICT_REVIEW');
+   const now=firebase.firestore.FieldValue.serverTimestamp();
+   tx.update(ref,{note,hasNote:!!note,noteUpdatedAt:now,noteUpdatedBy:user.name,lastNoteOperationId:operationId});
+   tx.set(opRef,{campaignId,teamId:team.id,itemId:it.id,sku:it.sku,action:'note_updated',before:{note:fresh.note||''},after:{note},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
+  });
+  const acknowledged=transaction.then(async()=>{if(!await verifyDraftReceipt(key))throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED')});
+  await Promise.race([acknowledged,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
+  if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تم تأكيد حفظ الملاحظة على خادم Firebase');return true;
+ }catch(error){const code=String(error?.code||error?.message||error),draft=draftStore.get(key);if(draft?.operationId===operationId)draftStore.set(key,{...draft,state:/CONFLICT|CHANGED/.test(code)?'conflict':'unconfirmed',error:code,failedAt:Date.now()});toast('تعذر تأكيد الملاحظة؛ راجع المسودات المحلية');return false}
+ finally{clearTimeout(timer);saving.delete('note:'+it.id);trackPendingDraft(it.id);paintSyncStatus()}
+}
 async function startScanner(){
  ensureFeedbackAudio();window.BranchScanAudio?.prepare();
  if(state.scanner)return;

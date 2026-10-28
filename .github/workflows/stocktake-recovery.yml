@@ -1,0 +1,35 @@
+name: Stocktake recovery isolated verification
+on:
+  pull_request:
+    paths:
+      - 'stocktake.html'
+      - 'stocktake-core.js'
+      - 'employee-attendance.js'
+      - 'tests/recovery-*.cjs'
+      - 'tests/support/recovery-firestore.cjs'
+      - '.github/workflows/stocktake-recovery.yml'
+  workflow_dispatch:
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/recovery-core.cjs
+      - run: node tests/recovery-browser.cjs
+      - run: node tests/v73-stocktake-data.cjs
+      - run: node tests/v89-cross-page-syntax.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v99-integrity-recovery.cjs
+      - run: node tests/v106-observability-write-budget.cjs
+      - run: node tests/v115-stocktake-source.cjs
+      - run: node tests/v116-dual-branch.cjs
+      - run: npm run build

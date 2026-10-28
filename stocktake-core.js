@@ -52,9 +52,28 @@
     const prefix = `stocktake.draft.v73:${scope}:`;
     return {
       get(id) { try { return JSON.parse(localStorage.getItem(prefix + id) || 'null'); } catch { return null; } },
-      set(id, value) { try { localStorage.setItem(prefix + id, JSON.stringify(value)); return true; } catch { return false; } },
+      set(id, value) { try { const existing=localStorage.getItem(prefix+id);if(existing!==null){const parsed=JSON.parse(existing);if(!parsed||typeof parsed!=='object')return false}const raw=JSON.stringify(value); localStorage.setItem(prefix + id, raw); return localStorage.getItem(prefix + id)===raw; } catch { return false; } },
+      list() {
+        const entries=[];
+        // Include corrupt records in the export rather than silently hiding them.
+        for(let j=0;j<localStorage.length;j++){
+          const key=localStorage.key(j);if(!key?.startsWith(prefix))continue;
+          const raw=localStorage.getItem(key);let value=null;try{value=JSON.parse(raw)}catch{}
+          entries.push({key:key.slice(prefix.length),raw,value});
+        }
+        return entries;
+      },
+      removeIf(id, expected) { try { if(localStorage.getItem(prefix+id)!==JSON.stringify(expected))return false;localStorage.removeItem(prefix+id);return localStorage.getItem(prefix+id)===null; } catch { return false; } },
       remove(id) { try { localStorage.removeItem(prefix + id); } catch {} }
     };
+  }
+  function receiptMatches(key,draft,receipt,actorId){
+    const parts=key.split(':');if(parts.length!==4||!draft?.operationId||!receipt||!actorId)return false;
+    const [campaignId,teamId,itemId,kind]=parts;
+    if(receipt.campaignId!==campaignId||receipt.teamId!==teamId||receipt.itemId!==itemId||receipt.actorEmployeeId!==actorId)return false;
+    if(kind==='note')return receipt.action==='note_updated'&&typeof draft.value==='string'&&receipt.after?.note===draft.value;
+    const actual=quantity(draft.value),saved=quantity(receipt.after?.teamActualQty);
+    return kind==='qty'&&['count_created','count_revised'].includes(receipt.action)&&Number.isFinite(actual)&&Number.isFinite(saved)&&actual===saved;
   }
   // Preserve user-edited fields and focus across live snapshots, scoped to the selected campaign.
   function capture(root) {
@@ -89,6 +108,6 @@
       if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
   }
-  global.StocktakeCore = { quantity, difference, teamKey, teamCount, contributionLabels, aggregate, forTeam, result, drafts, capture, restore };
+  global.StocktakeCore = { quantity, difference, teamKey, teamCount, contributionLabels, aggregate, forTeam, result, drafts, receiptMatches, capture, restore };
 })(typeof window !== 'undefined' ? window : globalThis);
 

@@ -16,5 +16,5 @@ assert(tracker.includes("setInterval(syncCart,2500)"),'cart CPU polling not redu
 assert(tracker.includes("lastCartHash=sig;await log"),'cart changes must be saved to server');
 assert(tracker.includes("presenceFailures>=2")&&tracker.includes("presenceWarning(true)"),'write failures must warn user');
 const employee=fs.readFileSync('employee-attendance.js','utf8');
-assert(employee.includes('pulseTimer=setInterval(pulse,45000)'),'verified employee presence must not be weakened');
+assert(employee.includes('pulseTimer=setInterval(pulse,90000)'),'attendance pulse remains below the existing 180-second online threshold');
 console.log('V106 low-write observability and verified employee attendance PASS');

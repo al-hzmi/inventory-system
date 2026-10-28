@@ -1,0 +1,5532 @@
+{
+  "basis": "Static text scan, includes wrappers/runtime duplicates and non-Firestore Map.get/set. NOT billed operations or coverage proof. Manually trace candidates.",
+  "files": [
+    {
+      "path": "OneSignalSDKUpdaterWorker.js",
+      "bytes": 76
+    },
+    {
+      "path": "OneSignalSDKWorker.js",
+      "bytes": 76
+    },
+    {
+      "path": "accountant-stocktake.html",
+      "bytes": 24286
+    },
+    {
+      "path": "admin-branch-presence.html",
+      "bytes": 3131
+    },
+    {
+      "path": "admin-dashboard.html",
+      "bytes": 233040
+    },
+    {
+      "path": "admin-feedback.html",
+      "bytes": 6325
+    },
+    {
+      "path": "admin-home.html",
+      "bytes": 22030
+    },
+    {
+      "path": "admin-image-export.html",
+      "bytes": 6157
+    },
+    {
+      "path": "admin-inventory-import.html",
+      "bytes": 1987
+    },
+    {
+      "path": "admin-stocktake-shell.html",
+      "bytes": 2704
+    },
+    {
+      "path": "admin-stocktake.html",
+      "bytes": 111132
+    },
+    {
+      "path": "api/image-admin.js",
+      "bytes": 12979
+    },
+    {
+      "path": "api/inventory-import.js",
+      "bytes": 16630
+    },
+    {
+      "path": "api/new-arrivals-admin.js",
+      "bytes": 8672
+    },
+    {
+      "path": "batco-brand-footer.js",
+      "bytes": 3568
+    },
+    {
+      "path": "batco-fast-nav.js",
+      "bytes": 5590
+    },
+    {
+      "path": "batco-scan-pro.js",
+      "bytes": 3795
+    },
+    {
+      "path": "branch-barcode-fallback.js",
+      "bytes": 4290
+    },
+    {
+      "path": "branch-camera-pro.js",
+      "bytes": 3967
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "bytes": 12210
+    },
+    {
+      "path": "branch-presence-core.js",
+      "bytes": 5893
+    },
+    {
+      "path": "branch-presence-entry.js",
+      "bytes": 1014
+    },
+    {
+      "path": "branch-presence-main-launcher.js",
+      "bytes": 1516
+    },
+    {
+      "path": "branch-presence.html",
+      "bytes": 6665
+    },
+    {
+      "path": "branch-presence.js",
+      "bytes": 23666
+    },
+    {
+      "path": "branch-scan-audio.js",
+      "bytes": 3404
+    },
+    {
+      "path": "branch-stocktake-core.js",
+      "bytes": 3977
+    },
+    {
+      "path": "branch-stocktake.html",
+      "bytes": 5594
+    },
+    {
+      "path": "branch-stocktake.js",
+      "bytes": 16335
+    },
+    {
+      "path": "command-center.html",
+      "bytes": 33911
+    },
+    {
+      "path": "control-center.html",
+      "bytes": 37209
+    },
+    {
+      "path": "customer-sw.js",
+      "bytes": 1738
+    },
+    {
+      "path": "customer.html",
+      "bytes": 48162
+    },
+    {
+      "path": "data/images_list.txt",
+      "bytes": 18455
+    },
+    {
+      "path": "deploy-v55.txt",
+      "bytes": 200
+    },
+    {
+      "path": "employee-attendance.js",
+      "bytes": 2289
+    },
+    {
+      "path": "health-center.html",
+      "bytes": 9008
+    },
+    {
+      "path": "identities.html",
+      "bytes": 16475
+    },
+    {
+      "path": "image-distribution.html",
+      "bytes": 17562
+    },
+    {
+      "path": "image-manager-setup-v29.txt",
+      "bytes": 1226
+    },
+    {
+      "path": "images/1.txt",
+      "bytes": 1
+    },
+    {
+      "path": "index.html",
+      "bytes": 23291
+    },
+    {
+      "path": "inventory-analytics.html",
+      "bytes": 18874
+    },
+    {
+      "path": "inventory-import-ui.js",
+      "bytes": 3950
+    },
+    {
+      "path": "inventory-system.txt",
+      "bytes": 20267
+    },
+    {
+      "path": "pdf-inventory-import.js",
+      "bytes": 8774
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "bytes": 164770
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "bytes": 377699
+    },
+    {
+      "path": "runtime/v56-12-production-probe.txt",
+      "bytes": 68
+    },
+    {
+      "path": "runtime/v56-34-production-probe.txt",
+      "bytes": 43
+    },
+    {
+      "path": "runtime/v56-35-production-probe.txt",
+      "bytes": 38
+    },
+    {
+      "path": "runtime/v56-39-identity-production-probe.txt",
+      "bytes": 51
+    },
+    {
+      "path": "security-center.html",
+      "bytes": 44441
+    },
+    {
+      "path": "stocktake-accountant.html",
+      "bytes": 17746
+    },
+    {
+      "path": "stocktake-branches.js",
+      "bytes": 4729
+    },
+    {
+      "path": "stocktake-core.js",
+      "bytes": 9285
+    },
+    {
+      "path": "stocktake-workbook.js",
+      "bytes": 13257
+    },
+    {
+      "path": "stocktake.html",
+      "bytes": 83096
+    },
+    {
+      "path": "sw.js",
+      "bytes": 10996
+    },
+    {
+      "path": "v44-admin-bridge.js",
+      "bytes": 1436
+    },
+    {
+      "path": "v44-observability.js",
+      "bytes": 20729
+    },
+    {
+      "path": "v45-admin-ux.js",
+      "bytes": 2060
+    },
+    {
+      "path": "v46-admin-nav.js",
+      "bytes": 11612
+    },
+    {
+      "path": "v48-admin-security.js",
+      "bytes": 10973
+    },
+    {
+      "path": "v48-auth-security.js",
+      "bytes": 21275
+    },
+    {
+      "path": "v54-admin-enhancements.js",
+      "bytes": 14460
+    },
+    {
+      "path": "v54-sales-clarity.js",
+      "bytes": 4919
+    },
+    {
+      "path": "v56-35-new-arrivals-quick-delete.js",
+      "bytes": 6083
+    },
+    {
+      "path": "v56-39-site-identity.js",
+      "bytes": 11655
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "bytes": 27430
+    },
+    {
+      "path": "v57-admin-workspace.js",
+      "bytes": 10687
+    },
+    {
+      "path": "v59-admin-import-ui.js",
+      "bytes": 22891
+    },
+    {
+      "path": "v61-employee-pilot-admin.js",
+      "bytes": 2597
+    },
+    {
+      "path": "v61-employee-pilot.js",
+      "bytes": 18413
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "bytes": 8460
+    },
+    {
+      "path": "v70-employee-feedback.js",
+      "bytes": 14047
+    }
+  ],
+  "callSites": [
+    {
+      "path": "accountant-stocktake.html",
+      "line": 33,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "accountant-stocktake.html",
+      "line": 40,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "accountant-stocktake.html",
+      "line": 41,
+      "candidates": {
+        "listener": 3
+      },
+      "collections": [
+        "stocktake_campaigns",
+        "stocktake_teams",
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 118,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 119,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 120,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 130,
+      "candidates": {
+        "get_candidate": 2,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 131,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 135,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 137,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 179,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 191,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 198,
+      "candidates": {
+        "write_candidate": 4
+      },
+      "collections": [
+        "employee_login_attempts",
+        "employee_security_photos",
+        "login_logs"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 273,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 285,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 286,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 294,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 322,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 344,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 345,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 404,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "employee_aliases"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 409,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_aliases"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 410,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_aliases"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 411,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 412,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 413,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 433,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "employee_aliases"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 435,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_accounts"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 436,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_aliases"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 437,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 438,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 483,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_notifications"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 488,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_notifications"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 545,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "customer_notifications"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 547,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "customer_notifications"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 548,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "customer_notifications"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 573,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 575,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 598,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 605,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 619,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 624,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 625,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 637,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 639,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 640,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 642,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 643,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 644,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": [
+        "employee_accounts",
+        "employee_aliases"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 645,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "customers"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 646,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "customers"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 647,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": [
+        "customers"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 648,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "customers"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 649,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": [
+        "customers"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 650,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": [
+        "customer_devices"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 651,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "customer_devices"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 652,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 653,
+      "candidates": {
+        "write_candidate": 4
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 654,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "access_requests"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 655,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "access_requests"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 670,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 672,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 673,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "login_logs"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 698,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 725,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 733,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 785,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 879,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 886,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 930,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 965,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1000,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1001,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1009,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1010,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1034,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1040,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1055,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1057,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": [
+        "new_arrival_reviews"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1102,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1109,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1119,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "orders"
+      ]
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1121,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1152,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-dashboard.html",
+      "line": 1176,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-home.html",
+      "line": 17,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-home.html",
+      "line": 18,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-home.html",
+      "line": 21,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 140,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 143,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 144,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 145,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "employee_accounts"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 146,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "stocktake_campaigns"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 150,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 151,
+      "candidates": {
+        "listener": 3
+      },
+      "collections": [
+        "stocktake_teams",
+        "stocktake_items",
+        "stocktake_audit"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 170,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 177,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 181,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 237,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 285,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 287,
+      "candidates": {
+        "write_candidate": 7
+      },
+      "collections": [
+        "stocktake_campaigns",
+        "stocktake_teams",
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 293,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 348,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 349,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 350,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 353,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 361,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 363,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 377,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 390,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 399,
+      "candidates": {
+        "write_candidate": 4
+      },
+      "collections": [
+        "stocktake_teams",
+        "stocktake_items",
+        "stocktake_teams"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 405,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": [
+        "stocktake_campaigns",
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 409,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": [
+        "stocktake_audit",
+        "stocktake_teams"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 414,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 416,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 417,
+      "candidates": {
+        "get_candidate": 4,
+        "write_candidate": 6
+      },
+      "collections": [
+        "stocktake_items",
+        "stocktake_campaigns",
+        "stocktake_audit",
+        "stocktake_items",
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 419,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "stocktake_campaigns"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 424,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 425,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 429,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 438,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "stocktake_campaigns"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 439,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 440,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "stocktake_teams"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 441,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 464,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 470,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 471,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 473,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 475,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 494,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 495,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 501,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 502,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 518,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 519,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 525,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 526,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 538,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 539,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 545,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 546,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 560,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "stocktake_campaigns"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 575,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 584,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 588,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 589,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "stocktake_campaigns"
+      ]
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 599,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 600,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "admin-stocktake.html",
+      "line": 609,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "stocktake_audit"
+      ]
+    },
+    {
+      "path": "api/image-admin.js",
+      "line": 103,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/image-admin.js",
+      "line": 124,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/image-admin.js",
+      "line": 139,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/image-admin.js",
+      "line": 140,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 38,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 47,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 60,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 62,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 65,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 75,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 76,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 78,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 83,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 84,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 114,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 128,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 145,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 206,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/inventory-import.js",
+      "line": 230,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "api/new-arrivals-admin.js",
+      "line": 29,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "batco-brand-footer.js",
+      "line": 5,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "batco-fast-nav.js",
+      "line": 36,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "batco-fast-nav.js",
+      "line": 42,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "batco-scan-pro.js",
+      "line": 38,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "batco-scan-pro.js",
+      "line": 39,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "batco-scan-pro.js",
+      "line": 41,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "batco-scan-pro.js",
+      "line": 42,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 43,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 50,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 76,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 80,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "seen"
+      ]
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 82,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 88,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "employee_accounts"
+      ]
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 89,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 92,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 96,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 111,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 112,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 113,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 115,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 116,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 121,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-admin.js",
+      "line": 122,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-core.js",
+      "line": 20,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-entry.js",
+      "line": 14,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence-main-launcher.js",
+      "line": 17,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "branch-presence.js",
+      "line": 95,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence.js",
+      "line": 96,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "seen"
+      ]
+    },
+    {
+      "path": "branch-presence.js",
+      "line": 102,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence.js",
+      "line": 142,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence.js",
+      "line": 143,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence.js",
+      "line": 149,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-presence.js",
+      "line": 155,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-stocktake-core.js",
+      "line": 28,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-stocktake.js",
+      "line": 165,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-stocktake.js",
+      "line": 180,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-stocktake.js",
+      "line": 182,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "branch-stocktake.js",
+      "line": 186,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "command-center.html",
+      "line": 19,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "command-center.html",
+      "line": 20,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "command-center.html",
+      "line": 21,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "v44_presence",
+        "v44_activity_logs",
+        "v44_live_carts",
+        "site_sessions",
+        "search_logs",
+        "customer_sessions",
+        "customer_orders",
+        "orders",
+        "employee_accounts",
+        "customers",
+        "system_controls"
+      ]
+    },
+    {
+      "path": "command-center.html",
+      "line": 24,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "command-center.html",
+      "line": 25,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "command-center.html",
+      "line": 26,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "command-center.html",
+      "line": 27,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "command-center.html",
+      "line": 45,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "command-center.html",
+      "line": 47,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "command-center.html",
+      "line": 48,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "control-center.html",
+      "line": 20,
+      "candidates": {
+        "get_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "control-center.html",
+      "line": 24,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "control-center.html",
+      "line": 25,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "control-center.html",
+      "line": 26,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "control-center.html",
+      "line": 28,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "security_admin_logs"
+      ]
+    },
+    {
+      "path": "control-center.html",
+      "line": 33,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "control-center.html",
+      "line": 38,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": [
+        "system_controls",
+        "system_controls",
+        "system_controls"
+      ]
+    },
+    {
+      "path": "control-center.html",
+      "line": 44,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "control-center.html",
+      "line": 52,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer-sw.js",
+      "line": 9,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 10,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 27,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 32,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "customer.html",
+      "line": 76,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 77,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 78,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 134,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 135,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 139,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 150,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 156,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 165,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 192,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 199,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "customer.html",
+      "line": 259,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "employee-attendance.js",
+      "line": 22,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "site_sessions"
+      ]
+    },
+    {
+      "path": "employee-attendance.js",
+      "line": 36,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "employee-attendance.js",
+      "line": 53,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "health-center.html",
+      "line": 1,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "identities.html",
+      "line": 85,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "identities.html",
+      "line": 94,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "identities.html",
+      "line": 101,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "identities.html",
+      "line": 102,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "security_admin_logs"
+      ]
+    },
+    {
+      "path": "image-distribution.html",
+      "line": 24,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "image-distribution.html",
+      "line": 25,
+      "candidates": {
+        "get_candidate": 7,
+        "write_candidate": 4
+      },
+      "collections": []
+    },
+    {
+      "path": "image-distribution.html",
+      "line": 30,
+      "candidates": {
+        "get_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "image-distribution.html",
+      "line": 31,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "image-distribution.html",
+      "line": 36,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 25,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 28,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 29,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 38,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 137,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 144,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 178,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "index.html",
+      "line": 186,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "inventory-analytics.html",
+      "line": 41,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "inventory-import-ui.js",
+      "line": 5,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "pdf-inventory-import.js",
+      "line": 101,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 165,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 258,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 262,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 264,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 275,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 276,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 278,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 285,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 300,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 301,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 308,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 311,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 317,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 444,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 452,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 453,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 454,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 468,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 469,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 475,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 487,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 488,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 489,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 508,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1049,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1080,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1091,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1094,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1095,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1118,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1119,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1139,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1150,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1151,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1156,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1162,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1175,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1176,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1178,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1200,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1215,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1237,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1260,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1265,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1274,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1287,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1294,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1295,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1297,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1380,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1384,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1389,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1401,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1407,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1411,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1427,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1428,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1435,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1446,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1452,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1481,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1541,
+      "candidates": {
+        "transaction": 1,
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1542,
+      "candidates": {
+        "transaction": 1,
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1543,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1545,
+      "candidates": {
+        "listener": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1547,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1548,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/customer-v37-source.txt",
+      "line": 1557,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 39,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 53,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 54,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 317,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 352,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 367,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 375,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 392,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 410,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 588,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 599,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 603,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 608,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 613,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 618,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 620,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 630,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 643,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 647,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 652,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 680,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 684,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 703,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 704,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 709,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 714,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 715,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 894,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 895,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 896,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 899,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 934,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 935,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 937,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 938,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 952,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 953,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 963,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 966,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 968,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 970,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 987,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 994,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1084,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1135,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1143,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1153,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1169,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1176,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1186,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1378,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1404,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "orders"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1428,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "orders"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1463,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "orders"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1469,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1483,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1485,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1595,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "drafts"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1603,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "drafts"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1715,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1727,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 1782,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "drafts"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2621,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2649,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2655,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2692,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2705,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2720,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2754,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2772,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 2805,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3042,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3191,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3196,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_login_attempts"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3217,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3245,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3260,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "login_logs"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3278,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3289,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3291,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3292,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3294,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_login_attempts"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3302,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "site_sessions"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3334,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3335,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3336,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3337,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_login_attempts"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3338,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "login_logs"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3505,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3512,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3548,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3601,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3662,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3667,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3686,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3687,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3688,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3689,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3704,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3705,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3706,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3820,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3897,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3905,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "access_requests"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3920,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "access_requests"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3952,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 3962,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4040,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "access_requests"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4060,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "access_requests"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4454,
+      "candidates": {
+        "transaction": 1,
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4455,
+      "candidates": {
+        "transaction": 1,
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4456,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4458,
+      "candidates": {
+        "listener": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4459,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4567,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "site_sessions"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4584,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4590,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "site_sessions"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4603,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4616,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "site_sessions"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4658,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4753,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4767,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4777,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4866,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "search_logs"
+      ]
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4875,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4876,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4890,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4902,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4903,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4904,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4914,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4915,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 4916,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 5341,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "runtime/index-v37-source.txt",
+      "line": 5344,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "security-center.html",
+      "line": 80,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "security-center.html",
+      "line": 81,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "security-center.html",
+      "line": 127,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "security-center.html",
+      "line": 131,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "security-center.html",
+      "line": 133,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "customers"
+      ]
+    },
+    {
+      "path": "security-center.html",
+      "line": 134,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "access_requests"
+      ]
+    },
+    {
+      "path": "security-center.html",
+      "line": 142,
+      "candidates": {
+        "get_candidate": 5,
+        "write_candidate": 5
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake-accountant.html",
+      "line": 20,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake-accountant.html",
+      "line": 23,
+      "candidates": {
+        "listener": 2
+      },
+      "collections": [
+        "system_controls",
+        "stocktake_campaigns"
+      ]
+    },
+    {
+      "path": "stocktake-accountant.html",
+      "line": 25,
+      "candidates": {
+        "listener": 2
+      },
+      "collections": [
+        "stocktake_teams",
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "stocktake-workbook.js",
+      "line": 37,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake-workbook.js",
+      "line": 43,
+      "candidates": {
+        "get_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 103,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 124,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 125,
+      "candidates": {
+        "get_candidate": 2,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 128,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 134,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 154,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 156,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 162,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 171,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "stocktake_campaigns"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 174,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "stocktake_teams"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 186,
+      "candidates": {
+        "listener": 1,
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": [
+        "stocktake_items"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 189,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 191,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 192,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "stocktake_audit"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 197,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 200,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 239,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 273,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 279,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 324,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 326,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 328,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 333,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 335,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 336,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 340,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 343,
+      "candidates": {
+        "get_candidate": 4
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 360,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 376,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 377,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 378,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "stocktake_audit"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 391,
+      "candidates": {
+        "get_candidate": 2,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 400,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 405,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 406,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 412,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 423,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 426,
+      "candidates": {
+        "transaction": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 427,
+      "candidates": {
+        "get_candidate": 4
+      },
+      "collections": [
+        "stocktake_campaigns",
+        "system_controls"
+      ]
+    },
+    {
+      "path": "stocktake.html",
+      "line": 431,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 435,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 436,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 441,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 442,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "stocktake.html",
+      "line": 447,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "sw.js",
+      "line": 33,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "sw.js",
+      "line": 61,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "sw.js",
+      "line": 77,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "sw.js",
+      "line": 105,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v44-admin-bridge.js",
+      "line": 9,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 23,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 98,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 99,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 101,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 102,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 103,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "v44_activity_logs"
+      ]
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 123,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "v44_presence"
+      ]
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 135,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": [
+        "v44_live_carts"
+      ]
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 136,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": [
+        "system_controls"
+      ]
+    },
+    {
+      "path": "v44-observability.js",
+      "line": 138,
+      "candidates": {
+        "timer": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v46-admin-nav.js",
+      "line": 17,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v46-admin-nav.js",
+      "line": 23,
+      "candidates": {
+        "get_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "v46-admin-nav.js",
+      "line": 30,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-admin-security.js",
+      "line": 24,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-admin-security.js",
+      "line": 26,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-admin-security.js",
+      "line": 27,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 1
+      },
+      "collections": [
+        "employee_accounts"
+      ]
+    },
+    {
+      "path": "v48-admin-security.js",
+      "line": 28,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": [
+        "employee_accounts",
+        "security_admin_logs"
+      ]
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 5,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 51,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 61,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 70,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 73,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 76,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 77,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 81,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 83,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 90,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 94,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 95,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 101,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 109,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 110,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 112,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 126,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 129,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 130,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 155,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v48-auth-security.js",
+      "line": 157,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v54-admin-enhancements.js",
+      "line": 42,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v54-admin-enhancements.js",
+      "line": 45,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v54-admin-enhancements.js",
+      "line": 68,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v54-admin-enhancements.js",
+      "line": 104,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v54-sales-clarity.js",
+      "line": 6,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-35-new-arrivals-quick-delete.js",
+      "line": 53,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-39-site-identity.js",
+      "line": 25,
+      "candidates": {
+        "write_candidate": 16
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-39-site-identity.js",
+      "line": 27,
+      "candidates": {
+        "write_candidate": 9
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-39-site-identity.js",
+      "line": 40,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 19,
+      "candidates": {
+        "get_candidate": 1,
+        "write_candidate": 4
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 20,
+      "candidates": {
+        "write_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 21,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 29,
+      "candidates": {
+        "write_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 36,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 47,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 51,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 55,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 95,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 100,
+      "candidates": {
+        "get_candidate": 3
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 101,
+      "candidates": {
+        "get_candidate": 2
+      },
+      "collections": []
+    },
+    {
+      "path": "v56-70-bulk-image-export.js",
+      "line": 206,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v59-admin-import-ui.js",
+      "line": 5,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v59-admin-import-ui.js",
+      "line": 6,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v59-admin-import-ui.js",
+      "line": 7,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v59-admin-import-ui.js",
+      "line": 10,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v59-admin-import-ui.js",
+      "line": 12,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v59-admin-import-ui.js",
+      "line": 179,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v61-employee-pilot-admin.js",
+      "line": 19,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v61-employee-pilot-admin.js",
+      "line": 28,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v61-employee-pilot.js",
+      "line": 16,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v61-employee-pilot.js",
+      "line": 25,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v61-employee-pilot.js",
+      "line": 185,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v61-employee-pilot.js",
+      "line": 193,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v61-employee-pilot.js",
+      "line": 220,
+      "candidates": {
+        "timer": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "line": 75,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "line": 80,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "line": 86,
+      "candidates": {
+        "write_candidate": 4
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "line": 108,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "line": 109,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": [
+        "users"
+      ]
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "line": 121,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-admin-feedback.js",
+      "line": 122,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-employee-feedback.js",
+      "line": 35,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-employee-feedback.js",
+      "line": 40,
+      "candidates": {
+        "write_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-employee-feedback.js",
+      "line": 159,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-employee-feedback.js",
+      "line": 161,
+      "candidates": {
+        "get_candidate": 1
+      },
+      "collections": []
+    },
+    {
+      "path": "v70-employee-feedback.js",
+      "line": 177,
+      "candidates": {
+        "listener": 1
+      },
+      "collections": []
+    }
+  ]
+}
