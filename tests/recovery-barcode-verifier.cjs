@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+require('../batco-scan-pro.js');
+let now=0,confirmed=[];
+const verify=global.BatcoScanPro.createVerifier({now:()=>now,onConfirm:code=>confirmed.push(code)});
+const code='5469835001128';
+assert.equal(verify.push(code,'quagga').accepted,false);
+now=850;assert.equal(verify.push(code,'quagga').accepted,false);
+now=1700;assert.equal(verify.push(code,'quagga').accepted,true);
+assert.deepEqual(confirmed,[code]);
+now=1800;assert.equal(verify.push(code,'quagga').reason,'duplicate-frame');
+verify.reset();now=3000;assert.equal(verify.push('5469835001129','quagga').reason,'checksum');
+now=3100;assert.equal(verify.push(code,'zxing').accepted,false);
+now=3200;assert.equal(verify.push(code,'quagga').accepted,true);
+verify.reset();now=5000;verify.push(code,'quagga');now=8000;
+assert.equal(verify.push(code,'quagga').accepted,false,'expired reads do not count');
+console.log('PASS: three 850ms fallback reads, checksum, duplicate suppression, independent engines, expiry');

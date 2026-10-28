@@ -27,7 +27,7 @@ function cameraOptions(high=true){
 }
 /* Trust two independent confirmations for linear retail codes, three when both
    reads come from the same engine. Reject invalid EAN at source, not later. */
-function createVerifier({onConfirm,now=()=>Date.now(),windowMs=1300,minGapMs=55}={}){
+function createVerifier({onConfirm,now=()=>Date.now(),windowMs=2500,minGapMs=55}={}){
  const candidates=new Map();
  let lastConfirmed='',confirmedAt=-Infinity;
  function push(raw,engine='zxing'){

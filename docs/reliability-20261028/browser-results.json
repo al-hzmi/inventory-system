@@ -70,7 +70,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 4542,
-    "elapsedMs": 5143,
+    "elapsedMs": 6055,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   },
   {
@@ -82,7 +82,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 6056,
-    "elapsedMs": 4732,
+    "elapsedMs": 4846,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   }
 ]

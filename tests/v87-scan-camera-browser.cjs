@@ -93,6 +93,9 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  assert.equal(await page.evaluate(()=>Object.keys(window.__v85.records).length),0,'Do not count an unrelated EAN as warehouse SKU');
  assert.equal(await page.evaluate(()=>window.__v86Audio.frequencies.filter(x=>x===1510).length),acceptedBefore,'unlinked EAN must not beep success');
 
+ // Current verifier requires two matching non-retail frames from the same engine.
+ await page.evaluate(()=>window.__v85.zxing('ARM_10004'));
+ await page.waitForTimeout(80);
  await page.evaluate(()=>window.__v85.zxing('ARM_10004'));
  await page.waitForFunction(()=>Object.keys(window.__v85.records).length===1);
  await page.waitForFunction(target=>window.__v86Audio.frequencies.filter(x=>x===1510).length===target,acceptedBefore+1);
