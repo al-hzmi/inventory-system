@@ -44,6 +44,16 @@ const root=path.resolve(__dirname,'..'),results=[];
  assert.equal(await count(page,'jeddah_0'),true);
  assert.equal(db.metrics.writes,2);assert.equal(await page.evaluate(()=>draftStore.list().length),0);
  results.push({test:'one count with receipt',passed:true,readsPerNewCount:5,writesPerNewCount:2});
+ // A single modified item is converted once; unrelated documents are not reprocessed.
+ const workDb=database(30),work=await open(workDb);
+ const processed=await work.page.evaluate(raw=>{const l=__testListeners.find(x=>x.query.collection==='stocktake_items'&&x.alive),original=StocktakeCore.forTeam;let conversions=0;StocktakeCore.forTeam=(...a)=>{conversions++;return original(...a)};
+  const updated={...raw,name:'UPDATED'},doc={id:'jeddah_1',data:()=>updated,metadata:{hasPendingWrites:false}};
+  l.cb({get docs(){throw Error('unexpected full snapshot read')},metadata:{fromCache:false},docChanges:()=>[{type:'modified',doc}]});StocktakeCore.forTeam=original;return {conversions,items:state.items.length,name:state.items.find(i=>i.id==='jeddah_1').name}
+ },workDb.rows.get('stocktake_items/jeddah_1'));
+ assert.deepEqual(processed,{conversions:1,items:30,name:'UPDATED'});
+ await work.page.evaluate(()=>{draftStore.set('jeddah:jeddah1:jeddah_2:qty',{value:'2'});pickTeam('jeddah1')});
+ assert.equal(await work.page.evaluate(()=>draftPendingIds.has('jeddah_2')),true);
+ results.push({test:'one changed document processed once; team switch refreshes draft indicator',passed:true});await work.ctx.close();
  // No result refresh is required to prove immutable receipt-based replay.
  const receipt=[...db.rows].find(([p])=>p.startsWith('stocktake_audit/'));
  await page.evaluate(op=>draftStore.set('jeddah:jeddah0:jeddah_0:qty',{value:'1',operationId:op}),receipt[0].split('/')[1]);

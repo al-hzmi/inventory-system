@@ -184,9 +184,29 @@ function accessibleTeams(){return state.teams.filter(isMember)}
 function pickTeam(id=''){const list=accessibleTeams();const chosen=list.find(t=>t.id===id)||list.find(t=>t.id===state.team?.id)||list[0]||null;if(chosen?.id===state.team?.id&&itemsUnsub){state.team=chosen;render();return}
 if(chosen&&itemsUnsub&&state.team?.campaignId===chosen.campaignId){
  state.team=chosen;state.enteredScope='';state.search='';state.activeEditId='';
- state.items=state.items.map(i=>StocktakeCore.forTeam(i,chosen.id));render();return;
+ state.items=state.items.map(i=>StocktakeCore.forTeam(i,chosen.id));draftPendingIds=new Set();for(const item of state.items)trackPendingDraft(item.id);render();return;
 }
-state.team=chosen;draftPendingIds=new Set();state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly;state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);if(wasReady&&wasCacheOnly===itemCacheOnly&&!s.docChanges({includeMetadataChanges:true}).length)return;state.items=s.docs.map(d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},state.team?.id||chosen.id)).sort((a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en'));draftPendingIds=new Set();for(const i of state.items){let remains=false;for(const kind of ['qty','note']){const key=draftKey(i.id,kind),draft=draftStore.get(key),op=kind==='qty'?i.lastCountOperationId:i.lastNoteOperationId;if(draft)remains=true}if(remains)draftPendingIds.add(i.id)}scheduleItemListPaint()},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
+state.team=chosen;draftPendingIds=new Set();state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}
+itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{
+ const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly,changes=s.docChanges({includeMetadataChanges:true});
+ state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);
+ if(wasReady&&wasCacheOnly===itemCacheOnly&&!changes.length)return;
+ const convert=d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},state.team?.id||chosen.id);
+ const compare=(a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en');
+ if(!wasReady){
+  state.items=s.docs.map(convert).sort(compare);draftPendingIds=new Set();
+  for(const item of state.items)trackPendingDraft(item.id);
+ }else if(changes.length){
+  const rows=new Map(state.items.map(item=>[item.id,item]));let reorder=false;
+  for(const change of changes){const d=change.doc;if(change.type==='removed'){rows.delete(d.id);draftPendingIds.delete(d.id);reorder=true;continue}
+   const previous=rows.get(d.id),next=convert(d);rows.set(d.id,next);trackPendingDraft(d.id);
+   if(!previous||previous.orderIndex!==next.orderIndex||previous.sku!==next.sku)reorder=true;
+  }
+  state.items=[...rows.values()];if(reorder)state.items.sort(compare);
+ }
+ scheduleItemListPaint();
+},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
+
 const receiptChecks=new Map();
 async function verifyDraftReceipt(key,expectedDraft=null){
  if(receiptChecks.has(key))return receiptChecks.get(key);
