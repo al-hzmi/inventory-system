@@ -62,7 +62,8 @@ const browserType=process.env.BROWSER==='webkit'?webkit:chromium;
  assert.equal(await page.evaluate(()=>Object.keys(window.__branchMock.docs).length),1);
  await page.locator('#workerInput').fill('NONEXISTENT');
  await page.locator('#workerInput').press('Enter');
- assert.match(await page.locator('#workerFeedback').innerText(),/غير معروف/);
+ assert.match(await page.locator('#workerFeedback').innerText(),/لا يوجد صنف مطابق/);
+ assert.equal(await page.evaluate(()=>Object.keys(window.__branchMock.docs).length),1,'unknown barcode must not create a record');
  await page.locator('#workerInput').fill('١٠٠٠٥');
  await page.locator('#workerInput').press('Enter');
  // The unique numeric suffix is accepted, and the full SKU must deduplicate it.
