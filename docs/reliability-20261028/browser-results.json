@@ -22,6 +22,10 @@
     "passed": true
   },
   {
+    "test": "overlapping receipt checks acknowledge one committed operation",
+    "passed": true
+  },
+  {
     "test": "note receipt and server-closed campaign",
     "passed": true
   },
@@ -46,7 +50,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 4542,
-    "elapsedMs": 4818,
+    "elapsedMs": 5114,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   },
   {
@@ -58,7 +62,7 @@
     "transactionAndReceiptReads": 7500,
     "writes": 3000,
     "initialQueryReads": 6056,
-    "elapsedMs": 4566,
+    "elapsedMs": 4803,
     "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
   }
 ]

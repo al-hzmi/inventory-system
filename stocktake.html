@@ -185,15 +185,16 @@ if(chosen&&itemsUnsub&&state.team?.campaignId===chosen.campaignId){
 }
 state.team=chosen;draftPendingIds=new Set();state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly;state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);if(wasReady&&wasCacheOnly===itemCacheOnly&&!s.docChanges({includeMetadataChanges:true}).length)return;state.items=s.docs.map(d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},state.team?.id||chosen.id)).sort((a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en'));draftPendingIds=new Set();for(const i of state.items){let remains=false;for(const kind of ['qty','note']){const key=draftKey(i.id,kind),draft=draftStore.get(key),op=kind==='qty'?i.lastCountOperationId:i.lastNoteOperationId;if(draft)remains=true}if(remains)draftPendingIds.add(i.id)}scheduleItemListPaint()},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
 const receiptChecks=new Map();
-async function verifyDraftReceipt(key){
+async function verifyDraftReceipt(key,expectedDraft=null){
  if(receiptChecks.has(key))return receiptChecks.get(key);
  const work=(async()=>{
-  const draft=draftStore.get(key);if(!draft?.operationId)return false;
+  const current=draftStore.get(key),draft=expectedDraft||current;if(!draft?.operationId)return false;
   const snap=await db.collection('stocktake_audit').doc(draft.operationId).get({source:'server'});
   if(snap.metadata?.fromCache||snap.metadata?.hasPendingWrites)throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED');
   if(!snap.exists)return false;
   if(!StocktakeCore.receiptMatches(key,draft,snap.data(),user.employeeId||ROOT_ID))throw Error('STOCKTAKE_OPERATION_CONFLICT');
-  const removed=draftStore.removeIf(key,draft);
+  const sameCurrent=current&&current.operationId===draft.operationId&&StocktakeCore.receiptMatches(key,current,snap.data(),user.employeeId||ROOT_ID);
+  const removed=current?(sameCurrent&&draftStore.removeIf(key,current)):Boolean(expectedDraft);
   if(removed){draftPendingIds=new Set(state.items.filter(i=>draftStore.get(draftKey(i.id))||draftStore.get(draftKey(i.id,'note'))).map(i=>i.id));paintSyncStatus()}
   return removed;
  })();
@@ -334,6 +335,7 @@ async function writeCount(item,actual,source){
  // The local draft remains until the Firestore transaction actually commits.
  if(!navigator.onLine){saving.delete(item.id);toast('بدون اتصال: الكمية محفوظة كمسودة على الجهاز، ولم تُعتمد في Firebase');return false}
  draftStore.set(key,{...draftStore.get(key),state:'saving'});
+ const receiptDraft=draftStore.get(key);
  const itemRef=db.collection('stocktake_items').doc(item.id),campaignRef=db.collection('stocktake_campaigns').doc(entryCampaignId),controlRef=db.collection('system_controls').doc(CONTROL_DOC),operationRef=db.collection('stocktake_audit').doc(operationId);
  let confirmTimer=null;
  try {
@@ -380,7 +382,7 @@ async function writeCount(item,actual,source){
    });
    // A temporary network stall is not a failed count. Keep the durable draft and
    // replay the same operation ID if the user retries after the timeout.
-   const acknowledged=transaction.then(async result=>{if(!await verifyDraftReceipt(key))throw new Error('STOCKTAKE_RECEIPT_UNCONFIRMED');return result});
+   const acknowledged=transaction.then(async result=>{if(!await verifyDraftReceipt(key,receiptDraft))throw new Error('STOCKTAKE_RECEIPT_UNCONFIRMED');return result});
    const result=await Promise.race([acknowledged,new Promise((_,reject)=>{confirmTimer=setTimeout(()=>reject(new Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
    // A transaction is acknowledged by Firestore, never by a pending local snapshot.
    trackPendingDraft(item.id);paintSyncStatus();
@@ -420,7 +422,7 @@ async function saveNote(){
  const operationId=old?.operationId||db.collection('stocktake_audit').doc().id;
  if(!saveDraft(it.id,note,'note',{operationId,baseNoteOperationId:old?.operationId?old.baseNoteOperationId:(it.lastNoteOperationId||''),baseNote:old?.operationId?old.baseNote:(it.note||'')}))return false;
  if(!navigator.onLine){toast('الملاحظة محفوظة محليًا بانتظار الإرسال');return false}
- saving.add('note:'+it.id);draftStore.set(key,{...draftStore.get(key),state:'saving'});let timer;
+ saving.add('note:'+it.id);draftStore.set(key,{...draftStore.get(key),state:'saving'});const receiptDraft=draftStore.get(key);let timer;
  try{
   const ref=db.collection('stocktake_items').doc(it.id),opRef=db.collection('stocktake_audit').doc(operationId);
   const transaction=db.runTransaction(async tx=>{
@@ -435,7 +437,7 @@ async function saveNote(){
    tx.update(ref,{note,hasNote:!!note,noteUpdatedAt:now,noteUpdatedBy:user.name,lastNoteOperationId:operationId});
    tx.set(opRef,{campaignId,teamId:team.id,itemId:it.id,sku:it.sku,action:'note_updated',before:{note:fresh.note||''},after:{note},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
   });
-  const acknowledged=transaction.then(async()=>{if(!await verifyDraftReceipt(key))throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED')});
+  const acknowledged=transaction.then(async()=>{if(!await verifyDraftReceipt(key,receiptDraft))throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED')});
   await Promise.race([acknowledged,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
   if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تم تأكيد حفظ الملاحظة على خادم Firebase');return true;
  }catch(error){const code=String(error?.code||error?.message||error),draft=draftStore.get(key);if(draft?.operationId===operationId)draftStore.set(key,{...draft,state:/CONFLICT|CHANGED/.test(code)?'conflict':'unconfirmed',error:code,failedAt:Date.now()});toast('تعذر تأكيد الملاحظة؛ راجع المسودات المحلية');return false}

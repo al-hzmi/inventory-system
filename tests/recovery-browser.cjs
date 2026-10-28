@@ -55,6 +55,13 @@ const root=path.resolve(__dirname,'..'),results=[];
  assert.ok(await page.evaluate(()=>draftStore.get('jeddah:jeddah0:jeddah_4:qty')));
  await page.waitForFunction(()=>draftStore.get('jeddah:jeddah0:jeddah_4:qty')===null,{},{timeout:5000});
  await page.evaluate(()=>__test.ackDelay=0);results.push({test:'late commit after 18s reconciles without second write',passed:true});
+ // A foreground reconciliation can finish while the acknowledged transaction is still returning.
+ await page.evaluate(()=>{__test.ackDelay=500;window.__concurrentReceipt=writeCount(state.items.find(i=>i.id==='jeddah_7'),7,'first_manual_count')});
+ await page.waitForFunction(()=>draftStore.get('jeddah:jeddah0:jeddah_7:qty')?.state==='saving');
+ await page.waitForFunction(()=>__test.ackDelay===500);await page.waitForTimeout(100);
+ assert.equal(await page.evaluate(()=>verifyDraftReceipt('jeddah:jeddah0:jeddah_7:qty')),true);
+ assert.equal(await page.evaluate(()=>window.__concurrentReceipt),true);
+ await page.evaluate(()=>__test.ackDelay=0);results.push({test:'overlapping receipt checks acknowledge one committed operation',passed:true});
  // Notes use the selected group and reject closed campaigns transactionally.
  await page.evaluate(()=>{openNote('jeddah_5');document.querySelector('#noteText').value='ملاحظة اختبار'});assert.equal(await page.evaluate(()=>saveNote()),true);
  const note=[...db.rows.values()].find(r=>r.action==='note_updated');assert.equal(note.teamId,'jeddah0');
