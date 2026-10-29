@@ -1,0 +1,28 @@
+name: Stocktake full-load isolated verification
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/stocktake-full-load.yml'
+jobs:
+  full-load:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npm install --no-save --ignore-scripts --no-audit --no-fund firebase@10.8.0
+      - name: Test 1500 items across eight isolated browser contexts
+        env:
+          STOCKTAKE_ITEMS_PER_BRANCH: '750'
+          STOCKTAKE_EMULATOR_LONG_POLL: '1'
+        run: npx --yes firebase-tools@13.35.1 emulators:exec --only firestore --project demo-inventory-reliability --config tests/emulator/firebase.json 'node tests/emulator/stocktake-app.cjs'
