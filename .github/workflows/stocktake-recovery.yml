@@ -35,6 +35,7 @@ jobs:
       - run: node tests/recovery-admin-mobile.cjs
       - run: node tests/recovery-audit-listener.cjs
       - run: node tests/recovery-core.cjs
+      - run: node tests/recovery-receipt-timeout.cjs
       - run: node tests/recovery-browser.cjs
       - run: node tests/v73-stocktake-data.cjs
       - run: node tests/v89-cross-page-syntax.cjs

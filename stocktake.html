@@ -217,7 +217,11 @@ async function verifyDraftReceipt(key,expectedDraft=null){
  if(receiptChecks.has(key))return receiptChecks.get(key);
  const work=(async()=>{
   const current=draftStore.get(key),draft=expectedDraft||current;if(!draft?.operationId)return false;
-  const snap=await db.collection('stocktake_audit').doc(draft.operationId).get({source:'server'});
+  // A server-only read can remain unresolved during reconnection. Bound the
+  // wait without treating a timeout as a missing receipt or deleting the draft.
+  let receiptTimer;
+  const read=db.collection('stocktake_audit').doc(draft.operationId).get({source:'server'});
+  let snap;try{snap=await Promise.race([read,new Promise((_,reject)=>{receiptTimer=setTimeout(()=>reject(Error('STOCKTAKE_RECEIPT_TIMEOUT')),18000)})])}finally{clearTimeout(receiptTimer)}
   if(snap.metadata?.fromCache||snap.metadata?.hasPendingWrites)throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED');
   if(!snap.exists)return false;
   if(!StocktakeCore.receiptMatches(key,draft,snap.data(),user.employeeId||ROOT_ID))throw Error('STOCKTAKE_OPERATION_CONFLICT');
