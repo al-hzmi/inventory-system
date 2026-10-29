@@ -183,7 +183,6 @@ function bindCampaign(){
  teamsUnsub=db.collection('stocktake_teams').where('campaignId','==',id).onSnapshot({includeMetadataChanges:true},s=>{
   teamsServerConfirmed=Boolean(!s.metadata?.fromCache&&!s.metadata?.hasPendingWrites);state.teams=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.orderIndex??999)-(b.orderIndex??999));pickTeam();
  },()=>{teamsServerConfirmed=false;render();toast('تعذر تحميل لجان الجرد')});
- state.unsubs.push(campaignUnsub,teamsUnsub);
 }
 function unbindCampaign(){campaignBound='';campaignServerConfirmed=false;teamsServerConfirmed=false;state.campaign=null;state.teams=[];state.team=null;state.items=[];if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}if(campaignUnsub){try{campaignUnsub()}catch{}campaignUnsub=null}if(teamsUnsub){try{teamsUnsub()}catch{}teamsUnsub=null}}
 function accessibleTeams(){return state.teams.filter(isMember)}
