@@ -43,7 +43,14 @@ assert.match(html,/data-filter="missing"/);
 assert.match(html,/exportMissing/);
 const shell=fs.readFileSync('admin-stocktake-shell.html','utf8');
 const admin=fs.readFileSync('admin-stocktake.html','utf8');
-assert.match(shell,/branch-stocktake\.html/);assert.match(admin,/branch-stocktake\.html/);
+// The former local branch-count page has been replaced in the admin flow by
+// the shared branch-presence workflow. Check the complete current route.
+assert.match(shell,/admin-stocktake\.html/);
+assert.match(admin,/admin-branch-presence\.html/);
+assert.match(fs.readFileSync('admin-branch-presence.html','utf8'),/branch-presence-admin\.js/);
+assert.match(fs.readFileSync('branch-presence-admin.js','utf8'),/branch-presence\.html/);
+assert.match(fs.readFileSync('index.html','utf8'),/branch-presence-main-launcher\.js/);
+assert.match(fs.readFileSync('branch-presence-main-launcher.js','utf8'),/branch-presence\.html/);
 const sw=fs.readFileSync('sw.js','utf8'),nav=fs.readFileSync('batco-fast-nav.js','utf8');
 assert.match(sw,/branch-stocktake\.html/);assert.match(sw,/branch-stocktake-core\.js/);
 assert.match(sw,/branch-stocktake\.css/);assert.match(nav,/branch-stocktake\.html/);
