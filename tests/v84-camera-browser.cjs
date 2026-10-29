@@ -23,7 +23,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
   });
   firestore.FieldValue={serverTimestamp:()=>({seconds:Math.floor(Date.now()/1000)})};
   window.firebase={apps:[{}],initializeApp:()=>{},firestore};
-  window.__cam84={failHD:false,zoom:true,torch:true,attempts:[],actualZoom:1,torchOn:false,saved};
+  window.__cam84={failHD:false,zoom:true,torch:true,attempts:[],actualZoom:1,torchOn:false,stops:0,saved};
  });
  await context.route('**/*',route=>{
   const url=new URL(route.request().url());
@@ -37,7 +37,7 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
     +'zoomFeature:()=>({isSupported:()=>window.__cam84.zoom,min:()=>1,max:()=>5,step:()=>.1,value:()=>window.__cam84.actualZoom,apply:async value=>{window.__cam84.actualZoom=value}}),'
     +'torchFeature:()=>({isSupported:()=>window.__cam84.torch,apply:async on=>{window.__cam84.torchOn=on}})'
     +'}}'
-    +'async stop(){}async clear(){}'
+    +'async stop(){window.__cam84.stops++}async clear(){}'
     +'};';
    return route.fulfill({body:stub,contentType:'application/javascript'});
   }
@@ -66,9 +66,14 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  await page.locator('#workerTorch').click();
  await page.waitForFunction(()=>window.__cam84.torchOn===true);
  await page.evaluate(()=>window.__cam84.decode('ARM_10004'));
+ await page.waitForTimeout(80);
+ assert.equal(await page.evaluate(()=>Object.keys(window.__cam84.saved).length),0,'one frame must not register an unverified code');
+ await page.evaluate(()=>window.__cam84.decode('ARM_10004'));
  await page.waitForFunction(()=>Object.keys(window.__cam84.saved).length===1);
  await page.locator('#workerCloseCamera').click();
- await page.locator('#cameraArea').waitFor({state:'hidden'});
+ await page.waitForFunction(()=>window.__cam84.stops>=1);
+ assert.equal(await page.locator('#cameraArea').evaluate(el=>el.classList.contains('idle')),true);
+ assert.equal(await page.locator('#workerCloseCamera').isVisible(),false);
  assert.equal(await page.locator('#workerZoomControl').isVisible(),false,'camera controls release on close');
  await page.evaluate(()=>{window.__cam84.failHD=true;window.__cam84.zoom=false;window.__cam84.torch=false});
  await page.locator('#workerCamera').click();
@@ -79,6 +84,9 @@ const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  state=await page.evaluate(()=>window.__cam84.attempts);
  assert.ok(state[1].videoConstraints,'HD attempted first');
  assert.equal(state[2].videoConstraints,null,'scanner falls back when device rejects HD');
+ await page.evaluate(()=>window.__cam84.decode('ARM_10005'));
+ await page.waitForTimeout(80);
+ assert.equal(await page.evaluate(()=>Object.keys(window.__cam84.saved).length),1,'one frame must not register a second code');
  await page.evaluate(()=>window.__cam84.decode('ARM_10005'));
  await page.waitForFunction(()=>Object.keys(window.__cam84.saved).length===2);
  await page.locator('#workerCloseCamera').click();
