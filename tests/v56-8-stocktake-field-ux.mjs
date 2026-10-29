@@ -17,7 +17,10 @@ has(employee,'function resolveStocktakeSearch(raw)','stocktake must resolve scan
 has(employee,'mapper.checksum(clean)','verified retail barcode must pass a checksum before any successful match');
 has(employee,'mapper.lookup(clean,state.items,item=>item.sku)','stocktake must share the verified barcode-to-SKU resolver');
 has(employee,'const resolved=resolveStocktakeSearch(value)','camera scanner must use the same barcode resolver');
-has(employee,'const resolved=resolveStocktakeSearch(e.target.value)','manual/pasted barcode search must use the same resolver');
+has(employee,'const resolved=resolveStocktakeSearch(se.value)','Enter on manual or pasted input must use the verified resolver');
+const inputHandler=employee.slice(employee.indexOf('se.oninput=e=>'),employee.indexOf('se.onkeydown=e=>'));
+assert.ok(inputHandler.includes("state.activeEditId=''"),'typing must preserve explicit selection');
+assert.ok(!inputHandler.includes('resolveStocktakeSearch('),'typing alone must not open a prefix match');
 has(employee,'Pro?.cameraOptions(false)','scanner must use the common fast validated camera configuration');
 const scanPro=fs.readFileSync('batco-scan-pro.js','utf8');
 has(scanPro,'fps:16','shared scanner must retain the responsive camera cadence');

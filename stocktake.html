@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="./batco-scan-pro.js?v=114.0"></script><script src="./branch-scan-audio.js?v=88.0"></script><script src="./branch-barcode-fallback.js?v=85.0"></script>
+<script src="./batco-scan-pro.js?v=114.0&fix=verifier1"></script><script src="./branch-scan-audio.js?v=88.0"></script><script src="./branch-barcode-fallback.js?v=85.0"></script>
 <style>
 :root{--p:#1c1917;--s:#57534e;--m:#a8a29e;--b:#e7e5e4;--sf:#fafaf9;--a:#b45309;--as:#fef3c7;--ok:#15803d;--oks:#f0fdf4;--bad:#b91c1c;--bads:#fef2f2;--info:#0369a1;--infos:#f0f9ff}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;background:var(--sf);color:var(--p);-webkit-font-smoothing:antialiased}button,input,textarea,select{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}input,textarea,select{font-size:16px}.app{max-width:900px;margin:auto;min-height:100vh;padding:12px 12px max(28px,env(safe-area-inset-bottom))}.top{position:sticky;top:0;z-index:30;background:rgba(250,250,249,.97);backdrop-filter:blur(12px);padding:10px 0 12px;border-bottom:1px solid var(--b)}.head{display:flex;align-items:center;gap:10px}.back{width:42px;height:42px;border:1px solid var(--b);border-radius:12px;background:#fff}.title{font-size:18px;font-weight:700}.sub{font-size:11px;color:var(--s);margin-top:2px;line-height:1.6}.grow{flex:1}.net{font-size:10px;padding:6px 9px;border-radius:999px;background:var(--oks);color:var(--ok);font-weight:700}.net.off{background:var(--bads);color:var(--bad)}.panel{background:#fff;border:1px solid var(--b);border-radius:16px;padding:14px;margin-top:12px;box-shadow:0 1px 3px rgba(28,25,23,.05)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{background:var(--sf);border:1px solid var(--b);border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font-size:18px}.stat span{font-size:9px;color:var(--s)}.progress{height:7px;background:#eeeae7;border-radius:99px;overflow:hidden;margin-top:12px}.progress>i{display:block;height:100%;background:var(--ok);width:0;transition:.2s}.teamselect{width:100%;height:44px;border:1px solid var(--b);border-radius:11px;background:#fff;padding:0 11px;margin-top:10px}.filters{display:flex;gap:7px;overflow:auto;padding:2px 0 7px;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}.chip{white-space:nowrap;border:1px solid var(--b);background:#fff;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:700;color:var(--s)}.chip.active{background:var(--p);color:#fff;border-color:var(--p)}.searchrow{display:grid;grid-template-columns:1fr 48px;gap:8px;margin-top:9px}.search{height:48px;border:1px solid var(--b);border-radius:12px;padding:0 13px;background:#fff;outline:none;font-weight:600}.search:focus{border-color:var(--a);box-shadow:0 0 0 3px rgba(180,83,9,.08)}.scan{border:1px solid var(--b);background:#fff;border-radius:12px;font-size:19px}.list{display:grid;gap:9px;margin-top:12px}.card{background:#fff;border:1px solid var(--b);border-radius:15px;padding:13px;box-shadow:0 1px 2px rgba(28,25,23,.04)}.card.shortage{border-color:rgba(185,28,28,.28)}.card.surplus{border-color:rgba(3,105,161,.28)}.card.matched{border-color:rgba(21,128,61,.20)}.meta{display:flex;align-items:flex-start;gap:8px}.sku{font-weight:700;font-size:15px;direction:ltr;unicode-bidi:isolate}.name{font-size:11px;color:var(--s);margin-top:2px;line-height:1.5}.pill{font-size:9px;font-weight:700;border-radius:999px;padding:5px 8px;background:var(--sf);color:var(--s);border:1px solid var(--b)}.pill.ok{background:var(--oks);color:var(--ok);border-color:rgba(21,128,61,.12)}.pill.bad{background:var(--bads);color:var(--bad);border-color:rgba(185,28,28,.12)}.pill.info{background:var(--infos);color:var(--info);border-color:rgba(3,105,161,.12)}.blind{margin-top:10px;border:1px dashed #d6d3d1;background:var(--sf);border-radius:11px;padding:10px;font-size:10px;color:var(--s);line-height:1.7}.qtygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}.q{background:var(--sf);border-radius:10px;padding:8px;text-align:center}.q span{display:block;font-size:9px;color:var(--s)}.q b{font-size:14px;direction:ltr;unicode-bidi:isolate}.variance{margin-top:9px;border-radius:11px;padding:9px 10px;font-size:11px;font-weight:700}.variance.shortage{background:var(--bads);color:var(--bad)}.variance.surplus{background:var(--infos);color:var(--info)}.variance.matched{background:var(--oks);color:var(--ok)}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.btn{height:42px;padding:0 13px;border-radius:11px;border:1px solid var(--b);background:#fff;font-size:11px;font-weight:700}.btn.entry{background:var(--p);color:#fff;border-color:var(--p);flex:1}.btn.found{background:var(--infos);color:var(--info);border-color:rgba(3,105,161,.18)}.btn.note{width:44px;padding:0;font-size:17px;position:relative}.btn.note.has:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--a);top:6px;left:6px}.editbox{margin-top:10px;background:var(--sf);border:1px solid var(--b);border-radius:12px;padding:10px;display:none}.editbox.open{display:block}.editrow{display:grid;grid-template-columns:1fr auto;gap:8px}.actual{height:46px;border:1px solid var(--b);border-radius:10px;padding:0 12px;direction:ltr;text-align:center;font-weight:700}.save{height:46px;padding:0 18px;border:0;border-radius:10px;background:var(--p);color:#fff;font-weight:700}.hint{font-size:10px;margin-top:7px;color:var(--s);line-height:1.7}.pendingmark{font-size:9px;color:var(--a);font-weight:700;margin-top:5px}.loadmore{width:100%;height:46px;border:1px solid var(--b);background:#fff;border-radius:12px;font-weight:700;margin-top:12px}.empty{text-align:center;padding:44px 15px;color:var(--m);font-size:12px}.lock{text-align:center;padding:60px 20px}.lock h2{font-size:19px;margin:0}.lock p{font-size:12px;color:var(--s);line-height:1.8}.modalbg{position:fixed;inset:0;background:rgba(28,25,23,.55);z-index:80;display:none;align-items:flex-end;justify-content:center}.modalbg.open{display:flex}.modal{width:100%;max-width:520px;background:#fff;border-radius:20px 20px 0 0;padding:16px 16px max(18px,env(safe-area-inset-bottom));box-shadow:0 -18px 60px rgba(0,0,0,.2)}.modal h3{margin:0 0 4px;font-size:16px}.modal p{margin:0 0 12px;font-size:10px;color:var(--s)}.modal textarea,.modal input{width:100%;border:1px solid var(--b);border-radius:12px;padding:12px;outline:none}.modal textarea{min-height:110px;resize:vertical}.modal input{height:48px;direction:ltr;text-align:center;font-weight:700}.modalactions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.modalactions button{height:44px;border-radius:11px;border:1px solid var(--b);font-weight:700}.primary{background:var(--p);color:#fff;border-color:var(--p)!important}.toast{position:fixed;z-index:100;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:var(--p);color:#fff;border-radius:12px;padding:11px 15px;font-size:12px;font-weight:700;transition:.2s;max-width:90%;text-align:center}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#reader{width:100%}.scanner{position:fixed;inset:0;background:#111;z-index:90;display:none;flex-direction:column}.scanner.open{display:flex}.scannerhead{padding:14px;color:white;display:flex;justify-content:space-between;align-items:center}.scannerhead button{width:40px;height:40px;border:0;border-radius:12px;background:rgba(255,255,255,.12);color:white}.scannerbody{flex:1;display:flex;align-items:center;justify-content:center;padding:12px}
@@ -74,7 +74,7 @@ html,body{overflow-x:hidden}
 @media(max-width:520px){.editrow{grid-template-columns:minmax(0,1fr)!important}.save{width:100%;min-width:0}.actual{width:100%;min-width:0}}
 </style>
 <script src="./v56-39-site-identity.js?v=56.39" defer></script>
-<link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.0"><link rel="stylesheet" href="./stocktake-workspace.css?v=75.2"><script src="./stocktake-core.js?v=75.0"></script><script src="./stocktake-branches.js?v=116.0"></script></head>
+<link rel="icon" href="./assets/batco-app-icon.svg?v=71.0" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/icon-180.png?v=71.0"><link rel="stylesheet" href="./v71-brand.css?v=71.0"><link rel="stylesheet" href="./stocktake-workspace.css?v=75.2"><script src="./stocktake-core.js?recovery=1&v=75.0"></script><script src="./stocktake-branches.js?v=116.0"></script></head>
 <body class="stocktake-floor">
 <div id="app" class="app"><div class="empty">جاري تحميل الجرد...</div></div>
 <div id="noteModal" class="modalbg"><div class="modal"><h3>ملاحظة على الصنف</h3><p id="noteSku"></p><textarea id="noteText" placeholder="الملاحظة اختيارية — اكتبها فقط عند الحاجة"></textarea><div class="modalactions"><button id="noteCancel">إلغاء</button><button id="noteSave" class="primary">حفظ الملاحظة</button></div></div></div>
@@ -117,23 +117,39 @@ window.addEventListener('keydown',()=>window.BranchScanAudio?.prepare(),{passive
 window.addEventListener('touchstart',ensureFeedbackAudio,{passive:true});
 window.addEventListener('keydown',ensureFeedbackAudio,{passive:true});
 const teamMemberIds=t=>Array.isArray(t.memberEmployeeIds)?t.memberEmployeeIds:(t.assignedEmployeeId?[t.assignedEmployeeId]:[]);const teamMemberNames=t=>Array.isArray(t.memberEmployeeNames)?t.memberEmployeeNames:[t.assignedEmployeeName,t.counterName].filter(Boolean);const isMember=t=>user.isAdmin||teamMemberIds(t).includes(user.employeeId)||teamMemberNames(t).some(x=>norm(x)===norm(user.name));const canAccess=c=>Boolean(c?.enabled&&(user.isAdmin||(user.validEmployee&&StocktakeBranches.available(c,user,norm).length>0)));
-const draftStore=StocktakeCore.drafts(user.employeeId||ROOT_ID),saving=new Set();let itemCacheOnly=true,focusedItem='',lastRenderScope='';let draftPendingIds=new Set();
+// A stable per-browser identity is required for group finalization. It is not an auth credential.
+function stocktakeDeviceId(){try{const key='stocktake.device.v1';let id=localStorage.getItem(key);if(!id){id=typeof crypto.randomUUID==='function'?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem(key,id)}return localStorage.getItem(key)===id?id:''}catch{return ''}}
+function groupFreezeKey(campaignId,teamId){return `stocktake.group.freeze.v1:${campaignId}:${teamId}`}
+function groupFrozen(){try{return Boolean(state.campaign?.closeEpoch&&localStorage.getItem(groupFreezeKey(state.campaign.id,state.team?.id))===state.campaign.closeEpoch)}catch{return true}}
+function groupServerMember(team){return user.isAdmin||teamMemberIds(team).includes(user.employeeId)||teamMemberNames(team).some(x=>norm(x)===norm(user.name))}
+const draftStore=StocktakeCore.drafts(user.employeeId||ROOT_ID),saving=new Set();let itemCacheOnly=true,itemSnapshotPending=true,controlServerConfirmed=false,campaignServerConfirmed=false,teamsServerConfirmed=false,focusedItem='',lastRenderScope='';let draftPendingIds=new Set();
 let itemListPaint=0;
 function scheduleItemListPaint(){if(itemListPaint)return;itemListPaint=requestAnimationFrame(()=>{itemListPaint=0;render()})}
 const draftKey=(id,kind='qty')=>`${state.campaign?.id}:${state.team?.id}:${id}:${kind}`;
 const draftValue=i=>draftStore.get(draftKey(i.id))?.value??((i.countStatus||'pending')!=='pending'?(Number.isFinite(i._teamActual)?i._teamActual:i.actualQty):'');
 function trackPendingDraft(id){if(draftStore.get(draftKey(id))||draftStore.get(draftKey(id,'note')))draftPendingIds.add(id);else draftPendingIds.delete(id)}
 function paintSyncStatus(){const node=$('.syncStatus');if(node)node.outerHTML=syncHtml()}
-function saveDraft(id,value,kind='qty',extra={}){const ok=draftStore.set(draftKey(id,kind),{value,...extra});if(ok){trackPendingDraft(id);paintSyncStatus()}else toast('تعذر حفظ المسودة على الجهاز؛ أبقِ الصفحة مفتوحة حتى تأكيد المزامنة');return ok}
-function syncHtml(){const pending=state.items.filter(i=>i._pending).length,drafts=draftPendingIds.size;const message=drafts?`${drafts} صنف به مسودة محلية لم يتأكد اعتمادها في Firebase · راجعها قبل مغادرة الجهاز`:!durableCache?'التخزين الدائم غير متاح على هذا المتصفح؛ انتظر تأكيد المزامنة قبل المغادرة':pending?`${pending} صنف محفوظ على الجهاز · بانتظار المزامنة`:!navigator.onLine?'بدون اتصال · يمكنك مواصلة الجرد على الأصناف المحمّلة':itemCacheOnly?'عرض البيانات المحفوظة على الجهاز · جارٍ التحقق من المزامنة':'تمت المزامنة مع الخادم';return `<div class="syncStatus ${drafts||!durableCache?'error':pending||itemCacheOnly||!navigator.onLine?'wait':''}" role="status">${message}</div>`}
-const destroy=()=>{if(itemListPaint)cancelAnimationFrame(itemListPaint);state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}});stopScanner()};window.addEventListener('beforeunload',destroy);window.addEventListener('online',render);window.addEventListener('offline',render);
+function saveDraft(id,value,kind='qty',extra={}){
+ if(groupFrozen()){toast('أقرت المجموعة نهاية العمل؛ تواصل مع الإدارة لإعادة فتحها');return false}
+ const key=draftKey(id,kind),old=draftStore.get(key),item=state.items.find(i=>i.id===id);
+ if(old?.operationId&&!extra.operationId){
+  const same=kind==='qty'?n(old.value)===n(value):old.value===value;
+  if(!same){toast('تحقق من العملية المعلقة قبل تغييرها؛ القيمة السابقة محفوظة');return false}
+  return true;
+ }
+ const ok=draftStore.set(key,{...old,value,campaignId:state.campaign?.id,teamId:state.team?.id,itemId:id,kind,sku:item?.sku||old?.sku||id,name:item?.name||old?.name||'',branch:state.campaign?.warehouse||old?.branch||'',campaignName:state.campaign?.name||old?.campaignName||'',teamName:state.team?.name||old?.teamName||'',actorEmployeeId:user.employeeId||ROOT_ID,state:extra.operationId?'queued':'local_draft',updatedAt:Date.now(),...extra});if(ok){trackPendingDraft(id);paintSyncStatus()}else toast('تعذر حفظ المسودة على الجهاز؛ أبقِ الصفحة مفتوحة حتى تأكيد المزامنة');return ok}
+function syncHtml(){const pending=state.items.filter(i=>i._pending).length,drafts=draftPendingIds.size;const message=drafts?`${drafts} صنف به مسودة محلية لم يتأكد اعتمادها في Firebase · راجعها قبل مغادرة الجهاز`:!durableCache?'التخزين الدائم غير متاح على هذا المتصفح؛ انتظر تأكيد المزامنة قبل المغادرة':pending?`${pending} صنف محفوظ على الجهاز · بانتظار المزامنة`:!navigator.onLine?'بدون اتصال · يمكنك مواصلة الجرد على الأصناف المحمّلة':itemCacheOnly?'عرض البيانات المحفوظة على الجهاز · جارٍ التحقق من المزامنة':'تمت المزامنة مع الخادم';return `<div class="syncStatus ${drafts||!durableCache?'error':pending||itemCacheOnly||!navigator.onLine?'wait':''}" role="status">${message}${state.campaign?.closePhase==='collecting'?'<button type="button" class="btn" data-finish-team>إقرار انتهاء المجموعة</button>':''}<button type="button" class="btn" data-recovery-open>عرض المسودات واستعادتها</button></div>`}
+const destroy=()=>{unbindCampaign();if(itemListPaint)cancelAnimationFrame(itemListPaint);state.unsubs.splice(0).forEach(fn=>{try{fn()}catch{}});stopScanner()};window.addEventListener('beforeunload',destroy);window.addEventListener('online',render);window.addEventListener('offline',render);
 if(!user.name||(!user.isAdmin&&!user.validEmployee))location.href='./index.html?employee=1';else start();
 function cleanDigits(value){return eng(String(value??'')).replace(/\D/g,'')}
 function resolveStocktakeSearch(raw){
  const value=String(raw??'').trim(),normalized=norm(value),clean=cleanDigits(value);
- let exact=state.items.find(i=>norm(i.sku)===normalized);
- if(!exact&&clean)exact=state.items.find(i=>cleanDigits(i.sku)===clean);
- if(exact)return {query:String(exact.sku),item:exact,fromBarcode:false};
+ const exact=state.items.filter(i=>norm(i.sku)===normalized);
+ if(exact.length===1)return {query:String(exact[0].sku),item:exact[0],fromBarcode:false};
+ if(exact.length>1)return {query:value,item:null,fromBarcode:false,ambiguous:true};
+ const aliases=clean?state.items.filter(i=>cleanDigits(i.sku)===clean):[];
+ if(aliases.length===1)return {query:String(aliases[0].sku),item:aliases[0],fromBarcode:false};
+ if(aliases.length>1)return {query:value,item:null,fromBarcode:false,ambiguous:true};
  const mapper=window.BatcoScanPro;
  if(mapper&&/^(?:\d{8}|\d{12}|\d{13})$/.test(clean)){
   if(!mapper.checksum(clean))return {query:value,item:null,fromBarcode:false,invalid:true};
@@ -144,9 +160,9 @@ function resolveStocktakeSearch(raw){
 }
 function stocktakeSuggestions(raw){const q=norm(eng(String(raw||'').trim()));if(!q)return [];return state.items.filter(i=>norm(eng(String(i.sku||''))).startsWith(q)).slice(0,20)}
 function searchResultsHtml(){if(!state.itemsLoaded)return '<div class="searchEmpty" role="status">جارٍ تحميل أصناف الحملة…</div>';if(!state.items.length)return `<div class="searchEmpty" role="status">${itemCacheOnly?'لا توجد أصناف محفوظة لهذه المجموعة على الجهاز. اتصل بالإنترنت لتحميلها.':'لا توجد أصناف في لقطة مخزون الحملة.'}</div>`;if(!state.search.trim())return '';const matches=stocktakeSuggestions(state.search);return matches.length?`<div class="skuSuggestions" aria-label="الأصناف المطابقة"><div class="suggestionHint">اختر الصنف المطلوب${matches.length===20?' · أول 20 نتيجة، أكمل الرقم لتضييق البحث':''}</div>${matches.map(i=>`<button type="button" data-open="${esc(i.id)}" class="skuSuggestion"><span><b dir="ltr">${esc(i.sku)}</b><small>${esc(i.name||'')}</small></span><span aria-hidden="true">‹</span></button>`).join('')}</div>`:'<div class="searchEmpty" role="status">لا توجد نتائج ضمن أصناف الحملة. تحقق من الرقم أو النطاق.</div>'}
-function renderWelcome(teams){const t=state.team,c=state.campaign,closed=c.status==='closed',members=teamMemberNames(t),assistants=t.extraMemberNames||[],ready=state.itemsLoaded&&state.items.length>0;app.classList.add('welcomeMode');app.innerHTML=`<section class="stocktakeWelcome" aria-labelledby="welcomeTitle"><div class="welcomeBrand"><img src="./assets/batco-logo.svg" alt="باتكو" width="180" height="72"><span>إدارة المخزون · أعمال الجرد</span></div><div class="welcomeHeading"><span class="welcomeEyebrow">لجنة الجرد${c.isTest||c.testMode?' · وضع اختبار':''}</span><h1 id="welcomeTitle">${esc(cleanUiName(c.name||'محضر الجرد'))}</h1><p>دقة الجرد تبدأ بكم. راجعوا بيانات المجموعة والنطاق قبل بدء العمل.</p></div><dl class="welcomeRoster"><div><dt>عضو اللجنة</dt><dd>${esc(members.join('، ')||'غير محدد')}</dd></div><div><dt>المساعد</dt><dd>${esc(assistants.join('، ')||'لا يوجد مساعد مسجل')}</dd></div><div><dt>المجموعة</dt><dd>${esc(cleanUiName(t.name))}</dd></div><div><dt>نطاق الجرد</dt><dd>${esc(t.scope||t.zone||'غير محدد')}</dd></div></dl>${teams.length>1?`<label class="welcomeTeamLabel" for="teamSelect">المجموعة المسندة<select id="teamSelect" class="teamselect">${teams.map(x=>`<option value="${esc(x.id)}" ${x.id===t.id?'selected':''}>${esc(cleanUiName(x.name))} · ${esc(x.scope||x.zone||'')}</option>`).join('')}</select></label>`:''}<div class="welcomeReadiness" role="status">${!state.itemsLoaded?'جارٍ تجهيز أصناف الحملة…':ready?`${state.items.length} صنف متاح لجميع لجان الجرد`:itemCacheOnly?'اتصل بالإنترنت لتحميل أصناف هذه المجموعة.':'لقطة مخزون الحملة غير جاهزة. راجع الإدارة لإكمال تحميل المخزون.'}</div><button type="button" id="startStocktake" class="welcomeStart" ${ready?'':'disabled'}>${closed?'عرض الجرد':'ابدأ الجرد'} <span aria-hidden="true">←</span></button><p class="welcomeFootnote">سجّل كمية جهتك فقط؛ تُجمع كميات الجهات تلقائيًا في نتيجة موحدة.</p><button type="button" id="backBtn" class="welcomeBack">العودة للنظام</button></section>`;$('#teamSelect')?.addEventListener('change',e=>pickTeam(e.target.value));$('#backBtn').onclick=()=>location.href='./index.html?employee=1';$('#startStocktake').onclick=()=>{if(!state.itemsLoaded||!state.items.length)return;state.enteredScope=c.id+':'+t.id;render();$('#search')?.focus({preventScroll:true})}}
+function renderWelcome(teams){const t=state.team,c=state.campaign,closed=c.status==='closed',members=teamMemberNames(t),assistants=t.extraMemberNames||[],referenceCount=Number(c.inventorySnapshotCount),knownCount=Number.isSafeInteger(referenceCount)&&referenceCount>0,partial=knownCount&&state.items.length!==referenceCount,serverConfirmed=!itemCacheOnly&&!itemSnapshotPending&&controlServerConfirmed&&campaignServerConfirmed&&teamsServerConfirmed,ready=state.itemsLoaded&&state.items.length>0&&knownCount&&!partial&&serverConfirmed;app.classList.add('welcomeMode');app.innerHTML=`<section class="stocktakeWelcome" aria-labelledby="welcomeTitle"><div class="welcomeBrand"><img src="./assets/batco-logo.svg" alt="باتكو" width="180" height="72"><span>إدارة المخزون · أعمال الجرد</span></div><div class="welcomeHeading"><span class="welcomeEyebrow">لجنة الجرد${c.isTest||c.testMode?' · وضع اختبار':''}</span><h1 id="welcomeTitle">${esc(cleanUiName(c.name||'محضر الجرد'))}</h1><p>دقة الجرد تبدأ بكم. راجعوا بيانات المجموعة والنطاق قبل بدء العمل.</p></div><dl class="welcomeRoster"><div><dt>عضو اللجنة</dt><dd>${esc(members.join('، ')||'غير محدد')}</dd></div><div><dt>المساعد</dt><dd>${esc(assistants.join('، ')||'لا يوجد مساعد مسجل')}</dd></div><div><dt>المجموعة</dt><dd>${esc(cleanUiName(t.name))}</dd></div><div><dt>نطاق الجرد</dt><dd>${esc(t.scope||t.zone||'غير محدد')}</dd></div></dl>${teams.length>1?`<label class="welcomeTeamLabel" for="teamSelect">المجموعة المسندة<select id="teamSelect" class="teamselect">${teams.map(x=>`<option value="${esc(x.id)}" ${x.id===t.id?'selected':''}>${esc(cleanUiName(x.name))} · ${esc(x.scope||x.zone||'')}</option>`).join('')}</select></label>`:''}<div class="welcomeReadiness" role="status">${!state.itemsLoaded?'جارٍ تجهيز أصناف الحملة…':partial?`لم يكتمل تحميل أصناف الحملة (${state.items.length} من ${referenceCount}). اتصل بالإنترنت وأعد المحاولة.`:!knownCount?'لا يوجد مرجع موثوق لعدد أصناف هذه الحملة. راجع الإدارة للتحقق قبل بدء الجرد.':!serverConfirmed?'يجب تأكيد أصناف الحملة من الخادم قبل بدء الجرد. اتصل بالإنترنت وانتظر المزامنة.':ready?`${state.items.length} صنف متاح لجميع لجان الجرد`:itemCacheOnly?'اتصل بالإنترنت لتحميل أصناف هذه المجموعة.':'لقطة مخزون الحملة غير جاهزة. راجع الإدارة لإكمال تحميل المخزون.'}</div><button type="button" id="startStocktake" class="welcomeStart" ${ready?'':'disabled'}>${closed?'عرض الجرد':'ابدأ الجرد'} <span aria-hidden="true">←</span></button><p class="welcomeFootnote">سجّل كمية جهتك فقط؛ تُجمع كميات الجهات تلقائيًا في نتيجة موحدة.</p><button type="button" id="backBtn" class="welcomeBack">العودة للنظام</button></section>`;$('#teamSelect')?.addEventListener('change',e=>pickTeam(e.target.value));$('#backBtn').onclick=()=>location.href='./index.html?employee=1';$('#startStocktake').onclick=()=>{if(!ready)return;state.enteredScope=c.id+':'+t.id;render();$('#search')?.focus({preventScroll:true})}}
 function restoreFilterStrip(){requestAnimationFrame(()=>{const strip=$('.filters');if(!strip)return;strip.scrollLeft=state.filterScroll||0;strip.onscroll=()=>{state.filterScroll=strip.scrollLeft}})}
-function start(){state.unsubs.push(db.collection('system_controls').doc(CONTROL_DOC).onSnapshot(d=>{state.control={...DEFAULT_CONTROL,...(d.exists?d.data():{})};bindCampaign()},()=>{app.innerHTML=lockHtml('تعذر قراءة إعدادات الجرد','تحقق من الاتصال ثم أعد المحاولة.')}))}
+function start(){state.unsubs.push(db.collection('system_controls').doc(CONTROL_DOC).onSnapshot({includeMetadataChanges:true},d=>{controlServerConfirmed=Boolean(d.exists&&!d.metadata?.fromCache&&!d.metadata?.hasPendingWrites);state.control={...DEFAULT_CONTROL,...(d.exists?d.data():{})};bindCampaign();render()},()=>{controlServerConfirmed=false;app.innerHTML=lockHtml('تعذر قراءة إعدادات الجرد','تحقق من الاتصال ثم أعد المحاولة.')}))}
 let campaignBound='',itemsUnsub=null,teamsUnsub=null,campaignUnsub=null;
 function bindCampaign(){
  const c=state.control;
@@ -161,33 +177,132 @@ function bindCampaign(){
  if(!id){unbindCampaign();app.innerHTML=lockHtml('لا توجد حملة جرد نشطة','الإدارة لم تبدأ حملة الجرد بعد.');return}
  if(campaignBound===id)return;
  unbindCampaign();campaignBound=id;
- campaignUnsub=db.collection('stocktake_campaigns').doc(id).onSnapshot(d=>{
-  state.campaign=d.exists?{id:d.id,...d.data()}:null;render();
- },()=>toast('تعذر تحميل بيانات حملة الجرد'));
- teamsUnsub=db.collection('stocktake_teams').where('campaignId','==',id).onSnapshot(s=>{
-  state.teams=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.orderIndex??999)-(b.orderIndex??999));pickTeam();
- },()=>toast('تعذر تحميل لجان الجرد'));
- state.unsubs.push(campaignUnsub,teamsUnsub);
+ campaignUnsub=db.collection('stocktake_campaigns').doc(id).onSnapshot({includeMetadataChanges:true},d=>{
+  campaignServerConfirmed=Boolean(d.exists&&!d.metadata?.fromCache&&!d.metadata?.hasPendingWrites);state.campaign=d.exists?{id:d.id,...d.data()}:null;render();
+ },()=>{campaignServerConfirmed=false;render();toast('تعذر تحميل بيانات حملة الجرد')});
+ teamsUnsub=db.collection('stocktake_teams').where('campaignId','==',id).onSnapshot({includeMetadataChanges:true},s=>{
+  teamsServerConfirmed=Boolean(!s.metadata?.fromCache&&!s.metadata?.hasPendingWrites);state.teams=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.orderIndex??999)-(b.orderIndex??999));pickTeam();
+ },()=>{teamsServerConfirmed=false;render();toast('تعذر تحميل لجان الجرد')});
 }
-function unbindCampaign(){campaignBound='';state.campaign=null;state.teams=[];state.team=null;state.items=[];if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}if(campaignUnsub){try{campaignUnsub()}catch{}campaignUnsub=null}if(teamsUnsub){try{teamsUnsub()}catch{}teamsUnsub=null}}
+function unbindCampaign(){campaignBound='';campaignServerConfirmed=false;teamsServerConfirmed=false;state.campaign=null;state.teams=[];state.team=null;state.items=[];if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}if(campaignUnsub){try{campaignUnsub()}catch{}campaignUnsub=null}if(teamsUnsub){try{teamsUnsub()}catch{}teamsUnsub=null}}
 function accessibleTeams(){return state.teams.filter(isMember)}
 function pickTeam(id=''){const list=accessibleTeams();const chosen=list.find(t=>t.id===id)||list.find(t=>t.id===state.team?.id)||list[0]||null;if(chosen?.id===state.team?.id&&itemsUnsub){state.team=chosen;render();return}
 if(chosen&&itemsUnsub&&state.team?.campaignId===chosen.campaignId){
  state.team=chosen;state.enteredScope='';state.search='';state.activeEditId='';
- state.items=state.items.map(i=>StocktakeCore.forTeam(i,chosen.id));render();return;
+ state.items=state.items.map(i=>StocktakeCore.forTeam(i,chosen.id));draftPendingIds=new Set();for(const item of state.items)trackPendingDraft(item.id);render();return;
 }
-state.team=chosen;draftPendingIds=new Set();state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly;state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);if(wasReady&&wasCacheOnly===itemCacheOnly&&!s.docChanges({includeMetadataChanges:true}).length)return;state.items=s.docs.map(d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},state.team?.id||chosen.id)).sort((a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en'));draftPendingIds=new Set();for(const i of state.items){let remains=false;for(const kind of ['qty','note']){const key=draftKey(i.id,kind),draft=draftStore.get(key),op=kind==='qty'?i.lastCountOperationId:i.lastNoteOperationId;if(draft?.operationId===op&&!i._pending&&!itemCacheOnly)draftStore.remove(key);else if(draft)remains=true}if(remains)draftPendingIds.add(i.id)}scheduleItemListPaint()},()=>toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة'))}
+state.team=chosen;draftPendingIds=new Set();state.itemsLoaded=false;state.enteredScope='';state.search='';state.activeEditId='';if(itemsUnsub){try{itemsUnsub()}catch{}itemsUnsub=null}state.items=[];if(!chosen){render();return}
+itemsUnsub=db.collection('stocktake_items').where('campaignId','==',chosen.campaignId).onSnapshot({includeMetadataChanges:true},s=>{
+ const wasReady=state.itemsLoaded,wasCacheOnly=itemCacheOnly,wasPending=itemSnapshotPending,changes=s.docChanges({includeMetadataChanges:true});
+ state.itemsLoaded=true;itemCacheOnly=Boolean(s.metadata?.fromCache);itemSnapshotPending=Boolean(s.metadata?.hasPendingWrites);
+ if(wasReady&&wasCacheOnly===itemCacheOnly&&wasPending===itemSnapshotPending&&!changes.length)return;
+ const convert=d=>StocktakeCore.forTeam({id:d.id,...d.data(),_pending:d.metadata.hasPendingWrites},state.team?.id||chosen.id);
+ const compare=(a,b)=>(a.orderIndex??999999)-(b.orderIndex??999999)||String(a.sku).localeCompare(String(b.sku),'en');
+ if(!wasReady){
+  state.items=s.docs.map(convert).sort(compare);draftPendingIds=new Set();
+  for(const item of state.items)trackPendingDraft(item.id);
+ }else if(changes.length){
+  const rows=new Map(state.items.map(item=>[item.id,item]));let reorder=false;
+  for(const change of changes){const d=change.doc;if(change.type==='removed'){rows.delete(d.id);draftPendingIds.delete(d.id);reorder=true;continue}
+   const previous=rows.get(d.id),next=convert(d);rows.set(d.id,next);trackPendingDraft(d.id);
+   if(!previous||previous.orderIndex!==next.orderIndex||previous.sku!==next.sku)reorder=true;
+  }
+  state.items=[...rows.values()];if(reorder)state.items.sort(compare);
+ }
+ scheduleItemListPaint();
+},()=>{itemCacheOnly=true;itemSnapshotPending=true;render();toast('تعذر مزامنة أصناف الحملة؛ احتفظ بالصفحة مفتوحة')})}
+
+const receiptChecks=new Map();
+async function verifyDraftReceipt(key,expectedDraft=null){
+ if(receiptChecks.has(key))return receiptChecks.get(key);
+ const work=(async()=>{
+  const current=draftStore.get(key),draft=expectedDraft||current;if(!draft?.operationId)return false;
+  // A server-only read can remain unresolved during reconnection. Bound the
+  // wait without treating a timeout as a missing receipt or deleting the draft.
+  let receiptTimer;
+  const read=db.collection('stocktake_audit').doc(draft.operationId).get({source:'server'});
+  let snap;try{snap=await Promise.race([read,new Promise((_,reject)=>{receiptTimer=setTimeout(()=>reject(Error('STOCKTAKE_RECEIPT_TIMEOUT')),18000)})])}finally{clearTimeout(receiptTimer)}
+  if(snap.metadata?.fromCache||snap.metadata?.hasPendingWrites)throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED');
+  if(!snap.exists)return false;
+  if(!StocktakeCore.receiptMatches(key,draft,snap.data(),user.employeeId||ROOT_ID))throw Error('STOCKTAKE_OPERATION_CONFLICT');
+  const sameCurrent=current&&current.operationId===draft.operationId&&StocktakeCore.receiptMatches(key,current,snap.data(),user.employeeId||ROOT_ID);
+  const removed=current?(sameCurrent&&draftStore.removeIf(key,current)):Boolean(expectedDraft);
+  if(removed){draftPendingIds=new Set(state.items.filter(i=>draftStore.get(draftKey(i.id))||draftStore.get(draftKey(i.id,'note'))).map(i=>i.id));paintSyncStatus()}
+  return removed;
+ })();
+ receiptChecks.set(key,work);try{return await work}finally{receiptChecks.delete(key)}
+}
+let lastReceiptSweep=0,receiptSweepOffset=0;
+async function reconcileVisibleDrafts(){
+ if(document.visibilityState!=='visible'||!navigator.onLine||Date.now()-lastReceiptSweep<60000)return;
+ lastReceiptSweep=Date.now();let pending;try{pending=draftStore.list().filter(r=>r.value?.operationId)}catch{return}
+ if(!pending.length){receiptSweepOffset=0;return}
+ const start=receiptSweepOffset%pending.length,batch=Array.from({length:Math.min(10,pending.length)},(_,i)=>pending[(start+i)%pending.length]);
+ receiptSweepOffset=(start+batch.length)%pending.length;
+ // Bound the reads and do not let a conflicting receipt starve unrelated drafts.
+ for(const row of batch){try{await verifyDraftReceipt(row.key)}catch{}}
+}
+window.addEventListener('online',reconcileVisibleDrafts);
+window.addEventListener('pageshow',reconcileVisibleDrafts);
+document.addEventListener('visibilitychange',reconcileVisibleDrafts);
+let acknowledgingTeam=false;
+async function acknowledgeTeam(){
+ const c=state.campaign,t=state.team,epoch=c?.closeEpoch,id=stocktakeDeviceId();
+ if(acknowledgingTeam||!c||!t||c.closePhase!=='collecting'||!epoch||!id)return toast('تعذر تجهيز إقرار المجموعة');
+ if(!navigator.onLine||itemCacheOnly||!controlServerConfirmed||!campaignServerConfirmed||!teamsServerConfirmed)return toast('يلزم الاتصال بالخادم قبل إقرار انتهاء المجموعة');
+ if(saving.size)return toast('انتظر اكتمال عمليات الحفظ قبل الإقرار');
+ if(!confirm('إقرار انتهاء المجموعة؟ لن يمكن تسجيل أصناف جديدة لهذه المجموعة حتى إعادة فتحها.'))return;
+ const key=groupFreezeKey(c.id,t.id);acknowledgingTeam=true;let submitted=false;
+ try{
+  const previous=localStorage.getItem(key);if(previous&&previous!==epoch)throw Error('GROUP_FREEZE_CONFLICT');
+  localStorage.setItem(key,epoch);if(localStorage.getItem(key)!==epoch)throw Error('GROUP_STORAGE_FAILED');render();
+  const marker=`:${c.id}:${t.id}:`;
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k?.startsWith('stocktake.draft.v73:')&&k.includes(marker))throw Error('GROUP_PENDING');}
+  if(saving.size)throw Error('GROUP_PENDING');
+  let timer;try{await Promise.race([db.waitForPendingWrites(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('GROUP_PENDING_TIMEOUT')),18000)})])}finally{clearTimeout(timer)}
+  const cp=db.collection('stocktake_campaigns').doc(c.id),team=db.collection('stocktake_teams').doc(t.id);
+  submitted=true;let confirmTimer;const ackTransaction=db.runTransaction(async tx=>{
+   const [cs,ts]=await Promise.all([tx.get(cp),tx.get(team)]),campaign=cs.data()||{},fresh=ts.data()||{};
+   if(!cs.exists||campaign.status!=='active'||campaign.closePhase!=='collecting'||campaign.closeEpoch!==epoch||!campaign.closeRoster?.includes(t.id))throw Error('GROUP_CLOSE_CHANGED');
+   if(!ts.exists||fresh.campaignId!==c.id||!teamMemberIds(fresh).includes(user.employeeId||ROOT_ID))throw Error('GROUP_NOT_ASSIGNED');
+   if(fresh.registeredDeviceId&&fresh.registeredDeviceId!==id)throw Error('GROUP_DEVICE_MISMATCH');
+   if(fresh.closeEpoch===epoch&&fresh.closeStatus==='acknowledged'){if(fresh.closeActorId!==(user.employeeId||ROOT_ID)||fresh.closeDeviceId!==id)throw Error('GROUP_ACK_CONFLICT');return}
+   tx.update(team,{registeredDeviceId:id,closeEpoch:epoch,closeStatus:'acknowledged',closeActorId:user.employeeId||ROOT_ID,closeDeviceId:id,closeAcknowledgedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  });
+  try{await Promise.race([ackTransaction,new Promise((_,reject)=>{confirmTimer=setTimeout(()=>reject(Error('GROUP_ACK_TIMEOUT')),18000)})])}finally{clearTimeout(confirmTimer)}
+  toast('تم إقرار انتهاء المجموعة على الخادم');
+ }catch(error){console.warn('[stocktake group acknowledgement]',error?.code||error?.message||error);try{if(!submitted&&localStorage.getItem(key)===epoch)localStorage.removeItem(key)}catch{}toast('تعذر الإقرار؛ راجع المسودات والاتصال أو تواصل مع الإدارة')}
+ finally{acknowledgingTeam=false;render()}
+}
+function recoveryRows(){return draftStore.list().map(row=>{const [campaignId,teamId,itemId,kind]=row.key.split(':'),item=state.items.find(i=>i.id===itemId&&i.campaignId===campaignId);return {...row,campaignId,teamId,itemId,kind,item}})}
+function showRecovery(){
+ let modal=document.getElementById('draftRecovery');
+ if(!modal){modal=document.createElement('div');modal.id='draftRecovery';modal.className='modalbg open';document.body.appendChild(modal)}
+ let rows;try{rows=recoveryRows()}catch{toast('تعذر قراءة تخزين الجهاز؛ أبقِ الصفحة مفتوحة');return}
+ const labels={local_draft:'مسودة محلية',queued:'بانتظار الإرسال',saving:'جارٍ الحفظ',unconfirmed:'تعذر التأكيد',conflict:'تعارض يحتاج مراجعة'};
+ modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-label="استعادة المسودات" style="max-height:85vh;overflow:auto"><h3>أصناف بانتظار التأكيد (${new Set(rows.map(r=>r.campaignId+':'+r.itemId)).size})</h3><p>تصدير النسخة يحفظ المسودات كما هي. التحقق يقرأ سجل الخادم دون تعديل الجرد.</p><div class="actions"><button class="btn" id="exportDrafts">تصدير نسخة احتياطية</button><button class="btn" id="closeRecovery">إغلاق</button></div><div>${rows.map((r,j)=>{const d=r.value||{};return `<article class="card"><b>${esc(d.sku||r.item?.sku||r.itemId||r.key)}</b><div>${esc(d.name||r.item?.name||'')}</div><div>${r.kind==='note'?'الملاحظة':'الكمية'}: ${esc(d.value??'بيانات تحتاج مراجعة')}</div><small>الفرع: ${esc(d.branch||(state.campaign?.id===r.campaignId?state.campaign.warehouse:'غير متاح محليًا'))}<br>الحملة: ${esc(d.campaignName||r.campaignId)}<br>المجموعة: ${esc(d.teamName||r.teamId)}</small><div>${esc(labels[d.state]||(d.operationId?'تعذر التأكيد':'مسودة محلية'))}${d.error?' · تعذر الحفظ أو التحقق؛ أعد التحقق عند عودة الاتصال':''}</div><div class="actions"><button class="btn" data-check-draft="${j}" ${d.operationId?'':'disabled'}>تحقق من الخادم</button><button class="btn" data-retry-draft="${j}" ${r.item&&r.teamId===state.team?.id?'':'disabled'}>مراجعة وإعادة المحاولة</button></div></article>`}).join('')||'<p>لا توجد مسودات لهذا الحساب على هذا المتصفح.</p>'}</div></section>`;
+ modal.querySelector('#closeRecovery').onclick=()=>modal.remove();
+ modal.querySelector('#exportDrafts').onclick=()=>{
+  try{const payload={format:'stocktake-local-recovery-v1',exportedAt:new Date().toISOString(),origin:location.origin,actorId:user.employeeId||ROOT_ID,entries:draftStore.list()};const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='stocktake-drafts-'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}catch{toast('تعذر التصدير؛ أبقِ الصفحة مفتوحة')}
+ };
+ modal.querySelectorAll('[data-check-draft]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{toast(await verifyDraftReceipt(rows[Number(b.dataset.checkDraft)].key)?'تم تأكيد العملية من الخادم':'لا يوجد سجل مؤكد لهذه العملية؛ احتفظ بالمسودة')}catch{toast('تعذر التأكيد؛ بقيت المسودة محفوظة')}showRecovery()});
+ modal.querySelectorAll('[data-retry-draft]').forEach(b=>b.onclick=()=>{const r=rows[Number(b.dataset.retryDraft)];modal.remove();state.enteredScope=state.campaign.id+':'+state.team.id;state.search=String(r.item.sku);state.activeEditId=r.itemId;render();if(r.kind==='note')openNote(r.itemId)});
+}
+document.addEventListener('click',event=>{if(event.target.closest('[data-recovery-open]'))showRecovery();if(event.target.closest('[data-finish-team]'))acknowledgeTeam()});
+// Also accessible when a campaign is closed/unassigned or its item disappeared.
+const recoveryLauncher=document.createElement('button');recoveryLauncher.type='button';recoveryLauncher.className='btn';recoveryLauncher.textContent='المسودات المحلية';recoveryLauncher.setAttribute('data-recovery-open','');document.body.appendChild(recoveryLauncher);
+
 function lockHtml(title,note){return `<div class="lock"><h2>${esc(title)}</h2><p>${esc(note)}</p><button class="btn" style="padding:0 18px;margin-top:12px" onclick="location.href='./index.html?employee=1'">العودة للنظام</button></div>`}
 function completedMatches(i){if((i.countStatus||'pending')==='pending')return false;if(state.filter==='matched')return i.countStatus==='matched';if(state.filter==='variance')return ['shortage','surplus'].includes(i.countStatus);if(state.filter==='notes')return Boolean(String(i.note||'').trim());return true}
 function recentStamp(i){return Number(i.lastCountAt?.seconds||i.updatedAt?.seconds||i.firstCountAt?.seconds||0)}
 function cleanUiName(v){return String(v||'').replace(/^[^\u0600-\u06FFA-Za-z0-9]+/,'').trim()}
 function render(){const scope=state.campaign?.id+':'+state.team?.id;const saved=lastRenderScope===scope?StocktakeCore.capture(app):null;lastRenderScope=scope;renderContent();if(saved)StocktakeCore.restore(app,saved)}
-function renderContent(){if(!state.control||!canAccess(state.control))return;if(!state.campaign){app.innerHTML=lockHtml('جاري تجهيز حملة الجرد','انتظر لحظات...');return}const teams=accessibleTeams();if(!state.team){app.innerHTML=lockHtml(teams.length?'جاري فتح المجموعة':'لا توجد مجموعة جرد مسندة لك','راجع توزيع لجنة الجرد مع الإدارة.');return}if(state.enteredScope!==state.campaign.id+':'+state.team.id){renderWelcome(teams);return}app.classList.remove('welcomeMode');const items=state.items,total=items.length,counted=items.filter(i=>(i.countStatus||'pending')!=='pending').length,pending=total-counted,short=items.filter(i=>i.countStatus==='shortage').length,surplus=items.filter(i=>i.countStatus==='surplus').length,progress=total?Math.round(counted/total*100):0,readonly=state.campaign.status==='closed',active=state.activeEditId?items.find(i=>i.id===state.activeEditId):null,completed=items.filter(completedMatches).sort((a,b)=>recentStamp(b)-recentStamp(a)||(b.orderIndex??0)-(a.orderIndex??0)),historyShown=completed.slice(0,state.historyVisible||12),roster=[...teamMemberNames(state.team),...(state.team.extraMemberNames||[])].filter(Boolean),campaignName=cleanUiName(state.campaign.name||`ملف الجرد لمستودع ${state.campaign.warehouse||''}`),teamName=cleanUiName(state.team.name||'المجموعة'),isTest=Boolean(state.campaign.isTest||state.campaign.testMode||state.campaign.sourceMode==='test'),keyboardMode=state.control?.searchKeyboardMode==='text'?'text':'numeric';const activeHtml=active?`<div class="activeResult">${cardHtml(active,readonly)}</div>`:searchResultsHtml();app.innerHTML=`<div class="top"><div class="head"><button class="back" id="backBtn">‹</button><div class="grow"><div class="title">${esc(campaignName)}</div><div class="sub">${esc(teamName)} · ${esc(state.team.scope||state.team.zone||'بدون نطاق')}</div></div><span class="net ${navigator.onLine?'':'off'}">${navigator.onLine?'متصل':'بدون اتصال'}</span></div></div><div class="scopeBar"><div class="scopeLabel">المجموعة الحالية ${isTest?'<span class="testBadge">وضع اختبار</span>':''}</div><div class="scopeName">${esc(teamName)} · ${esc(state.team.scope||state.team.zone||'بدون نطاق')}</div>${roster.length?`<div class="scopeMeta">عضو اللجنة / المساعد: ${esc(roster.join('، '))}</div>`:''}${teams.length>1?`<select id="teamSelect" class="teamselect">${teams.map(t=>`<option value="${t.id}" ${t.id===state.team.id?'selected':''}>${esc(cleanUiName(t.name))} · ${esc(t.scope||t.zone||'')}</option>`).join('')}</select>`:''}</div>${syncHtml()}<div class="summaryPanel"><div class="summaryHead"><div><div class="summaryTitle">ملخص الجرد</div><div class="summaryText">${counted===total&&total?'اكتملت أصناف الحملة':`سجّلت مجموعتك ${counted} من ${total} صنف متاح`}</div></div><div class="summaryProgress">${progress}%</div></div><div class="stats"><div class="stat"><b>${total}</b><span>الأصناف</span></div><div class="stat"><b>${counted}</b><span>تم الجرد</span></div><div class="stat"><b>${pending}</b><span>متبقي</span></div><div class="stat"><b>${short+surplus}</b><span>فروقات</span></div></div><div class="progress"><i style="width:${progress}%"></i></div></div><div class="operatorPanel"><div class="operatorHead"><div><div class="operatorTitle">إدخال الجرد</div><div class="operatorSub">كامل المخزون · سجّل كمية جهتك فقط</div></div><div class="operatorActions"><span class="readyBadge">${readonly?'مغلق':'جاهز'}</span>${user.isAdmin?`<button id="keyboardModeBtn" class="keyboardModeBtn" type="button" title="تبديل لوحة الإدخال لجميع لجان الجرد">${keyboardMode==='text'?'ABC':'123'}</button>`:''}</div></div><div class="searchWrap"><input id="search" class="search" value="${esc(state.search)}" inputmode="${keyboardMode}" enterkeyhint="search" autocomplete="off" placeholder="اكتب رقم الصنف"><button id="scanBtn" class="inventoryScanButton" title="مسح الباركود بالكاميرا" aria-label="مسح الباركود بالكاميرا"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10M7 9v6M10 9v6M14 9v6M17 9v6"/></svg></button></div>${activeHtml}</div><div class="completedPanel"><div class="completedHead"><div><div class="completedTitle">المنجز حديثًا</div></div><div class="completedCount">${counted} منجز</div></div><div class="filters">${chip('all','المنجز',counted)}${chip('matched','مطابق',items.filter(i=>i.countStatus==='matched').length)}${chip('variance','الفروقات',short+surplus)}${chip('notes','ملاحظات',items.filter(i=>(i.countStatus||'pending')!=='pending'&&String(i.note||'').trim()).length)}</div><div class="completedList">${historyShown.length?historyShown.map(completedCardHtml).join(''):'<div class="empty">لا توجد أصناف منجزة ضمن هذا القسم بعد.</div>'}</div>${historyShown.length<completed.length?'<button id="loadMoreHistory" class="historyMore">إظهار المزيد</button>':''}</div>`;bindUi(readonly);restoreFilterStrip();if(state.activeEditId&&focusedItem!==state.activeEditId){focusedItem=state.activeEditId;setTimeout(()=>{const el=$(`#actual_${CSS.escape(state.activeEditId)}`);if(el){try{el.focus({preventScroll:true})}catch{el.focus()}el.select()}},50)}if(!state.activeEditId)focusedItem=''}
+function renderContent(){if(!state.control||!canAccess(state.control))return;if(!state.campaign){app.innerHTML=lockHtml('جاري تجهيز حملة الجرد','انتظر لحظات...');return}const teams=accessibleTeams();if(!state.team){app.innerHTML=lockHtml(teams.length?'جاري فتح المجموعة':'لا توجد مجموعة جرد مسندة لك','راجع توزيع لجنة الجرد مع الإدارة.');return}if(state.enteredScope!==state.campaign.id+':'+state.team.id){renderWelcome(teams);return}app.classList.remove('welcomeMode');const items=state.items,total=items.length,counted=items.filter(i=>(i.countStatus||'pending')!=='pending').length,pending=total-counted,short=items.filter(i=>i.countStatus==='shortage').length,surplus=items.filter(i=>i.countStatus==='surplus').length,progress=total?Math.round(counted/total*100):0,readonly=state.campaign.status==='closed'||groupFrozen()||Boolean(state.campaign.closeEpoch&&state.team.closeEpoch===state.campaign.closeEpoch&&state.team.closeStatus==='acknowledged'),active=state.activeEditId?items.find(i=>i.id===state.activeEditId):null,completed=items.filter(completedMatches).sort((a,b)=>recentStamp(b)-recentStamp(a)||(b.orderIndex??0)-(a.orderIndex??0)),historyShown=completed.slice(0,state.historyVisible||12),roster=[...teamMemberNames(state.team),...(state.team.extraMemberNames||[])].filter(Boolean),campaignName=cleanUiName(state.campaign.name||`ملف الجرد لمستودع ${state.campaign.warehouse||''}`),teamName=cleanUiName(state.team.name||'المجموعة'),isTest=Boolean(state.campaign.isTest||state.campaign.testMode||state.campaign.sourceMode==='test'),keyboardMode=state.control?.searchKeyboardMode==='text'?'text':'numeric';const activeHtml=active?`<div class="activeResult">${cardHtml(active,readonly)}</div>`:searchResultsHtml();app.innerHTML=`<div class="top"><div class="head"><button class="back" id="backBtn">‹</button><div class="grow"><div class="title">${esc(campaignName)}</div><div class="sub">${esc(teamName)} · ${esc(state.team.scope||state.team.zone||'بدون نطاق')}</div></div><span class="net ${navigator.onLine?'':'off'}">${navigator.onLine?'متصل':'بدون اتصال'}</span></div></div><div class="scopeBar"><div class="scopeLabel">المجموعة الحالية ${isTest?'<span class="testBadge">وضع اختبار</span>':''}</div><div class="scopeName">${esc(teamName)} · ${esc(state.team.scope||state.team.zone||'بدون نطاق')}</div>${roster.length?`<div class="scopeMeta">عضو اللجنة / المساعد: ${esc(roster.join('، '))}</div>`:''}${teams.length>1?`<select id="teamSelect" class="teamselect">${teams.map(t=>`<option value="${t.id}" ${t.id===state.team.id?'selected':''}>${esc(cleanUiName(t.name))} · ${esc(t.scope||t.zone||'')}</option>`).join('')}</select>`:''}</div>${syncHtml()}<div class="summaryPanel"><div class="summaryHead"><div><div class="summaryTitle">ملخص الجرد</div><div class="summaryText">${counted===total&&total?'اكتملت أصناف الحملة':`سجّلت مجموعتك ${counted} من ${total} صنف متاح`}</div></div><div class="summaryProgress">${progress}%</div></div><div class="stats"><div class="stat"><b>${total}</b><span>الأصناف</span></div><div class="stat"><b>${counted}</b><span>تم الجرد</span></div><div class="stat"><b>${pending}</b><span>متبقي</span></div><div class="stat"><b>${short+surplus}</b><span>فروقات</span></div></div><div class="progress"><i style="width:${progress}%"></i></div></div><div class="operatorPanel"><div class="operatorHead"><div><div class="operatorTitle">إدخال الجرد</div><div class="operatorSub">كامل المخزون · سجّل كمية جهتك فقط</div></div><div class="operatorActions"><span class="readyBadge">${readonly?'مغلق':'جاهز'}</span>${user.isAdmin?`<button id="keyboardModeBtn" class="keyboardModeBtn" type="button" title="تبديل لوحة الإدخال لجميع لجان الجرد">${keyboardMode==='text'?'ABC':'123'}</button>`:''}</div></div><div class="searchWrap"><input id="search" class="search" value="${esc(state.search)}" inputmode="${keyboardMode}" enterkeyhint="search" autocomplete="off" placeholder="اكتب رقم الصنف"><button id="scanBtn" class="inventoryScanButton" title="مسح الباركود بالكاميرا" aria-label="مسح الباركود بالكاميرا"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10M7 9v6M10 9v6M14 9v6M17 9v6"/></svg></button></div>${activeHtml}</div><div class="completedPanel"><div class="completedHead"><div><div class="completedTitle">المنجز حديثًا</div></div><div class="completedCount">${counted} منجز</div></div><div class="filters">${chip('all','المنجز',counted)}${chip('matched','مطابق',items.filter(i=>i.countStatus==='matched').length)}${chip('variance','الفروقات',short+surplus)}${chip('notes','ملاحظات',items.filter(i=>(i.countStatus||'pending')!=='pending'&&String(i.note||'').trim()).length)}</div><div class="completedList">${historyShown.length?historyShown.map(completedCardHtml).join(''):'<div class="empty">لا توجد أصناف منجزة ضمن هذا القسم بعد.</div>'}</div>${historyShown.length<completed.length?'<button id="loadMoreHistory" class="historyMore">إظهار المزيد</button>':''}</div>`;bindUi(readonly);restoreFilterStrip();if(state.activeEditId&&focusedItem!==state.activeEditId){focusedItem=state.activeEditId;setTimeout(()=>{const el=$(`#actual_${CSS.escape(state.activeEditId)}`);if(el){try{el.focus({preventScroll:true})}catch{el.focus()}el.select()}},50)}if(!state.activeEditId)focusedItem=''}
 function chip(id,label,count){return `<button class="chip ${state.filter===id?'active':''}" data-filter="${id}">${label} <span>${count}</span></button>`}
 function completedCardHtml(i){const st=i.countStatus||'pending',diff=Number(i.actualQty)-Number(i.expectedQty);return `<article class="completedRow"><button class="completedOpen" data-open="${i.id}" aria-label="فتح الصنف">‹</button><div><div class="completedSku">${esc(i.sku)}</div><div class="completedName">${esc(i.name||'')}${i.pack!==''&&i.pack!=null?` · الشد: ${esc(i.pack)}`:''}</div><div class="completedNumbers"><span class="mini">الفعلي ${fmt(i.actualQty)}</span><span class="mini">النظام ${fmt(i.expectedQty)}</span><span class="mini">الفرق ${diff>0?'+':''}${fmt(diff)}</span>${i.note?'<span class="mini">ملاحظة</span>':''}</div></div><span class="completedStatus ${st}">${statusLabel(st)}</span></article>`}
 function cardHtml(i,readonly){const st=i.countStatus||'pending',counted=st!=='pending',diff=counted?Number(i.actualQty)-Number(i.expectedQty):null;return `<article class="card ${st}" data-id="${i.id}"><div class="meta"><div class="grow"><div class="sku">${esc(i.sku)}</div><div class="name">${esc(i.name||'')}${i.pack!==''&&i.pack!=null?` · الشد: ${esc(i.pack)}`:''}</div></div><span class="pill ${st==='matched'?'ok':st==='shortage'?'bad':st==='surplus'?'info':''}">${statusLabel(st)}</span></div>${counted?`<div class="qtygrid"><div class="q"><span>كمية النظام</span><b>${fmt(i.expectedQty)}</b></div><div class="q"><span>إجمالي الجهات</span><b>${fmt(i.actualQty)}</b></div><div class="q"><span>الفرق</span><b>${diff>0?'+':''}${fmt(diff)}</b></div></div><div class="variance ${st}">${st==='matched'?'✓ مطابق':st==='shortage'?`نقص ${fmt(Math.abs(diff))}`:`زيادة ${fmt(diff)}`}${i.revision?` · تعديل رقم ${fmt(i.revision)}`:''}</div>`:`<div class="blind"></div>`}${i.note?`<div class="hint"><b>ملاحظة:</b> ${esc(i.note)}</div>`:''}${i._pending?'<div class="pendingmark">بانتظار المزامنة...</div>':''}<div class="actions"><button class="btn entry" data-entry="${i.id}" ${readonly?'disabled':''}>${counted?'تعديل الكمية':'إدخال الكمية'}</button><button class="btn note ${String(i.note||'').trim()?'has':''}" data-note="${i.id}" ${readonly?'disabled':''} title="ملاحظة" aria-label="ملاحظة على الصنف ${esc(i.sku)}">ملاحظة</button></div><div class="editbox ${state.activeEditId===i.id?'open':''}" id="edit_${i.id}"><div class="editrow"><input class="actual" id="actual_${i.id}" inputmode="decimal" value="${esc(draftValue(i))}" aria-label="كمية هذا الصنف لدى جهتك ${esc(i.sku)}" autocomplete="off" placeholder="كمية هذا الصنف" ${readonly||saving.has(i.id)?'disabled':''}><button class="save" data-save="${i.id}" ${readonly||saving.has(i.id)?'disabled':''}>${saving.has(i.id)?'جارٍ الحفظ':'اعتماد'}</button></div></div></article>`}
-function bindUi(readonly){$('#backBtn')?.addEventListener('click',()=>{state.enteredScope='';render()});$('#teamSelect')?.addEventListener('change',e=>{state.activeEditId='';state.search='';state.historyVisible=12;pickTeam(e.target.value)});document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{const strip=b.closest('.filters');if(strip)state.filterScroll=strip.scrollLeft;state.filter=b.dataset.filter;state.historyVisible=12;render()});const se=$('#search');if(se){se.oninput=e=>{const resolved=resolveStocktakeSearch(e.target.value);state.search=e.target.value;state.activeEditId=resolved.item?.id||'';if(resolved.item&&resolved.fromBarcode)state.search=resolved.query;render();const next=$('#search');if(next&&!state.activeEditId){next.focus();try{next.setSelectionRange(next.value.length,next.value.length)}catch{}}};se.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const resolved=resolveStocktakeSearch(se.value);if(resolved.item){state.search=resolved.query;state.activeEditId=resolved.item.id;render()}else toast('لم يتم العثور على الصنف')}}}$('#keyboardModeBtn')?.addEventListener('click',async()=>{if(!user.isAdmin)return;const next=state.control?.searchKeyboardMode==='text'?'numeric':'text';try{state.control.searchKeyboardMode=next;render();await db.collection('system_controls').doc(CONTROL_DOC).set({searchKeyboardMode:next,searchKeyboardUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),searchKeyboardUpdatedBy:ROOT_ID},{merge:true});toast(next==='numeric'?'لوحة الأرقام مفعلة':'لوحة الإدخال الكاملة مفعلة')}catch(e){console.error(e);toast('تعذر تغيير لوحة الإدخال')}});$('#scanBtn')?.addEventListener('click',()=>{ensureFeedbackAudio();startScanner()});$('#loadMoreHistory')?.addEventListener('click',()=>{state.historyVisible=(state.historyVisible||12)+12;render()});document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.activeEditId=b.dataset.open;state.search=String(state.items.find(i=>i.id===b.dataset.open)?.sku||'');render()});if(readonly)return;document.querySelectorAll('[data-entry]').forEach(b=>b.onclick=()=>{ensureFeedbackAudio();state.activeEditId=b.dataset.entry;render()});document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveActual(b.dataset.save));document.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>openNote(b.dataset.note));document.querySelectorAll('.actual').forEach(inp=>inp.oninput=()=>saveDraft(inp.id.replace('actual_',''),inp.value));document.querySelectorAll('.actual').forEach(inp=>inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=inp.id.replace('actual_','');saveActual(id)}})}
-function canEditItem(item){return Boolean(item&&state.campaign&&state.team&&item.campaignId===state.campaign.id&&state.campaign.status==='active'&&canAccess(state.control)&&isMember(state.team))}
+function bindUi(readonly){$('#backBtn')?.addEventListener('click',()=>{state.enteredScope='';render()});$('#teamSelect')?.addEventListener('change',e=>{state.activeEditId='';state.search='';state.historyVisible=12;pickTeam(e.target.value)});document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{const strip=b.closest('.filters');if(strip)state.filterScroll=strip.scrollLeft;state.filter=b.dataset.filter;state.historyVisible=12;render()});const se=$('#search');if(se){se.oninput=e=>{const start=e.target.selectionStart,end=e.target.selectionEnd;state.search=e.target.value;state.activeEditId='';render();const next=$('#search');if(next){next.focus({preventScroll:true});try{next.setSelectionRange(start,end)}catch{}}};se.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const resolved=resolveStocktakeSearch(se.value);if(resolved.item){state.search=resolved.query;state.activeEditId=resolved.item.id;render()}else toast('لم يتم العثور على الصنف')}}}$('#keyboardModeBtn')?.addEventListener('click',async()=>{if(!user.isAdmin)return;const next=state.control?.searchKeyboardMode==='text'?'numeric':'text';try{state.control.searchKeyboardMode=next;render();await db.collection('system_controls').doc(CONTROL_DOC).set({searchKeyboardMode:next,searchKeyboardUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),searchKeyboardUpdatedBy:ROOT_ID},{merge:true});toast(next==='numeric'?'لوحة الأرقام مفعلة':'لوحة الإدخال الكاملة مفعلة')}catch(e){console.error(e);toast('تعذر تغيير لوحة الإدخال')}});$('#scanBtn')?.addEventListener('click',()=>{ensureFeedbackAudio();startScanner()});$('#loadMoreHistory')?.addEventListener('click',()=>{state.historyVisible=(state.historyVisible||12)+12;render()});document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.activeEditId=b.dataset.open;state.search=String(state.items.find(i=>i.id===b.dataset.open)?.sku||'');render()});if(readonly)return;document.querySelectorAll('[data-entry]').forEach(b=>b.onclick=()=>{ensureFeedbackAudio();state.activeEditId=b.dataset.entry;render()});document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveActual(b.dataset.save));document.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>openNote(b.dataset.note));document.querySelectorAll('.actual').forEach(inp=>inp.oninput=()=>{const id=inp.id.replace('actual_','');if(!saveDraft(id,inp.value)){const prior=draftStore.get(draftKey(id));if(prior?.operationId)inp.value=prior.value}});document.querySelectorAll('.actual').forEach(inp=>inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=inp.id.replace('actual_','');saveActual(id)}})}
+function canEditItem(item){return Boolean(item&&state.campaign&&state.team&&item.campaignId===state.campaign.id&&state.campaign.status==='active'&&canAccess(state.control)&&isMember(state.team)&&!groupFrozen()&&!(state.campaign.closeEpoch&&state.team.closeEpoch===state.campaign.closeEpoch&&state.team.closeStatus==='acknowledged'))}
 
 let surplusDialogActive=false;
 function confirmSurplusCount(item,enteredQty,totalQty,expectedQty){
@@ -225,7 +340,14 @@ function confirmSurplusCount(item,enteredQty,totalQty,expectedQty){
  });
 }
 async function writeCount(item,actual,source){
- if(!canEditItem(item))return false;
+ const retryScope=state.campaign?.id+':'+state.team?.id;
+ const retryKey=draftKey(item.id),retry=draftStore.get(retryKey);
+ if(retry?.operationId){
+  if(n(retry.value)!==actual){toast('راجع المسودة المعلقة قبل تغيير الكمية');return false}
+  try{if(await verifyDraftReceipt(retryKey)){toast('تم تأكيد العملية السابقة من الخادم');return true}}
+  catch(error){toast('تعذر التحقق من العملية السابقة؛ المسودة محفوظة');return false}
+ }
+ if(retryScope!==state.campaign?.id+':'+state.team?.id||!canEditItem(item))return false;
  const countingTeam={...state.team};
  if(!Number.isFinite(actual)||actual<0){toast('أدخل كمية صحيحة؛ اكتب 0 صراحةً إذا لم توجد كمية');return false}
  if(saving.has(item.id)||surplusDialogActive)return false;
@@ -264,8 +386,8 @@ async function writeCount(item,actual,source){
   item=fresh;
  }
  if(saving.has(item.id))return false;
- saving.add(item.id);await persistenceReady;if(!canEditItem(item)){saving.delete(item.id);return false}
- if(!durableCache&&!navigator.onLine){saving.delete(item.id);toast('التخزين الدائم غير متاح؛ اتصل بالإنترنت قبل الاعتماد');return false}
+ saving.add(item.id);await persistenceReady;if(state.team?.id!==entryTeamId||state.campaign?.id!==entryCampaignId||!canEditItem(item)){saving.delete(item.id);return false}
+ // Local drafts have their own verified storage; IndexedDB availability is independent.
  if(!Number.isFinite(StocktakeCore.quantity(item.expectedQty))){saving.delete(item.id);toast('كمية النظام غير صالحة؛ راجع الإدارة قبل الاعتماد');return false}
  const finishedAll=!((item.countStatus||'pending')!=='pending')&&state.items.length>0&&state.items.every(i=>i.id===item.id||(i.countStatus||'pending')!=='pending');
  const key=draftKey(item.id),previousDraft=draftStore.get(key);
@@ -273,23 +395,29 @@ async function writeCount(item,actual,source){
  // generate a second counted audit entry for the very same unconfirmed quantity.
  const operationId=previousDraft?.operationId&&String(previousDraft.value)===String(actual)
    ?String(previousDraft.operationId):db.collection('stocktake_audit').doc().id;
- if(!saveDraft(item.id,String(actual),'qty',{operationId})){saving.delete(item.id);return false}
+ if(!saveDraft(item.id,String(actual),'qty',{operationId,baseOperationId:previousDraft?.operationId?previousDraft.baseOperationId:(item.lastCountOperationId||''),baseTeamQty:previousDraft?.operationId?previousDraft.baseTeamQty:(Number.isFinite(item._teamActual)?item._teamActual:null)})){saving.delete(item.id);return false}
  // The local draft remains until the Firestore transaction actually commits.
  if(!navigator.onLine){saving.delete(item.id);toast('بدون اتصال: الكمية محفوظة كمسودة على الجهاز، ولم تُعتمد في Firebase');return false}
+ draftStore.set(key,{...draftStore.get(key),state:'saving'});
+ const receiptDraft=draftStore.get(key);
+ const teamRef=db.collection('stocktake_teams').doc(entryTeamId),deviceId=stocktakeDeviceId();if(!deviceId){saving.delete(item.id);toast('تعذر تثبيت هوية الجهاز؛ المسودة محفوظة');return false}
  const itemRef=db.collection('stocktake_items').doc(item.id),campaignRef=db.collection('stocktake_campaigns').doc(entryCampaignId),controlRef=db.collection('system_controls').doc(CONTROL_DOC),operationRef=db.collection('stocktake_audit').doc(operationId);
  let confirmTimer=null;
  try {
    const transaction=db.runTransaction(async tx=>{
      // Read the audit operation alongside the campaign and item. Firestore retries
      // transactions after concurrent edits, so duplicate retries are idempotent.
-     const [campaignDoc,controlDoc,currentDoc,operationDoc]=await Promise.all([tx.get(campaignRef),tx.get(controlRef),tx.get(itemRef),tx.get(operationRef)]);
+     const [campaignDoc,controlDoc,currentDoc,operationDoc,teamDoc]=await Promise.all([tx.get(campaignRef),tx.get(controlRef),tx.get(itemRef),tx.get(operationRef),tx.get(teamRef)]);
      const campaign=campaignDoc.data()||{},control=controlDoc.data()||{},fresh=currentDoc.data();
      if(operationDoc.exists){
        const completed=operationDoc.data()||{},after=completed.after||{};
-       if(completed.campaignId!==entryCampaignId||completed.teamId!==countingTeam.id||completed.itemId!==item.id||Math.abs(Number(after.teamActualQty)-actual)>1e-9)throw new Error('STOCKTAKE_OPERATION_CONFLICT');
+       if(!StocktakeCore.receiptMatches(key,{value:String(actual),operationId},completed,user.employeeId||ROOT_ID))throw new Error('STOCKTAKE_OPERATION_CONFLICT');
        return {status:after.countStatus,total:after.actualQty,alreadyCommitted:true};
      }
      if(campaign.status!=='active'||!StocktakeBranches.isActive(control,entryCampaignId,StocktakeBranches.branchOf(campaign)))throw new Error('STOCKTAKE_NOT_ACTIVE');
+     const serverTeam=teamDoc.data()||{};if(!teamDoc.exists||serverTeam.campaignId!==entryCampaignId||!groupServerMember(serverTeam))throw Error('STOCKTAKE_TEAM_INVALID');
+     if(serverTeam.registeredDeviceId&&serverTeam.registeredDeviceId!==deviceId)throw Error('STOCKTAKE_DEVICE_MISMATCH');
+     if(campaign.closeEpoch&&serverTeam.closeEpoch===campaign.closeEpoch&&serverTeam.closeStatus==='acknowledged')throw Error('STOCKTAKE_TEAM_CLOSED');
      if(!currentDoc.exists||fresh.campaignId!==entryCampaignId)throw new Error('STOCKTAKE_ITEM_NOT_FOUND');
      const expectedNow=StocktakeCore.quantity(fresh.expectedQty);
      if(!Number.isFinite(expectedNow)||Math.abs(expectedNow-expected)>1e-9)throw new Error('STOCKTAKE_REFERENCE_CHANGED');
@@ -299,6 +427,13 @@ async function writeCount(item,actual,source){
      if(otherEntries.some(x=>!ourScope||!norm(x.scope||'')||norm(x.scope||'')===ourScope))throw new Error('STOCKTAKE_DUPLICATE_SCOPE');
      const previous=fresh.teamCounts?.[entryKey];
      const previousActual=previous?StocktakeCore.quantity(previous.quantity):(fresh.teamId===countingTeam.id&&fresh.actualQty!=null?StocktakeCore.quantity(fresh.actualQty):NaN);
+     const intent=draftStore.get(key);
+     if(!intent||intent.operationId!==operationId)throw new Error('STOCKTAKE_DRAFT_CHANGED');
+     const currentOperation=previous?.operationId||(fresh.teamId===countingTeam.id?fresh.lastCountOperationId:'')||'';
+     if(intent.baseOperationId!==undefined&&currentOperation!==intent.baseOperationId)throw new Error('STOCKTAKE_CHANGED_RETRY');
+     if(intent.baseTeamQty!==undefined&&(Number.isFinite(previousActual)?previousActual:null)!==intent.baseTeamQty)throw new Error('STOCKTAKE_CHANGED_RETRY');
+     // Legacy unknown operations lack a concurrency baseline. Never overwrite an existing count silently.
+     if(intent.baseOperationId===undefined&&Number.isFinite(previousActual))throw new Error('STOCKTAKE_CONFLICT_REVIEW');
      const current=StocktakeCore.aggregate(fresh);
      if(current.countConflict)throw new Error('STOCKTAKE_CONFLICT_REVIEW');
      const aggregateQty=Number(current.actualQty)||0;
@@ -308,6 +443,7 @@ async function writeCount(item,actual,source){
      const patch={counted:true,updatedAt:now,lastCountAt:now,updatedByEmployeeId:user.employeeId||ROOT_ID,updatedByName:user.name,revision:firebase.firestore.FieldValue.increment(1),lastInputSource:source,lastCountOperationId:operationId};
      if(!fresh.counted&&!fresh.firstCountAt){patch.firstCountAt=now;patch.firstCountByEmployeeId=user.employeeId||ROOT_ID;patch.firstCountByName=user.name}
      patch['teamCounts.'+entryKey]={quantity:actual,operationId,teamId:countingTeam.id,teamName:countingTeam.name||'',scope:countingTeam.scope||countingTeam.zone||'',actorName:user.name};
+     if(!serverTeam.registeredDeviceId)tx.update(teamRef,{registeredDeviceId:deviceId});
      tx.update(itemRef,patch);
      tx.set(operationRef,{campaignId:entryCampaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:Number.isFinite(previousActual)?'count_revised':'count_created',before:{actualQty:current.actualQty??null,countStatus:current.countStatus||'pending',difference:current.difference??null,note:fresh.note||'',revision:fresh.revision||0},after:{actualQty:nextTotal,teamActualQty:actual,countStatus:status,difference},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now,source,userAgent:navigator.userAgent||''});
      if(source==='found_later')tx.set(db.collection('stocktake_audit').doc(operationId+'_found'),{campaignId:entryCampaignId,teamId:countingTeam.id,itemId:item.id,sku:item.sku,action:'quantity_found_later',before:{actualQty:current.actualQty},after:{foundQty:StocktakeCore.difference(actual,Number.isFinite(previousActual)?previousActual:0),actualQty:nextTotal,teamActualQty:actual},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
@@ -315,14 +451,15 @@ async function writeCount(item,actual,source){
    });
    // A temporary network stall is not a failed count. Keep the durable draft and
    // replay the same operation ID if the user retries after the timeout.
-   const result=await Promise.race([transaction,new Promise((_,reject)=>{confirmTimer=setTimeout(()=>reject(new Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
+   const acknowledged=transaction.then(async result=>{if(!await verifyDraftReceipt(key,receiptDraft))throw new Error('STOCKTAKE_RECEIPT_UNCONFIRMED');return result});
+   const result=await Promise.race([acknowledged,new Promise((_,reject)=>{confirmTimer=setTimeout(()=>reject(new Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
    // A transaction is acknowledged by Firestore, never by a pending local snapshot.
-   if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);trackPendingDraft(item.id);paintSyncStatus();
+   trackPendingDraft(item.id);paintSyncStatus();
    if(state.team?.id===countingTeam.id&&state.campaign?.id===entryCampaignId&&state.activeEditId===item.id){state.activeEditId='';state.search=''}
    feedback(result.status,finishedAll);toast('تم تأكيد حفظ كمية الصنف على خادم Firebase');return true;
  } catch(error) {
    const code=String(error?.code||error?.message||error);
-   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:String(actual),operationId,failedAt:Date.now(),error:code});trackPendingDraft(item.id);paintSyncStatus();
+   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{...draftStore.get(key),value:String(actual),operationId,state:/CONFLICT|CHANGED|DUPLICATE|REFERENCE|DEVICE_MISMATCH|TEAM_CLOSED/.test(code)?'conflict':'unconfirmed',failedAt:Date.now(),error:code});trackPendingDraft(item.id);paintSyncStatus();
    const message=/STOCKTAKE_DUPLICATE_SCOPE/.test(code)?'تم رفض عدّ مكرر للصنف في النطاق نفسه'
      :/STOCKTAKE_CHANGED_RETRY|STOCKTAKE_REFERENCE_CHANGED/.test(code)?'تغير جرد الصنف بالتزامن؛ أعد فتحه وراجع أحدث قيمة'
      :/STOCKTAKE_NOT_ACTIVE/.test(code)?'الجرد غير مفعّل حاليًا على الخادم'
@@ -337,25 +474,50 @@ async function writeCount(item,actual,source){
 
 function saveActual(id){ensureFeedbackAudio();const it=state.items.find(x=>x.id===id),inp=$(`#actual_${CSS.escape(id)}`);if(!it||!inp||state.campaign?.status==='closed')return;if(!inp.value.trim())return toast('اكتب الكمية أولًا؛ الحقل الفارغ لا يعني صفرًا');writeCount(it,n(inp.value),(it.countStatus||'pending')==='pending'?'first_manual_count':'manual_revision')}
 function openNote(id){const it=state.items.find(x=>x.id===id);if(!it)return;state.noteItem=it;$('#noteSku').textContent=`الصنف ${it.sku}`;$('#noteText').value=draftStore.get(draftKey(id,'note'))?.value??(it.note||'');$('#noteModal').classList.add('open');setTimeout(()=>$('#noteText').focus(),80)}
-$('#noteText').oninput=()=>{if(state.noteItem)saveDraft(state.noteItem.id,$('#noteText').value,'note')};
-$('#noteCancel').onclick=()=>{$('#noteModal').classList.remove('open');state.noteItem=null};$('#noteModal').onclick=e=>{if(e.target.id==='noteModal')$('#noteCancel').click()};$('#noteSave').onclick=async()=>{
- const it=state.noteItem;if(!canEditItem(it)||saving.has('note:'+it.id))return;
- const note=$('#noteText').value.trim();if(!note&&it.note&&!confirm('مسح ملاحظة هذا الصنف؟ ستبقى الحركة في سجل التعديلات.'))return;
- saving.add('note:'+it.id);await persistenceReady;if(!canEditItem(it)){saving.delete('note:'+it.id);return}
- if(!durableCache&&!navigator.onLine){saving.delete('note:'+it.id);return toast('اتصل بالإنترنت لحفظ الملاحظة')}
- const key=draftKey(it.id,'note'),operationId=db.collection('stocktake_audit').doc().id,now=firebase.firestore.FieldValue.serverTimestamp();
- if(!saveDraft(it.id,note,'note',{operationId})){saving.delete('note:'+it.id);return}
- const batch=db.batch();batch.update(db.collection('stocktake_items').doc(it.id),{note,hasNote:!!note,noteUpdatedAt:now,noteUpdatedBy:user.name,lastNoteOperationId:operationId});
- batch.set(db.collection('stocktake_audit').doc(operationId),{campaignId:it.campaignId,teamId:it.teamId,itemId:it.id,sku:it.sku,action:'note_updated',before:{note:it.note||''},after:{note},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
- batch.commit().then(()=>{
-   saving.delete('note:'+it.id);if(draftStore.get(key)?.operationId===operationId)draftStore.remove(key);
-   if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تم تأكيد حفظ الملاحظة على خادم Firebase');
- }).catch(e=>{
-   console.warn('[V95 stocktake note]',e?.code||e?.message||e);saving.delete('note:'+it.id);
-   if(draftStore.get(key)?.operationId===operationId)draftStore.set(key,{value:note,failedAt:Date.now()});
-   toast('فشل حفظ الملاحظة بالخادم؛ بقيت مسودة لإعادة المحاولة');
- });
-};
+$('#noteText').oninput=()=>{if(state.noteItem&&!saveDraft(state.noteItem.id,$('#noteText').value,'note')){const prior=draftStore.get(draftKey(state.noteItem.id,'note'));if(prior?.operationId)$('#noteText').value=prior.value}};
+$('#noteCancel').onclick=()=>{$('#noteModal').classList.remove('open');state.noteItem=null};
+$('#noteModal').onclick=e=>{if(e.target.id==='noteModal')$('#noteCancel').click()};
+$('#noteSave').onclick=()=>saveNote();
+async function saveNote(){
+ const it=state.noteItem;if(!it)return false;
+ const key=draftKey(it.id,'note'),old=draftStore.get(key),note=$('#noteText').value.trim(),team={...state.team},campaignId=state.campaign?.id;
+ if(saving.has('note:'+it.id))return false;
+ if(old?.operationId){
+  if(old.value!==note){toast('تحقق من الملاحظة المعلقة قبل تغييرها');return false}
+  try{if(await verifyDraftReceipt(key)){toast('تم تأكيد الملاحظة السابقة من الخادم');return true}}catch{toast('تعذر التحقق؛ الملاحظة محفوظة محليًا');return false}
+ }
+ if(state.team?.id!==team.id||state.campaign?.id!==campaignId||!canEditItem(it))return false;
+ if(!note&&it.note&&!confirm('مسح ملاحظة هذا الصنف؟ ستبقى الحركة في سجل التعديلات.'))return false;
+ const deviceId=stocktakeDeviceId();if(!deviceId)return toast('تعذر تثبيت هوية الجهاز؛ المسودة محفوظة');
+ const operationId=old?.operationId||db.collection('stocktake_audit').doc().id;
+ if(!saveDraft(it.id,note,'note',{operationId,baseNoteOperationId:old?.operationId?old.baseNoteOperationId:(it.lastNoteOperationId||''),baseNote:old?.operationId?old.baseNote:(it.note||'')}))return false;
+ if(!navigator.onLine){toast('الملاحظة محفوظة محليًا بانتظار الإرسال');return false}
+ saving.add('note:'+it.id);draftStore.set(key,{...draftStore.get(key),state:'saving'});const receiptDraft=draftStore.get(key);let timer;
+ try{
+  const ref=db.collection('stocktake_items').doc(it.id),opRef=db.collection('stocktake_audit').doc(operationId);
+  const transaction=db.runTransaction(async tx=>{
+   const teamRef=db.collection('stocktake_teams').doc(team.id);
+   const [cp,control,item,op,teamDoc]=await Promise.all([tx.get(db.collection('stocktake_campaigns').doc(campaignId)),tx.get(db.collection('system_controls').doc(CONTROL_DOC)),tx.get(ref),tx.get(opRef),tx.get(teamRef)]);
+   if(op.exists){if(!StocktakeCore.receiptMatches(key,{value:note,operationId},op.data(),user.employeeId||ROOT_ID))throw Error('STOCKTAKE_OPERATION_CONFLICT');return}
+   if(cp.data()?.status!=='active'||!StocktakeBranches.isActive(control.data()||{},campaignId,StocktakeBranches.branchOf(cp.data()||{})))throw Error('STOCKTAKE_NOT_ACTIVE');
+   const teamData=teamDoc.data()||{};if(!teamDoc.exists||teamData.campaignId!==campaignId||!groupServerMember(teamData))throw Error('STOCKTAKE_TEAM_INVALID');
+   if(teamData.registeredDeviceId&&teamData.registeredDeviceId!==deviceId)throw Error('STOCKTAKE_DEVICE_MISMATCH');
+   if(cp.data()?.closeEpoch&&teamData.closeEpoch===cp.data().closeEpoch&&teamData.closeStatus==='acknowledged')throw Error('STOCKTAKE_TEAM_CLOSED');
+   if(!item.exists||item.data().campaignId!==campaignId)throw Error('STOCKTAKE_ITEM_NOT_FOUND');
+   const fresh=item.data(),intent=draftStore.get(key);
+   if(!intent||intent.operationId!==operationId)throw Error('STOCKTAKE_DRAFT_CHANGED');
+   if(intent.baseNoteOperationId===undefined||(fresh.lastNoteOperationId||'')!==intent.baseNoteOperationId||(fresh.note||'')!==intent.baseNote)throw Error('STOCKTAKE_CONFLICT_REVIEW');
+   const now=firebase.firestore.FieldValue.serverTimestamp();
+   if(!teamData.registeredDeviceId)tx.update(teamRef,{registeredDeviceId:deviceId});
+   tx.update(ref,{note,hasNote:!!note,noteUpdatedAt:now,noteUpdatedBy:user.name,lastNoteOperationId:operationId});
+   tx.set(opRef,{campaignId,teamId:team.id,itemId:it.id,sku:it.sku,action:'note_updated',before:{note:fresh.note||''},after:{note},actorEmployeeId:user.employeeId||ROOT_ID,actorName:user.name,createdAt:now});
+  });
+  const acknowledged=transaction.then(async()=>{if(!await verifyDraftReceipt(key,receiptDraft))throw Error('STOCKTAKE_RECEIPT_UNCONFIRMED')});
+  await Promise.race([acknowledged,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('STOCKTAKE_CONFIRM_TIMEOUT')),18000)})]);
+  if(state.noteItem?.id===it.id)$('#noteCancel').click();toast('تم تأكيد حفظ الملاحظة على خادم Firebase');return true;
+ }catch(error){const code=String(error?.code||error?.message||error),draft=draftStore.get(key);if(draft?.operationId===operationId)draftStore.set(key,{...draft,state:/CONFLICT|CHANGED/.test(code)?'conflict':'unconfirmed',error:code,failedAt:Date.now()});toast('تعذر تأكيد الملاحظة؛ راجع المسودات المحلية');return false}
+ finally{clearTimeout(timer);saving.delete('note:'+it.id);trackPendingDraft(it.id);paintSyncStatus()}
+}
 async function startScanner(){
  ensureFeedbackAudio();window.BranchScanAudio?.prepare();
  if(state.scanner)return;

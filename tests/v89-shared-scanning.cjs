@@ -50,6 +50,6 @@ assert.match(stock,/BranchScanAudio\.play/);
 assert.match(index,/const BarcodeScannerModal = memo\(\(\{ onClose, onScan, items=\[\] \}\)/);
 assert.match(index,/Pro\.lookup\(code,items/);
 assert.match(index,/BranchBarcodeFallback\.create/);
-assert.match(sw,/stocktake-shell-v89/);
+assert.match(sw,/const STOCKTAKE_CACHE='stocktake-shell-v\d+'/);
 assert.match(sw,/batco-scan-pro\.js/);
 console.log('PASS V89: checksum, consensus, verified manufacturer EAN, shared scanners, atomic 12-SKU Firestore transaction and cached PWA');

@@ -1,0 +1,88 @@
+[
+  {
+    "test": "manual typing, paste, Enter and selection across prefix and leading-zero collisions; three viewport widths",
+    "passed": true
+  },
+  {
+    "test": "one count with receipt",
+    "passed": true,
+    "readsPerNewCount": 5,
+    "writesPerNewCount": 2
+  },
+  {
+    "test": "replay confirmed operation",
+    "passed": true
+  },
+  {
+    "test": "wrong receipt retained, recovery UI export and reload",
+    "passed": true
+  },
+  {
+    "test": "quota failure then same-id retry",
+    "passed": true
+  },
+  {
+    "test": "late commit after 18s reconciles without second write",
+    "passed": true
+  },
+  {
+    "test": "overlapping receipt checks acknowledge one committed operation",
+    "passed": true
+  },
+  {
+    "test": "note receipt and server-closed campaign",
+    "passed": true
+  },
+  {
+    "test": "one conflicting receipt does not block other draft reconciliation",
+    "passed": true
+  },
+  {
+    "test": "same group concurrent edits: one commit, one retained conflict",
+    "passed": true
+  },
+  {
+    "test": "distinct scopes preserve both counts after stale view review",
+    "passed": true
+  },
+  {
+    "test": "reload during save, offline reload replay, failed/cache-only receipt retained",
+    "passed": true
+  },
+  {
+    "test": "employee identity routing, concurrent saves and isolated offline device",
+    "devices": 6,
+    "passed": true,
+    "limit": "client routing, not Firestore Rules"
+  },
+  {
+    "test": "employee identity routing, concurrent saves and isolated offline device",
+    "devices": 8,
+    "passed": true,
+    "limit": "client routing, not Firestore Rules"
+  },
+  {
+    "test": "load",
+    "devices": 6,
+    "items": 1500,
+    "success": 1500,
+    "pending": 0,
+    "transactionAndReceiptReads": 7500,
+    "writes": 3000,
+    "initialQueryReads": 4542,
+    "elapsedMs": 6055,
+    "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
+  },
+  {
+    "test": "load",
+    "devices": 8,
+    "items": 1500,
+    "success": 1500,
+    "pending": 0,
+    "transactionAndReceiptReads": 7500,
+    "writes": 3000,
+    "initialQueryReads": 6056,
+    "elapsedMs": 4846,
+    "model": "Chromium with deterministic in-memory Firestore double; excludes listener fanout and billing"
+  }
+]

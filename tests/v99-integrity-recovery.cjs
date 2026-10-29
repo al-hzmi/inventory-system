@@ -5,11 +5,11 @@ const app=fs.readFileSync('runtime/index-v37-source.txt','utf8');
 const write=stock.slice(stock.indexOf('async function writeCount('),stock.indexOf('function saveActual(',stock.indexOf('async function writeCount(')));
 const login=app.slice(app.indexOf('const finalizeEmployeeLogin ='),app.indexOf('const finalizeAdminLogin ='));
 const invoice=app.slice(app.indexOf('const OrderInvoiceModal = memo('),app.indexOf('const saveAsDraft = () => {'));
-for(const x of ['previousDraft?.operationId','operationDoc.exists','tx.get(operationRef)','STOCKTAKE_CONFIRM_TIMEOUT','operationId,failedAt:Date.now()','saving.delete(item.id)','scheduleItemListPaint()'])
+for(const x of ['previousDraft?.operationId','operationDoc.exists','tx.get(operationRef)','STOCKTAKE_CONFIRM_TIMEOUT','failedAt:Date.now(),error:code','saving.delete(item.id)','scheduleItemListPaint()'])
  assert(stock.includes(x),'Stocktake missing '+x);
 assert(write.indexOf('tx.get(operationRef)')<write.indexOf('tx.update(itemRef,patch)'),'audit read must happen before writes');
-assert(write.includes('await Promise.race([transaction'),'no bounded transaction wait');
-assert(write.includes('completed.campaignId!==entryCampaignId'),'replay must validate identity');
+assert(write.includes('await Promise.race([acknowledged'),'no bounded transaction wait');
+assert(write.includes('StocktakeCore.receiptMatches(key,'),'replay must validate identity');
 assert(stock.includes("s.docChanges({includeMetadataChanges:true})"),'snapshot metadata batching');
 assert(login.indexOf("db.collection('login_logs').add({")<login.indexOf("const userRef = db.collection('users')"),'critical login confirmation before optional counters');
 assert(login.includes('[Employee optional login statistics]'),'non-critical write errors must be logged');

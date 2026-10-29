@@ -1,0 +1,15 @@
+{
+  "test": "receipt matching, corrupt records, quota failure, compare-before-remove",
+  "passed": true,
+  "attendance": {
+    "before": {
+      "steadyHourlyWrites": 80,
+      "eventBurstExtraWrites": 20
+    },
+    "after": {
+      "steadyHourlyWrites": 40,
+      "eventBurstExtraWrites": 0
+    },
+    "model": "virtual clock; source code executed, no Firestore calls"
+  }
+}

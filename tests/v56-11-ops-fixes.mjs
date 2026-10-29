@@ -17,7 +17,10 @@ assert.ok(stock.includes('inputmode=\"${keyboardMode}\"'),'search input must use
 assert.ok(!stock.includes('يمكن مسح الباركود الطويل مباشرة؛ النظام يستخرج رقم الصنف منه تلقائيًا مثل بحث المخزون.'),'verbose operator hint must be removed');
 assert.ok(!stock.includes('لن تظهر بقية الأصناف هنا حتى لا تربك عملية الجرد.'),'empty-state guidance must be removed');
 assert.ok(!stock.includes('يمكن تعديل الإجمالي النهائي. سيُحفظ التعديل كاملًا في سجل الجرد.'),'edit guidance must be removed');
-assert.ok(shell.includes('stocktake.html?v=56.11')&&shell.includes('admin-stocktake.html?embedded=1&v=56.11'),'stocktake shell cache keys must retain V56.11 operator surface');
+const adminRevision=shell.match(/admin-stocktake\.html\?embedded=1&v=(\d+\.\d+)/)?.[1];
+const employeeRevision=shell.match(/href="\.\/stocktake\.html\?v=(\d+\.\d+)/)?.[1];
+assert.ok(adminRevision&&employeeRevision,'both stocktake routes must remain revisioned');
+assert.equal(adminRevision,employeeRevision,'stocktake routes must use the same revision');
 for(const [name,src] of [['employee',idx],['customer',cust]]){
   assert.ok(src.includes('NOTIFICATION_RECEIPT_GLOBAL_KEY'),`${name}: identity-independent receipt ledger missing`);
   assert.ok(src.includes('LocalNotificationShows'),`${name}: local receipt ledger missing`);

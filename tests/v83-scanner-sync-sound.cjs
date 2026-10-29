@@ -9,8 +9,8 @@ assert.match(customer,/const customerHeaderBrand='<div className="batco-customer
 assert.doesNotMatch(customer,/const customerHeaderBrand=.*\+customerHeaderLabel/,'logo header should not reintroduce the redundant label');
 assert.match(read('batco-brand-footer.js'),/width:clamp\(122px,32vw,164px\)/);
 assert.match(stocktake,/function saveActual\(id\)\{ensureFeedbackAudio/);
-assert.match(stocktake,/feedback\(status,finishedAll\)/);
-assert.match(stocktake,/feedbackTone\(status==='shortage'\?735/);
+assert.match(stocktake,/feedback\(result\.status,finishedAll\)/);
+assert.match(stocktake,/BranchScanAudio\.play\('accepted'\)/);
 assert.match(stocktake,/window.addEventListener\('keydown',ensureFeedbackAudio/);
 assert.match(stocktake,/window.addEventListener\('touchstart',ensureFeedbackAudio/);
 assert.match(worker,/formatsToSupport:formats/);
@@ -25,5 +25,5 @@ assert.match(page,/id="workerRetry"/);
 assert.match(page,/id="workerExport"/);
 assert.match(page,/id="workerSyncHelp"/);
 assert.match(css,/cameraHint/);
-assert.match(read('sw.js'),/stocktake-shell-v8[34]/);
+assert.match(read('sw.js'),/const STOCKTAKE_CACHE='stocktake-shell-v\d+'/);
 console.log('PASS V83 customer header, barcode tuning, audio on accepted manual counts, Firestore diagnostics and pending scan backup');
