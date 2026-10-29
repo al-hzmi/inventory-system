@@ -34,7 +34,33 @@ const root=path.resolve(__dirname,'../..'),firebaseRoot=path.resolve(path.dirnam
  const start=Date.now();const results=await Promise.all(pages.map((page,i)=>page.evaluate(async({i,limit})=>{const branch=i%2?'riyadh':'jeddah',slot=Math.floor(i/2);let saved=0,failures=[];for(let k=slot;k<limit;k+=4){const item=state.items.find(x=>x.id===branch+'_'+k);if(!item)throw Error('missing item device='+i+' sku='+branch+'_'+k+' loaded='+state.items.length+' cache='+itemCacheOnly);if(await writeCount(item,1,'first_manual_count'))saved++;else {const failure={device:i,item:item.id,draft:draftStore.get(branch+':'+state.team.id+':'+item.id+':qty'),online:navigator.onLine};failures.push(failure);console.error('STOCKTAKE_FAILED '+JSON.stringify(failure))};if(saved>0&&saved%50===0)console.log('STOCKTAKE_PROGRESS device='+i+' saved='+saved)}return {saved,failures}},{i,limit:perBranch})));
  const failures=results.flatMap(r=>r.failures);
  if(failures.length){const audits=await getDocs(collection(db,'stocktake_audit'));for(const f of failures){const receipts=audits.docs.filter(d=>d.data().itemId===f.item).map(d=>({id:d.id,actor:d.data().actorEmployeeId}));const current=await getDoc(doc(db,'stocktake_items',f.item));console.error('STOCKTAKE_FAILURE_SERVER '+JSON.stringify({failure:f,receipts,item:current.data()}))}}
- const counts=results.map(r=>r.saved);
+ const counts=results.map(r=>r.saved), recovered=[];
+ // Preserve first-attempt failures in the output; retry only the unchanged,
+ // locally retained operation ID and keep the final audit cardinality checks.
+ for(const f of failures){
+  assert.ok(f.draft?.operationId, 'unconfirmed operation must retain its identity');
+  const serverReceipt=await getDoc(doc(db,'stocktake_audit',f.draft.operationId));
+  const receipt=serverReceipt.data();
+  if(serverReceipt.exists()){
+   assert.equal(receipt.campaignId,f.draft.campaignId);assert.equal(receipt.teamId,f.draft.teamId);
+   assert.equal(receipt.itemId,f.item);assert.equal(receipt.actorEmployeeId,f.draft.actorEmployeeId);
+   assert.equal(receipt.after?.teamActualQty,Number(f.draft.value));
+  }
+  const outcome=await pages[f.device].evaluate(async f=>{
+   const key=f.draft.campaignId+':'+f.draft.teamId+':'+f.item+':qty';
+   const before=draftStore.get(key);
+   if(!before)return {confirmed:false,reason:'draft disappeared'};
+   if(before.operationId!==f.draft.operationId)return {confirmed:false,reason:'draft identity changed'};
+   const item=state.items.find(x=>x.id===f.item);
+   if(!item)return {confirmed:false,reason:'item missing'};
+   const confirmed=await writeCount(item,Number(f.draft.value),'first_manual_count');
+   return {confirmed,remaining:draftStore.get(key)};
+  },f);
+  if(!outcome.confirmed&&outcome.reason==='draft disappeared'&&serverReceipt.exists())outcome.confirmed=true, outcome.reason='matched server receipt';
+  recovered.push({device:f.device,item:f.item,operationId:f.draft.operationId,...outcome});
+  if(outcome.confirmed)counts[f.device]++;
+ }
+ assert.ok(recovered.every(r=>r.confirmed), 'unconfirmed operations must recover with the original ID');
  assert.equal(counts.reduce((a,b)=>a+b,0),perBranch*2);assert.ok(counts.every((v,i)=>v===Math.floor((perBranch-1-Math.floor(i/2))/4)+1));assert.deepEqual(errors,[]);
  await pages[2].waitForFunction(()=>{const item=state.items.find(x=>x.id==='jeddah_0');return item&&Object.values(item.teamCounts||{}).some(x=>x.quantity===1)},null,{timeout:30000});
  const allItems=await getDocs(collection(db,'stocktake_items'));assert.equal(allItems.size,perBranch*2);for(const item of allItems.docs)assert.equal(Object.values(item.data().teamCounts||{})[0]?.quantity,1);
@@ -42,6 +68,6 @@ const root=path.resolve(__dirname,'../..'),firebaseRoot=path.resolve(path.dirnam
  assert.ok(audits.docs.some(d=>d.id===offline.operationId),'offline operation must be confirmed with its original ID');
  const replays=await Promise.all(pages.map((page,i)=>{const receipt=audits.docs.find(d=>d.data().actorEmployeeId==='worker'+i);assert.ok(receipt);const row=receipt.data();return page.evaluate(async({row,op})=>{const key=row.campaignId+':'+row.teamId+':'+row.itemId+':qty';draftStore.set(key,{value:'1',operationId:op});return writeCount(state.items.find(x=>x.id===row.itemId),1,'first_manual_count')},{row,op:receipt.id})}));
  assert.ok(replays.every(Boolean));assert.equal((await getDocs(collection(db,'stocktake_audit'))).size,perBranch*2,'replays must not add audit records');
- console.log(JSON.stringify({passed:true,scenario:'actual stocktake UI + real Firestore SDK/emulator',forceLongPolling:process.env.STOCKTAKE_EMULATOR_LONG_POLL==='1',devices:8,items:perBranch*2,confirmedReplays:8,sdkBackendWarnings:backendWarnings.length,warningSample:backendWarnings[0]||null,results:counts,elapsedMs:Date.now()-start,scope:'demo-only permissive test rules; not production authorization, billing, or mobile hardware'}));
+ console.log(JSON.stringify({passed:true,scenario:'actual stocktake UI + real Firestore SDK/emulator',forceLongPolling:process.env.STOCKTAKE_EMULATOR_LONG_POLL==='1',devices:8,items:perBranch*2,confirmedReplays:8,firstAttemptFailures:failures,recovered,sdkBackendWarnings:backendWarnings.length,warningSample:backendWarnings[0]||null,results:counts,elapsedMs:Date.now()-start,scope:'demo-only permissive test rules; not production authorization, billing, or mobile hardware'}));
  for(const ctx of contexts)await ctx.close();await browser.close();await deleteApp(app);
 })().catch(e=>{console.error(e);process.exit(1)});
