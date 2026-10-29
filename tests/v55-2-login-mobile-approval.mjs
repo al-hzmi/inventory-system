@@ -7,8 +7,8 @@ const source = fs.readFileSync('runtime/index-v37-source.txt', 'utf8');
 const boot = fs.readFileSync('index.html', 'utf8');
 
 for (const marker of [
-  "const LOGIN_LOOKUP_TIMEOUT_MS = 5000",
-  "const LOGIN_TOTAL_DEADLINE_MS = 9000",
+  "const LOGIN_LOOKUP_TIMEOUT_MS = 12000",
+  "const LOGIN_TOTAL_DEADLINE_MS = 26000",
   "Promise.all(variants.map",
   "array-contains-any",
   "visibilitychange",
