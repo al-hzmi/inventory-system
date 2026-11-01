@@ -1286,19 +1286,33 @@ const Icon = {
     MapPin: (p) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>),
 };
 
-const Quantity = ({ qty, unit, size = 'lg' }) => {
-    const tone = stockTone(qty);
+// Display-only conversion: inventory, stocktake and order quantities remain in their source unit.
+const quantityInCartons = (qty, unit, pack) => {
+    if (!/^(?:حبة|حبه)$/.test(String(unit || '').trim())) return null;
+    const packText = toEnglishDigits(String(pack ?? '')).trim();
+    if (!/^\d+(?:\.\d+)?$/.test(packText)) return null;
+    const pieces = Number(qty), perCarton = Number(packText);
+    if (!Number.isFinite(pieces) || pieces < 0 || !Number.isFinite(perCarton) || perCarton <= 0) return null;
+    return { pieces, perCarton, cartons: pieces / perCarton };
+};
+const CARTON_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 });
+
+const Quantity = ({ qty, unit, pack, size = 'lg' }) => {
+    const converted = quantityInCartons(qty, unit, pack);
+    const displayQty = converted ? converted.cartons : qty;
+    const tone = stockTone(displayQty);
     return (
         <div className="flex flex-col items-start">
-            <div className="flex items-baseline gap-4">
+            <div className="flex flex-wrap items-baseline gap-4">
                 <span className={`${size === 'lg' ? 'text-[26px]' : 'text-[20px]'} font-bold leading-none ${tone.text}`}>
-                    {NUMBER_FORMATTER.format(qty)}
+                    {converted ? CARTON_NUMBER_FORMATTER.format(displayQty) : NUMBER_FORMATTER.format(qty)}
                 </span>
-                {unit && <span className="text-[13px] text-muted">{unit}</span>}
+                {(converted || unit) && <span className="text-[13px] text-muted">{converted ? 'كرتون' : unit}</span>}
             </div>
-            {qty <= LOW_STOCK_THRESHOLD && (
+            {converted && <span className="text-[11px] text-muted mt-4 leading-4" data-testid="original-piece-quantity">{NUMBER_FORMATTER.format(converted.pieces)} حبة · الشد {NUMBER_FORMATTER.format(converted.perCarton)}</span>}
+            {displayQty <= LOW_STOCK_THRESHOLD && (
                 <span className={`text-[12px] mt-4 ${tone.text}`}>
-                    {qty <= 0 ? 'نفدت الكمية حالياً' : 'كمية محدودة'}
+                    {displayQty <= 0 ? 'نفدت الكمية حالياً' : 'كمية محدودة'}
                 </span>
             )}
         </div>
@@ -2080,7 +2094,7 @@ const FullResultCard = memo(({ item, warehouseName, showImage, imageFileName, hi
                 <div className="text-[12px] text-muted mb-2">رقم الصنف</div>
                 <div className="text-[18px] font-bold text-primary break-words bidi-isolate">{item.id}</div>
             </div>
-            {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} /></div>}
+            {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} pack={item.pack} /></div>}
         </div>
         <div>
             <div className="text-[12px] text-muted mb-2">اسم الصنف</div>
@@ -2149,7 +2163,7 @@ const CompactResultCard = memo(({ item, showImage, imageFileName, hideQty, cart,
                     <span className="text-[13px] text-secondary truncate">{item.name || '---'}</span>
                 </div>
             </div>
-            {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} size="sm" /></div>}
+            {!hideQty && <div className="flex-shrink-0"><Quantity qty={item.qty} unit={item.unit} pack={item.pack} size="sm" /></div>}
         </div>
         
         <div className="batco-result-actions border-t border-border pt-12">
@@ -2374,7 +2388,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                     </div>
                     <div className="border-t border-border pt-8 grid grid-cols-2 gap-8">
                         <div><div className="text-[11px] text-muted mb-3">القسم</div><div className="text-[12px] font-bold text-primary">{currentCategory || 'غير مصنف'}</div></div>
-                        <div><div className="text-[11px] text-muted mb-3">{warehouseName}</div><Quantity qty={item.qty} unit={item.unit} size="sm" /></div>
+                        <div><div className="text-[11px] text-muted mb-3">{warehouseName}</div><Quantity qty={item.qty} unit={item.unit} pack={item.pack} size="sm" /></div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-8 border-t border-border pt-8 bg-surface p-8 rounded-8 mt-4">
@@ -2407,8 +2421,8 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                         <div className="text-[15px] font-bold text-primary break-words bidi-isolate">{item.id}</div>
                         <div className="text-[13px] text-secondary break-words">{item.name || '---'}</div>
                         {isQuantity && (
-                            <div className={`animate-flip text-[13px] font-semibold mt-8 px-12 py-4 rounded-full ${stockTone(item.qty).bg} ${stockTone(item.qty).text}`}>
-                                {NUMBER_FORMATTER.format(item.qty)}{item.unit ? ` ${item.unit}` : ''}
+                            <div className={`animate-flip mt-8 px-12 py-8 rounded-10 ${stockTone(quantityInCartons(item.qty, item.unit, item.pack)?.cartons ?? item.qty).bg}`}>
+                                <Quantity qty={item.qty} unit={item.unit} pack={item.pack} size="sm" />
                             </div>
                         )}
                         
