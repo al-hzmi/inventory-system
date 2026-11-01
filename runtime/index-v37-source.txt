@@ -1877,7 +1877,7 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
 });
 
 // ============================================================
-// صور المنتجات — ضغط مطول: حفظ / مشاركة (بدون زر ظاهر)
+// صور المنتجات — ضغطة: تكبير، نقرتان/ثلاث: تحكم البطاقة، ضغط مطول: مشاركة
 // ============================================================
 const getProductImageUrl = (fileName) => new URL(`${IMAGES_PATH}${fileName}`, window.location.href).href;
 
@@ -1902,11 +1902,23 @@ const copyTextSafe = async (value) => {
     }
 };
 
-const ProductImage = ({ fileName, alt, className }) => {
+const ProductImage = ({ fileName, alt, className, onZoom, onMultiTap, disableZoom = false }) => {
     const [showActions, setShowActions] = useState(false);
+    const [zoomed, setZoomed] = useState(false);
     const [preparedFile, setPreparedFile] = useState(null);
     const [preparing, setPreparing] = useState(false);
+    const pressTimer = useRef(null);
+    const clickTimer = useRef(null);
+    const clicks = useRef(0);
+    const pressStart = useRef(null);
+    const held = useRef(false);
+    const skipClick = useRef(false);
     const imageUrl = fileName ? getProductImageUrl(fileName) : '';
+
+    useEffect(() => () => {
+        clearTimeout(pressTimer.current);
+        clearTimeout(clickTimer.current);
+    }, []);
 
     const prepareShareFile = useCallback(async () => {
         if (!imageUrl || !fileName) return null;
@@ -1932,7 +1944,56 @@ const ProductImage = ({ fileName, alt, className }) => {
 
     const openActions = (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
+        clearTimeout(clickTimer.current);
+        clicks.current = 0;
         setShowActions(true);
+    };
+
+    const beginPress = (e) => {
+        if (e.button !== 0) return;
+        clearTimeout(clickTimer.current);
+        clearTimeout(pressTimer.current);
+        pressStart.current = { x:e.clientX, y:e.clientY };
+        held.current = false;
+        skipClick.current = false;
+        pressTimer.current = setTimeout(() => { held.current = true; }, 550);
+    };
+    const movePress = (e) => {
+        const start = pressStart.current;
+        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 12) {
+            clearTimeout(pressTimer.current);
+            pressStart.current = null;
+            held.current = false;
+        }
+    };
+    const endPress = (e) => {
+        clearTimeout(pressTimer.current);
+        pressStart.current = null;
+        if (held.current) {
+            held.current = false;
+            skipClick.current = true;
+            openActions(e);
+        }
+    };
+    const cancelPress = () => {
+        clearTimeout(pressTimer.current);
+        pressStart.current = null;
+        held.current = false;
+    };
+    const handleImageClick = (e) => {
+        e.stopPropagation();
+        if (skipClick.current) { skipClick.current = false; return; }
+        clicks.current += 1;
+        clearTimeout(clickTimer.current);
+        clickTimer.current = setTimeout(() => {
+            const taps = clicks.current;
+            clicks.current = 0;
+            if (taps > 1 && onMultiTap) onMultiTap(taps);
+            else if (!disableZoom && (onZoom || taps > 0)) {
+                if (onZoom) onZoom();
+                else setZoomed(true);
+            }
+        }, MULTI_TAP_WINDOW_MS);
     };
 
     const handleDownload = async () => {
@@ -1982,12 +2043,19 @@ const ProductImage = ({ fileName, alt, className }) => {
                 alt={alt}
                 loading="lazy"
                 decoding="async"
-                draggable="true"
+                draggable={false}
                 className={className}
-                style={{ cursor:'pointer' }}
-                onClick={openActions}
+                style={{ cursor:'zoom-in', WebkitTouchCallout:'none', WebkitUserSelect:'none', userSelect:'none', touchAction:'manipulation' }}
+                onClick={handleImageClick}
+                onPointerDown={beginPress}
+                onPointerMove={movePress}
+                onPointerUp={endPress}
+                onPointerCancel={cancelPress}
+                onContextMenu={openActions}
                 onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
             />
+
+            {zoomed && <Lightbox fileName={fileName} title={alt || fileName} onClose={() => setZoomed(false)} />}
 
             {showActions && (
                 <div
@@ -2038,9 +2106,9 @@ const Lightbox = ({ fileName, title, onClose }) => {
                 <Icon.Close className="w-20 h-20" />
             </button>
             <div className="max-w-[860px] w-full flex flex-col items-center gap-16" onClick={(e) => e.stopPropagation()}>
-                <ProductImage fileName={fileName} alt={title} className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
+                <ProductImage fileName={fileName} alt={title} disableZoom className="max-h-[72vh] w-auto object-contain rounded-16 bg-white" />
                 <p className="text-white text-[15px] text-center px-16">{title}</p>
-                <p className="text-white/60 text-[11px] text-center">اضغط على الصورة لخيارات الحفظ أو المشاركة</p>
+                <p className="text-white/60 text-[11px] text-center">اضغط مطولاً على الصورة للحفظ أو المشاركة</p>
             </div>
         </div>
     );
@@ -2345,7 +2413,7 @@ const NewArrivalsAdminPanel = memo(({ catalogItems, newArrivalIds, onChange }) =
     );
 });
 
-const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, onZoom, warehouseName, warehouse, cart, setCart, isAdmin, currentCategory, onAdminCategoryEdit }) => {
+const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, onZoom, onImageTaps, warehouseName, warehouse, cart, setCart, isAdmin, currentCategory, onAdminCategoryEdit }) => {
     const isDetails  = view === CARD_VIEW.DETAILS;
     const isQuantity = view === CARD_VIEW.QUANTITY;
 
@@ -2410,6 +2478,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                     {showImage && (
                         <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
+                                          onZoom={() => onZoom(item)} onMultiTap={(taps) => onImageTaps(item.uid, taps)}
                                           className={`object-contain w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
                                     className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -5272,7 +5341,7 @@ const App = () => {
                                             <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16" : "flex flex-col gap-16 max-w-[520px] mx-auto"}>
                                                 {visibleItems.map(item => (
                                                     <GalleryCard key={item.uid} item={item} imageFileName={imageForItem(imagesList, item)} showImage={!isMissingImagesView} isGrid={galleryView === 'grid'}
-                                                        view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} warehouseName={activeWarehouseName} warehouse={warehouse} cart={cart} setCart={setCart}
+                                                        view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} onImageTaps={applyTaps} warehouseName={activeWarehouseName} warehouse={warehouse} cart={cart} setCart={setCart}
                                                         isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                                                 ))}
                                             </div>
