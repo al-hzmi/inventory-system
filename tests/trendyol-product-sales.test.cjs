@@ -123,3 +123,10 @@ test('catalog failure leaves barcode unlinked instead of guessing an internal pr
  assert.ok(result.rows.some(x=>x.sku==='غير مرتبط: B-A'&&x.quantity===8));
  assert.ok(!result.rows.some(x=>x.sku==='230006'));
 });
+
+test('a mapping absent from the current catalog is left unresolved',()=>{
+ const missing={rows:new Map([['230007',{name:'صنف آخر'}]])};
+ const result=summarizeRaw(base(),finance(),missing);
+ assert.ok(result.rows.some(x=>x.sku==='غير مرتبط: B-A'&&x.quantity===8));
+ assert.ok(!result.rows.some(x=>x.sku==='230006'));
+});

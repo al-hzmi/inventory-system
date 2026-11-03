@@ -176,7 +176,7 @@ function renderProductReport(data){
  +metric('مطابقة معلّقة',available?fmt(t.ambiguous):'—','حالات تتطلب تدقيقًا');
  var messages=['المبيعات محصورة في آخر '+data.days+' يومًا، وليست إجمالي مبيعات المتجر منذ افتتاحه.'];
  if(!available)messages.push('بيانات التسويات غير متاحة أو غير مكتملة؛ لا يمكن احتساب المسدد وغير المؤكد بشكل موثوق. '+(data.finance?.error||''));
- else messages.push('الحبة المسددة في التقرير تعني ارتباط السطر المالي بأمر دفع مطابق، وليس تأكيد وصول الحوالة إلى حسابك.');
+ else messages.push('الكمية المرتبطة بأمر دفع تعني مطابقة أولية للسجلات، ولا تثبت تنفيذ السداد أو وصول الحوالة إلى حسابك.');
  if(data.ordersLimited)messages.push('تنبيه: بيانات الطلبات غير مكتملة؛ الإجماليات جزئية.');
  if(!data.warehouseAvailable)messages.push('تعذر التحقق من دليل الأصناف؛ عُرضت المنتجات دون ربط داخلي حتى المراجعة.');
  if(data.totals?.possibleDuplicateUnits>0)messages.push('تنبيه: '+fmt(data.totals.possibleDuplicateUnits)+' حبة مرتبطة بسطور متكررة أو محتملة التكرار؛ قد تكون بعض السطور مستبعدة من الإجماليات حتى مراجعتها.');

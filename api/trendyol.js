@@ -156,7 +156,7 @@ function productSales(ordersData,financeData,warehouse){
     if(warehouse?.rows.has(raw))return [raw];
     if(warehouse?.rows.has(prefixed))return [prefixed];
     if(warehouse?.rows.has(bare))return [bare];
-    return [raw];
+    return [];
   };
   for(const entry of stockMap){
     const barcode=normal(entry.barcode),raw=normal(entry.sku);
@@ -257,7 +257,7 @@ function productSales(ordersData,financeData,warehouse){
     const {stock,...rest}=item;
     return {...rest,barcodes:[...item.barcodes],details:item.details.sort((a,b)=>b.date-a.date)};
   }).sort((a,b)=>b.quantity-a.quantity);
-  return {days:ordersData.days,rows,totals:{sold:salesUnits,paid:financeData?paidUnits:null,unconfirmed:financeData?unconfirmedUnits:null,ambiguous:financeData?ambiguousUnits:null,excluded:excludedUnits,possibleDuplicateUnits,amount:rows.reduce((sum,x)=>sum+x.value,0)},finance:{available:Boolean(financeData),complete:Boolean(financeData&&!financeData.limited),paymentOrders:financeData?.payment.length??null,saleRecords:financeData?.sale.length??null},ordersLimited:ordersData.limited,fetchedAt:Date.now(),note:'السداد المؤكد يعني مطابقة السطر المالي وأمر دفع من ترنديول، وليس تأكيد وصول الحوالة إلى الحساب البنكي. غير المؤكد لا يعني متأخر السداد.'};
+  return {days:ordersData.days,rows,totals:{sold:salesUnits,paid:financeData?paidUnits:null,unconfirmed:financeData?unconfirmedUnits:null,ambiguous:financeData?ambiguousUnits:null,excluded:excludedUnits,possibleDuplicateUnits,amount:rows.reduce((sum,x)=>sum+x.value,0)},finance:{available:Boolean(financeData),complete:Boolean(financeData&&!financeData.limited),paymentOrders:financeData?.payment.length??null,saleRecords:financeData?.sale.length??null},ordersLimited:ordersData.limited,fetchedAt:Date.now(),note:'مطابقة أمر الدفع ارتباط مبدئي بسجل ترنديول، ولا تثبت تنفيذ السداد أو وصول الحوالة إلى الحساب البنكي. عدم التأكد لا يعني تأخر السداد.'};
 }
 async function comprehensiveSales(days){
   const [orderData,financeResult,warehouseResult]=await Promise.all([
