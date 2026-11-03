@@ -272,6 +272,7 @@
     [/^تم الوصول للحد الأقصى المسموح لهذا الصنف: (.+) كرتون\.$/, 'Maximum permitted quantity: $1 cartons.'],
     [/^تم حفظ (.+) كمسودة\.$/, 'Draft $1 saved.'],
     [/^سيظهر في طلبات (.+)\.$/, 'This name will appear on orders for $1.'],
+    [/ ر\.س$/, ' SAR'],
   ];
 
   function text(value) {
@@ -292,7 +293,12 @@
     const displayIdentifiers = new Set(['label', 'error', 'globalError', 'pinError', 'status', 'employeeViewNotice']);
     const uiAttrs = new Set(['placeholder', 'title', 'aria-label', 'aria-description', 'label', 'hint', 'note']);
     const call = node => t.callExpression(t.identifier('customerUiText'), [node]);
-    const localizeBranch = node => t.isStringLiteral(node) && arabic.test(node.value) ? call(node) : node;
+    const localizeBranch = node => {
+      if (t.isStringLiteral(node) && arabic.test(node.value)) return call(node);
+      if (t.isTemplateLiteral(node) && node.quasis.some(q => arabic.test(q.value.cooked || ''))) return call(node);
+      if (t.isBinaryExpression(node) && [node.left, node.right].some(x => t.isStringLiteral(x) && arabic.test(x.value))) return call(node);
+      return node;
+    };
     return {
       name: 'batco-customer-ui-locale',
       visitor: {
@@ -336,6 +342,8 @@
           } else if (t.isConditionalExpression(expr)) {
             expr.consequent = localizeBranch(expr.consequent);
             expr.alternate = localizeBranch(expr.alternate);
+          } else if (t.isLogicalExpression(expr) && [expr.left,expr.right].some(x => t.isIdentifier(x) && displayIdentifiers.has(x.name))) {
+            path.node.expression = call(expr);
           }
         },
         CallExpression(path) {
