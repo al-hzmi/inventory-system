@@ -1156,15 +1156,10 @@ function AdminApp(){
   if(false&&loading)return <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-0 sm:p-4"><div className="w-full max-w-[1080px] h-[100dvh] sm:h-[94vh] bg-white sm:rounded-2xl overflow-hidden shadow-lift flex flex-col"><AdminView key="CommandHeader" render={CommandHeader}/><div className="flex-1 p-4 bg-surface"><div className="h-12 rounded-xl skeleton"></div><div className="grid grid-cols-2 gap-3 mt-3"><div className="h-28 rounded-xl skeleton"></div><div className="h-28 rounded-xl skeleton"></div></div><div className="h-72 rounded-xl skeleton mt-3"></div></div></div></div>;
 
   return <div className="min-h-[100dvh] bg-black/75 p-0 sm:p-4 safe-top safe-bottom">
-    <div className="w-full max-w-[1320px] min-h-[100dvh] sm:min-h-[calc(100dvh-2rem)] mx-auto bg-white sm:rounded-2xl shadow-lift flex flex-row fade overflow-visible"><aside aria-label="القائمة اليمنى للإدارة" className="hidden lg:flex w-[178px] shrink-0 flex-col bg-surface border-l border-border p-3 gap-2 rounded-r-2xl">
-<div className="text-[11px] font-bold text-secondary px-3 py-3">القائمة الرئيسية</div>
-{[['employees','live','users','الموظفون'],['customers','live','building','العملاء'],['products','product_management','box','الأصناف'],['trendyol','dashboard','cart','ترنديول']].map(([next,mod,icon,label])=><button key={next} type="button" onClick={()=>openArea(next,mod)} className={`w-full rounded-xl border flex items-center gap-2 text-right text-[12px] font-bold py-3 px-3 ${area===next?'bg-primary text-white border-primary':'bg-white border-border text-secondary hover:bg-white'}`}><Icon name={icon} className="w-4 h-4"/>{label}</button>)}
-<div className="mt-4 text-[10px] text-muted px-2 leading-6">ترنديول: بيانات البيع والتسويات من منصة البائع · المخزون من جدة فقط.</div>
-</aside><div className="flex min-w-0 flex-1 flex-col">
+    <div className="w-full max-w-[1080px] min-h-[100dvh] sm:min-h-[calc(100dvh-2rem)] mx-auto bg-white sm:rounded-2xl shadow-lift flex flex-col fade overflow-visible">
       <AdminView key="CommandHeader" render={CommandHeader}/>
       {Object.keys(collectionErrors).length>0&&<div role="alert" className="mx-3 mt-3 p-3 rounded-xl border border-red-200 bg-red-50 text-red-900 text-xs leading-6"><b>بعض سجلات قاعدة البيانات لم تُحمّل، والأرقام المعروضة قد تكون ناقصة.</b><div className="mt-1" dir="ltr">{Object.entries(collectionErrors).map(([key,reason])=><div key={key}>{key}: {reason}</div>)}</div><button type="button" className="mt-2 border border-red-300 rounded-lg px-3 py-1 font-bold" onClick={()=>location.reload()}>إعادة الاتصال وتحميل السجلات</button></div>}
       <><AdminView key="TabsBar" render={TabsBar}/><AdminView key="ToolBar" render={ToolBar}/><div data-admin-scroll-root="1" className="flex-1 p-3 sm:p-4 bg-surface overflow-visible"><AdminView key="ActiveContent" render={ActiveContent}/></div></>
-      </div>
     </div>
     {categoryManagerOpen&&<ProductCategoryManager onClose={()=>setCategoryManagerOpen(false)} control={control}/>}
     {detail&&<DetailDrawer row={detail} onClose={()=>setDetail(null)} onCustomerMessage={target=>{setDetail(null);setCustomerMessageTarget(target)}}/>}
