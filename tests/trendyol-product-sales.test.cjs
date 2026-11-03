@@ -1,0 +1,60 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'..','api','trendyol.js'),'utf8');
+const start=source.indexOf('function productSales('),end=source.indexOf('async function comprehensiveSales(',start);
+assert.ok(start>0&&end>start,'productSales source is available');
+const map=[{sku:'230006',barcode:'B-A'},{sku:'230006',barcode:'B-B'},{sku:'230007',barcode:'C'}];
+const normal=v=>String(v??'').trim().toUpperCase();
+const number=v=>Number.isFinite(Number(v))?Number(v):0;
+const summarize=new Function('stockMap','normal','number',source.slice(start,end)+'\nreturn productSales;')(map,normal,number);
+const makeLine=(id,qty,gross,barcode='B-A')=>({id,barcode,sku:'230006',name:'منتج تجريبي',quantity:qty,gross,discount:0});
+const makeOrder=(id,status,lines)=>({id,number:id,date:Date.now(),status,lines});
+const base=()=>({days:7,limited:false,orders:[makeOrder('A','DELIVERED',[makeLine('A1',5,100)]),makeOrder('B','DELIVERED',[makeLine('B1',3,60)])]});
+const finance=()=>({sale:[{id:'S-A',orderNumber:'A',barcode:'B-A',shipmentPackageId:'A',credit:100,paymentOrderId:99}],payment:[{id:'P99',paymentOrderId:99,debt:90}],returns:[],limited:false});
+test('matches paid order units by financial transaction and payout order, not order status',()=>{
+  const result=summarize(base(),finance(),null);
+  assert.deepEqual({sold:result.totals.sold,paid:result.totals.paid,unconfirmed:result.totals.unconfirmed},{sold:8,paid:5,unconfirmed:3});
+});
+test('withholds paid claims when finance API is unavailable',()=>{
+  const result=summarize(base(),null,null);
+  assert.equal(result.totals.sold,8);
+  assert.equal(result.totals.paid,null);
+  assert.equal(result.totals.unconfirmed,null);
+});
+test('payout order missing means payment is not confirmed',()=>{
+  const fin=finance();fin.payment=[];
+  const result=summarize(base(),fin,null);
+  assert.equal(result.totals.paid,0);
+  assert.equal(result.totals.unconfirmed,8);
+});
+test('mismatched amount is held for review even if payout order exists',()=>{
+  const fin=finance();fin.sale[0].credit=90;
+  const result=summarize(base(),fin,null);
+  assert.equal(result.totals.paid,0);
+  assert.equal(result.totals.ambiguous,5);
+});
+test('returned and cancelled orders do not count as sold units',()=>{
+  const data=base();data.orders.push(makeOrder('C','CANCELLED',[makeLine('C1',12,240)]));data.orders.push(makeOrder('D','RETURNED',[makeLine('D1',3,60)]));
+  const result=summarize(data,finance(),null);
+  assert.equal(result.totals.sold,8);
+  assert.equal(result.totals.excluded,15);
+});
+test('repeated barcode across packages is not falsely marked paid',()=>{
+  const data=base();data.orders=[makeOrder('P1','DELIVERED',[makeLine('1',5,100)]),makeOrder('P2','DELIVERED',[makeLine('2',5,100)])];
+  data.orders[0].number='SAME';data.orders[1].number='SAME';
+  const fin={sale:[{orderNumber:'SAME',barcode:'B-A',credit:100,paymentOrderId:99}],payment:[{paymentOrderId:99}],returns:[]};
+  const result=summarize(data,fin,null);
+  assert.equal(result.totals.paid,0);
+  assert.equal(result.totals.ambiguous,10);
+});
+test('includes mapped catalog products with zero sales and combines barcode aliases',()=>{
+  const data=base();data.orders[0].lines.push(makeLine('A2',2,50,'B-B'));
+  const result=summarize(data,finance(),null);
+  const row=result.rows.find(x=>x.sku==='230006');
+  assert.equal(row.quantity,10);
+  assert.ok(row.barcodes.includes('B-A')&&row.barcodes.includes('B-B'));
+  assert.ok(result.rows.some(x=>x.sku==='230007'&&x.quantity===0));
+});
