@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff"><title>تكامل ترنديول | لوحة إدارة BATCO</title>
+<link rel="icon" href="./assets/batco-app-icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--ink:#191919;--muted:#858585;--line:#e6e6e6;--bg:#f8f8f8;--ok:#16783b;--bad:#b91c1c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-size:14px}
+button,input{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}
+main{max-width:1260px;margin:auto;padding:22px 20px 70px}.bar{background:#fff;border-bottom:1px solid var(--line)}
+.bar-inner{max-width:1260px;margin:auto;min-height:80px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px}
+.brand{display:flex;align-items:center;gap:16px}.brand img{width:112px;height:44px;object-fit:contain}.brand small{display:block;color:var(--muted)}
+.btn{border:1px solid var(--line);border-radius:13px;background:#fff;padding:11px 16px;color:var(--ink);font-weight:600}
+.btn.primary{background:#1e1e1e;color:white;border-color:#1e1e1e}.btn:disabled{opacity:.5;cursor:not-allowed}
+h1{font-size:28px;letter-spacing:-.6px;margin:0 0 6px}.lede{color:var(--muted);margin:0}
+.card{background:white;border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 5px 20px #00000005}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.metric small{color:var(--muted);font-size:12px}.metric strong{font-size:28px;display:block;direction:ltr;text-align:right;font-weight:700;margin-top:8px}
+.muted{color:var(--muted)}.note{line-height:1.9;color:#666;font-size:12px}.pill{display:inline-block;background:#f3f4f4;border:1px solid #e3e5e3;border-radius:25px;padding:5px 10px;font-size:11px;font-weight:600}
+.pill.ok{background:#edf9f0;color:var(--ok);border-color:#c9ebd2}.pill.bad{background:#fff2f2;color:var(--bad);border-color:#f4d3d3}
+.head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:26px 0 14px}
+.head h2{margin:0;font-size:20px}.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.error{background:#fff1f1;border:1px solid #ffcaca;color:#961717;padding:12px 15px;border-radius:12px;margin-top:12px}
+.login{max-width:440px;margin:11vh auto}.login input{display:block;margin:18px 0 12px;width:100%;padding:15px;border:1px solid #d5d5d5;border-radius:12px;font-size:16px}
+.hidden{display:none!important}.tablewrap{overflow:auto;width:100%;border-radius:14px;border:1px solid var(--line)}
+table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{padding:13px 12px;border-bottom:1px solid #eee;text-align:right;vertical-align:top}th{background:#fafafa;color:#777;font-weight:600;white-space:nowrap}tr:last-child td{border-bottom:0}td .muted{font-size:11px}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate;display:inline-block}.danger{color:var(--bad)}.oktext{color:var(--ok)}
+.bars{display:flex;align-items:end;gap:7px;height:135px;border-bottom:1px solid #eee;padding:6px 0}.bar-col{flex:1;min-width:4px;border-radius:5px 5px 0 0;background:#222;height:var(--h);position:relative}
+.bar-col:focus-visible{outline:2px solid #444}.info-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.empty{text-align:center;color:#999;padding:34px 14px}.small-title{font-size:16px;margin:0 0 14px}
+@media(max-width:880px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.brand img{width:85px}.metric strong{font-size:23px}}
+@media(max-width:530px){main{padding:17px 12px 50px}.bar-inner{padding:10px 12px}.brand{gap:7px}.brand img{display:none}h1{font-size:23px}.card{padding:16px}.metric strong{font-size:20px}.btn{padding:9px 12px}.grid{gap:8px}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="bar-inner"><div class="brand"><img alt="BATCO" src="./assets/batco-logo.svg"><div><b>تكامل ترنديول</b><small>لوحة الإدارة · مستودع جدة</small></div></div><div class="controls"><a class="btn" href="./admin-dashboard.html">العودة للإدارة</a><button class="btn hidden" id="logout">خروج آمن</button></div></div></header>
+<main>
+<section id="signin" class="card login hidden"><h1>ربط ترنديول</h1><p class="lede">الطلبات والمبيعات ومقارنة مخزون جدة، ببوابة مستقلة محمية على الخادم.</p><form id="login-form"><label for="password">رمز دخول تكامل ترنديول</label><input id="password" type="password" autocomplete="off" required placeholder="الرمز الخاص بترنديول"><button class="btn primary" id="login-button" type="submit">دخول</button></form><p class="note">تُحفظ جلسة الدخول داخل ملف تعريف ارتباط محمي، ولا تُحفظ كلمة المرور على هذا الجهاز.</p><div id="login-error"></div></section>
+<section id="dashboard" class="hidden">
+<div class="head"><div><h1>ترنديول · المبيعات والمخزون</h1><p class="lede">الفرع المتصل: <b>جدة فقط</b> · ترنديول السعودية · <span id="refreshed">جارٍ الاتصال...</span></p></div><div class="controls"><button id="refresh" class="btn primary">تحديث البيانات</button><button id="days7" class="btn primary">7 أيام</button><button id="days30" class="btn">30 يومًا</button></div></div>
+<div class="grid" id="metrics">
+<div class="card metric"><small>قيمة الطلبات النشطة</small><strong>—</strong><small>ليست صافي تسويات ترنديول</small></div>
+<div class="card metric"><small>الطلبات النشطة</small><strong>—</strong></div>
+<div class="card metric"><small>تحتاج تجهيز</small><strong>—</strong></div>
+<div class="card metric"><small>فروقات المخزون</small><strong>—</strong></div>
+</div>
+<div id="data-error"></div>
+<div class="head"><h2>حركة المبيعات</h2><span class="pill" id="order-status">انتظار البيانات</span></div>
+<section class="card"><div id="sales-chart" class="bars"></div><p class="note">القيمة من حالات الطلبات غير الملغاة، ولا تشمل احتساب الأرباح أو عمولات المنصة أو التسويات النهائية.</p></section>
+<div class="head"><h2>أحدث طلبات ترنديول</h2><span class="pill" id="order-count">—</span></div>
+<section class="card"><div class="tablewrap"><table><thead><tr><th>رقم الطلب</th><th>تاريخ الطلب</th><th>الحالة</th><th>القيمة</th><th>الأصناف</th></tr></thead><tbody id="orders-table"><tr><td colspan="5" class="empty">جارٍ التحميل...</td></tr></tbody></table></div></section>
+<div class="head"><h2>الأصناف الأكثر طلبًا</h2></div><section class="card"><div class="tablewrap"><table><thead><tr><th>الباركود</th><th>الصنف</th><th>الوحدات المطلوبة</th><th>قيمة الطلبات</th></tr></thead><tbody id="top-table"></tbody></table></div></section>
+<div class="head"><div><h2>مطابقة المخزون · جدة ↔ ترنديول</h2><p class="lede">مقارنة تقديرية بالحبة اعتمادًا على الشد، وليست تصريحًا بنشر كمية جديدة.</p></div><span class="pill bad">تحديث المخزون الخارجي موقوف لأمان البيانات</span></div>
+<div class="grid" style="margin-bottom:13px" id="stock-metrics">
+<div class="card metric"><small>باركود في القائمة</small><strong>33</strong></div><div class="card metric"><small>مطابق وقابل للمراجعة</small><strong>—</strong></div><div class="card metric"><small>يحتاج تدقيق</small><strong>—</strong></div><div class="card metric"><small>فروقات مؤكدة من المطابقة</small><strong>—</strong></div>
+</div>
+<section class="card"><p class="note" style="margin-top:0">التطابق لا يعني أن بيع الصنف في ترنديول بالحبة مؤكد. أي صنف متعدد الباركود أو بحقول غير واضحة يبقى موقوفًا عن مزامنة الكميات.</p><div class="tablewrap"><table><thead><tr><th>الباركود</th><th>الصنف في جدة</th><th>رصيد جدة</th><th>التقدير بالحبة</th><th>ترنديول</th><th>الفرق</th><th>النتيجة</th></tr></thead><tbody id="stock-table"><tr><td colspan="7" class="empty">جارٍ التحميل...</td></tr></tbody></table></div><p id="stock-note" class="note"></p></section>
+</section>
+</main>
+<script>
+(function(){
+'use strict';
+var admin=false;
+try{var proof=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null');admin=localStorage.getItem('inventory_user_name_v2')==='مهند'&&localStorage.getItem('inventory_admin_token_v2')==='1jh297-spgf2z'&&proof&&proof.role==='admin'&&!!proof.photoId;}catch(e){}
+if(!admin){location.replace('./admin-dashboard.html');return;}
+var $=id=>document.getElementById(id),days=7,loadId=0,refreshTimer=null;
+var esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+var fmt=n=>Number(n||0).toLocaleString('ar-SA',{maximumFractionDigits:2});
+var money=(n,c)=>fmt(n)+' '+esc(c||'ر.س');
+var date=n=>n?new Date(n).toLocaleDateString('ar-SA',{day:'numeric',month:'short',year:'numeric'}):'—';
+var status=s=>({'CREATED':'طلب جديد','PICKING':'قيد التجهيز','INVOICED':'مفوتر','SHIPPED':'تم الشحن','DELIVERED':'تم التسليم','CANCELLED':'ملغي','RETURNED':'مرتجع','UNSUPPLIED':'غير متوفر','AWAITING':'بانتظار الدفع','VERIFIED':'بانتظار التأكيد'}[s]||s||'غير معروف');
+async function request(action,body){
+var options=body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'same-origin',cache:'no-store'}:{credentials:'same-origin',cache:'no-store'};
+var r=await fetch('./api/trendyol'+(body?'':'?action='+action),options);
+var data=await r.json().catch(()=>({error:'استجابة غير متوقعة من الخادم'}));
+if(!r.ok)throw Object.assign(new Error(data.error||'تعذر الاتصال'),{status:r.status});
+return data;
+}
+function signIn(message){$('signin').classList.remove('hidden');$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');if(message)$('login-error').innerHTML='<div class="error">'+esc(message)+'</div>';}
+function openDashboard(){$('signin').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');refresh();}
+async function init(){try{await request('status');openDashboard();}catch(e){signIn(e.status===401?'':'تعذّر تجهيز جلسة ترنديول: '+e.message);}}
+$('login-form').addEventListener('submit',async e=>{e.preventDefault();var btn=$('login-button');btn.disabled=true;$('login-error').textContent='';try{await request('login',{action:'login',password:$('password').value});$('password').value='';openDashboard();}catch(err){$('login-error').innerHTML='<div class="error">'+esc(err.message)+'</div>';}finally{btn.disabled=false;}});
+$('logout').onclick=async()=>{try{await request('logout',{action:'logout'});}finally{signIn('');}};
+$('refresh').onclick=refresh;
+function chooseDays(n){days=n;$('days7').classList.toggle('primary',n===7);$('days30').classList.toggle('primary',n===30);refresh();}
+$('days7').onclick=()=>chooseDays(7);$('days30').onclick=()=>chooseDays(30);
+function metric(label,value,details){return '<div class="card metric"><small>'+esc(label)+'</small><strong>'+esc(String(value))+'</strong><small>'+esc(details||'')+'</small></div>';}
+function renderOrders(data){
+var cur=Object.keys(data.totals||{});var sales=cur.length===1?money(data.totals[cur[0]],cur[0]):cur.length===0?'0 ر.س':'عملات متعددة';
+$('metrics').innerHTML=metric('قيمة الطلبات النشطة',sales,'خلال '+data.days+' يومًا')+metric('الطلبات النشطة',fmt(data.orderCount),'باستثناء الملغاة والمرتجعة')+metric('طلبات للتجهيز',fmt(data.pending),'جديدة وقيد التجهيز')+metric('طلبات ملغاة أو مرتجعة',fmt(data.cancelled),'غير محسوبة في المبيعات');
+$('order-status').textContent=data.limited?'البيانات جزئية بسبب حد الاستعلام':'تم جلب أحدث الطلبات';$('order-status').className='pill'+(data.limited?' bad':' ok');$('order-count').textContent=fmt(data.orders.length)+' طلب';
+$('orders-table').innerHTML=data.orders.length?data.orders.slice(0,75).map(o=>'<tr><td><b class="num">'+esc(o.number)+'</b></td><td>'+esc(date(o.date))+'</td><td><span class="pill">'+esc(status(o.status))+'</span></td><td><b>'+money(o.amount,o.currency)+'</b></td><td>'+o.lines.slice(0,3).map(l=>'<div>'+esc(l.name)+' · <span class="num">'+fmt(l.quantity)+'</span></div>').join('')+(o.lines.length>3?'<span class="muted">+'+(o.lines.length-3)+' أصناف</span>':'')+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">لا توجد طلبات خلال الفترة المختارة.</td></tr>';
+$('top-table').innerHTML=data.top.length?data.top.map(x=>'<tr><td><span class="num">'+esc(x.barcode)+'</span></td><td>'+esc(x.name)+'</td><td><b class="num">'+fmt(x.quantity)+'</b></td><td>'+money(x.amount,cur[0]||'SAR')+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">لا تتوفر أصناف مباعة في الفترة المختارة.</td></tr>';
+var daily=data.byDay||[],maximum=Math.max(1,...daily.map(x=>x.amount));$('sales-chart').innerHTML=daily.length?daily.slice(-30).map(x=>'<div class="bar-col" tabindex="0" title="'+esc(x.date+' · '+money(x.amount,x.currency))+'" style="--h:'+Math.max(3,Math.round(100*x.amount/maximum))+'%"></div>').join(''):'<div class="empty" style="width:100%">لا توجد مبيعات نشطة للرسم.</div>';
+$('refreshed').textContent='آخر تحديث '+new Date(data.fetchedAt).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+}
+function renderStock(data){
+var s=data.summary;
+$('stock-metrics').innerHTML=metric('باركود في قائمتك',fmt(s.total),'من القائمة التي أرسلتها')+metric('جاهز للمقارنة',fmt(s.ready),'مطابقة فنية فقط')+metric('يحتاج تدقيقًا',fmt(s.blocked),'موقوف عن المزامنة')+metric('كميات مختلفة',fmt(s.withDiscrepancy),'في الأصناف المتطابقة');
+$('stock-table').innerHTML=data.rows.map(x=>'<tr><td class="num">'+esc(x.barcode)+'</td><td><b>'+esc(x.sku)+'</b><div class="muted">'+esc(x.name)+'</div></td><td>'+ (x.warehouseQuantity===null?'—':fmt(x.warehouseQuantity)+' '+esc(x.unit))+'</td><td>'+ (x.expectedPieces===null?'—':fmt(x.expectedPieces))+'</td><td>'+ (x.trendyolQuantity===null?'—':fmt(x.trendyolQuantity))+'</td><td>'+ (x.delta===null?'—':fmt(x.delta))+'</td><td><span class="pill '+(x.eligible?'ok':'bad')+'">'+(x.eligible?(x.delta===0?'متطابق':'يختلف'):'مراجعة')+'</span>'+(x.issues.length?'<div class="muted">'+esc(x.issues.join('، '))+'</div>':'')+'</td></tr>').join('');
+$('stock-note').textContent='تمت المقارنة مع ملف جدة فقط. الأصناف الموجودة في ترنديول وخارج قائمتك: '+fmt(s.unmatchedProducts)+(s.productListIncomplete?' · تنبيه: قائمة ترنديول تجاوزت حد القراءة في الطلب الواحد.':'')+'. لا تتم أي كتابة تلقائية إلى المخزون أو ترنديول.';
+}
+async function refresh(){
+var id=++loadId;var btn=$('refresh');btn.disabled=true;$('data-error').textContent='';
+var results=await Promise.allSettled([request('orders&days='+days),request('stock')]);
+if(id!==loadId)return;
+var issues=[];
+if(results[0].status==='fulfilled')renderOrders(results[0].value);else issues.push('المبيعات: '+results[0].reason.message);
+if(results[1].status==='fulfilled')renderStock(results[1].value);else issues.push('المخزون: '+results[1].reason.message);
+if(issues.length)$('data-error').innerHTML='<div class="error">'+esc(issues.join(' · '))+'</div>';
+if(results.some(x=>x.status==='rejected'&&x.reason.status===401))signIn('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
+btn.disabled=false;
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!$('dashboard').classList.contains('hidden'))refresh();});
+refreshTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!$('dashboard').classList.contains('hidden'))refresh();},300000);
+init();
+})();
+</script>
+</body></html>
