@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const pages=fs.readdirSync('.').filter(f=>f.endsWith('.html'));
-assert.equal(pages.length,22,'The inventory HTML page list changed');
+assert.equal(pages.length,23,'The inventory HTML page list changed');
 const js=fs.readFileSync('batco-brand-footer.js','utf8');
 new vm.Script(js,{filename:'batco-brand-footer.js'});
 for(const file of pages){
@@ -19,7 +19,7 @@ assert.match(js,/batco-site-footer-logo/);
 assert.match(js,/new URLSearchParams/);
 const sw=fs.readFileSync('sw.js','utf8');
 assert.match(sw,/batco-brand-footer\.js/);
-assert.match(sw,/stocktake-shell-v8[23]/);
+assert.match(sw,/stocktake-shell-v116/);
 assert.match(fs.readFileSync('customer-sw.js','utf8'),/batco-customer-v82/);
 const ids=new Map(), appended=[];
 const createElement=tag=>({tagName:tag.toUpperCase(),children:[],attributes:{},setAttribute(k,v){this.attributes[k]=v;},append(...nodes){this.children.push(...nodes);},appendChild(v){this.append(v)}});
@@ -40,4 +40,4 @@ const embeddedDoc={head:createElement('head'),body:createElement('body'),readySt
 const iframe={},parent={};iframe.self=iframe;iframe.top=parent;
 vm.runInNewContext(js,{document:embeddedDoc,window:iframe,location:{pathname:'/admin-stocktake.html',search:'?embedded=1'},URLSearchParams,Date});
 assert.equal(embeddedDoc.body.children.length,0,'embedded warehouse UI must not gain a redundant footer');
-console.log('PASS V82: branded customer header and all 22 page footers, no duplicates, iframe isolation, SW upgrade');
+console.log('PASS V82: branded customer header and all 23 page footers, no duplicates, iframe isolation, SW upgrade');
