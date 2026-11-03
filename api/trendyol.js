@@ -44,61 +44,23 @@ async function api(path,params={}) {
   if(!response.ok)throw statusError(502,'تعذّر الاتصال بترنديول (HTTP '+response.status+'). تأكد من صلاحية بيانات التكامل.');
   return response.json();
 }
-async function products(){
-  const items=[];let more=false;
-  for(let page=0;page<45;page++){
-    const data=await api('product/sellers/{sellerId}/products/approved/inventory-and-price',{page,size:100});
-    const current=Array.isArray(data.content)?data.content:[];
-    for(const p of current)for(const v of (Array.isArray(p.variants)?p.variants:[p]))items.push({barcode:normal(v.barcode||p.barcode),stockCode:normal(v.stockCode||p.stockCode),quantity:number(v.quantity),salePrice:number(v.salePrice),listPrice:number(v.listPrice),modified:v.stockLastModifiedDate||null});
-    if(current.length<100 || (Number.isFinite(Number(data.totalPages)) && page+1>=Number(data.totalPages)))return {items,more:false};
-    more=true;
-  }
-  return {items,more};
-}
 async function jeddah(){
   const token=process.env.GITHUB_TOKEN,owner=process.env.GITHUB_OWNER||'al-hzmi',repo=process.env.GITHUB_REPO||'inventory-system';
   const path='https://api.github.com/repos/'+encodeURIComponent(owner)+'/'+encodeURIComponent(repo)+'/contents/data/jeddah.tsv?ref=main';
   const r=await fetch(path,{headers:{Accept:'application/vnd.github+json',...(token?{Authorization:'Bearer '+token}:{})},signal:AbortSignal.timeout(12000),cache:'no-store'});
-  if(!r.ok)throw statusError(502,'تعذرت قراءة ملف مخزون جدة الحالي');
+  if(!r.ok)throw statusError(502,'تعذرت قراءة دليل أسماء الأصناف');
   const body=await r.json();
   const content=Buffer.from(String(body.content||'').replace(/\s/g,''),'base64').toString('utf8');
   const lines=content.replace(/^\uFEFF/,'').split(/\r?\n/).filter(Boolean);
   const cols=(lines.shift()||'').split('\t').map(x=>x.trim());
-  const idx=['رقم الصنف','اسم الصنف','الوحدة','الكمية المتوفرة','الشد'].map(x=>cols.indexOf(x));
+  const idx=['رقم الصنف','اسم الصنف'].map(x=>cols.indexOf(x));
   if(idx.some(x=>x<0))throw statusError(502,'أعمدة ملف جدة غير متوافقة');
   const rows=new Map();
   for(const line of lines){
-    const c=line.split('\t'),[sku,name,unit,quantity,pack]=idx.map(x=>(c[x]||'').trim());
-    if(sku)rows.set(normal(sku),{sku:normal(sku),name,unit,quantity:number(quantity),pack:number(pack)});
+    const c=line.split('\t'),[sku,name]=idx.map(x=>(c[x]||'').trim());
+    if(sku)rows.set(normal(sku),{sku:normal(sku),name});
   }
   return {rows,sha:body.sha||null};
-}
-function mappingRows(warehouse,productList){
-  const barcodeProduct=new Map(),skuCount=new Map(),barcodeCount=new Map();
-  for(const p of productList){
-    if(!barcodeProduct.has(p.barcode))barcodeProduct.set(p.barcode,[]);
-    barcodeProduct.get(p.barcode).push(p);
-  }
-  for(const raw of stockMap){const s=normal(raw.sku);skuCount.set(s,(skuCount.get(s)||0)+1);const b=normal(raw.barcode);barcodeCount.set(b,(barcodeCount.get(b)||0)+1);}
-  const mappings=stockMap.map((entry,i)=>{
-    const supplied=normal(entry.sku), barcode=normal(entry.barcode);
-    const sku=warehouse.rows.has(supplied)?supplied:warehouse.rows.has('OGS_'+supplied)?'OGS_'+supplied:supplied;
-    const row=warehouse.rows.get(sku);
-    const productMatches=barcodeProduct.get(barcode)||[];
-    const errors=[];
-    if(/^\d+\.\d+E\+\d+$/i.test(barcode))errors.push('باركود بصيغة علمية');
-    if(supplied.includes('-'))errors.push('رقم صنف مركب');
-    if((skuCount.get(supplied)||0)>1)errors.push('عدة باركودات للصنف نفسه');
-    if((barcodeCount.get(barcode)||0)>1)errors.push('باركود مكرر');
-    if(!row)errors.push('الصنف غير موجود بجدة');
-    if(productMatches.length!==1)errors.push(productMatches.length?'باركود مكرر في ترنديول':'الصنف غير معتمد أو غير موجود في ترنديول');
-    const exact=row?(row.unit==='حبة'?row.quantity:row.unit==='كرتون'&&row.pack>0?row.quantity*row.pack:NaN):NaN;
-    const expected=Number.isFinite(exact)&&Math.abs(exact-Math.round(exact))<0.025?Math.max(0,Math.round(exact)):null;
-    if(row&&expected===null)errors.push('تحويل الشد يحتاج مراجعة');
-    const product=productMatches[0];
-    return {index:i+1,barcode,sku,displaySku:supplied,capacity:entry.capacity,name:row?.name||'',unit:row?.unit||'',pack:row?.pack??null,warehouseQuantity:row?.quantity??null,expectedPieces:expected,trendyolQuantity:product?.quantity??null,salePrice:product?.salePrice??null,delta:product&&expected!==null?expected-product.quantity:null,issues:errors,eligible:errors.length===0};
-  });
-  return mappings;
 }
 async function orderWindow(start,end){
   const result=[]; let limited=false;
@@ -106,7 +68,10 @@ async function orderWindow(start,end){
     const data=await api('order/sellers/{sellerId}/v2/orders',{startDate:start,endDate:end,page,size:200,orderByField:'PackageLastModifiedDate',orderByDirection:'DESC'});
     const batch=Array.isArray(data.content)?data.content:[];
     result.push(...batch);
-    if(batch.length<200||(Number.isFinite(Number(data.totalPages))&&page+1>=Number(data.totalPages)))return {result,limited:false};
+    if(!Array.isArray(data.content))return {result,limited:true};
+    const pages=data.totalPages==null?NaN:Number(data.totalPages);
+    if(Number.isInteger(pages)&&pages>=0){if(pages===0&&batch.length)return {result,limited:true};if(page+1>=pages)return {result,limited:false};if(batch.length===0)return {result,limited:true};}
+    else if(batch.length<200)return {result,limited:false};
     limited=true;
   }
   return {result,limited};
@@ -143,7 +108,10 @@ async function financeWindow(kind,type,start,end){
     const data=await api(path,{startDate:start,endDate:end,transactionType:type,page,size:500});
     const part=Array.isArray(data.content)?data.content:[];
     records.push(...part);
-    if(part.length<500||(Number.isFinite(Number(data.totalPages))&&page+1>=Number(data.totalPages)))return {records,limited:false};
+    if(!Array.isArray(data.content))return {records,limited:true};
+    const pages=data.totalPages==null?NaN:Number(data.totalPages);
+    if(Number.isInteger(pages)&&pages>=0){if(pages===0&&part.length)return {records,limited:true};if(page+1>=pages)return {records,limited:false};if(part.length===0)return {records,limited:true};}
+    else if(part.length<500)return {records,limited:false};
     limited=true;
   }
   return {records,limited};
@@ -172,12 +140,22 @@ async function financialRecords(days){
 function productSales(ordersData,financeData,warehouse){
   const excluded=new Set(['CANCELLED','RETURNED','UNSUPPLIED','UNPACKED','UNDELIVERED','AWAITING','VERIFIED']);
   const byBarcode=new Map(),bySku=new Map();
+  const candidates=raw=>{
+    const bare=raw.startsWith('OGS_')?raw.slice(4):raw, prefixed='OGS_'+bare;
+    if(warehouse?.rows.has(bare)&&warehouse?.rows.has(prefixed))return [bare,prefixed];
+    if(warehouse?.rows.has(raw))return [raw];
+    if(warehouse?.rows.has(prefixed))return [prefixed];
+    if(warehouse?.rows.has(bare))return [bare];
+    return [raw];
+  };
   for(const entry of stockMap){
-    const barcode=normal(entry.barcode),raw=normal(entry.sku),sku=warehouse?.rows.has(raw)?raw:warehouse?.rows.has('OGS_'+raw)?'OGS_'+raw:raw;
+    const barcode=normal(entry.barcode),raw=normal(entry.sku);
     if(!byBarcode.has(barcode))byBarcode.set(barcode,new Set());
-    byBarcode.get(barcode).add(sku);
-    if(!bySku.has(sku))bySku.set(sku,new Set());
-    bySku.get(sku).add(barcode);
+    for(const sku of candidates(raw)){
+      byBarcode.get(barcode).add(sku);
+      if(!bySku.has(sku))bySku.set(sku,new Set());
+      bySku.get(sku).add(barcode);
+    }
   }
   const payments=new Map(),sales=new Map(),returns=new Set();
   if(financeData){
@@ -198,10 +176,10 @@ function productSales(ordersData,financeData,warehouse){
   let salesUnits=0,paidUnits=0,unconfirmedUnits=0,excludedUnits=0,ambiguousUnits=0,possibleDuplicateUnits=0;
   const toCents=v=>Math.round(number(v)*100);
   for(const order of ordersData.orders){
-    const skip=excluded.has(order.status);
+    const skip=normal(order.status)!=='DELIVERED';
     for(const line of order.lines){
       const barcode=normal(line.barcode),rawSku=normal(line.sku),possible=byBarcode.get(barcode);
-      const sku=possible?.size===1?[...possible][0]:rawSku||barcode||'غير معروف';
+      const sku=possible?.size===1?[...possible][0]:'غير مرتبط: '+(barcode||rawSku||'غير معروف');
       const key=sku||barcode||line.name;
       const quantity=number(line.quantity);
       if(quantity<=0)continue;
@@ -214,7 +192,7 @@ function productSales(ordersData,financeData,warehouse){
       const item=mapped.get(key);
       if(barcode)item.barcodes.add(barcode);
       let payment='unavailable',reason='بيانات السداد غير متاحة';
-      if(skip){payment='excluded';reason='طلب ملغي أو مرتجع أو غير معتمد';}
+      if(skip){payment='excluded';reason='الطلب لم يثبت تسليمه ضمن هذه الفترة';}
       else if(financeData){
         const financialKey=normal(order.number)+'|'+barcode;
         const allRecords=sales.get(financialKey)||[];
@@ -223,9 +201,9 @@ function productSales(ordersData,financeData,warehouse){
         const multiplePackages=(duplicateCandidates.get(financialKey)||0)>1&&!packageRecords.length;
         const pids=[...new Set(records.map(r=>String(r.paymentOrderId??'')).filter(Boolean))];
         const confirmed=records.length>0&&pids.length===1&&records.every(r=>String(r.paymentOrderId??'')===pids[0])&&payments.has(pids[0]);
-        const amountsKnown=records.every(r=>Number.isFinite(Number(r.credit)))&&gross>0;
+        const amountsKnown=records.every(r=>r.credit!==null&&r.credit!==undefined&&String(r.credit).trim()!==''&&Number.isFinite(Number(r.credit)))&&gross>0;
         const recordGross=records.reduce((sum,r)=>sum+number(r.credit),0);
-        const amountMatches=amountsKnown&&Math.abs(recordGross-gross)<=Math.max(1,Math.abs(gross)*0.015);
+        const amountMatches=amountsKnown&&toCents(recordGross)===toCents(gross);
         const hasReturn=returns.has(normal(order.number)+'|'+barcode);
         if(confirmed&&amountMatches&&!hasReturn&&!multiplePackages){payment='confirmed';reason='مطابق لسجل البيع وأمر الدفع والقيمة';}
         else if(hasReturn||multiplePackages){payment='ambiguous';reason=multiplePackages?'نفس الباركود مكرر بين طرود طلب واحد؛ يلزم مطابقة رقم الطرد':'توجد حركة إرجاع مالية؛ يلزم التدقيق';}
@@ -242,14 +220,15 @@ function productSales(ordersData,financeData,warehouse){
     }
   }
   for(const entry of stockMap){
-    const barcode=normal(entry.barcode),raw=normal(entry.sku),sku=warehouse?.rows.has(raw)?raw:warehouse?.rows.has('OGS_'+raw)?'OGS_'+raw:raw;
+    const barcode=normal(entry.barcode),raw=normal(entry.sku),matches=candidates(raw);
+    if(matches.length!==1)continue;
+    const sku=matches[0];
     if(!mapped.has(sku))mapped.set(sku,{sku,name:warehouse?.rows.get(sku)?.name||'',barcodes:new Set(),quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(sku)||null});
     mapped.get(sku).barcodes.add(barcode);
   }
   const rows=[...mapped.values()].map(item=>{
-    const stock=item.stock,pack=stock?.pack||0;
-    const stockUnits=stock?(stock.unit==='حبة'?stock.quantity:stock.unit==='كرتون'&&pack>0?stock.quantity*pack:null):null;
-    return {...item,barcodes:[...item.barcodes],stock:stock?{unit:stock.unit,quantity:stock.quantity,pack,units:stockUnits}:null,details:item.details.sort((a,b)=>b.date-a.date)};
+    const {stock,...rest}=item;
+    return {...rest,barcodes:[...item.barcodes],details:item.details.sort((a,b)=>b.date-a.date)};
   }).sort((a,b)=>b.quantity-a.quantity);
   return {days:ordersData.days,rows,totals:{sold:salesUnits,paid:financeData?paidUnits:null,unconfirmed:financeData?unconfirmedUnits:null,ambiguous:financeData?ambiguousUnits:null,excluded:excludedUnits,possibleDuplicateUnits,amount:rows.reduce((sum,x)=>sum+x.value,0)},finance:{available:Boolean(financeData),complete:Boolean(financeData&&!financeData.limited),paymentOrders:financeData?.payment.length??null,saleRecords:financeData?.sale.length??null},ordersLimited:ordersData.limited,fetchedAt:Date.now(),note:'السداد المؤكد يعني مطابقة السطر المالي وأمر دفع من ترنديول، وليس تأكيد وصول الحوالة إلى الحساب البنكي. غير المؤكد لا يعني متأخر السداد.'};
 }
@@ -259,7 +238,7 @@ async function comprehensiveSales(days){
     financialRecords(days).then(value=>({value})).catch(e=>({error:String(e.message||'').slice(0,120)})),
     jeddah().then(value=>({value})).catch(e=>({error:String(e.message||'').slice(0,120)}))
   ]);
-  const result=productSales(orderData,financeResult.value&&!financeResult.value.limited?financeResult.value:null,warehouseResult.value||null);
+  const result=productSales(orderData,financeResult.value&&!financeResult.value.limited&&!orderData.limited?financeResult.value:null,warehouseResult.value||null);
   result.orderData={...orderData,orders:orderData.orders.slice(0,75),ordersTotal:orderData.orders.length};
   result.finance.error=financeResult.error||(financeResult.value?.limited?'بيانات التسويات تجاوزت حد القراءة':'');
   result.warehouseAvailable=Boolean(warehouseResult.value);
@@ -286,14 +265,9 @@ module.exports=async function handler(req,res){
   if(!validSession(req))return http(res,401,{error:'الدخول إلى ترنديول يتطلب جلسة محمية'});
   try{
     const action=String(req.query?.action||'status');
-    if(action==='status')return http(res,200,{sellerId:SELLER(),region:'SA',warehouse:'jeddah',configured:Boolean(SELLER()&&process.env.TRENDYOL_API_KEY&&process.env.TRENDYOL_API_SECRET),stockWritesEnabled:false,fetchedAt:Date.now()});
+    if(action==='status')return http(res,200,{sellerId:SELLER(),region:'SA',configured:Boolean(SELLER()&&process.env.TRENDYOL_API_KEY&&process.env.TRENDYOL_API_SECRET),stockWritesEnabled:false,fetchedAt:Date.now()});
     if(action==='orders')return http(res,200,await orders(req.query?.days==='30'?30:7));
     if(action==='product-sales')return http(res,200,await comprehensiveSales(req.query?.days==='30'?30:7));
-    if(action==='stock'){
-      const [warehouse,productList]=await Promise.all([jeddah(),products()]);
-      const rows=mappingRows(warehouse,productList.items);
-      return http(res,200,{rows,summary:{total:rows.length,ready:rows.filter(x=>x.eligible).length,blocked:rows.filter(x=>!x.eligible).length,withDiscrepancy:rows.filter(x=>x.eligible&&x.delta!==0).length,unmatchedProducts:productList.items.filter(x=>!stockMap.some(m=>normal(m.barcode)===x.barcode)).length,productListIncomplete:productList.more},jeddahSnapshotSha:warehouse.sha,warehouse:'jeddah',fetchedAt:Date.now()});
-    }
     return http(res,404,{error:'الوظيفة غير موجودة'});
-  }catch(err){console.error('Trendyol dashboard operation failed',String(err.message||'unknown').replace(/[\r\n]/g,' ').slice(0,180));return http(res,err.status||502,{error:err.status===503?err.message:'تعذر جلب بيانات ترنديول أو مخزون جدة. حاول مرة أخرى أو افحص إعدادات API.'});}
+  }catch(err){console.error('Trendyol dashboard operation failed',String(err.message||'unknown').replace(/[\r\n]/g,' ').slice(0,180));return http(res,err.status||502,{error:err.status===503?err.message:'تعذر جلب بيانات ترنديول. حاول مرة أخرى أو افحص إعدادات الاتصال.'});}
 };

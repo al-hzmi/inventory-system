@@ -66,3 +66,32 @@ test('does not double-count the same verified order-line id after package split'
   const result=summarize({days:7,limited:false,orders:[first,second]},null,null);
   assert.equal(result.totals.sold,4);
 });
+test('unfulfilled and unknown statuses are never counted as delivered or paid',()=>{
+ const data=base();data.orders.push(makeOrder('C','CREATED',[makeLine('C1',4,80)]),makeOrder('E','SHIPPED',[makeLine('E1',3,60)]),makeOrder('F','FUTURE_STATUS',[makeLine('F1',2,40)]));
+ const result=summarize(data,finance(),null);
+ assert.equal(result.totals.sold,8);assert.equal(result.totals.paid,5);assert.equal(result.totals.excluded,9);
+});
+test('nearby amounts are not treated as an exact payout match',()=>{
+ const fin=finance();fin.sale[0].credit=99.5;
+ const result=summarize(base(),fin,null);
+ assert.equal(result.totals.paid,0);assert.equal(result.totals.ambiguous,5);
+});
+test('unmapped barcode cannot silently inherit a supplied internal SKU',()=>{
+ const data=base();data.orders=[makeOrder('A','DELIVERED',[makeLine('A1',1,20,'UNKNOWN')])];
+ const result=summarize(data,finance(),null);
+ assert.equal(result.rows.find(x=>x.sku==='230006').quantity,0);
+ assert.equal(result.rows.find(x=>x.sku==='غير مرتبط: UNKNOWN').quantity,1);
+});
+test('financial report does not expose inventory quantities',()=>{
+ const warehouse={rows:new Map([['230006',{sku:'230006',name:'test',unit:'حبة',quantity:999,pack:12}]])};
+ const result=summarize(base(),finance(),warehouse);
+ assert.equal(Object.hasOwn(result.rows[0],'stock'),false);
+ assert.equal(JSON.stringify(result).includes('999'),false);
+});
+test('conflicting prefixed and unprefixed internal IDs require review',()=>{
+ const warehouse={rows:new Map([['230006',{name:'A'}],['OGS_230006',{name:'B'}]])};
+ const result=summarize(base(),finance(),warehouse);
+ const unresolved=result.rows.find(x=>x.sku==='غير مرتبط: B-A');
+ assert.ok(unresolved);assert.equal(unresolved.quantity,8);
+ assert.ok(!result.rows.some(x=>x.sku==='230006'&&x.quantity>0));
+});
