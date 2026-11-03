@@ -99,7 +99,8 @@ self.addEventListener('fetch',event=>{
       // The employee UI is generated from a revisioned source file. A stale
       // index.html points to the old source revision, hiding published changes.
       // Prefer a fresh shell on online launches while retaining offline fallback.
-      if(path==='/index.html'&&cached&&!url.searchParams.has('batco-retry')){
+      if((path==='/index.html'&&cached&&!url.searchParams.has('batco-retry')) ||
+         (path==='/customer.html'&&cached&&!url.searchParams.has('batco-retry'))){
         const network=fetch(request,{cache:'no-cache'});
         event.waitUntil(network.then(async fresh=>{
           if(fresh.ok&&String(fresh.headers.get('content-type')||'').includes('text/html')){
