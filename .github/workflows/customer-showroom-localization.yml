@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   bilingual-showroom:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: node --test tests/customer-showroom-localization.test.cjs
-      - run: node --test tests/v105-customer-catalog-quota.cjs tests/v107-customer-swipe-category-order.cjs
+      - run: node --test tests/v105-customer-catalog-quota.cjs tests/v107-customer-swipe-category-order.cjs tests/v118-employee-shell-freshness.cjs
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/v109-customer-viewport-swipe.cjs
       - run: npm run build
