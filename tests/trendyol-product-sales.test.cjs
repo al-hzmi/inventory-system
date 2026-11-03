@@ -95,3 +95,10 @@ test('conflicting prefixed and unprefixed internal IDs require review',()=>{
  assert.ok(unresolved);assert.equal(unresolved.quantity,8);
  assert.ok(!result.rows.some(x=>x.sku==='230006'&&x.quantity>0));
 });
+test('separates requested, cancelled and returned packages while flagging a financial return',()=>{
+ const data=base();data.orders.push(makeOrder('C','CANCELLED',[makeLine('C1',2,40)]),makeOrder('D','RETURNED',[makeLine('D1',1,20)]));
+ const fin=finance();fin.returns.push({orderNumber:'A',barcode:'B-A'});
+ const row=summarize(data,fin,null).rows.find(x=>x.sku==='230006');
+ assert.equal(row.requested,11);assert.equal(row.cancelled,2);assert.equal(row.returned,1);
+ assert.equal(row.quantity,8);assert.equal(row.returnReview,true);assert.equal(row.paid,0);assert.equal(row.ambiguous,5);
+});

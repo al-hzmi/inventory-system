@@ -181,10 +181,11 @@ function openProduct(x){
  $('product-dialog-title').textContent=(x.name||'الصنف')+' · '+x.sku;
  var f=report.finance?.available;
  var summary='<div class="grid" style="margin:15px 0">'+metric('المسلّم',fmt(x.quantity),'حبة')+metric('أمر دفع مطابق',f?fmt(x.paid):'—','حبة')+metric('دون تأكيد',f?fmt(x.unconfirmed):'—','حبة')+metric('تحتاج مراجعة',f?fmt(x.ambiguous):'—','حبة')+'</div>';
+ var operations='<p class="note">المطلوب: '+fmt(x.requested)+' · الملغى: '+fmt(x.cancelled)+' · المرتجع بحسب حالة الطرد: '+fmt(x.returned)+(x.returnReview?' · توجد حركة إرجاع تحتاج مراجعة الكمية':'')+'</p>';
  var statusPayment={confirmed:'مطابق لأمر دفع',unconfirmed:'لم يؤكد السداد',ambiguous:'مطابقة معلّقة',unavailable:'تعذر التحقق',excluded:'مستبعد'};
  var rows=x.details||[];
  var details='<div class="tablewrap"><table><thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>الباركود</th><th>الكمية</th><th>الحالة</th><th>وضع الدفع</th><th>سبب التصنيف</th></tr></thead><tbody>'+(rows.length?rows.map(l=>'<tr><td class="num">'+esc(l.orderNumber)+'</td><td>'+esc(date(l.date))+'</td><td class="num">'+esc(l.barcode)+'</td><td>'+fmt(l.quantity)+'</td><td>'+esc(status(l.status))+'</td><td>'+esc(statusPayment[l.payment]||'مجهول')+'</td><td>'+esc(l.reason)+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">لا يوجد طلب لهذا الصنف خلال الفترة المحددة.</td></tr>')+'</tbody></table></div>';
- $('product-dialog-body').innerHTML=summary+'<p class="note">الباركودات: '+esc(x.barcodes.join('، '))+'</p>'+details;
+ $('product-dialog-body').innerHTML=summary+operations+'<p class="note">الباركودات: '+esc(x.barcodes.join('، '))+'</p>'+details;
  $('product-modal').classList.remove('hidden');
  $('close-product').focus();
 }

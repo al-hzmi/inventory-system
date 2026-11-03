@@ -188,9 +188,13 @@ function productSales(ordersData,financeData,warehouse){
       const lineKey=line.sourceId?'source:'+normal(order.number)+'|'+normal(line.sourceId):'package:'+ [order.id,line.id||'',barcode,rawSku,quantity,toCents(gross)].join('|');
       if(seenOrderLines.has(lineKey))continue;
       seenOrderLines.add(lineKey);
-      if(!mapped.has(key))mapped.set(key,{sku:key,name:warehouse?.rows.get(key)?.name||line.name||'',barcodes:new Set(),quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(key)||null});
+      if(!mapped.has(key))mapped.set(key,{sku:key,name:warehouse?.rows.get(key)?.name||line.name||'',barcodes:new Set(),requested:0,cancelled:0,returned:0,returnReview:false,quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(key)||null});
       const item=mapped.get(key);
       if(barcode)item.barcodes.add(barcode);
+      item.requested+=quantity;
+      if(normal(order.status)==='CANCELLED')item.cancelled+=quantity;
+      if(normal(order.status)==='RETURNED')item.returned+=quantity;
+      if(!skip&&returns.has(normal(order.number)+'|'+barcode))item.returnReview=true;
       let payment='unavailable',reason='بيانات السداد غير متاحة';
       if(skip){payment='excluded';reason='الطلب لم يثبت تسليمه ضمن هذه الفترة';}
       else if(financeData){
@@ -223,7 +227,7 @@ function productSales(ordersData,financeData,warehouse){
     const barcode=normal(entry.barcode),raw=normal(entry.sku),matches=candidates(raw);
     if(matches.length!==1)continue;
     const sku=matches[0];
-    if(!mapped.has(sku))mapped.set(sku,{sku,name:warehouse?.rows.get(sku)?.name||'',barcodes:new Set(),quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(sku)||null});
+    if(!mapped.has(sku))mapped.set(sku,{sku,name:warehouse?.rows.get(sku)?.name||'',barcodes:new Set(),requested:0,cancelled:0,returned:0,returnReview:false,quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(sku)||null});
     mapped.get(sku).barcodes.add(barcode);
   }
   const rows=[...mapped.values()].map(item=>{
