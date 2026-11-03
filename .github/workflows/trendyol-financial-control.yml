@@ -1,0 +1,24 @@
+name: Trendyol read-only safety and mobile checks
+on:
+  pull_request:
+    paths:
+      - 'api/trendyol.js'
+      - 'admin-trendyol.html'
+      - 'tests/trendyol-*.test.cjs'
+      - '.github/workflows/trendyol-financial-control.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: node --test tests/trendyol-product-sales.test.cjs tests/trendyol-readonly.test.cjs
+      - run: node tests/trendyol-mobile.test.cjs
+      - run: npm run build

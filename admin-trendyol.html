@@ -82,7 +82,7 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 </div>
 <div id="finance-warning" class="report-notice">تجري مراجعة سجلات التسوية. لا تعتبر الطلبات المسلّمة مدفوعة حتى تتطابق مع سجلات الدفع المالية.</div>
 <section class="card" style="margin-top:14px">
-<div class="product-tools"><input id="product-search" class="field" type="search" placeholder="بحث برقم الصنف أو الباركود أو الاسم" aria-label="بحث عن صنف في تقرير المبيعات"><div class="controls"><button class="btn primary" id="all-products">الكل</button><button class="btn" id="pending-products">غير مؤكدة</button><button class="btn" id="sold-products">المسلّمة</button></div></div>
+<div class="product-tools"><input id="product-search" class="field" type="search" placeholder="بحث برقم الصنف أو الباركود أو الاسم أو الطلب" aria-label="بحث عن صنف في تقرير المبيعات"><div class="controls"><button class="btn primary" id="all-products">الكل</button><button class="btn" id="pending-products">غير مؤكدة</button><button class="btn" id="sold-products">المسلّمة</button></div></div>
 <p id="product-count" class="note"></p>
 <div class="tablewrap product-table-wrap"><table><thead><tr><th>رقم الصنف</th><th>اسم الصنف / الباركودات</th><th>تم تسليمها</th><th>له أمر دفع مؤكد</th><th>غير مؤكد السداد</th><th>يحتاج تدقيق</th><th>قيمة الطلبات</th><th>تفاصيل</th></tr></thead><tbody id="product-table"><tr><td colspan="8" class="empty">جارٍ تجهيز التقرير...</td></tr></tbody></table></div>
 <p class="note">تنبيه: المطابقة لأمر دفع لا تؤكد وصول المبلغ إلى البنك. عدم وجود سجل دفع لا يثبت التأخر في السداد. حالات الإلغاء والارتجاع مستبعدة من الحبات المسلّمة.</p>
@@ -162,7 +162,7 @@ function renderProductList(){
  if(!report)return;
  var q=$('product-search').value.trim().toUpperCase(),f=report.finance?.available;
  var rows=(report.rows||[]).filter(x=>{
- if(q&&!([x.sku,x.name,...x.barcodes].join(' ').toUpperCase().includes(q)))return false;
+ if(q&&!([x.sku,x.name,...x.barcodes,...(x.details||[]).map(d=>d.orderNumber)].join(' ').toUpperCase().includes(q)))return false;
  if(productFilter==='sold'&&x.quantity<=0)return false;
  if(productFilter==='pending'&&!(f&&(x.unconfirmed>0||x.ambiguous>0)))return false;
  return true;
