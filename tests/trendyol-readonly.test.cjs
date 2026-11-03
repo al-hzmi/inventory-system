@@ -36,3 +36,13 @@ test('report retains all fetched orders for client-side paging',async()=>{
   async()=>({orders:expected,limited:false}),async()=>({limited:false}),async()=>({}),()=>({finance:{}}));
  const result=await fn(7);assert.equal(result.orderData.orders.length,100);assert.equal(result.orderData.ordersTotal,100);
 });
+
+test('orders without a verified Saudi currency or valid date are excluded and flagged',async()=>{
+ const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
+ const section=src.slice(src.indexOf('async function orders('),src.indexOf('// Sales-to-payout reconciliation'));
+ const now=Date.now();
+ const data=[{id:'ok',orderDate:now,currencyCode:'SAR',status:'DELIVERED',lines:[]},{id:'unknown',orderDate:now,status:'DELIVERED',lines:[]},{id:'foreign',orderDate:now,currencyCode:'USD',status:'DELIVERED',lines:[]},{id:'bad-date',orderDate:'invalid',currencyCode:'SAR',status:'DELIVERED',lines:[]}];
+ const normal=v=>String(v??'').trim().toUpperCase(),number=v=>Number.isFinite(Number(v))?Number(v):0;
+ const fn=new Function('orderWindow','normal','number',section+';return orders')(async()=>({result:data,limited:false}),normal,number);
+ const result=await fn(1);assert.equal(result.limited,true);assert.deepEqual(result.orders.map(x=>x.id),['ok']);
+});

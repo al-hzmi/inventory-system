@@ -85,7 +85,12 @@ async function orders(days){
   }
   const unique=new Map();
   for(const x of all){const id=String(x.shipmentPackageId||x.id||'');if(!id){limited=true;continue;}const prev=unique.get(id);if(!prev||number(x.lastModifiedDate)>=number(prev.lastModifiedDate))unique.set(id,x);}
-  const raw=[...unique.values()].filter(x=>!x.orderCountryCode||normal(x.orderCountryCode)==='SA');
+  const raw=[...unique.values()].filter(x=>{
+    if(x.orderCountryCode&&normal(x.orderCountryCode)!=='SA')return false;
+    // Never label an unknown or foreign currency as Saudi riyals.
+    if(normal(x.currencyCode)!=='SAR'||!Number.isFinite(Number(x.orderDate))||Number(x.orderDate)<=0){limited=true;return false;}
+    return true;
+  });
   const mapped=raw.map(o=>({id:String(o.shipmentPackageId||o.id),number:String(o.orderNumber||''),date:number(o.orderDate),status:normal(o.shipmentPackageStatus||o.status),currency:String(o.currencyCode||'SAR'),gross:number(o.packageGrossAmount),discount:number(o.packageTotalDiscount),amount:number(o.packageGrossAmount)-number(o.packageTotalDiscount),lines:(Array.isArray(o.lines)?o.lines:[]).map((l,i)=>({id:String(l.id||l.orderLineItemId||i),sourceId:l.id||l.orderLineItemId?String(l.id||l.orderLineItemId):null,barcode:normal(l.barcode),sku:normal(l.stockCode),name:String(l.productName||''),quantity:number(l.quantity),gross:number(l.lineGrossAmount),discount:number(l.lineTotalDiscount)}))})).sort((a,b)=>b.date-a.date);
   const excluded=new Set(['CANCELLED','RETURNED','UNSUPPLIED','UNPACKED','UNDELIVERED','AWAITING','VERIFIED']);
   const approved=mapped.filter(x=>!excluded.has(x.status));
