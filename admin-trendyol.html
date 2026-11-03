@@ -60,7 +60,7 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 <main>
 <section id="signin" class="card login hidden"><h1>ربط ترنديول</h1><p class="lede">متابعة الطلبات والتسويات المالية من بوابة محمية.</p><form id="login-form"><label for="password">رمز دخول تكامل ترنديول</label><input id="password" type="password" autocomplete="off" required placeholder="الرمز الخاص بترنديول"><button class="btn primary" id="login-button" type="submit">دخول</button></form><p class="note">تُحفظ جلسة الدخول داخل ملف تعريف ارتباط محمي، ولا تُحفظ كلمة المرور على هذا الجهاز.</p><div id="login-error"></div></section>
 <section id="dashboard" class="hidden">
-<div class="head"><div><h1>ترنديول | المبيعات والسداد</h1><p class="lede">ترنديول السعودية · <span id="refreshed">جارٍ الاتصال...</span></p></div><div class="controls"><button id="refresh" class="btn primary">تحديث البيانات</button><button id="days7" class="btn primary">7 أيام</button><button id="days30" class="btn">30 يومًا</button></div></div>
+<div class="head"><div><h1>ترنديول | المبيعات والسداد</h1><p class="lede">ترنديول السعودية · <span id="refreshed">جارٍ الاتصال...</span></p></div><div class="controls"><button id="refresh" class="btn primary">تحديث البيانات</button><button id="today" class="btn">اليوم</button><button id="days7" class="btn primary">7 أيام</button><button id="days30" class="btn">30 يومًا</button></div></div>
 <nav class="tabbar" aria-label="أقسام ترنديول"><button type="button" data-tab="overview" aria-selected="true">نظرة عامة</button><button type="button" data-tab="products" aria-selected="false">مبيعات الأصناف</button><button type="button" data-tab="payments" aria-selected="false">السداد والمستحقات</button><button type="button" data-tab="orders" aria-selected="false">الطلبات</button></nav>
 <section class="section-panel" id="panel-overview">
 <div id="sales-overview"></div>
@@ -111,7 +111,7 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 var admin=false;
 try{var proof=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')||'null');admin=localStorage.getItem('inventory_user_name_v2')==='مهند'&&localStorage.getItem('inventory_admin_token_v2')==='1jh297-spgf2z'&&proof&&proof.role==='admin'&&!!proof.photoId;}catch(e){}
 if(!admin){location.replace('./admin-dashboard.html');return;}
-var $=id=>document.getElementById(id),days=7,loadId=0,refreshTimer=null;
+var $=id=>document.getElementById(id),days=7,period='rolling',loadId=0,refreshTimer=null;
 if(new URLSearchParams(location.search).get('embedded')==='1')document.body.classList.add('embedded');
 var report=null,orderReport=null,productFilter='all',productPage=0,orderPage=0,pageSize=25,lastProductFocus=null;
 function setTab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));document.querySelectorAll('.section-panel').forEach(p=>p.hidden=p.id!=='panel-'+name);}
@@ -144,8 +144,8 @@ $('close-product').onclick=closeProduct;
 $('product-modal').addEventListener('click',e=>{if(e.target===$('product-modal'))closeProduct();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeProduct();});
 
-function chooseDays(n){days=n;$('days7').classList.toggle('primary',n===7);$('days30').classList.toggle('primary',n===30);refresh();}
-$('days7').onclick=()=>chooseDays(7);$('days30').onclick=()=>chooseDays(30);
+function chooseDays(n,p){days=n;period=p||'rolling';$('today').classList.toggle('primary',period==='today');$('days7').classList.toggle('primary',period!=='today'&&n===7);$('days30').classList.toggle('primary',period!=='today'&&n===30);refresh();}
+$('today').onclick=()=>chooseDays(1,'today');$('days7').onclick=()=>chooseDays(7);$('days30').onclick=()=>chooseDays(30);
 function metric(label,value,details){return '<div class="card metric"><small>'+esc(label)+'</small><strong>'+esc(String(value))+'</strong><small>'+esc(details||'')+'</small></div>';}
 function drawPaging(id,total,page,onChange){
  var pages=Math.max(1,Math.ceil(total/pageSize)),box=$(id);
@@ -159,7 +159,7 @@ function renderOrderPage(){
 }
 function renderOrders(data){
 var cur=Object.keys(data.totals||{});var sales=cur.length===1?money(data.totals[cur[0]],cur[0]):cur.length===0?'0 ر.س':'عملات متعددة';
-$('metrics').innerHTML=metric('قيمة الطلبات النشطة',sales,'خلال '+data.days+' يومًا')+metric('الطلبات النشطة',fmt(data.orderCount),'باستثناء الملغاة والمرتجعة')+metric('طلبات للتجهيز',fmt(data.pending),'جديدة وقيد التجهيز')+metric('طلبات ملغاة أو مستبعدة',fmt(data.cancelled),'خارج الطلبات النشطة');
+$('metrics').innerHTML=metric('قيمة الطلبات النشطة',sales,data.period==='today'?'اليوم بتوقيت السعودية':'خلال '+data.days+' يومًا')+metric('الطلبات النشطة',fmt(data.orderCount),'باستثناء الملغاة والمرتجعة')+metric('طلبات للتجهيز',fmt(data.pending),'جديدة وقيد التجهيز')+metric('طلبات ملغاة أو مستبعدة',fmt(data.cancelled),'خارج الطلبات النشطة');
 $('order-status').textContent=data.limited?'البيانات جزئية بسبب حد الاستعلام':'تم جلب أحدث الطلبات';$('order-status').className='pill'+(data.limited?' bad':' ok');$('order-count').textContent=fmt(data.ordersTotal??data.orders.length)+' طلب';
 orderReport=data;orderPage=0;renderOrderPage();
 $('top-table').innerHTML=data.top.length?data.top.map(x=>'<tr><td><span class="num">'+esc(x.barcode)+'</span></td><td>'+esc(x.name)+'</td><td><b class="num">'+fmt(x.quantity)+'</b></td><td>'+money(x.amount,cur[0]||'SAR')+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">لا تتوفر أصناف مباعة في الفترة المختارة.</td></tr>';
@@ -170,11 +170,11 @@ $('refreshed').textContent='آخر تحديث '+new Date(data.fetchedAt).toLocal
 function renderProductReport(data){
  report=data;
  var t=data.totals||{},available=data.finance?.available;
- $('product-metrics').innerHTML=metric('حبات مسلّمة',fmt(t.sold),'خلال '+data.days+' يومًا')
+ $('product-metrics').innerHTML=metric('حبات مسلّمة',fmt(t.sold),data.period==='today'?'اليوم بتوقيت السعودية':'خلال '+data.days+' يومًا')
  +metric('مربوطة بأمر دفع',available?fmt(t.paid):'—','مطابقة رقم الدفع والسجل والمبلغ')
  +metric('سداد غير مؤكد',available?fmt(t.unconfirmed):'—','ليس بالضرورة مبلغًا متأخرًا')
  +metric('مطابقة معلّقة',available?fmt(t.ambiguous):'—','حالات تتطلب تدقيقًا');
- var messages=['المبيعات محصورة في آخر '+data.days+' يومًا، وليست إجمالي مبيعات المتجر منذ افتتاحه.'];
+ var messages=[data.period==='today'?'البيانات من بداية اليوم بتوقيت السعودية.':'المبيعات محصورة في آخر '+data.days+' يومًا، وليست إجمالي مبيعات المتجر منذ افتتاحه.'];
  if(!available)messages.push('بيانات التسويات غير متاحة أو غير مكتملة؛ لا يمكن احتساب المسدد وغير المؤكد بشكل موثوق. '+(data.finance?.error||''));
  else messages.push('الكمية المرتبطة بأمر دفع تعني مطابقة أولية للسجلات، ولا تثبت تنفيذ السداد أو وصول الحوالة إلى حسابك.');
  if(data.ordersLimited)messages.push('تنبيه: بيانات الطلبات غير مكتملة؛ الإجماليات جزئية.');
@@ -224,7 +224,7 @@ function openProduct(x){
 
 async function refresh(){
 var id=++loadId;var btn=$('refresh');btn.disabled=true;$('data-error').textContent='';
-var results=await Promise.allSettled([request('product-sales&days='+days)]);
+var results=await Promise.allSettled([request('product-sales&days='+days+'&period='+period)]);
 if(id!==loadId)return;
 var issues=[];
 if(results[0].status==='fulfilled'){renderOrders(results[0].value.orderData);renderProductReport(results[0].value);}else issues.push('المبيعات وتقرير الأصناف: '+results[0].reason.message);

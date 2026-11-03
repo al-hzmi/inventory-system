@@ -76,8 +76,9 @@ async function orderWindow(start,end){
   }
   return {result,limited};
 }
-async function orders(days){
-  const now=Date.now(), start=now-days*86400000, all=[];let limited=false;
+const reportStart=(days,now,period)=>period==='today'?Math.floor((now+3*3600000)/86400000)*86400000-3*3600000:now-days*86400000;
+async function orders(days,period){
+  const now=Date.now(), start=reportStart(days,now,period), all=[];let limited=false;
   for(let left=start;left<now;left+=12*86400000){
     const right=Math.min(now,left+12*86400000);
     const chunk=await orderWindow(left,right);
@@ -121,8 +122,8 @@ async function financeWindow(kind,type,start,end){
   }
   return {records,limited};
 }
-async function financialRecords(days){
-  const now=Date.now(),from=now-days*86400000,jobs=[];
+async function financialRecords(days,period){
+  const now=Date.now(),from=reportStart(days,now,period),jobs=[];
   for(let fromMs=from;fromMs<now;fromMs+=12*86400000){
     const until=Math.min(now,fromMs+12*86400000);
     for(const [kind,type] of [['sale','Sale'],['return','Return'],['payment','PaymentOrder']])jobs.push({kind,type,fromMs,until});
@@ -259,14 +260,15 @@ function productSales(ordersData,financeData,warehouse){
   }).sort((a,b)=>b.quantity-a.quantity);
   return {days:ordersData.days,rows,totals:{sold:salesUnits,paid:financeData?paidUnits:null,unconfirmed:financeData?unconfirmedUnits:null,ambiguous:financeData?ambiguousUnits:null,excluded:excludedUnits,possibleDuplicateUnits,amount:rows.reduce((sum,x)=>sum+x.value,0)},finance:{available:Boolean(financeData),complete:Boolean(financeData&&!financeData.limited),paymentOrders:financeData?.payment.length??null,saleRecords:financeData?.sale.length??null},ordersLimited:ordersData.limited,fetchedAt:Date.now(),note:'مطابقة أمر الدفع ارتباط مبدئي بسجل ترنديول، ولا تثبت تنفيذ السداد أو وصول الحوالة إلى الحساب البنكي. عدم التأكد لا يعني تأخر السداد.'};
 }
-async function comprehensiveSales(days){
+async function comprehensiveSales(days,period){
   const [orderData,financeResult,warehouseResult]=await Promise.all([
-    orders(days),
-    financialRecords(days).then(value=>({value})).catch(e=>({error:String(e.message||'').slice(0,120)})),
+    orders(days,period),
+    financialRecords(days,period).then(value=>({value})).catch(e=>({error:String(e.message||'').slice(0,120)})),
     jeddah().then(value=>({value})).catch(e=>({error:String(e.message||'').slice(0,120)}))
   ]);
   const result=productSales(orderData,financeResult.value&&!financeResult.value.limited&&!orderData.limited?financeResult.value:null,warehouseResult.value||null);
-  result.orderData={...orderData,orders:orderData.orders,ordersTotal:orderData.orders.length};
+  result.period=period||'rolling';
+  result.orderData={...orderData,period:result.period,orders:orderData.orders,ordersTotal:orderData.orders.length};
   result.finance.error=financeResult.error?'تعذر قراءة سجلات التسوية من ترنديول.':(financeResult.value?.limited?'بيانات التسويات ناقصة أو تفتقر إلى معرّفات موثوقة':'');
   result.warehouseAvailable=Boolean(warehouseResult.value);
   result.warehouseError=warehouseResult.error?'تعذر التحقق من دليل الأصناف':'';
@@ -293,8 +295,10 @@ module.exports=async function handler(req,res){
   try{
     const action=String(req.query?.action||'status');
     if(action==='status')return http(res,200,{sellerId:SELLER(),region:'SA',configured:Boolean(SELLER()&&process.env.TRENDYOL_API_KEY&&process.env.TRENDYOL_API_SECRET),stockWritesEnabled:false,fetchedAt:Date.now()});
-    if(action==='orders')return http(res,200,await orders(req.query?.days==='30'?30:7));
-    if(action==='product-sales')return http(res,200,await comprehensiveSales(req.query?.days==='30'?30:7));
+    const period=req.query?.period==='today'?'today':'rolling';
+    const days=period==='today'?1:(req.query?.days==='30'?30:7);
+    if(action==='orders')return http(res,200,await orders(days,period));
+    if(action==='product-sales')return http(res,200,await comprehensiveSales(days,period));
     return http(res,404,{error:'الوظيفة غير موجودة'});
   }catch(err){console.error('Trendyol dashboard operation failed',String(err.message||'unknown').replace(/[\r\n]/g,' ').slice(0,180));return http(res,err.status||502,{error:err.status===503?err.message:'تعذر جلب بيانات ترنديول. حاول مرة أخرى أو افحص إعدادات الاتصال.'});}
 };

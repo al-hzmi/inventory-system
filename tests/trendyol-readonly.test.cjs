@@ -24,7 +24,8 @@ test('pagination follows reported pages and marks a premature empty page incompl
 test('unidentified financial transactions cannot be treated as a complete reconciliation',async()=>{
  const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
  const section=src.slice(src.indexOf('async function financialRecords('),src.indexOf('function productSales('));
- const read=new Function('financeWindow',section+';return financialRecords')(async(kind)=>({records:kind==='sale'?[{orderNumber:'A',barcode:'B',credit:10}]:[],limited:false}));
+ const reportStart=(days,now)=>now-days*86400000;
+ const read=new Function('financeWindow','reportStart',section+';return financialRecords')(async(kind)=>({records:kind==='sale'?[{orderNumber:'A',barcode:'B',credit:10}]:[],limited:false}),reportStart);
  const result=await read(1);assert.equal(result.limited,true);
 });
 
@@ -39,10 +40,18 @@ test('report retains all fetched orders for client-side paging',async()=>{
 
 test('orders without a verified Saudi currency or valid date are excluded and flagged',async()=>{
  const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
- const section=src.slice(src.indexOf('async function orders('),src.indexOf('// Sales-to-payout reconciliation'));
+ const section=src.slice(src.indexOf('const reportStart='),src.indexOf('// Sales-to-payout reconciliation'));
  const now=Date.now();
  const data=[{id:'ok',orderDate:now,currencyCode:'SAR',status:'DELIVERED',lines:[]},{id:'unknown',orderDate:now,status:'DELIVERED',lines:[]},{id:'foreign',orderDate:now,currencyCode:'USD',status:'DELIVERED',lines:[]},{id:'bad-date',orderDate:'invalid',currencyCode:'SAR',status:'DELIVERED',lines:[]},{id:'out-of-range-date',orderDate:1e20,currencyCode:'SAR',status:'DELIVERED',lines:[]}];
  const normal=v=>String(v??'').trim().toUpperCase(),number=v=>Number.isFinite(Number(v))?Number(v):0;
  const fn=new Function('orderWindow','normal','number',section+';return orders')(async()=>({result:data,limited:false}),normal,number);
  const result=await fn(1);assert.equal(result.limited,true);assert.deepEqual(result.orders.map(x=>x.id),['ok']);
+});
+
+test('today starts at midnight in Saudi Arabia',()=>{
+ const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
+ const section=src.slice(src.indexOf('const reportStart='),src.indexOf('async function orders('));
+ const start=new Function(section+';return reportStart')();
+ assert.equal(new Date(start(1,Date.parse('2026-11-03T21:30:00Z'),'today')).toISOString(),'2026-11-03T21:00:00.000Z');
+ assert.equal(new Date(start(1,Date.parse('2026-11-03T20:30:00Z'),'today')).toISOString(),'2026-11-02T21:00:00.000Z');
 });
