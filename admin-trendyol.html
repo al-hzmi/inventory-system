@@ -49,7 +49,8 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 
 .tabbar{display:flex;gap:4px;overflow:auto;border-bottom:1px solid var(--line);margin:24px 0 16px;scrollbar-width:none}.tabbar button{border:0;border-bottom:2px solid transparent;background:transparent;padding:12px 16px;white-space:nowrap;font-weight:600;color:#666}.tabbar button[aria-selected="true"]{border-bottom-color:#111;color:#111}.paging{display:flex;justify-content:center;align-items:center;gap:12px;margin:18px 0 0}.paging span{color:#555}.section-panel[hidden]{display:none!important}
 @media(max-width:600px){
-.mobile-list{border:0;overflow:visible}.mobile-list table,.mobile-list tbody{display:block;min-width:0}.mobile-list thead{display:none}.mobile-list tr:not(.empty-row){display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.mobile-list td{display:flex;flex-direction:column;gap:3px;border:0;padding:4px;min-width:0;overflow-wrap:anywhere;font-size:14px}.mobile-list td:before{color:#777;font-size:12px}.orders-list td:nth-child(1):before,.detail-list td:nth-child(1):before{content:'رقم الطلب'}.orders-list td:nth-child(2):before,.detail-list td:nth-child(2):before{content:'التاريخ'}.orders-list td:nth-child(3):before{content:'الحالة'}.orders-list td:nth-child(4):before{content:'القيمة'}.orders-list td:nth-child(5){grid-column:1/-1}.orders-list td:nth-child(5):before{content:'الأصناف'}.detail-list td:nth-child(3):before{content:'الباركود'}.detail-list td:nth-child(4):before{content:'الكمية'}.detail-list td:nth-child(5):before{content:'الحالة'}.detail-list td:nth-child(6):before{content:'السداد'}.detail-list td:nth-child(7){grid-column:1/-1}.detail-list td:nth-child(7):before{content:'الملاحظة'}
+.tabbar{display:grid;grid-template-columns:1fr 1fr;overflow:visible}.tabbar button{white-space:normal}
+.mobile-list{border:0;overflow:visible}.mobile-list table,.mobile-list tbody{display:block;min-width:0}.mobile-list thead{display:none}.mobile-list tr:not(.empty-row){display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.mobile-list td{display:flex;flex-direction:column;gap:3px;border:0;padding:4px;min-width:0;overflow-wrap:anywhere;font-size:14px}.mobile-list td:before{color:#777;font-size:12px}.orders-list td:nth-child(1):before,.detail-list td:nth-child(1):before{content:'رقم الطلب'}.orders-list td:nth-child(2):before,.detail-list td:nth-child(2):before{content:'التاريخ'}.orders-list td:nth-child(3):before{content:'الحالة'}.orders-list td:nth-child(4):before{content:'القيمة'}.orders-list td:nth-child(5){grid-column:1/-1}.orders-list td:nth-child(5):before{content:'الأصناف'}.detail-list td:nth-child(3):before{content:'الباركود'}.detail-list td:nth-child(4):before{content:'الكمية'}.detail-list td:nth-child(5):before{content:'الحالة'}.detail-list td:nth-child(6):before{content:'السداد'}.detail-list td:nth-child(7){grid-column:1/-1}.detail-list td:nth-child(7):before{content:'الملاحظة'}.top-list td:nth-child(1):before{content:'الباركود'}.top-list td:nth-child(2):before{content:'الصنف'}.top-list td:nth-child(3):before{content:'الوحدات المطلوبة'}.top-list td:nth-child(4):before{content:'قيمة الطلبات'}
 .product-table-wrap{border:0;overflow:visible}.product-table-wrap table,.product-table-wrap tbody{display:block;min-width:0;width:100%}.product-table-wrap thead{display:none}.product-table-wrap tr.product-line{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;padding:14px;margin:10px 0;background:#fff;border:1px solid #e6e6e6;border-radius:14px}.product-table-wrap tr.product-line td{display:flex;flex-direction:column;gap:3px;border:0;padding:4px;min-width:0;overflow-wrap:anywhere;font-size:14px}.product-table-wrap tr.product-line td:nth-child(2){grid-column:1/-1}.product-table-wrap tr.product-line td:before{color:#777;font-size:12px}.product-table-wrap td:nth-child(1):before{content:'رقم الصنف'}.product-table-wrap td:nth-child(2):before{content:'الصنف والباركود'}.product-table-wrap td:nth-child(3):before{content:'تم تسليمها'}.product-table-wrap td:nth-child(4):before{content:'مطابقة لأمر دفع'}.product-table-wrap td:nth-child(5):before{content:'سداد غير مؤكد'}.product-table-wrap td:nth-child(6):before{content:'يحتاج تدقيق'}.product-table-wrap td:nth-child(7):before{content:'قيمة الطلبات'}.product-table-wrap td:nth-child(8){grid-column:1/-1}.product-table-wrap td:nth-child(8) button{width:100%}
 }
 </style>
@@ -72,13 +73,14 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 <div id="data-error"></div>
 <div class="head"><h2>حركة الطلبات</h2><span class="pill" id="order-status">انتظار البيانات</span></div>
 <section class="card"><div id="sales-chart" class="bars"></div><p class="note">القيمة من حالات الطلبات غير الملغاة، ولا تشمل احتساب الأرباح أو عمولات المنصة أو التسويات النهائية.</p></section>
+<div class="head"><h2>الأصناف الأكثر طلبًا</h2></div><section class="card"><div class="tablewrap mobile-list top-list"><table><thead><tr><th>الباركود</th><th>الصنف</th><th>الوحدات المطلوبة</th><th>قيمة الطلبات</th></tr></thead><tbody id="top-table"></tbody></table></div></section>
 </section>
 <section class="section-panel" id="panel-orders" hidden>
 <div class="head" id="latest-orders"><h2>أحدث طلبات ترنديول</h2><span class="pill" id="order-count">—</span></div>
 <section class="card"><div class="tablewrap mobile-list orders-list"><table><thead><tr><th>رقم الطلب</th><th>تاريخ الطلب</th><th>الحالة</th><th>القيمة</th><th>الأصناف</th></tr></thead><tbody id="orders-table"><tr><td colspan="5" class="empty">جارٍ التحميل...</td></tr></tbody></table></div><div id="orders-paging" class="paging"></div></section>
 </section>
 <section class="section-panel" id="panel-products" hidden>
-<div class="head"><h2>الأصناف الأكثر طلبًا</h2></div><section class="card"><div class="tablewrap"><table><thead><tr><th>الباركود</th><th>الصنف</th><th>الوحدات المطلوبة</th><th>قيمة الطلبات</th></tr></thead><tbody id="top-table"></tbody></table></div></section>
+
 
 <div class="head" id="product-section"><div><h2>مبيعات الأصناف والتسويات</h2><p class="lede">لكل صنف: عدد القطع المطلوبة، المطابقة لأوامر الدفع، والقطع التي لم يُؤكد سدادها.</p></div><span class="pill">معلومات مالية للعرض فقط</span></div>
 <div class="grid" id="product-metrics">
@@ -111,7 +113,7 @@ try{var proof=JSON.parse(localStorage.getItem('inventory_login_photo_proof_v2')|
 if(!admin){location.replace('./admin-dashboard.html');return;}
 var $=id=>document.getElementById(id),days=7,loadId=0,refreshTimer=null;
 if(new URLSearchParams(location.search).get('embedded')==='1')document.body.classList.add('embedded');
-var report=null,orderReport=null,productFilter='all',productPage=0,orderPage=0,pageSize=25;
+var report=null,orderReport=null,productFilter='all',productPage=0,orderPage=0,pageSize=25,lastProductFocus=null;
 function setTab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));document.querySelectorAll('.section-panel').forEach(p=>p.hidden=p.id!=='panel-'+name);}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
 var esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -137,9 +139,10 @@ $('product-search').addEventListener('input',()=>{productPage=0;renderProductLis
 for(const [button,filter] of [['all-products','all'],['pending-products','pending'],['sold-products','sold']]){
  $(button).addEventListener('click',()=>{productFilter=filter;productPage=0;for(const [other,f] of [['all-products','all'],['pending-products','pending'],['sold-products','sold']])$(other).classList.toggle('primary',f===filter);renderProductList();});
 }
-$('close-product').onclick=()=>{$('product-modal').classList.add('hidden');};
-$('product-modal').addEventListener('click',e=>{if(e.target===$('product-modal'))$('product-modal').classList.add('hidden');});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')$('product-modal').classList.add('hidden');});
+function closeProduct(){if($('product-modal').classList.contains('hidden'))return;$('product-modal').classList.add('hidden');if(lastProductFocus)lastProductFocus.focus();}
+$('close-product').onclick=closeProduct;
+$('product-modal').addEventListener('click',e=>{if(e.target===$('product-modal'))closeProduct();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeProduct();});
 
 function chooseDays(n){days=n;$('days7').classList.toggle('primary',n===7);$('days30').classList.toggle('primary',n===30);refresh();}
 $('days7').onclick=()=>chooseDays(7);$('days30').onclick=()=>chooseDays(30);
@@ -206,6 +209,7 @@ function renderProductList(){
 }
 function openProduct(x){
  if(!x)return;
+ lastProductFocus=document.activeElement;
  $('product-dialog-title').textContent=(x.name||'الصنف')+' · '+x.sku;
  var f=report.finance?.available;
  var summary='<div class="grid" style="margin:15px 0">'+metric('المسلّم',fmt(x.quantity),'حبة')+metric('أمر دفع مطابق',f?fmt(x.paid):'—','حبة')+metric('دون تأكيد',f?fmt(x.unconfirmed):'—','حبة')+metric('تحتاج مراجعة',f?fmt(x.ambiguous):'—','حبة')+'</div>';

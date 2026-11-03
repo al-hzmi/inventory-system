@@ -41,7 +41,7 @@ test('orders without a verified Saudi currency or valid date are excluded and fl
  const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
  const section=src.slice(src.indexOf('async function orders('),src.indexOf('// Sales-to-payout reconciliation'));
  const now=Date.now();
- const data=[{id:'ok',orderDate:now,currencyCode:'SAR',status:'DELIVERED',lines:[]},{id:'unknown',orderDate:now,status:'DELIVERED',lines:[]},{id:'foreign',orderDate:now,currencyCode:'USD',status:'DELIVERED',lines:[]},{id:'bad-date',orderDate:'invalid',currencyCode:'SAR',status:'DELIVERED',lines:[]}];
+ const data=[{id:'ok',orderDate:now,currencyCode:'SAR',status:'DELIVERED',lines:[]},{id:'unknown',orderDate:now,status:'DELIVERED',lines:[]},{id:'foreign',orderDate:now,currencyCode:'USD',status:'DELIVERED',lines:[]},{id:'bad-date',orderDate:'invalid',currencyCode:'SAR',status:'DELIVERED',lines:[]},{id:'out-of-range-date',orderDate:1e20,currencyCode:'SAR',status:'DELIVERED',lines:[]}];
  const normal=v=>String(v??'').trim().toUpperCase(),number=v=>Number.isFinite(Number(v))?Number(v):0;
  const fn=new Function('orderWindow','normal','number',section+';return orders')(async()=>({result:data,limited:false}),normal,number);
  const result=await fn(1);assert.equal(result.limited,true);assert.deepEqual(result.orders.map(x=>x.id),['ok']);
