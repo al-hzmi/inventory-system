@@ -32,7 +32,10 @@ test('first visit selects device language; manual selection takes priority',()=>
   assert.equal(global.document.documentElement.dir,'ltr');
   assert.equal(i18n.text('السلة'),'Cart');
   assert.equal(i18n.text('15 صنف في السلة'),'15 items in cart');
-  assert.equal(i18n.text('ابحث داخل الأواني...'),'Search within الأواني...');
+  assert.equal(i18n.text('ابحث داخل الأواني المنزلية...'),'Search within Homeware...');
+  assert.equal(i18n.text('منتجات الأواني المنزلية'),'Products in Homeware');
+  assert.equal(i18n.text('الأواني المنزلية'),'Homeware');
+  assert.equal(i18n.text('ابحث داخل قسم غير معروف...'),'Search within قسم غير معروف...');
   assert.equal(i18n.text('غير مترجم'),'غير مترجم');
   i18n.apply('ar');
 });
@@ -46,6 +49,11 @@ test('Babel translation is restricted to display nodes and leaves business ident
   assert.match(code,/item\.id/);
   assert.match(code,/create\(["']الفرع الرئيسي["']\)/);
   assert.doesNotMatch(code,/customerUiText\(item\.name\)/);
+  const category=Babel.transform("function Category({section,c,categoryBrowse}){return <><h2>{section.name}</h2><div>{c.name}</div><span>{categoryBrowse}</span><input placeholder={`ابحث داخل ${categoryBrowse}...`}/></>}",{presets:['react'],plugins:[i18n.babelPlugin],sourceType:'script'}).code;
+  assert.match(category,/customerUiText\(section\.name\)/);
+  assert.match(category,/customerUiText\(c\.name\)/);
+  assert.match(category,/customerUiText\(categoryBrowse\)/);
+  assert.match(category,/customerUiText\(`ابحث داخل/);
 });
 
 test('showroom runtime and build compiler use the same localization without touching employee pages',()=>{

@@ -10,6 +10,19 @@
   'use strict';
   const STORAGE_KEY = 'batco_customer_showroom_language_v1';
   const EN = {
+  "المخفضة": "Discounted Products",
+  "الأواني المنزلية": "Homeware",
+  "البرطمان": "Jars",
+  "أدوات الشواء": "Grilling Accessories",
+  "البلاستيك": "Plasticware",
+  "التحف والهدايا": "Decor & Gifts",
+  "الألعاب والسباحة": "Toys & Swimming",
+  "أحذية OGS": "OGS Footwear",
+  "العناية والشنط": "Personal Care & Bags",
+  "العُدد": "Tools",
+  "القرطاسية": "Stationery",
+  "مجات OGS": "OGS Mugs",
+  "بقية الأصناف": "Other Products",
   "صنف في السلة": "items in cart",
   "كرتون": "cartons",
   "صنف": "items",
@@ -317,11 +330,11 @@
     [/^(\d[\d,.\s]*) صنف · اسحب لاستعراض المنتجات$/, '$1 items · swipe to browse'],
     [/^(\d[\d,.\s]*) صنف$/, '$1 items'],
     [/^(\d[\d,.\s]*) كرتون$/, '$1 cartons'],
-    [/^منتجات (.+)$/, 'Products in $1'],
-    [/^قسم (.+)$/, '$1 category'],
+    [/^منتجات (.+)$/, (_match, name) => 'Products in '+(EN[name]||name)],
+    [/^قسم (.+)$/, (_match, name) => (EN[name]||name)+' category'],
     [/^عرض صورة (.+)$/, 'View image of $1'],
     [/^إضافة (.+) للسلة$/, 'Add $1 to cart'],
-    [/^ابحث داخل (.+)\.\.\.$/, 'Search within $1...'],
+    [/^ابحث داخل (.+)\.\.\.$/, (_match, name) => 'Search within '+(EN[name]||name)+'...'],
     [/^تم الوصول للحد الأقصى المسموح لهذا الصنف: (.+) كرتون\.$/, 'Maximum permitted quantity: $1 cartons.'],
     [/^تم حفظ (.+) كمسودة\.$/, 'Draft $1 saved.'],
     [/^سيظهر في طلبات (.+)\.$/, 'This name will appear on orders for $1.'],
@@ -378,6 +391,11 @@
           if (uiAttrs.has(name) && t.isStringLiteral(value) && arabic.test(value.value)) {
             path.node.value = t.jsxExpressionContainer(call(value));
           }
+          if (uiAttrs.has(name) && t.isJSXExpressionContainer(value)) {
+            const expr = value.expression;
+            if (t.isBinaryExpression(expr) && t.isStringLiteral(expr.left) && arabic.test(expr.left.value)) value.expression = call(expr);
+            else if (t.isTemplateLiteral(expr) && expr.quasis.some(q => arabic.test(q.value.cooked || ''))) value.expression = call(expr);
+          }
           if (name === 'aria-label' && t.isJSXExpressionContainer(value) &&
               t.isBinaryExpression(value.expression) &&
               value.expression.operator === '+' &&
@@ -389,6 +407,11 @@
           if (path.parentPath.isJSXAttribute()) return;
           const expr = path.node.expression;
           if (t.isIdentifier(expr) && displayIdentifiers.has(expr.name)) {
+            path.node.expression = call(expr);
+          } else if (t.isMemberExpression(expr) && t.isIdentifier(expr.property, { name: 'name' }) &&
+              t.isIdentifier(expr.object) && ['section','c'].includes(expr.object.name)) {
+            path.node.expression = call(expr);
+          } else if (t.isIdentifier(expr, { name: 'categoryBrowse' })) {
             path.node.expression = call(expr);
           } else if (t.isMemberExpression(expr) &&
               t.isIdentifier(expr.object, { name: 'toast' }) &&
