@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:min(59vw,218px);max-width:100%;height:auto;aspect-ratio:900/353;object-fit:contain;display:block;margin:auto}@media(max-width:600px){.v37box img.batco-splash-wordmark{width:min(43vw,178px)}}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:min(59vw,218px);max-width:100%;height:auto;aspect-ratio:900/353;object-fit:contain;display:block;margin:auto}@media(max-width:600px){.v37box img.batco-splash-wordmark{width:min(43vw,178px)}}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style><script src="./customer-localization.js?v=1"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script></head>
 <body><div id="v37boot"><div class="v37box"><img class="batco-splash-wordmark" src="./assets/batco-logo.svg?v=72.0" width="900" height="353" alt="BATCO — شركة بيت الأواني الطيبة"></div></div>
 <script>
 (async function(){
@@ -265,6 +265,71 @@
     if(html.includes(customerHeaderLabel))html=html.replace(customerHeaderLabel,customerHeaderBrand);
     else console.warn('[BATCO V82] Customer header anchor changed; keeping portal available.');
     html=html.replace('</body>','<scr'+'ipt defer src="./batco-brand-footer.js?v=82.0"></scr'+'ipt></body>');
+
+    // BATCO customer SHOWROOM localization — product data and ordering services are untouched.
+    const localeScript='<script src="./customer-localization.js?v=1"></scr'+'ipt>';
+    const localeRegister='<script>if(window.Babel&&window.BatcoCustomerLocale)window.Babel.registerPlugin("batco-customer-ui-locale",window.BatcoCustomerLocale.babelPlugin);</scr'+'ipt>';
+    if(!html.includes('<script type="text/babel">'))throw new Error('CUSTOMER_LOCALE_BABEL_ANCHOR');
+    html=html.replace('<script type="text/babel">',localeScript+localeRegister+'<script type="text/babel" data-plugins="batco-customer-ui-locale">');
+
+    const languageComponents=String.raw`
+const CustomerLanguageContext=React.createContext(null);
+function customerUiText(value){return window.BatcoCustomerLocale?window.BatcoCustomerLocale.text(value):value;}
+function CustomerLanguageSwitch(){
+  const current=React.useContext(CustomerLanguageContext);
+  if(!current)return null;
+  return <div className="batco-locale-switch" role="group" aria-label={current.locale==='en'?'Catalog language':'لغة المعرض'} dir="ltr">
+    <button type="button" lang="ar" aria-pressed={current.locale==='ar'} className={current.locale==='ar'?'is-active':''} onClick={()=>current.choose('ar')}>العربية</button>
+    <button type="button" lang="en" aria-pressed={current.locale==='en'} className={current.locale==='en'?'is-active':''} onClick={()=>current.choose('en')}>English</button>
+  </div>;
+}
+function CustomerLocalizedRoot(){
+  const [locale,setLocale]=React.useState(()=>window.BatcoCustomerLocale?.initial()||'ar');
+  const choose=React.useCallback(next=>{
+    const selected=window.BatcoCustomerLocale?.apply(next,true)||next;
+    setLocale(selected);
+  },[]);
+  React.useLayoutEffect(()=>{window.BatcoCustomerLocale?.apply(locale,false)},[locale]);
+  const value=React.useMemo(()=>({locale,choose}),[locale,choose]);
+  return <CustomerLanguageContext.Provider value={value}><CustomerPortalBootstrap/><CustomerAdminNotificationHost/></CustomerLanguageContext.Provider>;
+}
+`;
+    const oldMount="ReactDOM.createRoot(document.getElementById('root')).render(<><CustomerPortalBootstrap/><CustomerAdminNotificationHost/></>);";
+    const newMount=languageComponents+"\nReactDOM.createRoot(document.getElementById('root')).render(<CustomerLocalizedRoot/>);";
+    if(!html.includes(oldMount))throw new Error('CUSTOMER_LOCALE_MOUNT_ANCHOR');
+    html=html.replace(oldMount,newMount);
+    const bootstrapAnchor="function CustomerPortalBootstrap(){";
+    if(!html.includes(bootstrapAnchor))throw new Error('CUSTOMER_LOCALE_CONTEXT_ANCHOR');
+    html=html.replace(bootstrapAnchor,bootstrapAnchor+"\n  React.useContext(CustomerLanguageContext);");
+    const noticeAnchor="function CustomerAdminNotificationHost(){";
+    if(html.includes(noticeAnchor))html=html.replace(noticeAnchor,noticeAnchor+"\n  React.useContext(CustomerLanguageContext);");
+    const switchAnchors=[
+      ['<div className="flex items-center gap-2"><div className="hidden sm:block text-left">','<div className="flex items-center gap-2"><CustomerLanguageSwitch/><div className="hidden sm:block text-left">'],
+      ['<div className="max-w-[900px] mx-auto p-4"><b>اعتماد طلب الشراء</b></div>','<div className="max-w-[900px] mx-auto p-4 flex items-center justify-between gap-3"><b>اعتماد طلب الشراء</b><CustomerLanguageSwitch/></div>'],
+      ['<div className="w-full max-w-[500px] ui-panel fade-in">\n      <div className="ui-panel-head">','<div className="w-full max-w-[500px] ui-panel fade-in">\n      <div className="ui-panel-head"><div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div>'],
+      ['<div className="ui-panel-head"><div className="ui-success-dot"><Icon name="check"','<div className="ui-panel-head"><div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><div className="ui-success-dot"><Icon name="check"']
+    ];
+    for(const [before,after] of switchAnchors){
+      if(!html.includes(before))throw new Error('CUSTOMER_LOCALE_SWITCH_ANCHOR_'+before.slice(0,32));
+      html=html.replace(before,after);
+    }
+    // Reuse native Safari momentum scrolling; only the rail direction changes.
+    html=html.replace('<div dir="rtl" className="customer-product-rail','<div dir={window.BatcoCustomerLocale?.locale||"ar"} className="customer-product-rail');
+    html=html.replaceAll('name="search" className="absolute right-4','name="search" className="customer-locale-search-icon absolute right-4');
+    html=html.replaceAll('className="w-full h-[52px] pr-12 pl-4','className="customer-locale-search-input w-full h-[52px] pr-12 pl-4');
+    const localeCss=String.raw`<style id="batco-customer-locale-style">
+.batco-locale-switch{display:inline-flex;align-items:center;gap:2px;flex:0 0 auto;padding:3px;border:1px solid #e7e5e4;border-radius:11px;background:#fafaf9;direction:ltr}
+.batco-locale-switch button{min-height:35px;padding:0 7px;border:0;border-radius:8px;color:#78716c;font:600 11px/1.2 system-ui,-apple-system,sans-serif;white-space:nowrap;cursor:pointer}
+.batco-locale-switch button.is-active{background:#1c1917;color:white}
+.batco-locale-switch button:focus-visible{outline:2px solid #b45309;outline-offset:2px}
+html[dir="ltr"] .ui-choice,html[dir="ltr"] .category-tile{text-align:left}
+html[dir="ltr"] .customer-locale-search-icon{left:1rem;right:auto}
+html[dir="ltr"] .customer-locale-search-input{padding-left:3rem;padding-right:1rem}
+html[dir="ltr"] .customer-product-rail{direction:ltr}
+html[dir="ltr"] .ui-modal,html[dir="ltr"] input,html[dir="ltr"] textarea{text-align:start}
+@media(max-width:390px){.batco-locale-switch button{padding:0 5px;font-size:10px}.batco-locale-switch{gap:1px}}
+</style>`;
+    html=html.replace('</head>',localeCss+'</head>');
     document.open();document.write(html);document.close();
   }catch(e){console.error('[V41 customer bootstrap]',e);const root=document.getElementById('v37boot');if(root)root.innerHTML='<div class="v37box"><div class="v37err"><b>تعذر فتح بوابة العملاء بأمان.</b><br>حدّث الصفحة وحاول مرة أخرى.<br><small>'+String(e&&e.message||e)+'</small></div></div>'}
 })();
