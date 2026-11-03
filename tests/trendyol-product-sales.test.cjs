@@ -58,3 +58,11 @@ test('includes mapped catalog products with zero sales and combines barcode alia
   assert.ok(row.barcodes.includes('B-A')&&row.barcodes.includes('B-B'));
   assert.ok(result.rows.some(x=>x.sku==='230007'&&x.quantity===0));
 });
+
+test('does not double-count the same verified order-line id after package split',()=>{
+  const first=makeOrder('P1','DELIVERED',[{...makeLine('LINE-9',4,80),sourceId:'LINE-9'}]);
+  const second=makeOrder('P2','DELIVERED',[{...makeLine('LINE-9',4,80),sourceId:'LINE-9'}]);
+  first.number='ORDER-9';second.number='ORDER-9';
+  const result=summarize({days:7,limited:false,orders:[first,second]},null,null);
+  assert.equal(result.totals.sold,4);
+});

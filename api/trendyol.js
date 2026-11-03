@@ -121,7 +121,7 @@ async function orders(days){
   const unique=new Map();
   for(const x of all){const id=String(x.shipmentPackageId||x.id||'');if(!id)continue;const prev=unique.get(id);if(!prev||number(x.lastModifiedDate)>=number(prev.lastModifiedDate))unique.set(id,x);}
   const raw=[...unique.values()].filter(x=>!x.orderCountryCode||normal(x.orderCountryCode)==='SA');
-  const mapped=raw.map(o=>({id:String(o.shipmentPackageId||o.id),number:String(o.orderNumber||''),date:number(o.orderDate),status:normal(o.shipmentPackageStatus||o.status),currency:String(o.currencyCode||'SAR'),gross:number(o.packageGrossAmount),discount:number(o.packageTotalDiscount),amount:number(o.packageGrossAmount)-number(o.packageTotalDiscount),lines:(Array.isArray(o.lines)?o.lines:[]).map((l,i)=>({id:String(l.id||l.orderLineItemId||i),barcode:normal(l.barcode),sku:normal(l.stockCode),name:String(l.productName||''),quantity:number(l.quantity),gross:number(l.lineGrossAmount),discount:number(l.lineTotalDiscount)}))})).sort((a,b)=>b.date-a.date);
+  const mapped=raw.map(o=>({id:String(o.shipmentPackageId||o.id),number:String(o.orderNumber||''),date:number(o.orderDate),status:normal(o.shipmentPackageStatus||o.status),currency:String(o.currencyCode||'SAR'),gross:number(o.packageGrossAmount),discount:number(o.packageTotalDiscount),amount:number(o.packageGrossAmount)-number(o.packageTotalDiscount),lines:(Array.isArray(o.lines)?o.lines:[]).map((l,i)=>({id:String(l.id||l.orderLineItemId||i),sourceId:l.id||l.orderLineItemId?String(l.id||l.orderLineItemId):null,barcode:normal(l.barcode),sku:normal(l.stockCode),name:String(l.productName||''),quantity:number(l.quantity),gross:number(l.lineGrossAmount),discount:number(l.lineTotalDiscount)}))})).sort((a,b)=>b.date-a.date);
   const excluded=new Set(['CANCELLED','RETURNED','UNSUPPLIED','UNPACKED','UNDELIVERED','AWAITING','VERIFIED']);
   const approved=mapped.filter(x=>!excluded.has(x.status));
   const totals={},byDay={},top={};let pending=0,cancelled=0;
@@ -195,7 +195,7 @@ function productSales(ordersData,financeData,warehouse){
   const mapped=new Map(),seenOrderLines=new Set();
   const duplicateCandidates=new Map();
   for(const o of ordersData.orders)for(const l of o.lines){const k=normal(o.number)+'|'+normal(l.barcode);duplicateCandidates.set(k,(duplicateCandidates.get(k)||0)+1);}
-  let salesUnits=0,paidUnits=0,unconfirmedUnits=0,excludedUnits=0,ambiguousUnits=0;
+  let salesUnits=0,paidUnits=0,unconfirmedUnits=0,excludedUnits=0,ambiguousUnits=0,possibleDuplicateUnits=0;
   const toCents=v=>Math.round(number(v)*100);
   for(const order of ordersData.orders){
     const skip=excluded.has(order.status);
@@ -207,10 +207,10 @@ function productSales(ordersData,financeData,warehouse){
       if(quantity<=0)continue;
       const gross=number(line.gross)-number(line.discount);
       // Order package identifiers are stable only inside each package. Repeated line IDs are not double-counted.
-      const lineKey=[order.id,line.id||'',barcode,rawSku,quantity,toCents(gross)].join('|');
+      const lineKey=line.sourceId?'source:'+normal(order.number)+'|'+normal(line.sourceId):'package:'+ [order.id,line.id||'',barcode,rawSku,quantity,toCents(gross)].join('|');
       if(seenOrderLines.has(lineKey))continue;
       seenOrderLines.add(lineKey);
-      if(!mapped.has(key))mapped.set(key,{sku:key,name:warehouse?.rows.get(key)?.name||line.name||'',barcodes:new Set(),quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,value:0,details:[],stock:warehouse?.rows.get(key)||null});
+      if(!mapped.has(key))mapped.set(key,{sku:key,name:warehouse?.rows.get(key)?.name||line.name||'',barcodes:new Set(),quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(key)||null});
       const item=mapped.get(key);
       if(barcode)item.barcodes.add(barcode);
       let payment='unavailable',reason='بيانات السداد غير متاحة';
@@ -234,6 +234,7 @@ function productSales(ordersData,financeData,warehouse){
       }
       item.details.push({orderNumber:order.number,date:order.date,status:order.status,barcode,quantity,value:gross,payment,reason});
       if(skip){item.excluded+=quantity;excludedUnits+=quantity;continue;}
+      if((duplicateCandidates.get(normal(order.number)+'|'+barcode)||0)>1&&!line.sourceId){possibleDuplicateUnits+=quantity;item.possibleDuplicateUnits+=quantity;}
       salesUnits+=quantity;item.quantity+=quantity;item.value+=gross;
       if(payment==='confirmed'){item.paid+=quantity;paidUnits+=quantity;}
       else if(payment==='ambiguous'){item.ambiguous+=quantity;ambiguousUnits+=quantity;}
@@ -242,7 +243,7 @@ function productSales(ordersData,financeData,warehouse){
   }
   for(const entry of stockMap){
     const barcode=normal(entry.barcode),raw=normal(entry.sku),sku=warehouse?.rows.has(raw)?raw:warehouse?.rows.has('OGS_'+raw)?'OGS_'+raw:raw;
-    if(!mapped.has(sku))mapped.set(sku,{sku,name:warehouse?.rows.get(sku)?.name||'',barcodes:new Set(),quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,value:0,details:[],stock:warehouse?.rows.get(sku)||null});
+    if(!mapped.has(sku))mapped.set(sku,{sku,name:warehouse?.rows.get(sku)?.name||'',barcodes:new Set(),quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(sku)||null});
     mapped.get(sku).barcodes.add(barcode);
   }
   const rows=[...mapped.values()].map(item=>{
@@ -250,7 +251,7 @@ function productSales(ordersData,financeData,warehouse){
     const stockUnits=stock?(stock.unit==='حبة'?stock.quantity:stock.unit==='كرتون'&&pack>0?stock.quantity*pack:null):null;
     return {...item,barcodes:[...item.barcodes],stock:stock?{unit:stock.unit,quantity:stock.quantity,pack,units:stockUnits}:null,details:item.details.sort((a,b)=>b.date-a.date)};
   }).sort((a,b)=>b.quantity-a.quantity);
-  return {days:ordersData.days,rows,totals:{sold:salesUnits,paid:financeData?paidUnits:null,unconfirmed:financeData?unconfirmedUnits:null,ambiguous:financeData?ambiguousUnits:null,excluded:excludedUnits,amount:rows.reduce((sum,x)=>sum+x.value,0)},finance:{available:Boolean(financeData),complete:Boolean(financeData&&!financeData.limited),paymentOrders:financeData?.payment.length??null,saleRecords:financeData?.sale.length??null},ordersLimited:ordersData.limited,fetchedAt:Date.now(),note:'السداد المؤكد يعني مطابقة السطر المالي وأمر دفع من ترنديول، وليس تأكيد وصول الحوالة إلى الحساب البنكي. غير المؤكد لا يعني متأخر السداد.'};
+  return {days:ordersData.days,rows,totals:{sold:salesUnits,paid:financeData?paidUnits:null,unconfirmed:financeData?unconfirmedUnits:null,ambiguous:financeData?ambiguousUnits:null,excluded:excludedUnits,possibleDuplicateUnits,amount:rows.reduce((sum,x)=>sum+x.value,0)},finance:{available:Boolean(financeData),complete:Boolean(financeData&&!financeData.limited),paymentOrders:financeData?.payment.length??null,saleRecords:financeData?.sale.length??null},ordersLimited:ordersData.limited,fetchedAt:Date.now(),note:'السداد المؤكد يعني مطابقة السطر المالي وأمر دفع من ترنديول، وليس تأكيد وصول الحوالة إلى الحساب البنكي. غير المؤكد لا يعني متأخر السداد.'};
 }
 async function comprehensiveSales(days){
   const [orderData,financeResult,warehouseResult]=await Promise.all([
