@@ -55,3 +55,14 @@ test('today starts at midnight in Saudi Arabia',()=>{
  assert.equal(new Date(start(1,Date.parse('2026-11-03T21:30:00Z'),'today')).toISOString(),'2026-11-03T21:00:00.000Z');
  assert.equal(new Date(start(1,Date.parse('2026-11-03T20:30:00Z'),'today')).toISOString(),'2026-11-02T21:00:00.000Z');
 });
+
+test('order lines use per-unit Trendyol prices for multi-quantity products',async()=>{
+ const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
+ const section=src.slice(src.indexOf('const reportStart='),src.indexOf('// Sales-to-payout reconciliation'));
+ const normal=v=>String(v??'').trim().toUpperCase(),number=v=>Number.isFinite(Number(v))?Number(v):0;
+ const sample={id:'P1',orderNumber:'O1',orderDate:Date.now(),currencyCode:'SAR',status:'DELIVERED',packageGrossAmount:700,packageTotalDiscount:70,lines:[{lineId:42,quantity:2,lineGrossAmount:350,lineTotalDiscount:35,barcode:'B',productName:'صنف'}]};
+ const fn=new Function('orderWindow','normal','number',section+';return orders')(async()=>({result:[sample],limited:false}),normal,number);
+ const result=await fn(1);assert.equal(result.orders[0].lines[0].gross,700);assert.equal(result.orders[0].lines[0].discount,70);assert.equal(result.top[0].amount,630);
+ sample.lines[0].discountDetails=[{lineItemPrice:300},{lineItemPrice:315}];
+ const details=await fn(1);assert.equal(details.top[0].amount,615);
+});

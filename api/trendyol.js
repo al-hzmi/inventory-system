@@ -92,7 +92,16 @@ async function orders(days,period){
     if(normal(x.currencyCode)!=='SAR'||!Number.isFinite(Number(x.orderDate))||Number(x.orderDate)<=0||!Number.isFinite(new Date(Number(x.orderDate)).getTime())){limited=true;return false;}
     return true;
   });
-  const mapped=raw.map(o=>({id:String(o.shipmentPackageId||o.id),number:String(o.orderNumber||''),date:number(o.orderDate),status:normal(o.shipmentPackageStatus||o.status),currency:String(o.currencyCode||'SAR'),gross:number(o.packageGrossAmount),discount:number(o.packageTotalDiscount),amount:number(o.packageGrossAmount)-number(o.packageTotalDiscount),lines:(Array.isArray(o.lines)?o.lines:[]).map((l,i)=>({id:String(l.id||l.orderLineItemId||i),sourceId:l.id||l.orderLineItemId?String(l.id||l.orderLineItemId):null,barcode:normal(l.barcode),sku:normal(l.stockCode),name:String(l.productName||''),quantity:number(l.quantity),gross:number(l.lineGrossAmount),discount:number(l.lineTotalDiscount)}))})).sort((a,b)=>b.date-a.date);
+  const mapped=raw.map(o=>({id:String(o.shipmentPackageId||o.id),number:String(o.orderNumber||''),date:number(o.orderDate),status:normal(o.shipmentPackageStatus||o.status),currency:String(o.currencyCode||'SAR'),gross:number(o.packageGrossAmount),discount:number(o.packageTotalDiscount),amount:number(o.packageGrossAmount)-number(o.packageTotalDiscount),lines:(Array.isArray(o.lines)?o.lines:[]).map((l,i)=>{
+    const quantity=number(l.quantity),unitGross=number(l.lineGrossAmount);
+    const cents=v=>Math.round(number(v)*100);
+    const grossCents=cents(unitGross)*quantity;
+    const detail=Array.isArray(l.discountDetails)?l.discountDetails:[];
+    const itemPricesComplete=Number.isInteger(quantity)&&quantity>0&&detail.length===quantity&&detail.every(d=>d.lineItemPrice!==null&&d.lineItemPrice!==undefined&&String(d.lineItemPrice).trim()!==''&&Number.isFinite(Number(d.lineItemPrice)));
+    const discountCents=itemPricesComplete?grossCents-detail.reduce((sum,d)=>sum+cents(d.lineItemPrice),0):cents(l.lineTotalDiscount)*quantity;
+    const sourceId=l.id||l.orderLineItemId||null;
+    return {id:String(sourceId||i),sourceId:sourceId?String(sourceId):null,barcode:normal(l.barcode),sku:normal(l.stockCode),name:String(l.productName||''),quantity,gross:grossCents/100,discount:discountCents/100};
+  })})).sort((a,b)=>b.date-a.date);
   const excluded=new Set(['CANCELLED','RETURNED','UNSUPPLIED','UNPACKED','UNDELIVERED','AWAITING','VERIFIED']);
   const approved=mapped.filter(x=>!excluded.has(x.status));
   const totals={},byDay={},top={};let pending=0,cancelled=0;
