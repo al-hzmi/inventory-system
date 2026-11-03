@@ -20,3 +20,10 @@ test('pagination follows reported pages and marks a premature empty page incompl
  calls=0;windowFn=new Function('api',section+';return orderWindow')(async()=>{calls++;return calls===1?{content:[{id:1}],totalPages:3}:{content:[],totalPages:3}});
  result=await windowFn(0,10);assert.equal(result.limited,true);assert.equal(calls,2);
 });
+
+test('unidentified financial transactions cannot be treated as a complete reconciliation',async()=>{
+ const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
+ const section=src.slice(src.indexOf('async function financialRecords('),src.indexOf('function productSales('));
+ const read=new Function('financeWindow',section+';return financialRecords')(async(kind)=>({records:kind==='sale'?[{orderNumber:'A',barcode:'B',credit:10}]:[],limited:false}));
+ const result=await read(1);assert.equal(result.limited,true);
+});
