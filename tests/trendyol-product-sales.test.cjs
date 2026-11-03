@@ -59,12 +59,14 @@ test('includes mapped catalog products with zero sales and combines barcode alia
   assert.ok(result.rows.some(x=>x.sku==='230007'&&x.quantity===0));
 });
 
-test('does not double-count the same verified order-line id after package split',()=>{
+test('excludes repeated source identifiers across packages pending verification',()=>{
   const first=makeOrder('P1','DELIVERED',[{...makeLine('LINE-9',4,80),sourceId:'LINE-9'}]);
   const second=makeOrder('P2','DELIVERED',[{...makeLine('LINE-9',4,80),sourceId:'LINE-9'}]);
   first.number='ORDER-9';second.number='ORDER-9';
   const result=summarize({days:7,limited:false,orders:[first,second]},null,null);
-  assert.equal(result.totals.sold,4);
+  assert.equal(result.totals.sold,0);
+  assert.equal(result.totals.possibleDuplicateUnits,8);
+  assert.equal(result.rows.find(x=>x.sku==='230006').details.length,2);
 });
 test('unfulfilled and unknown statuses are never counted as delivered or paid',()=>{
  const data=base();data.orders.push(makeOrder('C','CREATED',[makeLine('C1',4,80)]),makeOrder('E','SHIPPED',[makeLine('E1',3,60)]),makeOrder('F','FUTURE_STATUS',[makeLine('F1',2,40)]));
@@ -106,4 +108,10 @@ test('missing order number cannot establish a payment match',()=>{
  const data=base();data.orders=[makeOrder('A','DELIVERED',[makeLine('A1',5,100)])];data.orders[0].number='';
  const fin={sale:[{orderNumber:'',barcode:'B-A',credit:100,paymentOrderId:99}],payment:[{paymentOrderId:99}],returns:[]};
  const result=summarize(data,fin,null);assert.equal(result.totals.paid,0);assert.equal(result.totals.ambiguous,5);
+});
+
+test('a single financial record cannot be allocated twice to repeated lines in one package',()=>{
+ const data=base(); data.orders=[makeOrder('A','DELIVERED',[makeLine('L1',5,100),makeLine('L2',5,100)])];
+ const result=summarize(data,finance(),null);
+ assert.equal(result.totals.paid,0);assert.equal(result.totals.ambiguous,10);
 });

@@ -171,8 +171,12 @@ function productSales(ordersData,financeData,warehouse){
     for(const row of financeData.returns)returns.add(normal(row.orderNumber)+'|'+normal(row.barcode));
   }
   const mapped=new Map(),seenOrderLines=new Set();
-  const duplicateCandidates=new Map();
-  for(const o of ordersData.orders)for(const l of o.lines){const k=normal(o.number)+'|'+normal(l.barcode);duplicateCandidates.set(k,(duplicateCandidates.get(k)||0)+1);}
+  const duplicateCandidates=new Map(),sourceOccurrences=new Map();
+  for(const o of ordersData.orders)for(const l of o.lines){
+    const k=normal(o.number)+'|'+normal(l.barcode);
+    duplicateCandidates.set(k,(duplicateCandidates.get(k)||0)+1);
+    if(l.sourceId){const source=normal(o.number)+'|'+normal(l.sourceId);sourceOccurrences.set(source,(sourceOccurrences.get(source)||0)+1);}
+  }
   let salesUnits=0,paidUnits=0,unconfirmedUnits=0,excludedUnits=0,ambiguousUnits=0,possibleDuplicateUnits=0;
   const toCents=v=>Math.round(number(v)*100);
   for(const order of ordersData.orders){
@@ -184,13 +188,20 @@ function productSales(ordersData,financeData,warehouse){
       const quantity=number(line.quantity);
       if(quantity<=0)continue;
       const gross=number(line.gross)-number(line.discount);
-      // Order package identifiers are stable only inside each package. Repeated line IDs are not double-counted.
-      const lineKey=line.sourceId?'source:'+normal(order.number)+'|'+normal(line.sourceId):'package:'+ [order.id,line.id||'',barcode,rawSku,quantity,toCents(gross)].join('|');
+      // A line identifier repeated across packages may describe either a split or a duplicate.
+      // Exclude all such occurrences from totals until the source semantics are verified.
+      const repeatedSource=Boolean(line.sourceId&&(sourceOccurrences.get(normal(order.number)+'|'+normal(line.sourceId))||0)>1);
+      const lineKey='package:'+ [order.id,line.sourceId||line.id||'',barcode,rawSku,quantity,toCents(gross)].join('|');
       if(seenOrderLines.has(lineKey))continue;
       seenOrderLines.add(lineKey);
       if(!mapped.has(key))mapped.set(key,{sku:key,name:warehouse?.rows.get(key)?.name||line.name||'',barcodes:new Set(),requested:0,cancelled:0,returned:0,returnReview:false,quantity:0,paid:0,unconfirmed:0,ambiguous:0,excluded:0,possibleDuplicateUnits:0,value:0,details:[],stock:warehouse?.rows.get(key)||null});
       const item=mapped.get(key);
       if(barcode)item.barcodes.add(barcode);
+      if(repeatedSource){
+        possibleDuplicateUnits+=quantity;item.possibleDuplicateUnits+=quantity;
+        item.details.push({orderNumber:order.number,date:order.date,status:order.status,barcode,quantity,value:gross,payment:'ambiguous',reason:'معرّف السطر مكرر؛ لا يمكن تحديد الكمية دون مراجعة'});
+        continue;
+      }
       item.requested+=quantity;
       if(normal(order.status)==='CANCELLED')item.cancelled+=quantity;
       if(normal(order.status)==='RETURNED')item.returned+=quantity;
@@ -202,7 +213,8 @@ function productSales(ordersData,financeData,warehouse){
         const allRecords=sales.get(financialKey)||[];
         const packageRecords=allRecords.filter(r=>String(r.shipmentPackageId||'')===String(order.id));
         const records=packageRecords.length?packageRecords:allRecords;
-        const multiplePackages=(duplicateCandidates.get(financialKey)||0)>1&&!packageRecords.length;
+        // Even within a package, one order/barcode finance record must not pay several lines.
+        const multiplePackages=(duplicateCandidates.get(financialKey)||0)>1;
         const pids=[...new Set(records.map(r=>String(r.paymentOrderId??'')).filter(Boolean))];
         const confirmed=records.length>0&&pids.length===1&&records.every(r=>String(r.paymentOrderId??'')===pids[0])&&payments.has(pids[0]);
         const amountsKnown=records.every(r=>r.credit!==null&&r.credit!==undefined&&String(r.credit).trim()!==''&&Number.isFinite(Number(r.credit)))&&gross>0;
@@ -211,7 +223,7 @@ function productSales(ordersData,financeData,warehouse){
         const hasReturn=returns.has(normal(order.number)+'|'+barcode);
         if(!normal(order.number)||!barcode){payment='ambiguous';reason='رقم الطلب أو الباركود غير متاح للمطابقة';}
         else if(confirmed&&amountMatches&&!hasReturn&&!multiplePackages){payment='confirmed';reason='مطابق لسجل البيع وأمر الدفع والقيمة';}
-        else if(hasReturn||multiplePackages){payment='ambiguous';reason=multiplePackages?'نفس الباركود مكرر بين طرود طلب واحد؛ يلزم مطابقة رقم الطرد':'توجد حركة إرجاع مالية؛ يلزم التدقيق';}
+        else if(hasReturn||multiplePackages){payment='ambiguous';reason=multiplePackages?'باركود مكرر في الطلب؛ يلزم ربط مالي موثوق بكل سطر':'توجد حركة إرجاع مالية؛ يلزم التدقيق';}
         else if(records.length&&(!amountMatches||pids.length>1)){payment='ambiguous';reason='سجل مالي موجود لكن مبلغ السطر أو أمر الدفع غير مطابق';}
         else {payment='unconfirmed';reason=records.length?'لم يظهر أمر دفع مؤكد':'لم تظهر تسوية مؤكدة لهذا السطر';}
       }

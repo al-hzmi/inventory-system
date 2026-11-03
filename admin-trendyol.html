@@ -153,7 +153,7 @@ function renderProductReport(data){
  if(!available)messages.push('بيانات التسويات غير متاحة أو غير مكتملة؛ لا يمكن احتساب المسدد وغير المؤكد بشكل موثوق. '+(data.finance?.error||''));
  else messages.push('الحبة المسددة في التقرير تعني ارتباط السطر المالي بأمر دفع مطابق، وليس تأكيد وصول الحوالة إلى حسابك.');
  if(data.ordersLimited)messages.push('تنبيه: جلب الطلبات وصل حد البيانات؛ الإجماليات جزئية.');
- if(data.totals?.possibleDuplicateUnits>0)messages.push('تنبيه: '+fmt(data.totals.possibleDuplicateUnits)+' حبة ضمن طلبات تحتوي على سطور باركود مكررة دون معرّف سطر ثابت؛ قد يحتاج إجماليها إلى تدقيق.');
+ if(data.totals?.possibleDuplicateUnits>0)messages.push('تنبيه: '+fmt(data.totals.possibleDuplicateUnits)+' حبة مرتبطة بسطور متكررة أو محتملة التكرار؛ قد تكون بعض السطور مستبعدة من الإجماليات حتى مراجعتها.');
 
  $('finance-warning').textContent=messages.join(' ');
  renderProductList();
