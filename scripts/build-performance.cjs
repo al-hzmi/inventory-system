@@ -1,6 +1,7 @@
 /* Build-only compiler. No business data, authentication or appearance changes. */
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto');
 const Babel=require('@babel/standalone'),postcss=require('postcss'),tailwind=require('tailwindcss');
+const customerLocale=require('../customer-localization.js');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'assets/build');fs.mkdirSync(out,{recursive:true});
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const write=(p,s)=>fs.writeFileSync(path.join(root,p),s);
@@ -27,7 +28,7 @@ async function compile(html,label){
  let scripts=0,sourceBytes=0,compiledBytes=0;
  html=html.replace(/<script\b([^>]*\btype=["']text\/babel["'][^>]*)>([\s\S]*?)<\/script>/g,(_,attrs,code)=>{
    if(/\bsrc\s*=/.test(attrs))throw new Error('External JSX needs explicit compilation: '+label);
-   const result=Babel.transform(code,{presets:['env','react'],sourceType:'script',comments:false,compact:true}).code;
+   const result=Babel.transform(code,{presets:['env','react'],plugins:label==='customer'?[customerLocale.babelPlugin]:[],sourceType:'script',comments:false,compact:true}).code;
    scripts++;sourceBytes+=Buffer.byteLength(code);compiledBytes+=Buffer.byteLength(result);
    return `<script defer src="${asset(label,result)}"></script>`;
  });

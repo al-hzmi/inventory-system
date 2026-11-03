@@ -1,0 +1,33 @@
+name: BATCO Customer Showroom — Arabic / English
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - customer.html
+      - customer-localization.js
+      - scripts/build-performance.cjs
+      - tests/customer-showroom-localization.test.cjs
+      - .github/workflows/customer-showroom-localization.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bilingual-showroom:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/customer-showroom-localization.test.cjs
+      - run: node --test tests/v105-customer-catalog-quota.cjs tests/v107-customer-swipe-category-order.cjs tests/v118-employee-shell-freshness.cjs
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/v109-customer-viewport-swipe.cjs
+      - run: npm run build
+      - run: git diff --check

@@ -1,7 +1,7 @@
 /* Cache only the stocktake shell. Never cache API, identity or Firestore traffic. */
 const STOCKTAKE_CACHE='stocktake-shell-v116';
 const RESOURCE_CACHE='batco-static-resources-v116';
-const NAV_CACHE='batco-navigation-shell-v118-fresh-employee';
+const NAV_CACHE='batco-navigation-shell-v118-fresh-employee-showroom-bilingual';
 const IMAGE_CACHE='batco-public-product-images-v103';
 const PAGES=['/admin-branch-presence.html','/branch-presence.html','/branch-stocktake.html','/stocktake.html','/admin-stocktake.html','/stocktake-accountant.html','/accountant-stocktake.html'];
 const ASSETS=['/employee-attendance.js','/batco-scan-pro.js','/branch-scan-audio.js','/branch-barcode-fallback.js','/branch-camera-pro.js','/batco-brand-footer.js','/branch-presence-core.js','/branch-presence.js','/branch-presence-main-launcher.js','/branch-presence-page.css','/branch-presence-admin.css','/branch-presence-admin.js','/branch-presence-entry.js','/branch-presence.css','/branch-stocktake-core.js','/branch-stocktake.js','/branch-stocktake.css','/stocktake-core.js','/stocktake-branches.js','/stocktake-workspace.css','/stocktake-workbook.js','/v71-brand.css','/v56-39-site-identity.js','/assets/batco-logo.svg','/assets/batco-app-icon.svg'];
@@ -99,7 +99,8 @@ self.addEventListener('fetch',event=>{
       // The employee UI is generated from a revisioned source file. A stale
       // index.html points to the old source revision, hiding published changes.
       // Prefer a fresh shell on online launches while retaining offline fallback.
-      if(path==='/index.html'&&cached&&!url.searchParams.has('batco-retry')){
+      if((path==='/index.html'&&cached&&!url.searchParams.has('batco-retry')) ||
+         (path==='/customer.html'&&cached&&!url.searchParams.has('batco-retry'))){
         const network=fetch(request,{cache:'no-cache'});
         event.waitUntil(network.then(async fresh=>{
           if(fresh.ok&&String(fresh.headers.get('content-type')||'').includes('text/html')){
