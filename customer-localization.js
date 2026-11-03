@@ -10,6 +10,14 @@
   'use strict';
   const STORAGE_KEY = 'batco_customer_showroom_language_v1';
   const EN = {
+  "صنف في السلة": "items in cart",
+  "كرتون": "cartons",
+  "صنف": "items",
+  "صنف · اسحب لاستعراض المنتجات": "items · swipe to browse",
+  "— المطلوب ": "— Requested: ",
+  "، الحد المسموح حاليًا ": "; current limit: ",
+  " يوم متبقي": " days left",
+  " ر.س": " SAR",
   "(اختياري)": "Optional",
   "© 2026 تطوير مهند الحزمي": "© 2026 Developed by Mohanad Al-Hazmi",
   "ابحث برقم الصنف أو اسمه في جميع الأقسام...": "Search all categories by item code or product name...",
