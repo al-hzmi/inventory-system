@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:min(59vw,218px);max-width:100%;height:auto;aspect-ratio:900/353;object-fit:contain;display:block;margin:auto}@media(max-width:600px){.v37box img.batco-splash-wordmark{width:min(43vw,178px)}}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style><script src="./customer-localization.js?v=1"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>بوابة عملاء بيت الأواني الطيبة</title><meta name="theme-color" content="#FFFFFF"><style>html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;color:#1c1917}#v37boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:999999}.v37box{text-align:center;padding:24px}.v37box img{width:min(59vw,218px);max-width:100%;height:auto;aspect-ratio:900/353;object-fit:contain;display:block;margin:auto}@media(max-width:600px){.v37box img.batco-splash-wordmark{width:min(43vw,178px)}}.v37err{max-width:440px;margin:auto;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;padding:16px;font-size:13px;line-height:1.8}</style><script src="./customer-localization.js?v=2"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script></head>
 <body><div id="v37boot"><div class="v37box"><img class="batco-splash-wordmark" src="./assets/batco-logo.svg?v=72.0" width="900" height="353" alt="BATCO — شركة بيت الأواني الطيبة"></div></div>
 <script>
 (async function(){
@@ -113,7 +113,7 @@
     html=html.replace(sessionMarker,sessionPatch);
 
     const guestPromptCopy='<div className="ui-eyebrow">خطوة سريعة</div><h2 className="ui-title text-[20px]">اسمك الكريم</h2><p className="ui-subtitle">نحفظ الاسم على هذا الجهاز لتسهيل إعداد الطلب لاحقًا.</p>';
-    const guestPromptCopyNew='<div className="ui-eyebrow">بعد 5 ثوانٍ من التصفح</div><h2 className="ui-title text-[20px]">سجل اسمك للمتابعة</h2><p className="ui-subtitle">اكتب اسمك مرة واحدة فقط، وسيُحفظ على هذا الجهاز لتسهيل التصفح والطلبات لاحقًا.</p>';
+    const guestPromptCopyNew='<div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><div className="ui-eyebrow">بعد 5 ثوانٍ من التصفح</div><h2 className="ui-title text-[20px]">سجل اسمك للمتابعة</h2><p className="ui-subtitle">اكتب اسمك مرة واحدة فقط، وسيُحفظ على هذا الجهاز لتسهيل التصفح والطلبات لاحقًا.</p>';
     if(!html.includes(guestPromptCopy))throw new Error('V41_GUEST_PROMPT_COPY_MARKER');
     html=html.replace(guestPromptCopy,guestPromptCopyNew);
 
@@ -264,10 +264,10 @@
     const customerHeaderBrand='<div className="batco-customer-header-brand" aria-label="شركة بيت الأواني الطيبة"><img className="batco-customer-header-logo" src="./assets/batco-logo.svg?v=83.0" alt="شركة بيت الأواني الطيبة" width="155" height="62"/></div>';
     if(html.includes(customerHeaderLabel))html=html.replace(customerHeaderLabel,customerHeaderBrand);
     else console.warn('[BATCO V82] Customer header anchor changed; keeping portal available.');
-    html=html.replace('</body>','<scr'+'ipt defer src="./batco-brand-footer.js?v=82.0"></scr'+'ipt></body>');
+    html=html.replace('</body>','<scr'+'ipt defer src="./batco-brand-footer.js?v=82.1"></scr'+'ipt></body>');
 
     // BATCO customer SHOWROOM localization — product data and ordering services are untouched.
-    const localeScript='<script src="./customer-localization.js?v=1"></scr'+'ipt>';
+    const localeScript='<script src="./customer-localization.js?v=2"></scr'+'ipt>';
     const localeRegister='<script>if(window.Babel&&window.BatcoCustomerLocale)window.Babel.registerPlugin("batco-customer-ui-locale",window.BatcoCustomerLocale.babelPlugin);</scr'+'ipt>';
     const babelOpen='<scr'+'ipt type="text/babel">';
     const localizedBabelOpen='<scr'+'ipt type="text/babel" data-plugins="batco-customer-ui-locale">';

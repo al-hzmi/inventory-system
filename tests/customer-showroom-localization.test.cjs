@@ -68,3 +68,28 @@ test('showroom runtime and build compiler use the same localization without touc
   assert.ok(admin.includes('CUSTOMER_UI_EN') || admin.includes('Customer'));
   assert.doesNotMatch(shell,/location\.reload\(\)/);
 });
+
+
+test('nested guest labels and product action accessibility translate without changing names',()=>{
+  i18n.apply('en');
+  assert.equal(i18n.text('إضافة بلاط مرايا ديكور لاصق للطلب'),'Add بلاط مرايا ديكور لاصق to Order');
+  const sample="function Header({guestMode,safeProfile}){return <div>{guestMode?'تصفح مباشر':safeProfile.name||'عميل'}</div>}";
+  const code=Babel.transform(sample,{presets:['react'],plugins:[i18n.babelPlugin],sourceType:'script'}).code;
+  assert.match(code,/customerUiText\(["']تصفح مباشر["']\)/);
+  assert.match(code,/safeProfile\.name/);
+  const shell=fs.readFileSync('customer.html','utf8');
+  assert.match(shell,/guestPromptCopyNew=.*CustomerLanguageSwitch/);
+  i18n.apply('ar');
+});
+
+
+test('shared BATCO footer translates only on the customer route',()=>{
+  const vm=require('node:vm');
+  const footer=fs.readFileSync('batco-brand-footer.js','utf8');
+  new vm.Script(footer);
+  assert.match(footer,/isCustomer&&doc\.documentElement\.lang==='en'/);
+  assert.match(footer,/english\?'Customer Portal':'بوابة العملاء'/);
+  assert.match(footer,/if\(isCustomer\)doc\.addEventListener\('batco-customer-locale-change'/);
+  const locale=fs.readFileSync('customer-localization.js','utf8');
+  assert.match(locale,/dispatchEvent\(new Event\('batco-customer-locale-change'\)\)/);
+});

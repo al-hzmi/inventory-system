@@ -30,9 +30,18 @@ const mount=()=>{
  const logo=doc.createElement('img');logo.src='./assets/batco-logo.svg?v=82.0';logo.className='batco-site-footer-logo';logo.width=117;logo.height=46;logo.loading='lazy';logo.decoding='async';logo.alt='BATCO — شركة بيت الأواني الطيبة';
  const rule=doc.createElement('span');rule.className='batco-site-footer-separator';rule.setAttribute('aria-hidden','true');
  const copy=doc.createElement('div');copy.className='batco-site-footer-copy';
- const title=doc.createElement('strong');title.textContent=/\/customer\.html$/i.test(location.pathname)?'بوابة العملاء':'نظام إدارة المخزون';
- const year=doc.createElement('small');year.textContent='© '+new Date().getFullYear()+' · جميع الحقوق محفوظة';
+ const isCustomer=/\/customer\.html$/i.test(location.pathname);
+ const title=doc.createElement('strong');
+ const year=doc.createElement('small');
+ const syncLocale=()=>{
+  const english=isCustomer&&doc.documentElement.lang==='en';
+  title.textContent=isCustomer?(english?'Customer Portal':'بوابة العملاء'):'نظام إدارة المخزون';
+  year.textContent='© '+new Date().getFullYear()+(english?' · All Rights Reserved':' · جميع الحقوق محفوظة');
+  if(isCustomer){footer.style.direction=english?'ltr':'rtl';footer.setAttribute('aria-label',english?'BATCO Brand':'هوية شركة بيت الأواني الطيبة');}
+ };
+ syncLocale();
  copy.append(title,year);row.append(logo,rule,copy);footer.append(row);doc.body.append(footer);
+ if(isCustomer)doc.addEventListener('batco-customer-locale-change',syncLocale);
 };
 if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

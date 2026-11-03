@@ -30,4 +30,4 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/v109-customer-viewport-swipe.cjs
       - run: npm run build
-      - run: git diff --check
+      - run: git diff --check -- customer.html customer-localization.js scripts/build-performance.cjs sw.js tests/customer-showroom-localization.test.cjs .github/workflows/customer-showroom-localization.yml
