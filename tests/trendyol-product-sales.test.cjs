@@ -9,7 +9,9 @@ assert.ok(start>0&&end>start,'productSales source is available');
 const map=[{sku:'230006',barcode:'B-A'},{sku:'230006',barcode:'B-B'},{sku:'230007',barcode:'C'}];
 const normal=v=>String(v??'').trim().toUpperCase();
 const number=v=>Number.isFinite(Number(v))?Number(v):0;
-const summarize=new Function('stockMap','normal','number',source.slice(start,end)+'\nreturn productSales;')(map,normal,number);
+const summarizeRaw=new Function('stockMap','normal','number',source.slice(start,end)+'\nreturn productSales;')(map,normal,number);
+const catalog={rows:new Map([['230006',{name:'صنف'}],['230007',{name:'صنف آخر'}]])};
+const summarize=(orders,finance,warehouse)=>summarizeRaw(orders,finance,warehouse||catalog);
 const makeLine=(id,qty,gross,barcode='B-A')=>({id,barcode,sku:'230006',name:'منتج تجريبي',quantity:qty,gross,discount:0});
 const makeOrder=(id,status,lines)=>({id,number:id,date:Date.now(),status,lines});
 const base=()=>({days:7,limited:false,orders:[makeOrder('A','DELIVERED',[makeLine('A1',5,100)]),makeOrder('B','DELIVERED',[makeLine('B1',3,60)])]});
@@ -114,4 +116,10 @@ test('a single financial record cannot be allocated twice to repeated lines in o
  const data=base(); data.orders=[makeOrder('A','DELIVERED',[makeLine('L1',5,100),makeLine('L2',5,100)])];
  const result=summarize(data,finance(),null);
  assert.equal(result.totals.paid,0);assert.equal(result.totals.ambiguous,10);
+});
+
+test('catalog failure leaves barcode unlinked instead of guessing an internal product',()=>{
+ const result=summarizeRaw(base(),finance(),null);
+ assert.ok(result.rows.some(x=>x.sku==='غير مرتبط: B-A'&&x.quantity===8));
+ assert.ok(!result.rows.some(x=>x.sku==='230006'));
 });

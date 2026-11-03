@@ -27,3 +27,12 @@ test('unidentified financial transactions cannot be treated as a complete reconc
  const read=new Function('financeWindow',section+';return financialRecords')(async(kind)=>({records:kind==='sale'?[{orderNumber:'A',barcode:'B',credit:10}]:[],limited:false}));
  const result=await read(1);assert.equal(result.limited,true);
 });
+
+test('report retains all fetched orders for client-side paging',async()=>{
+ const fs=require('node:fs'),src=fs.readFileSync(require.resolve('../api/trendyol.js'),'utf8');
+ const section=src.slice(src.indexOf('async function comprehensiveSales('),src.indexOf('module.exports='));
+ const expected=Array.from({length:100},(_,i)=>({number:String(i)}));
+ const fn=new Function('orders','financialRecords','jeddah','productSales',section+';return comprehensiveSales')(
+  async()=>({orders:expected,limited:false}),async()=>({limited:false}),async()=>({}),()=>({finance:{}}));
+ const result=await fn(7);assert.equal(result.orderData.orders.length,100);assert.equal(result.orderData.ordersTotal,100);
+});

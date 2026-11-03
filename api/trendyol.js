@@ -144,6 +144,8 @@ function productSales(ordersData,financeData,warehouse){
   const excluded=new Set(['CANCELLED','RETURNED','UNSUPPLIED','UNPACKED','UNDELIVERED','AWAITING','VERIFIED']);
   const byBarcode=new Map(),bySku=new Map();
   const candidates=raw=>{
+    // Without the catalog, OGS aliases and internal identity cannot be verified.
+    if(!warehouse?.rows)return [];
     const bare=raw.startsWith('OGS_')?raw.slice(4):raw, prefixed='OGS_'+bare;
     if(warehouse?.rows.has(bare)&&warehouse?.rows.has(prefixed))return [bare,prefixed];
     if(warehouse?.rows.has(raw))return [raw];
@@ -259,10 +261,10 @@ async function comprehensiveSales(days){
     jeddah().then(value=>({value})).catch(e=>({error:String(e.message||'').slice(0,120)}))
   ]);
   const result=productSales(orderData,financeResult.value&&!financeResult.value.limited&&!orderData.limited?financeResult.value:null,warehouseResult.value||null);
-  result.orderData={...orderData,orders:orderData.orders.slice(0,75),ordersTotal:orderData.orders.length};
-  result.finance.error=financeResult.error?'تعذر قراءة سجلات التسوية من ترنديول.':(financeResult.value?.limited?'بيانات التسويات تجاوزت حد القراءة':'');
+  result.orderData={...orderData,orders:orderData.orders,ordersTotal:orderData.orders.length};
+  result.finance.error=financeResult.error?'تعذر قراءة سجلات التسوية من ترنديول.':(financeResult.value?.limited?'بيانات التسويات ناقصة أو تفتقر إلى معرّفات موثوقة':'');
   result.warehouseAvailable=Boolean(warehouseResult.value);
-  result.warehouseError=warehouseResult.error||'';
+  result.warehouseError=warehouseResult.error?'تعذر التحقق من دليل الأصناف':'';
   return result;
 }
 
