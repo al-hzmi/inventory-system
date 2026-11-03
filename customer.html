@@ -307,7 +307,11 @@ function CustomerLocalizedRoot(){
       ['<div className="flex items-center gap-2"><div className="hidden sm:block text-left">','<div className="flex items-center gap-2"><CustomerLanguageSwitch/><div className="hidden sm:block text-left">'],
       ['<div className="max-w-[900px] mx-auto p-4"><b>اعتماد طلب الشراء</b></div>','<div className="max-w-[900px] mx-auto p-4 flex items-center justify-between gap-3"><b>اعتماد طلب الشراء</b><CustomerLanguageSwitch/></div>'],
       ['<div className="w-full max-w-[500px] ui-panel fade-in">\n      <div className="ui-panel-head">','<div className="w-full max-w-[500px] ui-panel fade-in">\n      <div className="ui-panel-head"><div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div>'],
-      ['<div className="ui-panel-head"><div className="ui-success-dot"><Icon name="check"','<div className="ui-panel-head"><div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><div className="ui-success-dot"><Icon name="check"']
+      ['<div className="ui-panel-head"><div className="ui-success-dot"><Icon name="check"','<div className="ui-panel-head"><div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><div className="ui-success-dot"><Icon name="check"'],
+      ['<div className="max-w-[520px] mx-auto">\n    <button type="button" onClick={onBack}', '<div className="max-w-[520px] mx-auto">\n     <div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><button type="button" onClick={onBack}'],
+      ['<div className="w-full max-w-[500px]">\n      <button type="button" onClick={onBack}', '<div className="w-full max-w-[500px]">\n      <div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><button type="button" onClick={onBack}'],
+      ['<div className="flex items-center justify-between mb-4">\n        <button onClick={()=>{stop();onBack()}}', '<div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><div className="flex items-center justify-between mb-4">\n        <button onClick={()=>{stop();onBack()}}'],
+      ['<div className="w-full max-w-[440px] ui-panel fade-in">', '<div className="w-full max-w-[440px] ui-panel fade-in"><div className="flex justify-end p-2"><CustomerLanguageSwitch/></div>']
     ];
     for(const [before,after] of switchAnchors){
       if(!html.includes(before))throw new Error('CUSTOMER_LOCALE_SWITCH_ANCHOR_'+before.slice(0,32));
@@ -327,6 +331,7 @@ html[dir="ltr"] .customer-locale-search-icon{left:1rem;right:auto}
 html[dir="ltr"] .customer-locale-search-input{padding-left:3rem;padding-right:1rem}
 html[dir="ltr"] .customer-product-rail{direction:ltr}
 html[dir="ltr"] .ui-modal,html[dir="ltr"] input,html[dir="ltr"] textarea{text-align:start}
+@media(max-width:430px){.batco-customer-header-brand>div{display:none}}
 @media(max-width:390px){.batco-locale-switch button{padding:0 5px;font-size:10px}.batco-locale-switch{gap:1px}}
 </style>`;
     html=html.replace('</head>',localeCss+'</head>');
