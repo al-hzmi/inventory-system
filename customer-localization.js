@@ -229,7 +229,52 @@
   "إضافة إلى السلة": "Add to Cart",
   "الطلب": "Order",
   "أي تعليمات إضافية...": "Any additional instructions...",
-  "اكتب اسم الشركة أو المؤسسة": "Enter your company or organization name"
+  "اكتب اسم الشركة أو المؤسسة": "Enter your company or organization name",
+  "أسماء الفروع غير مكتملة.": "Please complete all branch names.",
+  "أسماء الفروع يجب أن تكون مختلفة.": "Each branch must have a unique name.",
+  "اختر رمزًا جديدًا مختلفًا.": "Choose a different PIN.",
+  "اسمح باستخدام الكاميرا لإكمال التسجيل.": "Allow camera access to complete registration.",
+  "اكتب اسم الشركة أو المؤسسة.": "Enter your company or organization name.",
+  "اكتب اسم الفرع بشكل واضح.": "Enter a clear branch name.",
+  "الحد الأعلى 20 فرعًا.": "You can add up to 20 branches.",
+  "الحساب موجود في المصادقة لكن ملف العميل غير مكتمل. تواصل مع الإدارة.": "This account is registered but its customer profile is incomplete. Contact BATCO.",
+  "السلة فارغة.": "Your cart is empty.",
+  "الكاميرا جاهزة — اضغط التقاط والمتابعة": "Camera ready — tap Capture and Continue",
+  "تأكيد الرمز الجديد غير مطابق.": "New PIN confirmation does not match.",
+  "تحقق من رقم الجوال وحاول مرة أخرى.": "Check your mobile number and try again.",
+  "تحقق من رقم الجوال.": "Check your mobile number.",
+  "تعذر الاتصال بخدمة تسجيل الدخول. تحقق من الشبكة وحاول مرة أخرى.": "Could not connect to sign-in. Check your connection and try again.",
+  "تعذر تحميل بيانات المعرض.": "Unable to load the product catalog.",
+  "تعذر تحميل حساب العميل.": "Unable to load your account.",
+  "تعذر تشغيل الكاميرا على هذا الجهاز.": "Could not start the camera on this device.",
+  "تعذر حفظ الفرع. حاول مرة أخرى.": "Unable to save the branch. Please try again.",
+  "تغير المتاح لبعض الأصناف. عدّل الكمية ثم أعد الاعتماد.": "Availability changed for some items. Adjust quantities and try again.",
+  "تم إيقاف المحاولات مؤقتًا للحماية. حاول بعد قليل.": "Sign-in attempts have been temporarily limited. Please try again later.",
+  "تم إيقاف المحاولات مؤقتًا. حاول بعد 15 دقيقة.": "Too many attempts. Please try again in 15 minutes.",
+  "تم تحديث طلب المنتج.": "Item quantity updated.",
+  "خدمة تسجيل الدخول غير مفعّلة حاليًا.": "Sign-in is currently unavailable.",
+  "رقم الجوال أو رمز الدخول غير صحيح.": "Incorrect mobile number or PIN.",
+  "رمز الدخول يجب أن يتكون من 6 أرقام.": "Your PIN must contain six digits.",
+  "رمز الدخول يجب أن يكون 6 أرقام.": "Your PIN must be six digits.",
+  "لتبسيط الطلب، اعتمد الطلب مباشرة. سيتم حفظ بياناتك تلقائيًا على هذا الجهاز.": "Submit the order directly. Your details will be saved on this device.",
+  "لم يتم العثور على كاميرا أمامية.": "No front-facing camera was found.",
+  "هذا الجهاز غير مصرح له بالدخول إلى الحساب. تواصل مع الإدارة.": "This device is not authorized for this account. Contact BATCO.",
+  "هذا الحساب لم يعد متاحًا. تواصل مع الإدارة عند الحاجة.": "This account is no longer available. Contact BATCO if you need assistance.",
+  "هذا الحساب موقوف حاليًا. تواصل مع الإدارة.": "This account is currently suspended. Contact BATCO.",
+  "يجب أن يكون الرمز الحالي والجديد 6 أرقام.": "The current and new PINs must both contain six digits.",
+  "يوجد حساب مسجل بهذا الرقم بالفعل. اختر «لدي حساب».": "An account already exists for this number. Select I Have an Account.",
+  "خدمة إنشاء الحسابات غير مفعّلة في Firebase. فعّل Email/Password من Authentication ثم حاول مرة أخرى.": "Account registration is temporarily unavailable. Contact BATCO support.",
+  "تعذر تجهيز معرّف الحساب الداخلي. تم تصحيح هذه المشكلة في النسخة الجديدة؛ حدّث الصفحة وحاول مرة أخرى.": "Unable to prepare the account identifier. Refresh and try again.",
+  "رمز الدخول غير مقبول حسب سياسة Firebase الحالية. استخدم 6 أرقام مختلفة مؤقتًا أو راجع سياسة كلمات المرور.": "The PIN does not meet the current security requirements. Try a different six-digit PIN.",
+  "تعذر الوصول إلى خدمة الحسابات الآن. تحقق من الاتصال ثم حاول مرة أخرى.": "Account services are unavailable. Check your connection and try again.",
+  "تم إيقاف إنشاء الحسابات مؤقتًا بسبب كثرة المحاولات. انتظر قليلًا ثم حاول مرة أخرى.": "Account creation is temporarily limited. Please try again later.",
+  "نطاق الموقع غير مصرح له في Firebase Authentication. أضف نطاق Vercel ضمن Authorized domains.": "Sign-in is unavailable for this domain. Contact BATCO support.",
+  "تم إنشاء بيانات الدخول، لكن قواعد Firestore تمنع إنشاء ملف العميل. يلزم السماح لمجموعة customers للمستخدم المسجل.": "Your sign-in details were created, but the customer profile could not be saved. Contact BATCO support.",
+  "إعداد قاعدة البيانات غير مكتمل لهذه العملية. راجع Firestore ثم أعد المحاولة.": "This service is not configured correctly. Contact BATCO support.",
+  "نجح إنشاء بيانات الدخول لكن تعذر حفظ ملف العميل في قاعدة البيانات.": "Sign-in details were created, but the customer profile could not be saved.",
+  "تعذر إنشاء الحساب بسبب إعداد تقني غير متوقع.": "Unable to create the account due to a technical issue.",
+  "وتعذر تنظيف حساب المصادقة تلقائيًا؛ راجع Firebase Authentication.": "Automatic account cleanup failed. Contact BATCO support.",
+  "راجع Firebase Authentication قبل إعادة المحاولة.": "Contact BATCO support before trying again."
 };
   const AR = Object.freeze(Object.fromEntries(Object.keys(EN).map(key => [key, key])));
   const dictionaries = Object.freeze({ ar: AR, en: EN });
@@ -282,6 +327,14 @@
     const trailing = value.match(/\s*$/)?.[0] || '';
     const core = value.trim();
     if (Object.prototype.hasOwnProperty.call(EN, core)) return leading + EN[core] + trailing;
+    const codeAt = core.indexOf(' (رمز: ');
+    if (codeAt > 0 && Object.prototype.hasOwnProperty.call(EN, core.slice(0,codeAt))) {
+      const translated = EN[core.slice(0,codeAt)];
+      const detail = core.slice(codeAt).replace(' (رمز: ', ' (Code: ')
+        .replace(' وتعذر تنظيف حساب المصادقة تلقائيًا؛ راجع Firebase Authentication.', ' Automatic account cleanup failed. Contact BATCO support.')
+        .replace(' راجع Firebase Authentication قبل إعادة المحاولة.', ' Contact BATCO support before trying again.');
+      return leading + translated + detail + trailing;
+    }
     for (const [pattern, replacement] of patterns) {
       if (pattern.test(core)) return leading + core.replace(pattern, replacement) + trailing;
     }
