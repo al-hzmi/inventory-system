@@ -81,3 +81,15 @@ test('nested guest labels and product action accessibility translate without cha
   assert.match(shell,/guestPromptCopyNew=.*CustomerLanguageSwitch/);
   i18n.apply('ar');
 });
+
+
+test('shared BATCO footer translates only on the customer route',()=>{
+  const vm=require('node:vm');
+  const footer=fs.readFileSync('batco-brand-footer.js','utf8');
+  new vm.Script(footer);
+  assert.match(footer,/isCustomer&&doc\.documentElement\.lang==='en'/);
+  assert.match(footer,/english\?'Customer Portal':'بوابة العملاء'/);
+  assert.match(footer,/if\(isCustomer\)doc\.addEventListener\('batco-customer-locale-change'/);
+  const locale=fs.readFileSync('customer-localization.js','utf8');
+  assert.match(locale,/dispatchEvent\(new Event\('batco-customer-locale-change'\)\)/);
+});

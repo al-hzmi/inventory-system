@@ -314,6 +314,7 @@
   }
 
   function apply(locale, persist = false) {
+    const previous = active;
     active = locale === 'en' ? 'en' : 'ar';
     if (persist) {
       try { localStorage.setItem(STORAGE_KEY, active); } catch (_) {}
@@ -322,6 +323,9 @@
       document.documentElement.lang = active;
       document.documentElement.dir = active === 'ar' ? 'rtl' : 'ltr';
       document.title = active === 'en' ? 'BATCO | Product Catalog' : 'بوابة عملاء بيت الأواني الطيبة';
+      if (previous !== active && typeof document.dispatchEvent === 'function' && typeof Event === 'function') {
+        document.dispatchEvent(new Event('batco-customer-locale-change'));
+      }
     }
     return active;
   }
