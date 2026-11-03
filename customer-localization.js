@@ -10,6 +10,7 @@
   'use strict';
   const STORAGE_KEY = 'batco_customer_showroom_language_v1';
   const EN = {
+  "موظف": "Employee",
   "المخفضة": "Discounted Products",
   "الأواني المنزلية": "Homeware",
   "البرطمان": "Jars",
@@ -196,7 +197,7 @@
   "يُستخدم لتسجيل الدخول فقط، ولا نرسل رسائل SMS.": "Used for sign-in only. We do not send SMS messages.",
   "الرئيسية": "Home",
   "السلة": "Cart",
-  "تصفح مباشر": "Guest Browsing",
+  "تصفح مباشر": "Guest",
   "عميل": "Customer",
   "تم التقاط الصورة بنجاح": "Photo Captured Successfully",
   "تعذر التقاط الصورة. حاول مرة أخرى.": "Unable to capture the photo. Please try again.",
@@ -334,6 +335,7 @@
     [/^قسم (.+)$/, (_match, name) => (EN[name]||name)+' category'],
     [/^عرض صورة (.+)$/, 'View image of $1'],
     [/^إضافة (.+) للسلة$/, 'Add $1 to cart'],
+    [/^إضافة (.+) للطلب$/, 'Add $1 to Order'],
     [/^ابحث داخل (.+)\.\.\.$/, (_match, name) => 'Search within '+(EN[name]||name)+'...'],
     [/^تم الوصول للحد الأقصى المسموح لهذا الصنف: (.+) كرتون\.$/, 'Maximum permitted quantity: $1 cartons.'],
     [/^تم حفظ (.+) كمسودة\.$/, 'Draft $1 saved.'],
@@ -368,6 +370,16 @@
     const uiAttrs = new Set(['placeholder', 'title', 'aria-label', 'aria-description', 'label', 'hint', 'note']);
     const call = node => t.callExpression(t.identifier('customerUiText'), [node]);
     const localizeBranch = node => {
+      if (t.isConditionalExpression(node)) {
+        node.consequent = localizeBranch(node.consequent);
+        node.alternate = localizeBranch(node.alternate);
+        return node;
+      }
+      if (t.isLogicalExpression(node)) {
+        node.left = localizeBranch(node.left);
+        node.right = localizeBranch(node.right);
+        return node;
+      }
       if (t.isStringLiteral(node) && arabic.test(node.value)) return call(node);
       if (t.isTemplateLiteral(node) && node.quasis.some(q => arabic.test(q.value.cooked || ''))) return call(node);
       if (t.isBinaryExpression(node) && [node.left, node.right].some(x => t.isStringLiteral(x) && arabic.test(x.value))) return call(node);

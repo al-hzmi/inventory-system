@@ -113,7 +113,7 @@
     html=html.replace(sessionMarker,sessionPatch);
 
     const guestPromptCopy='<div className="ui-eyebrow">خطوة سريعة</div><h2 className="ui-title text-[20px]">اسمك الكريم</h2><p className="ui-subtitle">نحفظ الاسم على هذا الجهاز لتسهيل إعداد الطلب لاحقًا.</p>';
-    const guestPromptCopyNew='<div className="ui-eyebrow">بعد 5 ثوانٍ من التصفح</div><h2 className="ui-title text-[20px]">سجل اسمك للمتابعة</h2><p className="ui-subtitle">اكتب اسمك مرة واحدة فقط، وسيُحفظ على هذا الجهاز لتسهيل التصفح والطلبات لاحقًا.</p>';
+    const guestPromptCopyNew='<div className="flex justify-end mb-2"><CustomerLanguageSwitch/></div><div className="ui-eyebrow">بعد 5 ثوانٍ من التصفح</div><h2 className="ui-title text-[20px]">سجل اسمك للمتابعة</h2><p className="ui-subtitle">اكتب اسمك مرة واحدة فقط، وسيُحفظ على هذا الجهاز لتسهيل التصفح والطلبات لاحقًا.</p>';
     if(!html.includes(guestPromptCopy))throw new Error('V41_GUEST_PROMPT_COPY_MARKER');
     html=html.replace(guestPromptCopy,guestPromptCopyNew);
 

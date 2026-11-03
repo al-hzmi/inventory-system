@@ -68,3 +68,16 @@ test('showroom runtime and build compiler use the same localization without touc
   assert.ok(admin.includes('CUSTOMER_UI_EN') || admin.includes('Customer'));
   assert.doesNotMatch(shell,/location\.reload\(\)/);
 });
+
+
+test('nested guest labels and product action accessibility translate without changing names',()=>{
+  i18n.apply('en');
+  assert.equal(i18n.text('إضافة بلاط مرايا ديكور لاصق للطلب'),'Add بلاط مرايا ديكور لاصق to Order');
+  const sample="function Header({guestMode,safeProfile}){return <div>{guestMode?'تصفح مباشر':safeProfile.name||'عميل'}</div>}";
+  const code=Babel.transform(sample,{presets:['react'],plugins:[i18n.babelPlugin],sourceType:'script'}).code;
+  assert.match(code,/customerUiText\(["']تصفح مباشر["']\)/);
+  assert.match(code,/safeProfile\.name/);
+  const shell=fs.readFileSync('customer.html','utf8');
+  assert.match(shell,/guestPromptCopyNew=.*CustomerLanguageSwitch/);
+  i18n.apply('ar');
+});
