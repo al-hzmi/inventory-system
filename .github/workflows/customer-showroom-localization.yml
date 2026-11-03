@@ -27,7 +27,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: node --test tests/customer-showroom-localization.test.cjs
       - run: node --test tests/v105-customer-catalog-quota.cjs tests/v107-customer-swipe-category-order.cjs tests/v118-employee-shell-freshness.cjs
+      - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/v109-customer-viewport-swipe.cjs
-      - run: npm run build
       - run: git diff --check
