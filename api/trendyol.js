@@ -209,7 +209,8 @@ function productSales(ordersData,financeData,warehouse){
         const recordGross=records.reduce((sum,r)=>sum+number(r.credit),0);
         const amountMatches=amountsKnown&&toCents(recordGross)===toCents(gross);
         const hasReturn=returns.has(normal(order.number)+'|'+barcode);
-        if(confirmed&&amountMatches&&!hasReturn&&!multiplePackages){payment='confirmed';reason='مطابق لسجل البيع وأمر الدفع والقيمة';}
+        if(!normal(order.number)||!barcode){payment='ambiguous';reason='رقم الطلب أو الباركود غير متاح للمطابقة';}
+        else if(confirmed&&amountMatches&&!hasReturn&&!multiplePackages){payment='confirmed';reason='مطابق لسجل البيع وأمر الدفع والقيمة';}
         else if(hasReturn||multiplePackages){payment='ambiguous';reason=multiplePackages?'نفس الباركود مكرر بين طرود طلب واحد؛ يلزم مطابقة رقم الطرد':'توجد حركة إرجاع مالية؛ يلزم التدقيق';}
         else if(records.length&&(!amountMatches||pids.length>1)){payment='ambiguous';reason='سجل مالي موجود لكن مبلغ السطر أو أمر الدفع غير مطابق';}
         else {payment='unconfirmed';reason=records.length?'لم يظهر أمر دفع مؤكد':'لم تظهر تسوية مؤكدة لهذا السطر';}
@@ -244,7 +245,7 @@ async function comprehensiveSales(days){
   ]);
   const result=productSales(orderData,financeResult.value&&!financeResult.value.limited&&!orderData.limited?financeResult.value:null,warehouseResult.value||null);
   result.orderData={...orderData,orders:orderData.orders.slice(0,75),ordersTotal:orderData.orders.length};
-  result.finance.error=financeResult.error||(financeResult.value?.limited?'بيانات التسويات تجاوزت حد القراءة':'');
+  result.finance.error=financeResult.error?'تعذر قراءة سجلات التسوية من ترنديول.':(financeResult.value?.limited?'بيانات التسويات تجاوزت حد القراءة':'');
   result.warehouseAvailable=Boolean(warehouseResult.value);
   result.warehouseError=warehouseResult.error||'';
   return result;

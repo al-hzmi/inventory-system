@@ -102,3 +102,8 @@ test('separates requested, cancelled and returned packages while flagging a fina
  assert.equal(row.requested,11);assert.equal(row.cancelled,2);assert.equal(row.returned,1);
  assert.equal(row.quantity,8);assert.equal(row.returnReview,true);assert.equal(row.paid,0);assert.equal(row.ambiguous,5);
 });
+test('missing order number cannot establish a payment match',()=>{
+ const data=base();data.orders=[makeOrder('A','DELIVERED',[makeLine('A1',5,100)])];data.orders[0].number='';
+ const fin={sale:[{orderNumber:'',barcode:'B-A',credit:100,paymentOrderId:99}],payment:[{paymentOrderId:99}],returns:[]};
+ const result=summarize(data,fin,null);assert.equal(result.totals.paid,0);assert.equal(result.totals.ambiguous,5);
+});
