@@ -269,8 +269,10 @@
     // BATCO customer SHOWROOM localization — product data and ordering services are untouched.
     const localeScript='<script src="./customer-localization.js?v=1"></scr'+'ipt>';
     const localeRegister='<script>if(window.Babel&&window.BatcoCustomerLocale)window.Babel.registerPlugin("batco-customer-ui-locale",window.BatcoCustomerLocale.babelPlugin);</scr'+'ipt>';
-    if(!html.includes('<script type="text/babel">'))throw new Error('CUSTOMER_LOCALE_BABEL_ANCHOR');
-    html=html.replace('<script type="text/babel">',localeScript+localeRegister+'<script type="text/babel" data-plugins="batco-customer-ui-locale">');
+    const babelOpen='<scr'+'ipt type="text/babel">';
+    const localizedBabelOpen='<scr'+'ipt type="text/babel" data-plugins="batco-customer-ui-locale">';
+    if(!html.includes(babelOpen))throw new Error('CUSTOMER_LOCALE_BABEL_ANCHOR');
+    html=html.replace(babelOpen,localeScript+localeRegister+localizedBabelOpen);
 
     const languageComponents=String.raw`
 const CustomerLanguageContext=React.createContext(null);
