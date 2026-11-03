@@ -1,0 +1,27 @@
+name: Customer Admin Arabic-English Localization
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - admin-dashboard.html
+      - tests/customer-admin-localization.test.cjs
+      - .github/workflows/customer-admin-localization.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bilingual-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/customer-admin-localization.test.cjs
+      - run: git diff --check
+      - run: npm run build
