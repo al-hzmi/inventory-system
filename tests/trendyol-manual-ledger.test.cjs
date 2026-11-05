@@ -40,3 +40,8 @@ test('editing allocation updates remaining balance while retaining audit history
  assert.equal(state(events).deposits[0].remaining,130000);assert.equal(state(events).allocations[0].quantity,3);assert.equal(events.length,3);
  assert.throws(()=>apply(events,{id:'edit-allocation-222',type:'edit',allocationId:first.id,quantity:3,amount:'1600'}),/أكبر من المبلغ/);
 });
+
+test('historical paid quantities are saved without inventing a payment amount',()=>{
+ const entry={id:'historic-230118-20260909',type:'historical',date:'2026-09-09',sku:'OGS_230118',quantity:1};const saved=apply([],entry).events;
+ assert.equal(state(saved).historical[0].quantity,1);assert.equal(Object.hasOwn(saved[0],'amount'),false);assert.equal(apply(saved,entry).duplicate,true);
+});
