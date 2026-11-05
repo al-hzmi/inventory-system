@@ -38,7 +38,7 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 .subnav{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}.subnav a{border:1px solid var(--line);border-radius:11px;padding:10px 15px;background:#fff;font-size:12px;font-weight:700}
 .subnav a:focus-visible,.btn:focus-visible{outline:2px solid #111}.subnav a:hover{background:#fafafa}
 .report-notice{padding:13px 15px;border-radius:13px;border:1px solid #e7d7ac;background:#fffaf0;color:#7d5a0a;line-height:1.9;margin:14px 0;font-size:12px}
-.product-line{cursor:pointer}.product-line:hover{background:#fafafa}.product-line:focus-visible{outline:2px solid #333}
+.group-head th{background:#e1eaf1;color:#222;text-align:center;font-weight:700}.product-line{cursor:pointer}.product-line:hover{background:#fafafa}.product-line:focus-visible{outline:2px solid #333}
 .report-modal{position:fixed;inset:0;z-index:100;background:#0009;display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:4vh 12px}
 .report-dialog{width:min(860px,100%);max-height:92vh;overflow:auto;border-radius:20px;background:#fff;padding:23px;box-shadow:0 30px 70px #0003}
 .report-dialog .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -51,7 +51,8 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 @media(max-width:600px){
 .tabbar{display:grid;grid-template-columns:1fr 1fr;overflow:visible}.tabbar button{white-space:normal}
 .mobile-list{border:0;overflow:visible}.mobile-list table,.mobile-list tbody{display:block;min-width:0}.mobile-list thead{display:none}.mobile-list tr:not(.empty-row){display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.mobile-list td{display:flex;flex-direction:column;gap:3px;border:0;padding:4px;min-width:0;overflow-wrap:anywhere;font-size:14px}.mobile-list td:before{color:#777;font-size:12px}.orders-list td:nth-child(1):before,.detail-list td:nth-child(1):before{content:'رقم الطلب'}.orders-list td:nth-child(2):before,.detail-list td:nth-child(2):before{content:'التاريخ'}.orders-list td:nth-child(3):before{content:'الحالة'}.orders-list td:nth-child(4):before{content:'القيمة'}.orders-list td:nth-child(5){grid-column:1/-1}.orders-list td:nth-child(5):before{content:'الأصناف'}.detail-list td:nth-child(3):before{content:'الباركود'}.detail-list td:nth-child(4):before{content:'الكمية'}.detail-list td:nth-child(5):before{content:'الحالة'}.detail-list td:nth-child(6):before{content:'السداد'}.detail-list td:nth-child(7){grid-column:1/-1}.detail-list td:nth-child(7):before{content:'الملاحظة'}.top-list td:nth-child(1):before{content:'الباركود'}.top-list td:nth-child(2):before{content:'الصنف'}.top-list td:nth-child(3):before{content:'الوحدات المطلوبة'}.top-list td:nth-child(4):before{content:'قيمة الطلبات'}
-.product-table-wrap{border:0;overflow:visible}.product-table-wrap table,.product-table-wrap tbody{display:block;min-width:0;width:100%}.product-table-wrap thead{display:none}.product-table-wrap tr.product-line{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;padding:14px;margin:10px 0;background:#fff;border:1px solid #e6e6e6;border-radius:14px}.product-table-wrap tr.product-line td{display:flex;flex-direction:column;gap:3px;border:0;padding:4px;min-width:0;overflow-wrap:anywhere;font-size:14px}.product-table-wrap tr.product-line td:nth-child(2){grid-column:1/-1}.product-table-wrap tr.product-line td:before{color:#777;font-size:12px}.product-table-wrap td:nth-child(1):before{content:'رقم الصنف'}.product-table-wrap td:nth-child(2):before{content:'الصنف والباركود'}.product-table-wrap td:nth-child(3):before{content:'المطلوبة'}.product-table-wrap td:nth-child(4):before{content:'المسلّمة'}.product-table-wrap td:nth-child(5):before{content:'مسجل يدويًا — كل الفترات'}.product-table-wrap td:nth-child(6):before{content:'المتبقي'}.product-table-wrap td:nth-child(7){grid-column:1/-1}.product-table-wrap td:nth-child(7) button{min-width:48px}
+ .product-table-wrap{overflow:visible}.product-table-wrap table{min-width:0;table-layout:fixed;width:100%}.product-table-wrap th,.product-table-wrap td{padding:8px 2px;font-size:12px;text-align:center;overflow-wrap:anywhere}.product-table-wrap th:first-child,.product-table-wrap td:first-child{width:32%}.product-table-wrap .btn{min-width:32px;padding:7px 4px}.product-table-wrap .controls{display:flex;flex-wrap:nowrap;gap:2px;justify-content:center}
+
 }
 </style>
 </head>
@@ -85,9 +86,9 @@ table{border-collapse:collapse;min-width:790px;width:100%;font-size:12px}th,td{p
 <div class="head" id="product-section"><div><h2>مبيعات الأصناف والسداد</h2><p class="lede">شاهد الكميات المطلوبة وسجّل المدفوع لكل صنف باستخدام + و−.</p></div></div>
 <div id="finance-warning" class="report-notice">جارٍ تحميل بيانات الطلبات.</div>
 <section class="card" style="margin-top:14px">
-<div class="product-tools"><input id="product-search" class="field" type="search" placeholder="بحث برقم الصنف أو الباركود أو الاسم أو الطلب" aria-label="بحث عن صنف في تقرير المبيعات"><div class="controls"><button class="btn primary" id="all-products">الكل</button><button class="btn" id="size500">500 مل</button><button class="btn" id="size750">750 مل</button></div></div>
+<div class="product-tools"><input id="product-search" class="field" type="search" placeholder="ابحث عن رقم الصنف أو اسمه" aria-label="بحث عن صنف"></div>
 <p id="product-count" class="note"></p>
-<div class="tablewrap product-table-wrap"><table><thead><tr><th>رقم الصنف</th><th>اسم الصنف / الباركودات</th><th>الكمية المطلوبة</th><th>تم تسليمها</th><th>المدفوع يدويًا</th><th>المتبقي</th><th>تعديل المدفوع</th></tr></thead><tbody id="product-table"><tr><td colspan="7" class="empty">جارٍ تجهيز التقرير...</td></tr></tbody></table></div>
+<div class="tablewrap product-table-wrap"><table><thead><tr><th>رقم الصنف</th><th>المطلوب</th><th>المدفوع</th><th>المتبقي</th><th>تعديل</th></tr></thead><tbody id="product-table"><tr><td colspan="5" class="empty">جارٍ تجهيز التقرير...</td></tr></tbody></table></div>
 <div id="products-paging" class="paging"></div>
 <p class="note">المدفوع عدد تسجّله بنفسك، وتعديله لا يغيّر كميات المخزون.</p>
 </section>
@@ -137,9 +138,6 @@ $('logout').onclick=async()=>{try{await request('logout',{action:'logout'});}fin
 $('refresh').onclick=refresh;
 
 $('product-search').addEventListener('input',()=>{productPage=0;renderProductList();});
-for(const [button,filter] of [['all-products','all'],['size500','500مل'],['size750','750مل']]){
- $(button).addEventListener('click',()=>{productFilter=filter;productPage=0;for(const [other,f] of [['all-products','all'],['size500','500مل'],['size750','750مل']])$(other).classList.toggle('primary',f===filter);renderProductList();});
-}
 function closeProduct(){if($('product-modal').classList.contains('hidden'))return;$('product-modal').classList.add('hidden');if(lastProductFocus)lastProductFocus.focus();}
 $('close-product').onclick=closeProduct;
 $('product-modal').addEventListener('click',e=>{if(e.target===$('product-modal'))closeProduct();});
@@ -186,18 +184,17 @@ function renderProductList(){
  var q=$('product-search').value.trim().toUpperCase(),f=report.finance?.available;
  var rows=(report.rows||[]).filter(x=>{
  if(q&&!([x.sku,x.name,...x.barcodes,...(x.details||[]).map(d=>d.orderNumber)].join(' ').toUpperCase().includes(q)))return false;
- if(productFilter!=='all'&&x.capacity!==productFilter)return false;
+
 
  return true;
  });
  $('product-count').textContent='المطلوب للفترة المحددة، والمدفوع المسجّل لكل الفترات. المتبقي يحتاج سجل مبيعات كامل.';
- productPage=Math.min(productPage,Math.max(0,Math.ceil(rows.length/pageSize)-1));
- var visibleRows=rows.slice(productPage*pageSize,(productPage+1)*pageSize);
+ var visibleRows=rows;
  var grouped=visibleRows.map((x,i)=>({x,i})).sort((a,b)=>((a.x.capacity||'~').localeCompare(b.x.capacity||'~'))||a.i-b.i),lastGroup='';
- $('product-table').innerHTML=grouped.length?grouped.map(({x,i})=>{var group=x.capacity||'سعة غير محددة',head=group!==lastGroup?'<tr class="group-head"><th colspan="7">'+esc(group)+'</th></tr>':'';lastGroup=group;var blocked=!ledger||ambiguousSku(x.sku)||! /^(?:OGS_)?[A-Z0-9][A-Z0-9_-]{0,79}$/.test(x.sku);return head+'<tr class="product-line" tabindex="0" data-product="'+i+'"><td><b>'+esc(x.sku)+'</b></td><td>'+esc(x.name||'غير محدد')+'</td><td>'+fmt(x.requested)+'</td><td>'+fmt(x.quantity)+'</td><td>'+(ledger?fmt(manualCount(x.sku)):'—')+'</td><td>—</td><td><div class="controls"><button class="btn" data-adjust="-1" '+(blocked?'disabled':'')+' aria-label="إنقاص المدفوع">−</button><button class="btn primary" data-adjust="1" '+(blocked?'disabled':'')+' aria-label="زيادة المدفوع">+</button></div></td></tr>';}).join(''):'<tr><td colspan="7" class="empty">لا توجد أصناف مطابقة.</td></tr>';
+ $('product-table').innerHTML=grouped.length?grouped.map(({x,i})=>{var group=x.capacity||'سعة غير محددة',head=group!==lastGroup?'<tr class="group-head"><th colspan="5">'+esc(group)+'</th></tr>':'';lastGroup=group;var blocked=!ledger||ambiguousSku(x.sku)||! /^(?:OGS_)?[A-Z0-9][A-Z0-9_-]{0,79}$/.test(x.sku);return head+'<tr class="product-line" tabindex="0" data-product="'+i+'"><td><b>'+esc(x.sku)+'</b></td><td>'+fmt(x.requested)+'</td><td>'+(ledger?fmt(manualCount(x.sku)):'—')+'</td><td>—</td><td><div class="controls"><button class="btn" data-adjust="-1" '+(blocked?'disabled':'')+' aria-label="إنقاص المدفوع">−</button><button class="btn primary" data-adjust="1" '+(blocked?'disabled':'')+' aria-label="زيادة المدفوع">+</button></div></td></tr>';}).join(''):'<tr><td colspan="5" class="empty">لا توجد أصناف مطابقة.</td></tr>';
  $('product-table').querySelectorAll('[data-product]').forEach(row=>{row.onclick=()=>openProduct(visibleRows[Number(row.dataset.product)]);row.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&e.target===row){e.preventDefault();openProduct(visibleRows[Number(row.dataset.product)]);}};});
  $('product-table').querySelectorAll('[data-adjust]').forEach(btn=>btn.onclick=async e=>{e.stopPropagation();var row=visibleRows[Number(btn.closest('[data-product]').dataset.product)];if(!row||!ledger)return;btn.disabled=true;try{await saveLedger({id:ledgerId(),type:'manual_adjust',sku:row.sku,delta:Number(btn.dataset.adjust)});}catch(err){ledger=null;ledgerLoaded=false;renderProductList();ledgerMessage('تعذر تأكيد الحفظ؛ حدّث السجل قبل المحاولة مجددًا.',true);alert('تعذر تأكيد الحفظ؛ افتح السداد واضغط تحديث السجل قبل إعادة المحاولة.');}finally{btn.disabled=false;}});
- drawPaging('products-paging',rows.length,productPage,n=>{productPage=n;renderProductList();});
+
 }
 function openProduct(x){
  if(!x)return;
