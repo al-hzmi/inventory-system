@@ -297,12 +297,14 @@ module.exports=async function handler(req,res){
     }
     if(!validSession(req))return http(res,401,{error:'انتهت جلسة ترنديول، سجّل الدخول'});
     if(action==='logout'){res.setHeader('Set-Cookie','batco_trendyol=; HttpOnly; Secure; SameSite=Strict; Path=/api/trendyol; Max-Age=0');return http(res,200,{ok:true});}
+    if(action==='manual-ledger'){try{const ledger=require('../lib/trendyol-ledger.cjs').service();return http(res,200,await ledger.write(req.body.entry));}catch(err){return http(res,err.safeLedgerError?err.status:503,{error:err.safeLedgerError?err.message:'تعذر حفظ السداد، لم يتم تأكيد العملية'});}}
     return http(res,405,{error:'لا يُسمح بتعديل بيانات ترنديول قبل اعتماد المطابقة والوحدات'});
   }
   if(req.method!=='GET')return http(res,405,{error:'طريقة غير مدعومة'});
   if(!validSession(req))return http(res,401,{error:'الدخول إلى ترنديول يتطلب جلسة محمية'});
   try{
     const action=String(req.query?.action||'status');
+    if(action==='manual-ledger'){try{return http(res,200,await require('../lib/trendyol-ledger.cjs').service().read());}catch(err){return http(res,err.safeLedgerError?err.status:503,{error:err.safeLedgerError?err.message:'تعذر قراءة سجل السداد'});}}
     if(action==='status')return http(res,200,{sellerId:SELLER(),region:'SA',configured:Boolean(SELLER()&&process.env.TRENDYOL_API_KEY&&process.env.TRENDYOL_API_SECRET),stockWritesEnabled:false,fetchedAt:Date.now()});
     const period=req.query?.period==='today'?'today':'rolling';
     const days=period==='today'?1:(req.query?.days==='30'?30:7);
