@@ -45,3 +45,8 @@ test('historical paid quantities are saved without inventing a payment amount',(
  const entry={id:'historic-230118-20260909',type:'historical',date:'2026-09-09',sku:'OGS_230118',quantity:1};const saved=apply([],entry).events;
  assert.equal(state(saved).historical[0].quantity,1);assert.equal(Object.hasOwn(saved[0],'amount'),false);assert.equal(apply(saved,entry).duplicate,true);
 });
+
+test('import history atomically and idempotently without amounts',async()=>{
+ let events=[],writes=0;const storage={async read(){return {events,etag:events.length?'etag':null}},async backup(){},async save(next){events=next;writes++},isConflict(){return false}};const l=service(storage);const entries=[{id:'historic-230118-20260909',type:'historical',date:'2026-09-09',sku:'OGS_230118',quantity:1},{id:'historic-230104-20261021',type:'historical',date:'2026-10-21',sku:'OGS_230104',quantity:1}];
+ await l.seedHistory(entries);await l.seedHistory(entries);assert.equal(writes,1);assert.equal((await l.read()).historical.length,2);
+});
