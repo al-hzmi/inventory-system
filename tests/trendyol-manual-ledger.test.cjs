@@ -34,3 +34,9 @@ test('ledger API requires the server session and fails closed without private st
  const payload=Buffer.from(JSON.stringify({expires:Date.now()+60000})).toString('base64url');const sig=crypto.createHmac('sha256',process.env.TRENDYOL_SESSION_SECRET).update(payload).digest('base64url');
  const headers={host:'localhost',cookie:'batco_trendyol='+payload+'.'+sig};res=response();await handler({method:'POST',headers,body:{action:'manual-ledger',entry:deposit}},res);assert.equal(res.code,503);
 });
+
+test('editing allocation updates remaining balance while retaining audit history',()=>{
+ let events=apply([],deposit).events;events=apply(events,first).events;events=apply(events,{id:'edit-allocation-111',type:'edit',allocationId:first.id,quantity:3,amount:'200.00'}).events;
+ assert.equal(state(events).deposits[0].remaining,130000);assert.equal(state(events).allocations[0].quantity,3);assert.equal(events.length,3);
+ assert.throws(()=>apply(events,{id:'edit-allocation-222',type:'edit',allocationId:first.id,quantity:3,amount:'1600'}),/أكبر من المبلغ/);
+});
