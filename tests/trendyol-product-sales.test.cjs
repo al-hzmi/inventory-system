@@ -130,3 +130,9 @@ test('a mapping absent from the current catalog is left unresolved',()=>{
  assert.ok(result.rows.some(x=>x.sku==='غير مرتبط: B-A'&&x.quantity===8));
  assert.ok(!result.rows.some(x=>x.sku==='230006'));
 });
+test('reports capacity only when all linked aliases agree',()=>{
+ const mapWithSize=[{sku:'230006',barcode:'B-A',capacity:'750مل'},{sku:'230006',barcode:'B-B',capacity:'750مل'},{sku:'230007',barcode:'C',capacity:'500مل'}];
+ const fn=new Function('stockMap','normal','number',source.slice(start,end)+'\nreturn productSales;')(mapWithSize,normal,number);
+ const result=fn(base(),null,catalog);assert.equal(result.rows.find(r=>r.sku==='230006').capacity,'750مل');assert.equal(result.rows.find(r=>r.sku==='230007').capacity,'500مل');
+ mapWithSize[1].capacity='500مل';assert.equal(fn(base(),null,catalog).rows.find(r=>r.sku==='230006').capacity,'');
+});

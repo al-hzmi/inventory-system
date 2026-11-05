@@ -157,7 +157,7 @@ async function financialRecords(days,period){
 }
 function productSales(ordersData,financeData,warehouse){
   const excluded=new Set(['CANCELLED','RETURNED','UNSUPPLIED','UNPACKED','UNDELIVERED','AWAITING','VERIFIED']);
-  const byBarcode=new Map(),bySku=new Map();
+  const byBarcode=new Map(),bySku=new Map(),capacityBySku=new Map();
   const candidates=raw=>{
     // Without the catalog, OGS aliases and internal identity cannot be verified.
     if(!warehouse?.rows)return [];
@@ -175,6 +175,8 @@ function productSales(ordersData,financeData,warehouse){
       byBarcode.get(barcode).add(sku);
       if(!bySku.has(sku))bySku.set(sku,new Set());
       bySku.get(sku).add(barcode);
+      if(!capacityBySku.has(sku))capacityBySku.set(sku,new Set());
+      if(entry.capacity)capacityBySku.get(sku).add(String(entry.capacity).replace(/\s/g,''));
     }
   }
   const payments=new Map(),sales=new Map(),returns=new Set();
@@ -265,7 +267,8 @@ function productSales(ordersData,financeData,warehouse){
   }
   const rows=[...mapped.values()].map(item=>{
     const {stock,...rest}=item;
-    return {...rest,barcodes:[...item.barcodes],details:item.details.sort((a,b)=>b.date-a.date)};
+    const capacities=[...(capacityBySku.get(item.sku)||[])];
+    return {...rest,capacity:capacities.length===1?capacities[0]:'',barcodes:[...item.barcodes],details:item.details.sort((a,b)=>b.date-a.date)};
   }).sort((a,b)=>b.quantity-a.quantity);
   return {days:ordersData.days,rows,totals:{sold:salesUnits,paid:financeData?paidUnits:null,unconfirmed:financeData?unconfirmedUnits:null,ambiguous:financeData?ambiguousUnits:null,excluded:excludedUnits,possibleDuplicateUnits,amount:rows.reduce((sum,x)=>sum+x.value,0)},finance:{available:Boolean(financeData),complete:Boolean(financeData&&!financeData.limited),paymentOrders:financeData?.payment.length??null,saleRecords:financeData?.sale.length??null},ordersLimited:ordersData.limited,fetchedAt:Date.now(),note:'مطابقة أمر الدفع ارتباط مبدئي بسجل ترنديول، ولا تثبت تنفيذ السداد أو وصول الحوالة إلى الحساب البنكي. عدم التأكد لا يعني تأخر السداد.'};
 }

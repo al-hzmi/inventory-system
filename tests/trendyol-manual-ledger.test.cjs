@@ -50,3 +50,10 @@ test('import history atomically and idempotently without amounts',async()=>{
  let events=[],writes=0;const storage={async read(){return {events,etag:events.length?'etag':null}},async backup(){},async save(next){events=next;writes++},isConflict(){return false}};const l=service(storage);const entries=[{id:'historic-230118-20260909',type:'historical',date:'2026-09-09',sku:'OGS_230118',quantity:1},{id:'historic-230104-20261021',type:'historical',date:'2026-10-21',sku:'OGS_230104',quantity:1}];
  await l.seedHistory(entries);await l.seedHistory(entries);assert.equal(writes,1);assert.equal((await l.read()).historical.length,2);
 });
+
+test('plus and minus update manual count across OGS aliases without changing deposits',()=>{
+ let events=apply([],deposit).events;events=apply(events,first).events;events=apply(events,{id:'adjustment-11111111',type:'manual_adjust',sku:'230104',delta:1}).events;
+ let result=state(events);assert.equal(result.adjustments[0].delta,1);assert.equal(result.deposits[0].remaining,90000);
+ for(let i=0;i<7;i++)events=apply(events,{id:'adjustment-minus-'+String(i).padStart(8,'0'),type:'manual_adjust',sku:'230104',delta:-1}).events;
+ assert.throws(()=>apply(events,{id:'adjustment-too-low-001',type:'manual_adjust',sku:'230104',delta:-1}),/أقل من صفر/);
+});
