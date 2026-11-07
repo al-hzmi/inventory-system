@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-07T16:44:05.951202Z",
+  "generatedAt": "2026-11-07T16:50:33.445002Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
@@ -11,11 +11,51 @@
     },
     "riyadh": {
       "skuCount": 723,
-      "inStock": 633,
-      "totalQty": 7259.7360622
+      "inStock": 631,
+      "totalQty": 7251.7360622
     }
   },
   "events": [
+    {
+      "id": "652abf6cb48c",
+      "commit": "652abf6cb48ccdb3286665525344f62ee6d69993",
+      "timestamp": "2026-11-07T19:50:12+03:00",
+      "message": "admin: import data/riyadh.tsv and update inventory timestamp",
+      "paths": [
+        "data/riyadh.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "28997",
+          "name": "صفايات حمام",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 4,
+          "after": 0,
+          "delta": -4,
+          "zeroed": true,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "28998",
+          "name": "صفايات حمام",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 4,
+          "after": 0,
+          "delta": -4,
+          "zeroed": true,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "67fafc6e8a2b",
       "commit": "67fafc6e8a2b3d8e0dedd7113ae4987164bea9d7",
