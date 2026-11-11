@@ -1,0 +1,35 @@
+name: V119 Android employee login reliability
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'tests/v104-employee-login-recovery.cjs'
+      - 'tests/v119-android-employee-login.cjs'
+      - '.github/workflows/v119-android-login-reliability.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'tests/v104-employee-login-recovery.cjs'
+      - 'tests/v119-android-employee-login.cjs'
+      - '.github/workflows/v119-android-login-reliability.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node tests/v104-employee-login-recovery.cjs
+      - run: node tests/v119-android-employee-login.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: npm run build
