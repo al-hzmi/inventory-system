@@ -1,0 +1,32 @@
+name: V120 employee login resilience
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'tests/v104-employee-login-recovery.cjs'
+      - 'tests/v120-employee-login-resilience.cjs'
+      - '.github/workflows/v120-employee-login-resilience.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'runtime/index-v37-source.txt'
+      - 'index.html'
+      - 'tests/v120-employee-login-resilience.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  login-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/v104-employee-login-recovery.cjs
+      - run: node tests/v120-employee-login-resilience.cjs
+      - run: node tests/v95-login-stocktake-integrity.cjs
+      - run: node tests/v118-employee-shell-freshness.cjs

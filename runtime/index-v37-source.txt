@@ -3052,6 +3052,9 @@ const EmployeeInlinePinSetup = ({ sessionName, onActivated }) => {
 // Allow Firebase SDK startup and real mobile networks without aborting identity lookup prematurely.
 const LOGIN_LOOKUP_TIMEOUT_MS = 12000;
 const LOGIN_TOTAL_DEADLINE_MS = 26000;
+// Mobile Firestore requests regularly exceed the former six-second PIN verification limit.
+const LOGIN_ACCOUNT_VERIFY_TIMEOUT_MS = 16000;
+const LOGIN_CHALLENGE_WRITE_TIMEOUT_MS = 16000;
 const loginErrorMessage=(error,fallback='تعذر التحقق من حساب الموظف. حاول مرة أخرى.')=>{
   const code=String(error?.code||error?.message||'').toLowerCase();
   if(/resource-exhausted|quota-exceeded|daily quota|quota exceeded/.test(code))
@@ -3080,6 +3083,21 @@ const loginLookupTimeout = (promise, ms = LOGIN_LOOKUP_TIMEOUT_MS) => new Promis
     });
 });
 
+const loginRetryableTransportError = error =>
+    /login_lookup_timeout|unavailable|deadline-exceeded|network-request-failed|failed to fetch/i.test(String(error?.code || error?.message || ''));
+const freshEmployeeAccountDocument = async (db, employeeId) => {
+    // Password verification must never trust a cached/offline account or an outdated suspension state.
+    const ref = db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeId);
+    try {
+        return await loginLookupTimeout(ref.get({ source:'server' }), LOGIN_ACCOUNT_VERIFY_TIMEOUT_MS);
+    } catch (error) {
+        // A single bounded retry handles intermittent Android/mobile connectivity.
+        // Never retry permission, quota, missing-account or invalid-credential errors.
+        if (!loginRetryableTransportError(error) || navigator.onLine === false) throw error;
+        return loginLookupTimeout(ref.get({ source:'server' }), LOGIN_ACCOUNT_VERIFY_TIMEOUT_MS);
+    }
+};
+
 const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
@@ -3098,6 +3116,7 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
     const codeRef = useRef(null);
     const autoProbeRef = useRef(false);
     const verifyAttemptRef = useRef(0);
+    const photoChallengeRef = useRef(null);
 
     useEffect(() => { if ((step === 'password' || step === 'employee_password' || step === 'activate_password') && codeRef.current) codeRef.current.focus(); }, [step]);
     useEffect(() => { getDb().catch(err => console.warn('[Employee login prewarm]', err?.message || err)); }, []);
@@ -3121,12 +3140,28 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
 
     const createPhotoChallenge = async (account, alias, extra={}) => {
         const db = await getDb();
-        const ref = db.collection('employee_login_attempts').doc();
-        await ref.set({
+        // Reuse the same document on PIN retries. A delayed first write must not make duplicate attempts.
+        const key = String(account?.id || '')+'|'+String(alias || '')+'|'+verifyAttemptRef.current;
+        let challenge = photoChallengeRef.current;
+        if (!challenge || challenge.key !== key) {
+            const newRef = db.collection('employee_login_attempts').doc();
+            challenge = { key, id:newRef.id };
+            photoChallengeRef.current = challenge;
+        }
+        const ref = db.collection('employee_login_attempts').doc(challenge.id);
+        const payload = {
             employeeId: account?.id || '', canonicalName: account?.canonicalName || alias || '', enteredAlias: alias || '',
             success: true, photoRequired: true, photoCaptured: false, status: 'awaiting_photo',
             time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent, ...extra
-        });
+        };
+        try {
+            await loginLookupTimeout(ref.set(payload), LOGIN_CHALLENGE_WRITE_TIMEOUT_MS);
+        } catch (error) {
+            if (!loginRetryableTransportError(error) || navigator.onLine === false) throw error;
+            // Same ID and payload: a lost acknowledgement cannot generate a second challenge.
+            await loginLookupTimeout(ref.set(payload), LOGIN_CHALLENGE_WRITE_TIMEOUT_MS);
+        }
+        // Show photo verification only after Firestore has acknowledged the write.
         setLoginAttemptId(ref.id);
         return ref.id;
     };
@@ -3271,14 +3306,14 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
         try {
             const db = await getDb();
             // لا نعتمد نسخة الحساب المخبأة عند فحص الرمز؛ نجلب النسخة الحالية بمهلة صريحة.
-            const freshDoc = await loginLookupTimeout(db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).get(), 6000);
+            const freshDoc = await freshEmployeeAccountDocument(db, employeeAccount.id);
             if (!freshDoc.exists) throw Object.assign(new Error('ACCOUNT_NOT_FOUND'), { code: 'ACCOUNT_NOT_FOUND' });
             const freshAccount = { id: freshDoc.id, ...freshDoc.data() };
             if (freshAccount.status === 'suspended') { setStep('name'); setEmployeeAccount(null); setCode(''); setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
             const ok = await verifyEmployeePassword(freshAccount, password);
             if (!ok) { db.collection('employee_login_attempts').add({employeeId:freshAccount.id,canonicalName:freshAccount.canonicalName||'',enteredAlias,success:false,photoRequired:false,status:'password_rejected',time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent}).catch(()=>{});setError('كلمة المرور غير صحيحة.');return; }
             setEmployeeAccount(cacheEmployeeAccount(freshAccount, [enteredAlias]));
-            await loginLookupTimeout(createPhotoChallenge(freshAccount, enteredAlias), 6000);
+            await createPhotoChallenge(freshAccount, enteredAlias);
             setStep('face');
         } catch (err) {
             console.error(err);
