@@ -3271,14 +3271,14 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
         try {
             const db = await getDb();
             // لا نعتمد نسخة الحساب المخبأة عند فحص الرمز؛ نجلب النسخة الحالية بمهلة صريحة.
-            const freshDoc = await loginLookupTimeout(db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).get(), 6000);
+            const freshDoc = await loginLookupTimeout(db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).get(), 15000);
             if (!freshDoc.exists) throw Object.assign(new Error('ACCOUNT_NOT_FOUND'), { code: 'ACCOUNT_NOT_FOUND' });
             const freshAccount = { id: freshDoc.id, ...freshDoc.data() };
             if (freshAccount.status === 'suspended') { setStep('name'); setEmployeeAccount(null); setCode(''); setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
             const ok = await verifyEmployeePassword(freshAccount, password);
             if (!ok) { db.collection('employee_login_attempts').add({employeeId:freshAccount.id,canonicalName:freshAccount.canonicalName||'',enteredAlias,success:false,photoRequired:false,status:'password_rejected',time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent}).catch(()=>{});setError('كلمة المرور غير صحيحة.');return; }
             setEmployeeAccount(cacheEmployeeAccount(freshAccount, [enteredAlias]));
-            await loginLookupTimeout(createPhotoChallenge(freshAccount, enteredAlias), 6000);
+            await loginLookupTimeout(createPhotoChallenge(freshAccount, enteredAlias), 15000);
             setStep('face');
         } catch (err) {
             console.error(err);
