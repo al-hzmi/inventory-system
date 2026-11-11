@@ -1,6 +1,7 @@
 const crypto=require('crypto');
 const HASH='f03cbd5064d744450fd61c889dabc2874a8acbb0005d06561db00159bfd3c0c7';
-const paths={jeddah:'data/jeddah.tsv',riyadh:'data/riyadh.tsv',pricing:'data/pricing.tsv'};
+const paths={jeddah:'data/jeddah.tsv',riyadh:'data/riyadh.tsv',pricing_jeddah:'data/pricing.tsv',pricing_riyadh:'data/pricing.tsv'};
+const isPricing=kind=>kind==='pricing_jeddah'||kind==='pricing_riyadh';
 const respond=(res,status,data)=>{res.setHeader('Cache-Control','no-store');return res.status(status).json(data)};
 const config=()=>({token:process.env.GITHUB_TOKEN,owner:process.env.GITHUB_OWNER||process.env.VERCEL_GIT_REPO_OWNER,repo:process.env.GITHUB_REPO||process.env.VERCEL_GIT_REPO_SLUG||'inventory-system',branch:process.env.GITHUB_BRANCH||'main'});
 async function remote(c,path,body,ref){const url='https://api.github.com/repos/'+c.owner+'/'+c.repo+'/contents/'+path;const r=await fetch(url+(body?'':'?ref='+encodeURIComponent(ref||c.branch)),{method:body?'PUT':'GET',headers:{Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error('GitHub: '+data.message);return data}
@@ -10,26 +11,28 @@ const skuOf=x=>String(x||'').trim().toUpperCase();
 const numeric=(x,line,name,zero=true)=>{const s=String(x??'').trim().replace(/,/g,'');if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(s)||!Number.isFinite(Number(s))||Number(s)<0||(!zero&&Number(s)===0))throw Error('السطر '+line+': '+name+' غير صالح ('+s+')');return String(Number(s))};
 function prepare(kind,input,current,options={}) {
  const fullSnapshot=options.fullSnapshot===true;
- if(fullSnapshot&&kind==='pricing')throw Error('مطابقة الكشف الكامل متاحة للمخزون فقط، وليست للتسعيرة');
+ const price=isPricing(kind);
+ if(fullSnapshot&&price)throw Error('مطابقة الكشف الكامل متاحة للمخزون فقط، وليست للتسعيرة');
  const source=readLines(input);
  if(source.length<2)throw Error('الصق صف العناوين وصفًا واحدًا على الأقل');
  const inputLines=String(input||'').replace(/\r\n?/g,'\n').split('\n');
  if(inputLines.at(-1)==='')inputLines.pop();
  const blankRowsSkipped=inputLines.filter(l=>!l.trim()).length;
- const price=kind==='pricing',two=price&&source[0].cells[0].includes('مخزون جدة');
- const headers=source[two?1:0]?.cells.map(x=>x.trim().replace(/^\uFEFF/,''))||[];
+ if(price&&/مخزون جدة|مخزون الرياض/.test(source[0].cells.join(' ')))
+  throw Error('ارفع تسعيرة فرع واحد فقط: ملف بعمودَي رقم الصنف وسعر البيع، دون دمج جدة والرياض.');
+ const headers=source[0]?.cells.map(x=>x.trim().replace(/^\uFEFF/,''))||[];
  const col=(regex,start=0)=>headers.findIndex((x,i)=>i>=start&&regex.test(x));
  const id=col(/^(رقم الصنف|sku)$/i),v=col(price?/^(سعر البيع|السعر|price)$/i:/^(الكمية المتوفرة|الكمية|quantity|qty)$/i);
  if(id<0||v<0)throw Error('أعمدة الملف غير معروفة. يجب وجود رقم الصنف و'+(price?'سعر البيع':'الكمية المتوفرة'));
  const name=col(/^اسم الصنف$/),unit=col(/^الوحدة$/),pack=col(/^الشد$/),full=!price&&name>=0&&unit>=0&&pack>=0;
- const id2=two?col(/^(رقم الصنف|sku)$/i,id+1):-1,v2=two?col(/^(سعر البيع|السعر|price)$/i,v+1):-1;
- if(two&&(id2<0||v2<0))throw Error('تنسيق تسعيرة جدة والرياض غير مكتمل');
+ if(price&&col(/^(رقم الصنف|sku)$/i,id+1)>=0)
+  throw Error('الملف يحتوي على أكثر من جدول أصناف؛ ارفع تسعيرة الفرع المحدد وحده.');
  const values=new Map(),changes=[];
  const put=(row,idCol,valCol)=>{
   const key=skuOf(row.cells[idCol]);
   if(!key){
    if(String(row.cells[valCol]||'').trim()&&!/^(الإجمالي|المجموع|total)$/i.test(String(row.cells[idCol]||'').trim()))
-    throw Error('السطر '+row.line+': توجد كمية دون رقم صنف؛ راجع الملف الكامل.');
+    throw Error('السطر '+row.line+': توجد '+(price?'سعر':'كمية')+' دون رقم صنف؛ راجع الملف.');
    return;
   }
   if(!/^[A-Z0-9][A-Z0-9_.\/-]{0,79}$/.test(key))throw Error('السطر '+row.line+': رقم صنف غير صالح: '+key);
@@ -46,7 +49,7 @@ function prepare(kind,input,current,options={}) {
   }
   values.set(key,{id:key,value,meta,line:row.line});
  };
- for(const row of source.slice(two?2:1)){put(row,id,v);if(two)put(row,id2,v2)}
+ for(const row of source.slice(1))put(row,id,v);
  if(!values.size)throw Error('الملف لا يحتوي على أصناف صالحة');
  if(values.size>10000)throw Error('الحد الأعلى عشرة آلاف صنف');
  const ending=String(current).includes('\r\n')?'\r\n':'\n';
@@ -55,13 +58,15 @@ function prepare(kind,input,current,options={}) {
  const old=raw.map(r=>r.split('\t')),seen=new Set(),existingIds=new Set(),added=[],pendingNew=[],modified=new Set(),metadata=new Set();
  if(!old.length)throw Error('ملف المخزون الأصلي فارغ');
  if(price){
-  if(old[1]?.[0]?.trim()!=='رقم الصنف')throw Error('تنسيق التسعيرة الأصلي غير متوافق');
-  for(let i=2;i<old.length;i++)for(const k of [0,5]){
+  const k=kind==='pricing_jeddah'?0:5;
+  if(old[1]?.[0]?.trim()!=='رقم الصنف'||old[1]?.[5]?.trim()!=='رقم الصنف')
+   throw Error('تنسيق التسعيرة الأصلي غير متوافق');
+  for(let i=2;i<old.length;i++){
    const key=skuOf(old[i][k]),row=values.get(key);
    if(!row)continue;
    seen.add(key);
    if(old[i][k+1]!==row.value){
-    changes.push({sku:key,field:'سعر البيع',before:old[i][k+1]||'',after:row.value});
+    changes.push({sku:key,field:kind==='pricing_jeddah'?'سعر جدة':'سعر الرياض',before:old[i][k+1]||'',after:row.value});
     modified.add(key);old[i][k+1]=row.value;
    }
   }
@@ -140,7 +145,7 @@ function prepare(kind,input,current,options={}) {
  };
  for(const row of values.values())if(!seen.has(row.id)){
   const cells=Array(Math.max(price?7:5,old[0].length)).fill('');
-  if(price){cells[0]=row.id;cells[1]=row.value}
+  if(price){const k=kind==='pricing_jeddah'?0:5;cells[k]=row.id;cells[k+1]=row.value}
   else{
    const meta=row.meta||getOverride(row.id)||reference.get(row.id);
    if(!meta){
@@ -151,7 +156,7 @@ function prepare(kind,input,current,options={}) {
    [cells[0],cells[1],cells[2],cells[3],cells[4]]=[row.id,meta.name,meta.unit,row.value,meta.pack];
   }
   added.push(cells);
-  changes.push({sku:row.id,field:'صنف جديد',before:'',after:row.value});
+  changes.push({sku:row.id,field:price?(kind==='pricing_jeddah'?'سعر جدة (جديد)':'سعر الرياض (جديد)'):'صنف جديد',before:'',after:row.value});
  }
  const changesFromInput=modified.size-zeroed;
  const samples=fullSnapshot&&zeroed?[
@@ -198,7 +203,7 @@ async function saveInventoryWithVersion(c,headSha,dataPath,text){
 module.exports=async(req,res)=>{
  if(req.method==='GET'){
   const c=config();
-  return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v115-stocktake-source-verified',imports:['jeddah','riyadh','pricing'],stocktakeSource:true});
+  return respond(res,200,{configured:!!(c.token&&c.owner&&c.repo),version:'v116-branch-price-import',imports:['jeddah','riyadh','pricing_jeddah','pricing_riyadh'],stocktakeSource:true});
  }
  if(req.method!=='POST')return respond(res,405,{error:'Method not allowed'});
  const c=config(),b=req.body||{};
@@ -211,14 +216,17 @@ module.exports=async(req,res)=>{
  }
  const stocktakeActions=['stocktake_source','stocktake_preview','stocktake_prepare'];
  const isStocktake=stocktakeActions.includes(b.action);
+ if(b.kind==='pricing')return respond(res,400,{error:'تم فصل تسعيرة جدة والرياض. حدّث صفحة الاستيراد ثم اختر فرع الأسعار المطلوب.'});
  if(!paths[b.kind]||!['preview','save',...stocktakeActions].includes(b.action)||
     (b.action!=='stocktake_source'&&(typeof b.text!=='string'||b.text.length>2000000)))
   return respond(res,400,{error:'طلب غير صالح'});
- if(isStocktake&&(b.kind==='pricing'||(b.action!=='stocktake_source'&&b.fullSnapshot!==true)))
+ if(isStocktake&&(isPricing(b.kind)||(b.action!=='stocktake_source'&&b.fullSnapshot!==true)))
   return respond(res,400,{error:'الجرد يقبل كشف مخزون كاملًا لفرع واحد فقط.'});
  // Legacy cached clients must refresh, rather than accidentally retaining yesterday's quantities.
- if(!isStocktake&&b.kind!=='pricing'&&typeof b.fullSnapshot!=='boolean')
+ if(!isStocktake&&!isPricing(b.kind)&&typeof b.fullSnapshot!=='boolean')
   return respond(res,400,{error:'حدّث صفحة الاستيراد لاختيار التحديث اليومي الكامل أو الجزئي صراحةً.'});
+ if(isPricing(b.kind)&&b.fullSnapshot===true)
+  return respond(res,400,{error:'لا يمكن إجراء مطابقة مخزون كامل عند رفع الأسعار.'});
  try{
   const head=b.action==='save'?await gitData(c,'git/ref/heads/'+c.branch):null;
   const other=b.kind==='jeddah'?'riyadh':b.kind==='riyadh'?'jeddah':null;

@@ -93,6 +93,6 @@ async function request(action,fields={}){
  assert.match(stocktake,/inventoryItemsHash/);
  assert.match(stocktake,/inventorySourceSha/);
  assert.match(stocktake,/تغيّر مخزون الفرع بعد إنشاء الجرد/);
- assert.match(html,/v59-admin-import-ui\.js\?v=115\.0/);
+ assert.match(html,/v59-admin-import-ui\.js\?v=116\.0/);
  console.log('V115_STOCKTAKE_SOURCE_PASS: identical PDF/Excel importer, pure reference prepare, zeroing, new SKUs, immutable SHA, no public-stock writes');
 })().catch(e=>{console.error(e);process.exitCode=1});

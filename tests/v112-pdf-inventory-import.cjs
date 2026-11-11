@@ -37,7 +37,7 @@ assert.throws(()=>parseTextPages([{width:1050,items:[]}]),/لا تحتوي نص�
 assert.throws(()=>parseTextPages([page([['ARM_10004','8','60']]),page([['ARM_10004','9','60']])]),/مكرر/);
 const ui=fs.readFileSync('v59-admin-import-ui.js','utf8');
 const html=fs.readFileSync('admin-inventory-import.html','utf8');
-assert.match(ui,/ext==='pdf'&&kind.value==='pricing'/);
+assert.match(ui,/ext==='pdf'&&isPrice\(\)/);
 assert.match(ui,/BatcoPdfInventory\.readFile/);
 assert.match(ui,/\.pdf,\.xlsx/);
 assert.match(html,/pdf-inventory-import\.js\?v=114\.0/);
