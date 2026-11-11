@@ -64,7 +64,7 @@ const db={collection:name=>{assert.equal(name,'employee_accounts');return {doc:i
  const challengeDb={collection:collection=>{
    assert.equal(collection,'employee_login_attempts');
    return {doc:id=>{
-     const chosen=id||'challenge_1';
+     const chosen=id||'challenge_'+(attemptIds.length+1);
      if(!id)attemptIds.push(chosen);
      return {id:chosen,set:async payload=>{
        written.push({id:chosen,payload});
@@ -73,6 +73,7 @@ const db={collection:name=>{assert.equal(name,'employee_accounts');return {doc:i
    }};
  }};
  const challengeCtx={getDb:async()=>challengeDb,photoChallengeRef:session,verifyAttemptRef:attempt,
+   LOGIN_CHALLENGE_WRITE_TIMEOUT_MS:20,
    loginLookupTimeout:promise=>promise,loginRetryableTransportError:ctx.retryable,
    navigator:{onLine:true,userAgent:'test-phone'},firebase:{firestore:{FieldValue:{serverTimestamp:()=>({now:true})}}},
    setLoginAttemptId:id=>challengeCtx.ack=id,Promise,Object};
@@ -86,5 +87,6 @@ const db={collection:name=>{assert.equal(name,'employee_accounts');return {doc:i
  attempt.current=10;
  await challengeCtx.challenge({id:'employee_1',canonicalName:'Employee'},'Employee');
  assert.equal(attemptIds.length,2,'new independent login gets a new challenge');
+ assert.equal(challengeCtx.ack,'challenge_2');
  console.log('V120_EMPLOYEE_LOGIN_RESILIENCE_PASS: fresh server, retry, offline/quota/permission guards, stable challenge, cache bust');
 })().catch(e=>{console.error(e);process.exitCode=1});
