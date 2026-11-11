@@ -162,6 +162,13 @@
                 .then(() => {
                     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                     const db = firebase.firestore();
+                    // Android browsers may buffer Firestore WebChannel responses indefinitely.
+                    // Only on Android, prefer its compatible long-polling transport before the first read.
+                    // Never use cached employee credentials as a substitute for a server response.
+                    if (/Android/i.test(navigator.userAgent || '')) {
+                        try { db.settings({ experimentalForceLongPolling: true }); }
+                        catch (error) { console.warn('[BATCO login transport]', error?.code || error?.message || error); }
+                    }
                     db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
                         console.warn("تنبيه: تعذر تفعيل وضع الأوفلاين للفايربيس", err.code);
                     });
@@ -3080,6 +3087,34 @@ const loginLookupTimeout = (promise, ms = LOGIN_LOOKUP_TIMEOUT_MS) => new Promis
     });
 });
 
+
+const LOGIN_PIN_SERVER_READ_TIMEOUT_MS = 15000;
+const LOGIN_PIN_SERVER_RETRY_TIMEOUT_MS = 15000;
+const LOGIN_PHOTO_CHALLENGE_TIMEOUT_MS = 18000;
+// A PIN is checked only against the current server account, never a cached account.
+// A bounded retry is allowed for a stalled/temporarily unavailable read; never retry
+// permission or quota failures, and never accept a timed-out request as verification.
+const loginRecoverableReadError = error =>
+    /login_lookup_timeout|unavailable|deadline-exceeded|network-request-failed/.test(String(error?.code || error?.message || '').toLowerCase());
+const readEmployeeAccountForLogin = async (db, employeeId) => {
+    const ref = db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeId);
+    try {
+        return await loginLookupTimeout(ref.get({ source: 'server' }), LOGIN_PIN_SERVER_READ_TIMEOUT_MS);
+    } catch (error) {
+        if (!loginRecoverableReadError(error) || navigator.onLine === false) throw error;
+        return loginLookupTimeout(ref.get({ source: 'server' }), LOGIN_PIN_SERVER_RETRY_TIMEOUT_MS);
+    }
+};
+const noteEmployeeLoginFailure = (stage, error) => {
+    // Diagnostic only: no PIN, photo, user name, account ID or document contents.
+    try {
+        const raw = String(error?.code || error?.message || 'unknown');
+        sessionStorage.setItem('batco_login_last_error_v119', JSON.stringify({
+            stage, code: raw.slice(0, 80), online: navigator.onLine !== false, at: Date.now()
+        }));
+    } catch {}
+};
+
 const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
     const customerPortalControl = useCustomerPortalControl();
     const customerPortalReleased = !!customerPortalControl.enabled;
@@ -3122,11 +3157,11 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
     const createPhotoChallenge = async (account, alias, extra={}) => {
         const db = await getDb();
         const ref = db.collection('employee_login_attempts').doc();
-        await ref.set({
+        await loginLookupTimeout(ref.set({
             employeeId: account?.id || '', canonicalName: account?.canonicalName || alias || '', enteredAlias: alias || '',
             success: true, photoRequired: true, photoCaptured: false, status: 'awaiting_photo',
             time: firebase.firestore.FieldValue.serverTimestamp(), userAgent: navigator.userAgent, ...extra
-        });
+        }), LOGIN_PHOTO_CHALLENGE_TIMEOUT_MS);
         setLoginAttemptId(ref.id);
         return ref.id;
     };
@@ -3271,17 +3306,18 @@ const StandardLoginScreen = ({ onLogin, initialName = '' }) => {
         try {
             const db = await getDb();
             // لا نعتمد نسخة الحساب المخبأة عند فحص الرمز؛ نجلب النسخة الحالية بمهلة صريحة.
-            const freshDoc = await loginLookupTimeout(db.collection(EMPLOYEE_ACCOUNT_COLLECTION).doc(employeeAccount.id).get(), 6000);
+            const freshDoc = await readEmployeeAccountForLogin(db, employeeAccount.id);
             if (!freshDoc.exists) throw Object.assign(new Error('ACCOUNT_NOT_FOUND'), { code: 'ACCOUNT_NOT_FOUND' });
             const freshAccount = { id: freshDoc.id, ...freshDoc.data() };
             if (freshAccount.status === 'suspended') { setStep('name'); setEmployeeAccount(null); setCode(''); setError('هذا الحساب موقوف حاليًا. راجع الإدارة.'); return; }
             const ok = await verifyEmployeePassword(freshAccount, password);
             if (!ok) { db.collection('employee_login_attempts').add({employeeId:freshAccount.id,canonicalName:freshAccount.canonicalName||'',enteredAlias,success:false,photoRequired:false,status:'password_rejected',time:firebase.firestore.FieldValue.serverTimestamp(),userAgent:navigator.userAgent}).catch(()=>{});setError('كلمة المرور غير صحيحة.');return; }
             setEmployeeAccount(cacheEmployeeAccount(freshAccount, [enteredAlias]));
-            await loginLookupTimeout(createPhotoChallenge(freshAccount, enteredAlias), 6000);
+            await createPhotoChallenge(freshAccount, enteredAlias);
             setStep('face');
         } catch (err) {
             console.error(err);
+            noteEmployeeLoginFailure('pin_server_verification', err);
             setError(loginErrorMessage(err,'تعذر التحقق من كلمة المرور. حاول مرة أخرى.'));
         } finally { setLoading(false); }
     };
