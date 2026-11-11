@@ -22,7 +22,7 @@ const stockFixture=[
 const priceFixture=[
  'مخزون جدة\t\t\t\t\tمخزون الرياض\t',
  'رقم الصنف\tسعر البيع\t\t\t\tرقم الصنف\tسعر البيع',
- 'ARM_10004\t240\t\t\t\tARM_10004\t240'
+ 'ARM_10004\t240\t\t\t\tARM_10004\t260'
 ].join('\n')+'\n';
 let checked=0;
 function check(name,fn){fn();checked++;console.log('PASS '+name)}
@@ -38,11 +38,22 @@ check('Riyadh current live stock unchanged',()=>{
  assert.ok(x.summary.rows>100);
  assert.equal(x.summary.changed,0);
 });
-check('Current live two-branch pricing unchanged',()=>{
- const x=prepare('pricing',pricing,pricing);
- assert.equal(x.content,pricing);
- assert.ok(x.summary.rows>800);
- assert.equal(x.summary.changed,0);
+check('Current live pricing is idempotent for each separate branch',()=>{
+ const sides=pricing.trimEnd().split('\n').slice(2).map(line=>line.split('\t'));
+ for(const [kind,k] of [['pricing_jeddah',0],['pricing_riyadh',5]]){
+  const unique=new Map();
+  for(const cells of sides)if(cells[k]?.trim()){
+   const sku=cells[k].trim().toUpperCase(),value=cells[k+1];
+   if(!unique.has(sku))unique.set(sku,value);
+   else if(unique.get(sku)!==value)unique.set(sku,null);
+  }
+  // Choose a SKU whose existing duplicate rows, if any, have the same price.
+  const [sku,value]=[...unique].find(([,value])=>value!==null);
+  const x=prepare(kind,'رقم الصنف\tسعر البيع\n'+sku+'\t'+value+'\n',pricing);
+  assert.equal(x.summary.rows,1);
+  assert.equal(x.content,pricing);
+  assert.equal(x.summary.changed,0);
+ }
 });
 check('Five-column TSV, blank separator rows and fractional stock',()=>{
  const data=stockFixture.replace('\t50\t32','\t46.875\t32').replace('\t46.5\t60','\t45.5\t60');
@@ -75,21 +86,48 @@ check('New quantity-only item requires metadata before save',()=>{
  assert.ok(complete.content.includes('TEST_9981\tاختبار\tكرتون\t1\t12'));
 });
 check('Ignore true blank rows in pricing paste',()=>{
- const x=prepare('pricing','رقم الصنف\tسعر البيع\n\n\t\t\t\nARM_10004\t245\n',priceFixture);
+ const x=prepare('pricing_jeddah','رقم الصنف\tسعر البيع\n\n\t\t\t\nARM_10004\t245\n',priceFixture);
  assert.equal(x.summary.changed,1);
  assert.equal(x.summary.blankRowsSkipped,2);
 });
-check('One price update changes both branch entries',()=>{
- const x=prepare('pricing','رقم الصنف\tسعر البيع\nARM_10004\t245',priceFixture);
+check('Jeddah price update leaves Riyadh price unchanged',()=>{
+ const x=prepare('pricing_jeddah','رقم الصنف\tسعر البيع\nARM_10004\t245',priceFixture);
  assert.equal(x.summary.changed,1);
  assert.equal(x.summary.added,0);
- assert.equal(x.summary.examples.length,2);
+ assert.equal(x.summary.examples.length,1);
+ assert.ok(x.content.includes('ARM_10004\t245\t\t\t\tARM_10004\t260'));
+});
+check('Riyadh price update leaves Jeddah price unchanged',()=>{
+ const x=prepare('pricing_riyadh','رقم الصنف\tسعر البيع\nARM_10004\t280',priceFixture);
+ assert.equal(x.summary.changed,1);
+ assert.ok(x.content.includes('ARM_10004\t240\t\t\t\tARM_10004\t280'));
+});
+check('New price is inserted in selected branch only',()=>{
+ for(const [kind,k] of [['pricing_jeddah',0],['pricing_riyadh',5]]){
+  const x=prepare(kind,'رقم الصنف\tسعر البيع\nTEST_999\t123',priceFixture);
+  assert.equal(x.summary.added,1);
+  const last=x.content.split('\n').at(-2).split('\t');
+  assert.equal(last[k],'TEST_999');assert.equal(last[k+1],'123');
+  assert.equal(last[k===0?5:0],'');
+ }
+});
+check('Selected branch is idempotent even if the other branch differs',()=>{
+ const j=prepare('pricing_jeddah','رقم الصنف\tسعر البيع\nARM_10004\t240',priceFixture);
+ const r=prepare('pricing_riyadh','رقم الصنف\tسعر البيع\nARM_10004\t260',priceFixture);
+ assert.equal(j.content,priceFixture);assert.equal(r.content,priceFixture);
+});
+check('Reject legacy combined pricing input to prevent cross-branch updates',()=>{
+ assert.throws(()=>prepare('pricing_jeddah',priceFixture,priceFixture),/فرع واحد/);
+ assert.throws(()=>prepare('pricing_riyadh','رقم الصنف\tسعر البيع\t\t\t\tرقم الصنف\tسعر البيع\nARM_10004\t240\t\t\t\tARM_10004\t260',priceFixture),/أكثر من جدول/);
+});
+check('Pricing cannot zero inventory or change stock quantities',()=>{
+ assert.throws(()=>prepare('pricing_jeddah','رقم الصنف\tسعر البيع\nARM_10004\t240',priceFixture,{fullSnapshot:true}),/للمخزون فقط/);
 });
 check('Reject conflicting duplicate SKU',()=>{
  assert.throws(()=>prepare('jeddah','رقم الصنف\tالكمية المتوفرة\nARM_10004\t3\nARM_10004\t4',stockFixture),/مكرر/);
 });
 check('Allow same-price duplicate in input',()=>{
- const x=prepare('pricing','رقم الصنف\tسعر البيع\nARM_10004\t240\nARM_10004\t240',priceFixture);
+ const x=prepare('pricing_jeddah','رقم الصنف\tسعر البيع\nARM_10004\t240\nARM_10004\t240',priceFixture);
  assert.equal(x.summary.rows,1);
  assert.equal(x.summary.changed,0);
 });
