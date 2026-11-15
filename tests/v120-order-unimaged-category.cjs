@@ -51,6 +51,7 @@ const norm = value => String(value||'').replace(/\D/g,'');
 const rows = read('data/categories.tsv').split(/\r?\n/).filter(Boolean).map(line=>line.split('\t'));
 const headers = rows.shift().map(x=>x.trim());
 assert(headers.includes('أحذية متنوعة'), 'non-OGS shoes require a distinct category');
+assert(headers.includes('مظلات'), 'umbrella products require an explicit, accurate category');
 const members = new Map();
 for(const row of rows)for(let col=0;col<headers.length;col++){
   const sku=String(row[col]||'').trim(),key=norm(sku);
@@ -65,12 +66,16 @@ for(const [sku,category] of [
   ['OGS_230017','مجات OGS'],
   ['AR_12737','أدوات الشواء'],
   ['JAA_300009','الألعاب والسباحة'],
-  ['BAT-00112','التحف والهدايا']
+  ['BAT-00112','التحف والهدايا'],
+  ['BAT-00409','مظلات'],
+  ['BAT-00410','مظلات'],
+  ['BAT-00411','مظلات'],
+  ['BAT-00412','مظلات']
 ])assert(members.get(sku)?.has(category), `${sku} must belong to ${category}`);
 assert(!members.has('AR_100108'), 'ambiguous damaged inventory must not be auto-classified');
 assert(!members.has('JAA_300006'), 'colliding SKU must not be auto-classified');
 const audit = JSON.parse(execFileSync(process.execPath,['tools/classify-uncategorized-products.cjs'],{encoding:'utf8'}));
 assert.equal(audit.suggestions,0,'re-running classifier must not duplicate categories');
-assert.equal(audit.pending,10,'ambiguous or colliding products remain for review');
+assert.equal(audit.pending,6,'only ambiguous or colliding products remain for review');
 
-console.log('V120_ORDER_UNIMAGED_CATEGORY_PASS: names in both WhatsApp paths, employee permission, compact no-image cards, 406 category assignments, 10 held for review');
+console.log('V120_ORDER_UNIMAGED_CATEGORY_PASS: names in both WhatsApp paths, employee permission, compact no-image cards, 410 category assignments, 6 held for review');
