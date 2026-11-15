@@ -23,18 +23,25 @@ const flatten=(node,out=[])=>{if(node===null||node===undefined)return out;if(Arr
 const render=more=>{index=0;return GalleryCard({...props,...more})};
 let card=render();let nodes=flatten(card);
 assert.equal(card.props['data-image-state'],'without-image');
-assert(card.props.className.includes('self-start'),'no-image card must not stretch to square image height');
+assert(card.props.className.includes('w-full min-w-0'),'no-image card must occupy its whole row without squeezing product text');
+assert(card.props.className.includes('col-span-full'),'no-image card must span the grid row instead of remaining half width');
+assert(!card.props.className.includes('self-start'),'self-start caused text-only cards to shrink to their intrinsic width');
 assert(!nodes.some(x=>x?.type==='ProductImage'),'no-image card must not render a blank media area');
 assert(nodes.some(x=>x?.type==='OrderControl'),'ordering must remain available');
 for(const label of ['AR_123','صحن تقديم عربي','المتوفر:','الشد:','السعر:'])
   assert(nodes.some(x=>typeof x==='string'&&x.includes(label)),label+' visible in no-image card');
 
+card=render({isGrid:false});
+assert(card.props.className.includes('w-full min-w-0'),'list-view text card fills the same row as image cards');
+assert(!card.props.className.includes('col-span-full'),'grid-specific layout is not applied in list view');
+
 card=render({showImage:true});nodes=flatten(card);
 assert.equal(card.props['data-image-state'],'with-image');
+assert(!card.props.className.includes('col-span-full'),'image card must retain its normal grid column');
 const image=nodes.find(x=>x?.type==='ProductImage');
 assert(image,'product with image retains gallery layout');
 image.props.onMissing();
 card=render({showImage:true});nodes=flatten(card);
 assert.equal(card.props['data-image-state'],'without-image','broken image changes to compact card');
 assert(!nodes.some(x=>x?.type==='ProductImage'),'broken image must no longer occupy the media area');
-console.log('V120_GALLERY_CARD_PASS: compact image-less card, details and ordering, broken image fallback');
+console.log('V123_GALLERY_CARD_PASS: full-width compact image-less card, original image layout, details and ordering, broken image fallback');

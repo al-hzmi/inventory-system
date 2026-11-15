@@ -40,10 +40,10 @@ assert.match(employee, /data-image-state=\{canRenderImage \? 'with-image' : 'wit
 assert.match(employee, /!canRenderImage && <div className="flex flex-wrap/);
 assert.match(employee, /onMissing=\{\(\) => setImageUnavailable\(true\)\}/);
 assert.match(admin, /onChange=\{v=>saveEmployeeSiteControl\(\{showUnimagedProducts:v\}\)\}/);
-assert.match(employeeShell, /catalog-card=122/);
-assert.match(employeeShell, /batco_sw_checked_v122/);
+assert.match(employeeShell, /catalog-card=123/);
+assert.match(employeeShell, /batco_sw_checked_v123/);
 assert.match(customerShell, /whatsapp-names=120/);
-assert.match(read('sw.js'), /batco-navigation-shell-v118-fresh-employee-showroom-bilingual-v122/);
+assert.match(read('sw.js'), /batco-navigation-shell-v118-fresh-employee-showroom-bilingual-v123/);
 
 // The category map must be stable, cover actual inventory across both branches,
 // and not mix products whose digit-only IDs collide with a different prefix.
