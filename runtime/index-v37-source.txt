@@ -283,6 +283,7 @@ const DEFAULT_EMPLOYEE_SITE_CONTROL = {
     mode: 'open',
     allowedEmployeeIds: [],
     allowedEmployeeNames: [],
+    showUnimagedProducts: true,
     maintenanceMessage: 'النظام متوقف مؤقتًا من الإدارة.'
 };
 
@@ -342,6 +343,7 @@ const sanitizeEmployeeSiteControl = (raw = {}) => ({
     ...DEFAULT_EMPLOYEE_SITE_CONTROL,
     ...raw,
     mode: ['open','restricted','closed'].includes(raw?.mode) ? raw.mode : 'open',
+    showUnimagedProducts: raw?.showUnimagedProducts !== false,
     allowedEmployeeIds: Array.isArray(raw?.allowedEmployeeIds) ? raw.allowedEmployeeIds.filter(Boolean) : [],
     allowedEmployeeNames: Array.isArray(raw?.allowedEmployeeNames) ? raw.allowedEmployeeNames.filter(Boolean) : []
 });
@@ -375,7 +377,7 @@ const subscribeEmployeeSiteControl = listener => {
                 if(!active)return;received=true;clearTimeout(timer);
                 const next=sanitizeEmployeeSiteControl(doc.exists?doc.data():DEFAULT_EMPLOYEE_SITE_CONTROL);
                 publish({...next,__loading:false,__unavailable:false});
-                try { localStorage.setItem(EMPLOYEE_SITE_CONTROL_CACHE_KEY,JSON.stringify({mode:next.mode,allowedEmployeeIds:next.allowedEmployeeIds,allowedEmployeeNames:next.allowedEmployeeNames,maintenanceMessage:next.maintenanceMessage})); } catch {}
+                try { localStorage.setItem(EMPLOYEE_SITE_CONTROL_CACHE_KEY,JSON.stringify({mode:next.mode,allowedEmployeeIds:next.allowedEmployeeIds,allowedEmployeeNames:next.allowedEmployeeNames,showUnimagedProducts:next.showUnimagedProducts,maintenanceMessage:next.maintenanceMessage})); } catch {}
             },()=>{clearTimeout(timer);fallback()});
         }).catch(()=>{clearTimeout(timer);fallback()});
     }
@@ -1690,8 +1692,10 @@ const OrderInvoiceModal = memo(({ cart, setCart, drafts, setDrafts, onClose, ses
         if (notes.trim()) msg += `الملاحظات: ${notes.trim()}\n`;
         msg += `════════════════\n\n`;
         items.forEach((it, idx) => {
-            msg += `${idx + 1}. *[ ${it.id} ]*\n`;
-            msg += `   الكمية: *${it.cartQty}* | الإجمالي: *${NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}* ر.س\n`;
+            const itemName = String(it.name || 'اسم الصنف غير متوفر').replace(/[\r\n\t]+/g, ' ').replace(/[*_~`]/g, '').replace(/\s+/g, ' ').trim();
+            msg += `${idx + 1}. *${itemName}*\n`;
+            msg += `   رقم الصنف: ${it.id} | الكمية: *${it.cartQty}*\n`;
+            msg += `   الإجمالي: *${NUMBER_FORMATTER.format((it.price || 0) * it.cartQty)}* ر.س\n`;
             if (idx < items.length - 1) msg += `  ╌╌╌╌╌╌╌╌╌╌╌╌\n`;
         });
         msg += `\n════════════════\n`;
@@ -1909,7 +1913,7 @@ const copyTextSafe = async (value) => {
     }
 };
 
-const ProductImage = ({ fileName, alt, className, onZoom, onMultiTap, disableZoom = false }) => {
+const ProductImage = ({ fileName, alt, className, onZoom, onMultiTap, onMissing, disableZoom = false }) => {
     const [showActions, setShowActions] = useState(false);
     const [zoomed, setZoomed] = useState(false);
     const [preparedFile, setPreparedFile] = useState(null);
@@ -2059,7 +2063,7 @@ const ProductImage = ({ fileName, alt, className, onZoom, onMultiTap, disableZoo
                 onPointerUp={endPress}
                 onPointerCancel={cancelPress}
                 onContextMenu={openActions}
-                onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+                onError={(e) => { e.currentTarget.style.visibility = 'hidden'; onMissing?.(); }}
             />
 
             {zoomed && <Lightbox fileName={fileName} title={alt || fileName} onClose={() => setZoomed(false)} />}
@@ -2423,6 +2427,9 @@ const NewArrivalsAdminPanel = memo(({ catalogItems, newArrivalIds, onChange }) =
 const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap, onCycle, onZoom, onImageTaps, warehouseName, warehouse, cart, setCart, isAdmin, currentCategory, onAdminCategoryEdit }) => {
     const isDetails  = view === CARD_VIEW.DETAILS;
     const isQuantity = view === CARD_VIEW.QUANTITY;
+    const [imageUnavailable, setImageUnavailable] = useState(false);
+    useEffect(() => setImageUnavailable(false), [imageFileName]);
+    const canRenderImage = showImage && !imageUnavailable;
 
     return (
         <div role="button" tabIndex={0}
@@ -2431,7 +2438,8 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
              title="نقرتان: الكمية · ثلاث نقرات: بطاقة المنتج"
              onClick={() => onTap(item.uid)}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCycle(item.uid); } }}
-             className={`tap-card group relative cursor-pointer border rounded-16 bg-bg overflow-hidden flex flex-col transition-colors duration-200 ${isDetails ? 'border-accent' : 'border-border'}`}>
+             data-image-state={canRenderImage ? 'with-image' : 'without-image'}
+             className={`tap-card group relative cursor-pointer border rounded-16 bg-bg overflow-hidden flex flex-col transition-colors duration-200 ${!canRenderImage ? 'self-start' : ''} ${isDetails ? 'border-accent' : 'border-border'}`}>
 
             {isDetails ? (
                 <div className="animate-flip w-full p-16 flex flex-col gap-10">
@@ -2479,13 +2487,13 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                 </div>
             ) : (
                 <React.Fragment>
-                    <div className={`batco-gallery-favorite-anchor ${showImage?'below-zoom':'without-zoom'}`}>
+                    <div className={`batco-gallery-favorite-anchor ${canRenderImage?'below-zoom':'without-zoom'}`}>
                         <PilotFavoriteButton item={item} warehouse={warehouse} compact iconOnly/>
                     </div>
-                    {showImage && (
+                    {canRenderImage && (
                         <div className="relative w-full bg-surface">
                             <ProductImage fileName={imageFileName} alt={item.name || item.searchId}
-                                          onZoom={() => onZoom(item)} onMultiTap={(taps) => onImageTaps(item.uid, taps)}
+                                          onMissing={() => setImageUnavailable(true)} onZoom={() => onZoom(item)} onMultiTap={(taps) => onImageTaps(item.uid, taps)}
                                           className={`object-contain w-full mx-auto ${isGrid ? 'aspect-square' : 'max-w-[360px] aspect-square'}`} />
                             <button onClick={(e) => { e.stopPropagation(); onZoom(item); }} aria-label="تكبير الصورة"
                                     className="absolute top-8 right-8 w-36 h-36 rounded-10 bg-white/90 border border-border text-secondary flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -2493,16 +2501,17 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
                             </button>
                         </div>
                     )}
-                    <div className={`p-12 flex flex-col items-center text-center gap-2 ${!showImage ? 'py-24' : ''}`}>
-                        <div className="text-[15px] font-bold text-primary break-words bidi-isolate">{item.id}</div>
-                        <div className="text-[13px] text-secondary break-words">{item.name || '---'}</div>
+                    <div className={`flex flex-col items-center text-center gap-2 ${!canRenderImage ? 'px-10 py-12' : 'p-12'}`}>
+                        <div className={`${!canRenderImage ? 'text-[12px]' : 'text-[15px]'} font-bold text-primary break-words bidi-isolate`}>{item.id}</div>
+                        <div className={`${!canRenderImage ? 'text-[12px] font-medium leading-5' : 'text-[13px]'} text-secondary break-words line-clamp-2`}>{item.name || 'اسم الصنف غير متوفر'}</div>
+                        {!canRenderImage && <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 mt-4 text-[10px] text-muted"><span>المتوفر: <b className="text-primary">{NUMBER_FORMATTER.format(item.qty)} {item.unit || ''}</b></span><span>الشد: <b className="text-primary">{item.pack || '—'}</b></span>{item.price > 0 && <span>السعر: <b className="text-accent">{NUMBER_FORMATTER.format(item.price)} ر.س</b></span>}</div>}
                         {isQuantity && (
                             <div className={`animate-flip mt-8 px-12 py-8 rounded-10 ${stockTone(quantityInCartons(item.qty, item.unit, item.pack)?.cartons ?? item.qty).bg}`}>
                                 <Quantity qty={item.qty} unit={item.unit} pack={item.pack} size="sm" />
                             </div>
                         )}
                         
-                        <div className="mt-8 w-full flex justify-center" onClick={e => e.stopPropagation()}>
+                        <div className={`${!canRenderImage ? 'mt-5' : 'mt-8'} w-full flex justify-center`} onClick={e => e.stopPropagation()}>
                             <OrderQuantityControl item={item} cart={cart} setCart={setCart} />
                         </div>
                     </div>
@@ -5054,14 +5063,15 @@ const App = () => {
 
         let pool = databases[warehouse] || [];
         if (VISIBILITY_RULES.hideOutOfStockInGallery) pool = pool.filter(i => i.qty > 0);
+        const canSeeUnimaged = isAdmin || employeeSiteControl.showUnimagedProducts !== false;
 
         if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(normalizeImageSku(i.id)) && hasImageForItem(imagesList, i));
         if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) return pool.filter(i => !hasImageForItem(imagesList, i));
-        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => hasImageForItem(imagesList, i) && !allCategorizedIds.has(i.cleanId));
+        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => !allCategorizedIds.has(i.cleanId) && (canSeeUnimaged || hasImageForItem(imagesList, i)));
 
         const ids = new Set(categories[activeCategory] || []);
-        return pool.filter(i => ids.has(i.cleanId) && hasImageForItem(imagesList, i));
-    }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, newArrivalIds, isAdmin]);
+        return pool.filter(i => ids.has(i.cleanId) && (canSeeUnimaged || hasImageForItem(imagesList, i)));
+    }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, newArrivalIds, isAdmin, employeeSiteControl.showUnimagedProducts]);
 
     const visibleItems = useMemo(() => galleryResults.slice(0, visibleCount), [galleryResults, visibleCount]);
     const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
@@ -5376,7 +5386,7 @@ const App = () => {
                                         ) : (
                                             <div className={galleryView === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-16" : "flex flex-col gap-16 max-w-[520px] mx-auto"}>
                                                 {visibleItems.map(item => (
-                                                    <GalleryCard key={item.uid} item={item} imageFileName={imageForItem(imagesList, item)} showImage={!isMissingImagesView} isGrid={galleryView === 'grid'}
+                                                    <GalleryCard key={item.uid} item={item} imageFileName={imageForItem(imagesList, item)} showImage={!isMissingImagesView && hasImageForItem(imagesList, item)} isGrid={galleryView === 'grid'}
                                                         view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} onImageTaps={applyTaps} warehouseName={activeWarehouseName} warehouse={warehouse} cart={cart} setCart={setCart}
                                                         isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
                                                 ))}
