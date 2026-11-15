@@ -311,6 +311,9 @@ const CATEGORY_COLLECTIONS = {
     META: 'catalog_categories',
     AUDIT: 'category_audit_logs'
 };
+// These full SKUs share their digit-only IDs with unrelated products.
+// Keep their category memberships independent of the legacy numeric lookup.
+const EXACT_CATEGORY_SKUS = new Set(['AR_285', 'AR_296', 'BA_301', 'JAA_300006', 'JAA_300008']);
 
 const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
 
@@ -1075,11 +1078,30 @@ const parseCategories = (text) => {
         for (let j = 0; j < headers.length; j++) {
             const h = headers[j];
             if (!h || !obj[h]) continue;
-            const clean = normalizeCleanId(rows[i][j]);
+            const clean = normalizeCategoryKey(rows[i][j]);
             if (clean) obj[h].push(clean);
         }
     }
     return obj;
+};
+
+const normalizeCategoryKey = raw => {
+    const value = String(raw || '').trim();
+    if (/^sku:/i.test(value)) {
+        const sku = normalizeImageSku(value.slice(4));
+        return sku ? 'sku:' + sku : '';
+    }
+    return normalizeCleanId(value);
+};
+const categoryKeyForItem = item => {
+    const sku = normalizeImageSku(item?.id || item?.imageSku || '');
+    return EXACT_CATEGORY_SKUS.has(sku) ? 'sku:' + sku : normalizeCleanId(item?.cleanId || item?.id || item);
+};
+const categoryForItem = (item, lookup) => {
+    const sku = normalizeImageSku(item?.id || item?.imageSku || '');
+    const exact = sku ? lookup?.['sku:' + sku] : null;
+    if (EXACT_CATEGORY_SKUS.has(sku)) return exact || null;
+    return exact || lookup?.[item?.cleanId] || null;
 };
 
 
@@ -1107,7 +1129,7 @@ const buildEffectiveCategories = (baseCategories, overrides, categoryMeta) => {
     });
 
     Object.values(overrides || {}).forEach(override => {
-        const cleanId = normalizeCleanId(override?.cleanId || override?.id || '');
+        const cleanId = normalizeCategoryKey(override?.categoryKey || override?.cleanId || override?.id || '');
         const category = override?.category;
         if (!cleanId || !category || category === CATEGORY_UNASSIGNED || archived.has(category)) return;
         if (!result[category]) result[category] = [];
@@ -1130,8 +1152,8 @@ const buildCategoryLookup = (categories) => {
 
 const categoryDocId = (name) => 'cat_' + toSafeDocId(normalizeText(name).replace(/\s+/g, '_'));
 
-const saveProductCategory = async ({ cleanId, category, previousCategory, source = 'admin' }) => {
-    const id = normalizeCleanId(cleanId);
+const saveProductCategory = async ({ cleanId, sku, categoryKey, category, previousCategory, source = 'admin' }) => {
+    const id = normalizeCategoryKey(categoryKey || (sku && EXACT_CATEGORY_SKUS.has(normalizeImageSku(sku)) ? 'sku:' + sku : cleanId));
     if (!id) throw new Error('INVALID_PRODUCT_ID');
     const nextCategory = category || CATEGORY_UNASSIGNED;
     if ((previousCategory || CATEGORY_UNASSIGNED) === nextCategory) return;
@@ -1142,7 +1164,8 @@ const saveProductCategory = async ({ cleanId, category, previousCategory, source
     const auditRef = db.collection(CATEGORY_COLLECTIONS.AUDIT).doc();
 
     batch.set(overrideRef, {
-        cleanId: id,
+        cleanId: normalizeCleanId(cleanId),
+        categoryKey: id,
         category: nextCategory,
         updatedBy: 'مهند',
         source,
@@ -1151,7 +1174,8 @@ const saveProductCategory = async ({ cleanId, category, previousCategory, source
 
     batch.set(auditRef, {
         action: 'move',
-        cleanId: id,
+        cleanId: normalizeCleanId(cleanId),
+        categoryKey: id,
         previousCategory: previousCategory || CATEGORY_UNASSIGNED,
         category: nextCategory,
         updatedBy: 'مهند',
@@ -1163,20 +1187,24 @@ const saveProductCategory = async ({ cleanId, category, previousCategory, source
 };
 
 const bulkSaveProductCategory = async ({ items, category, currentCategoryById, source = 'bulk' }) => {
-    const cleanIds = [...new Set((items || []).map(item => normalizeCleanId(item?.cleanId || item)).filter(Boolean))];
-    if (!cleanIds.length) return 0;
+    const productKeys = [...new Map((items || []).map(item => {
+        const key = categoryKeyForItem(item);
+        return [key, { key, cleanId:normalizeCleanId(item?.cleanId || item), sku:item?.id || '' }];
+    }).filter(([key]) => Boolean(key))).values()];
+    if (!productKeys.length) return 0;
     const db = await getDb();
     const nextCategory = category || CATEGORY_UNASSIGNED;
 
     // 180 منتجاً في الدفعة حتى نترك مساحة لسجل تدقيق لكل منتج تحت حد Firestore batch.
-    for (let start = 0; start < cleanIds.length; start += 180) {
-        const slice = cleanIds.slice(start, start + 180);
+    for (let start = 0; start < productKeys.length; start += 180) {
+        const slice = productKeys.slice(start, start + 180);
         const batch = db.batch();
-        slice.forEach(id => {
-            const previousCategory = currentCategoryById?.[id] || CATEGORY_UNASSIGNED;
+        slice.forEach(({key:id,cleanId}) => {
+            const previousCategory = currentCategoryById?.[id] || currentCategoryById?.[cleanId] || CATEGORY_UNASSIGNED;
             if (previousCategory === nextCategory) return;
             batch.set(db.collection(CATEGORY_COLLECTIONS.OVERRIDES).doc(id), {
-                cleanId: id,
+                cleanId,
+                categoryKey: id,
                 category: nextCategory,
                 updatedBy: 'مهند',
                 source,
@@ -1184,7 +1212,8 @@ const bulkSaveProductCategory = async ({ items, category, currentCategoryById, s
             }, { merge: true });
             batch.set(db.collection(CATEGORY_COLLECTIONS.AUDIT).doc(), {
                 action: 'move',
-                cleanId: id,
+                cleanId,
+                categoryKey: id,
                 previousCategory,
                 category: nextCategory,
                 updatedBy: 'مهند',
@@ -1194,7 +1223,7 @@ const bulkSaveProductCategory = async ({ items, category, currentCategoryById, s
         });
         await batch.commit();
     }
-    return cleanIds.length;
+    return productKeys.length;
 };
 
 const runSearch = (activeDb, rawQuery, hideOutOfStock, depletedDb = []) => {
@@ -2282,6 +2311,7 @@ const AdminCategoryPickerModal = memo(({ item, imageFileName, currentCategory, c
         try {
             await saveProductCategory({
                 cleanId: item.cleanId,
+                sku: item.id,
                 category,
                 previousCategory: oldCategory,
                 source: 'admin-quick-edit'
@@ -3696,14 +3726,14 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
     const [auditLoading, setAuditLoading] = useState(false);
 
     const categoryNames = useMemo(() => Object.keys(categories || {}).sort((a,b) => a.localeCompare(b, 'ar')), [categories]);
-    const unclassifiedItems = useMemo(() => catalogItems.filter(item => !currentCategoryById[item.cleanId]), [catalogItems, currentCategoryById]);
+    const unclassifiedItems = useMemo(() => catalogItems.filter(item => !categoryForItem(item, currentCategoryById)), [catalogItems, currentCategoryById]);
 
     const scopedItems = useMemo(() => {
         let rows = scope === 'uncategorized'
             ? unclassifiedItems
             : scope === 'all'
                 ? catalogItems
-                : catalogItems.filter(item => currentCategoryById[item.cleanId] === scope);
+                : catalogItems.filter(item => categoryForItem(item, currentCategoryById) === scope);
 
         const qClean = normalizeCleanId(search);
         const qText = normalizeText(search);
@@ -3743,14 +3773,14 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
 
     const chooseCategory = async (item, category) => {
         if (!item || busy) return;
-        const previousCategory = currentCategoryById[item.cleanId] || CATEGORY_UNASSIGNED;
+        const previousCategory = categoryForItem(item, currentCategoryById) || CATEGORY_UNASSIGNED;
         if (previousCategory === category) {
             if (mode === 'quick') setQuickIndex(i => Math.min(i + 1, Math.max(0, scopedItems.length - 1)));
             return;
         }
         setBusy(true);
         try {
-            await saveProductCategory({ cleanId: item.cleanId, category, previousCategory, source: mode === 'quick' ? 'quick-classifier' : 'catalog-manager' });
+            await saveProductCategory({ cleanId: item.cleanId, sku:item.id, category, previousCategory, source: mode === 'quick' ? 'quick-classifier' : 'catalog-manager' });
             flash('تم حفظ القسم ومزامنته مع جميع الأجهزة ✓');
             if (mode === 'quick') {
                 const nextCategory = category === CATEGORY_UNASSIGNED ? null : category;
@@ -3766,7 +3796,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
 
     const applyBulk = async () => {
         if (!selected.size || !bulkCategory || busy) return;
-        const rows = catalogItems.filter(item => selected.has(item.cleanId));
+        const rows = catalogItems.filter(item => selected.has(categoryKeyForItem(item)));
         if (!window.confirm(`نقل ${rows.length} صنف إلى ${bulkCategory === CATEGORY_UNASSIGNED ? 'غير مصنف' : bulkCategory}؟`)) return;
         setBusy(true);
         try {
@@ -3804,7 +3834,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
         if (!nextName || nextName.trim() === oldName) return;
         const name = nextName.trim();
         if (categoryNames.some(c => c !== oldName && normalizeText(c) === normalizeText(name))) return alert('يوجد قسم بهذا الاسم مسبقاً.');
-        const affected = catalogItems.filter(item => currentCategoryById[item.cleanId] === oldName);
+        const affected = catalogItems.filter(item => categoryForItem(item, currentCategoryById) === oldName);
         if (!window.confirm(`سيتم تغيير اسم القسم ونقل ${affected.length} صنف إلى "${name}". متابعة؟`)) return;
         setBusy(true);
         try {
@@ -3822,7 +3852,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
     };
 
     const deleteCategory = async (category) => {
-        const affected = catalogItems.filter(item => currentCategoryById[item.cleanId] === category);
+        const affected = catalogItems.filter(item => categoryForItem(item, currentCategoryById) === category);
         if (!window.confirm(`حذف قسم "${category}"؟ سيتم نقل ${affected.length} صنف إلى "غير مصنف" ولن تُحذف المنتجات.`)) return;
         setBusy(true);
         try {
@@ -3845,8 +3875,9 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
         try {
             await saveProductCategory({
                 cleanId: row.cleanId,
+                categoryKey: row.categoryKey,
                 category: row.previousCategory || CATEGORY_UNASSIGNED,
-                previousCategory: currentCategoryById[row.cleanId] || CATEGORY_UNASSIGNED,
+                previousCategory: currentCategoryById[row.categoryKey || row.cleanId] || CATEGORY_UNASSIGNED,
                 source: 'audit-undo'
             });
             flash('تم التراجع عن التعديل ✓');
@@ -3855,17 +3886,17 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
     };
 
     const quickItem = scopedItems.length ? scopedItems[Math.min(quickIndex, scopedItems.length - 1)] : null;
-    const countFor = category => catalogItems.reduce((n,item) => n + (currentCategoryById[item.cleanId] === category ? 1 : 0), 0);
+    const countFor = category => catalogItems.reduce((n,item) => n + (categoryForItem(item, currentCategoryById) === category ? 1 : 0), 0);
 
     const CategoryChoices = ({ item, compact = false }) => (
         <div className={`flex flex-wrap ${compact ? 'gap-6' : 'gap-8'}`}>
             {categoryNames.map(category => {
-                const active = currentCategoryById[item.cleanId] === category;
+                const active = categoryForItem(item, currentCategoryById) === category;
                 return <button key={category} disabled={busy} onClick={() => chooseCategory(item, category)}
                     className={`${compact ? 'px-10 h-32 text-[11px]' : 'px-14 h-38 text-[12px]'} rounded-full border font-semibold transition-colors disabled:opacity-50 ${active ? 'bg-accent text-white border-accent' : 'bg-bg border-border text-primary hover:border-accent'}`}>{category}</button>;
             })}
             <button disabled={busy} onClick={() => chooseCategory(item, CATEGORY_UNASSIGNED)}
-                className={`${compact ? 'px-10 h-32 text-[11px]' : 'px-14 h-38 text-[12px]'} rounded-full border font-semibold transition-colors disabled:opacity-50 ${!currentCategoryById[item.cleanId] ? 'bg-primary text-white border-primary' : 'bg-bg border-border text-secondary'}`}>غير مصنف</button>
+                className={`${compact ? 'px-10 h-32 text-[11px]' : 'px-14 h-38 text-[12px]'} rounded-full border font-semibold transition-colors disabled:opacity-50 ${!categoryForItem(item, currentCategoryById) ? 'bg-primary text-white border-primary' : 'bg-bg border-border text-secondary'}`}>غير مصنف</button>
         </div>
     );
 
@@ -3913,7 +3944,7 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
                         <div>
                             <div className="flex justify-between gap-12 items-start">
                                 <div className="min-w-0"><p className="text-[10px] text-muted">رقم الصنف</p><p className="text-[17px] font-bold text-primary bidi-isolate">{quickItem.id}</p></div>
-                                <span className="text-[10px] bg-surface border border-border rounded-full px-8 py-4 text-secondary whitespace-nowrap">{currentCategoryById[quickItem.cleanId] || 'غير مصنف'}</span>
+                                <span className="text-[10px] bg-surface border border-border rounded-full px-8 py-4 text-secondary whitespace-nowrap">{categoryForItem(quickItem, currentCategoryById) || 'غير مصنف'}</span>
                             </div>
                             <p className="text-[13px] text-secondary mt-6 leading-relaxed">{quickItem.name || '---'}</p>
                         </div>
@@ -3938,16 +3969,16 @@ const ProductClassificationManager = memo(({ catalogItems, imagesList, categorie
 
                     <div className="flex justify-between items-center gap-8">
                         <p className="text-[11px] text-muted">النتائج: <span className="numeric">{scopedItems.length}</span></p>
-                        {scopedItems.length>0 && <button onClick={()=>setSelected(new Set(scopedItems.slice(0,200).map(i=>i.cleanId)))} className="text-[11px] text-accent font-bold">تحديد أول {Math.min(200,scopedItems.length)}</button>}
+                        {scopedItems.length>0 && <button onClick={()=>setSelected(new Set(scopedItems.slice(0,200).map(categoryKeyForItem)))} className="text-[11px] text-accent font-bold">تحديد أول {Math.min(200,scopedItems.length)}</button>}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         {scopedItems.slice(0,300).map(item => {
-                            const checked=selected.has(item.cleanId);
-                            return <div key={item.cleanId} className={`bg-bg border rounded-12 p-10 flex gap-10 ${checked?'border-accent ring-1 ring-accent/20':'border-border'}`}>
-                                <button onClick={()=>setSelected(prev=>{const n=new Set(prev);checked?n.delete(item.cleanId):n.add(item.cleanId);return n;})} className={`w-24 h-24 rounded-6 border flex-shrink-0 flex items-center justify-center text-[12px] font-bold ${checked?'bg-accent text-white border-accent':'border-border bg-surface'}`}>{checked?'✓':''}</button>
+                            const checked=selected.has(categoryKeyForItem(item));
+                            return <div key={categoryKeyForItem(item)} className={`bg-bg border rounded-12 p-10 flex gap-10 ${checked?'border-accent ring-1 ring-accent/20':'border-border'}`}>
+                                <button onClick={()=>setSelected(prev=>{const n=new Set(prev);checked?n.delete(categoryKeyForItem(item)):n.add(categoryKeyForItem(item));return n;})} className={`w-24 h-24 rounded-6 border flex-shrink-0 flex items-center justify-center text-[12px] font-bold ${checked?'bg-accent text-white border-accent':'border-border bg-surface'}`}>{checked?'✓':''}</button>
                                 <div className="w-72 h-72 rounded-10 border border-border bg-surface overflow-hidden flex-shrink-0 flex items-center justify-center">{hasImageForItem(imagesList, item)?<ProductImage fileName={imageForItem(imagesList, item)} alt={item.name||item.id} className="w-full h-full object-contain"/>:<Icon.ImageOff className="w-20 h-20 text-muted"/>}</div>
-                                <div className="min-w-0 flex-1"><p className="font-bold text-[13px] bidi-isolate truncate">{item.id}</p><p className="text-[11px] text-secondary truncate mt-2">{item.name||'---'}</p><p className="text-[10px] text-muted mt-6 mb-6">الحالي: <b className="text-primary">{currentCategoryById[item.cleanId]||'غير مصنف'}</b></p><select disabled={busy} value={currentCategoryById[item.cleanId]||CATEGORY_UNASSIGNED} onChange={e=>chooseCategory(item,e.target.value)} className="w-full h-32 px-8 rounded-8 border border-border bg-surface text-[10px] outline-none focus:border-accent"><option value={CATEGORY_UNASSIGNED}>غير مصنف</option>{categoryNames.map(cat=><option key={cat} value={cat}>{cat}</option>)}</select></div>
+                                <div className="min-w-0 flex-1"><p className="font-bold text-[13px] bidi-isolate truncate">{item.id}</p><p className="text-[11px] text-secondary truncate mt-2">{item.name||'---'}</p><p className="text-[10px] text-muted mt-6 mb-6">الحالي: <b className="text-primary">{categoryForItem(item, currentCategoryById)||'غير مصنف'}</b></p><select disabled={busy} value={categoryForItem(item, currentCategoryById)||CATEGORY_UNASSIGNED} onChange={e=>chooseCategory(item,e.target.value)} className="w-full h-32 px-8 rounded-8 border border-border bg-surface text-[10px] outline-none focus:border-accent"><option value={CATEGORY_UNASSIGNED}>غير مصنف</option>{categoryNames.map(cat=><option key={cat} value={cat}>{cat}</option>)}</select></div>
                             </div>;
                         })}
                     </div>
@@ -4896,7 +4927,7 @@ const App = () => {
                 const next = {};
                 snapshot.docs.forEach(doc => {
                     const row = { id: doc.id, ...doc.data() };
-                    const cleanId = normalizeCleanId(row.cleanId || doc.id);
+                    const cleanId = normalizeCategoryKey(row.categoryKey || doc.id || row.cleanId);
                     if (cleanId) next[cleanId] = row;
                 });
                 setCategoryOverrides(next);
@@ -4997,7 +5028,6 @@ const App = () => {
         return () => clearTimeout(t);
     }, [search, warehouse, query, sessionName]);
 
-    const allCategorizedIds = useMemo(() => new Set(Object.values(categories).flat()), [categories]);
     const newArrivalIds = useMemo(() => {
         const next = new Set((newArrivalsMeta.items || []).map(row => normalizeImageSku(row.sku)).filter(Boolean));
         (newArrivalOverrides.include || []).forEach(id => { const exact = normalizeImageSku(id); if (exact) next.add(exact); });
@@ -5039,9 +5069,10 @@ const App = () => {
         const map = new Map();
         [WAREHOUSES.jeddah.key, WAREHOUSES.riyadh.key].forEach(wh => {
             (databases[wh] || []).forEach(item => {
-                const prev = map.get(item.cleanId);
-                if (!prev) map.set(item.cleanId, { ...item, warehouseQty: { [wh]: item.qty || 0 } });
-                else map.set(item.cleanId, { ...prev, name: prev.name || item.name, warehouseQty: { ...(prev.warehouseQty || {}), [wh]: item.qty || 0 } });
+                const key = normalizeImageSku(item.id);
+                const prev = map.get(key);
+                if (!prev) map.set(key, { ...item, warehouseQty: { [wh]: item.qty || 0 } });
+                else map.set(key, { ...prev, name: prev.name || item.name, warehouseQty: { ...(prev.warehouseQty || {}), [wh]: item.qty || 0 } });
             });
         });
         return Array.from(map.values()).sort((a,b) => String(a.id).localeCompare(String(b.id), 'en', { numeric:true }));
@@ -5067,11 +5098,10 @@ const App = () => {
 
         if (activeCategory === SPECIAL_CATEGORIES.NEW_ARRIVALS) return pool.filter(i => newArrivalIds.has(normalizeImageSku(i.id)) && hasImageForItem(imagesList, i));
         if (activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES) return pool.filter(i => !hasImageForItem(imagesList, i));
-        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => !allCategorizedIds.has(i.cleanId) && (canSeeUnimaged || hasImageForItem(imagesList, i)));
+        if (activeCategory === SPECIAL_CATEGORIES.UNCATEGORIZED) return pool.filter(i => !categoryForItem(i, currentCategoryById) && (canSeeUnimaged || hasImageForItem(imagesList, i)));
 
-        const ids = new Set(categories[activeCategory] || []);
-        return pool.filter(i => ids.has(i.cleanId) && (canSeeUnimaged || hasImageForItem(imagesList, i)));
-    }, [activeCategory, warehouse, databases, imagesList, categories, allCategorizedIds, newArrivalIds, isAdmin, employeeSiteControl.showUnimagedProducts]);
+        return pool.filter(i => categoryForItem(i, currentCategoryById) === activeCategory && (canSeeUnimaged || hasImageForItem(imagesList, i)));
+    }, [activeCategory, warehouse, databases, imagesList, currentCategoryById, newArrivalIds, isAdmin, employeeSiteControl.showUnimagedProducts]);
 
     const visibleItems = useMemo(() => galleryResults.slice(0, visibleCount), [galleryResults, visibleCount]);
     const isMissingImagesView = activeCategory === SPECIAL_CATEGORIES.MISSING_IMAGES;
@@ -5296,17 +5326,17 @@ const App = () => {
                                 <FullResultCard item={selectedSearchItem} warehouseName={selectedSearchItem.isDepletedArchive ? 'أرشيف سابق' : activeWarehouseName}
                                     showImage={showImageInSearch && hasImageForItem(imagesList, selectedSearchItem)}
                                     imageFileName={imageForItem(imagesList, selectedSearchItem)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse}
-                                    isAdmin={isAdmin} currentCategory={currentCategoryById[selectedSearchItem.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
+                                    isAdmin={isAdmin} currentCategory={categoryForItem(selectedSearchItem, currentCategoryById)} onAdminCategoryEdit={setCategoryEditItem} />
                             </React.Fragment>
                         ) : (
                             <React.Fragment>
-                                {search.exact && <FullResultCard item={search.exact} warehouseName={search.exact.isDepletedArchive ? 'أرشيف سابق' : activeWarehouseName} showImage={showImageInSearch && hasImageForItem(imagesList, search.exact)} imageFileName={imageForItem(imagesList, search.exact)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} isAdmin={isAdmin} currentCategory={currentCategoryById[search.exact.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />}
+                                {search.exact && <FullResultCard item={search.exact} warehouseName={search.exact.isDepletedArchive ? 'أرشيف سابق' : activeWarehouseName} showImage={showImageInSearch && hasImageForItem(imagesList, search.exact)} imageFileName={imageForItem(imagesList, search.exact)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} isAdmin={isAdmin} currentCategory={categoryForItem(search.exact, currentCategoryById)} onAdminCategoryEdit={setCategoryEditItem} />}
                                 {search.availableVisible.filter(i => !search.exact || i.uid !== search.exact.uid).map(item => (
-                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
+                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={categoryForItem(item, currentCategoryById)} onAdminCategoryEdit={setCategoryEditItem} />
                                 ))}
                                 {search.depletedVisible.length > 0 && <div id="batco-depleted-results" className="mt-12 rounded-10 border border-border bg-surface px-12 py-10"><h3 className="text-[13px] font-bold text-primary">الأصناف المنتهية أو المؤرشفة</h3><p className="text-[11px] text-muted mt-2">للاطلاع على صور الأصناف وبياناتها فقط؛ لا يمكن إضافتها إلى الطلب.</p></div>}
                                 {search.depletedVisible.map(item => (
-                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
+                                    <CompactResultCard key={item.uid} item={item} showImage={showImageInSearch && hasImageForItem(imagesList, item)} imageFileName={imageForItem(imagesList, item)} hideQty={hideQtyInSearch} cart={cart} setCart={setCart} warehouse={warehouse} onSelect={(item) => { setSelectedSearchItem(item); try { window.dispatchEvent(new CustomEvent('batco61:product-open', { detail:{sku:item.id,warehouse} })); } catch {} }} isAdmin={isAdmin} currentCategory={categoryForItem(item, currentCategoryById)} onAdminCategoryEdit={setCategoryEditItem} />
                                 ))}
                                 {search.total > search.visible.length && <p className="text-[12px] text-muted text-center pt-8"><span className="numeric">{NUMBER_FORMATTER.format(search.total)}</span> نتيجة — اضغط على أي نتيجة لفتح بطاقتها كاملة</p>}
                             </React.Fragment>
@@ -5388,7 +5418,7 @@ const App = () => {
                                                 {visibleItems.map(item => (
                                                     <GalleryCard key={item.uid} item={item} imageFileName={imageForItem(imagesList, item)} showImage={!isMissingImagesView && hasImageForItem(imagesList, item)} isGrid={galleryView === 'grid'}
                                                         view={cardViews[item.uid] || CARD_VIEW.IMAGE} onTap={handleCardTap} onCycle={handleCardCycle} onZoom={handleZoom} onImageTaps={applyTaps} warehouseName={activeWarehouseName} warehouse={warehouse} cart={cart} setCart={setCart}
-                                                        isAdmin={isAdmin} currentCategory={currentCategoryById[item.cleanId]} onAdminCategoryEdit={setCategoryEditItem} />
+                                                        isAdmin={isAdmin} currentCategory={categoryForItem(item, currentCategoryById)} onAdminCategoryEdit={setCategoryEditItem} />
                                                 ))}
                                             </div>
                                         )}
@@ -5435,7 +5465,7 @@ const App = () => {
                 currentCategoryById={currentCategoryById}
                 categoryMeta={categoryMeta}
             />}
-            {categoryEditItem && isAdmin && <AdminCategoryPickerModal item={categoryEditItem} imageFileName={imageForItem(imagesList, categoryEditItem)} currentCategory={currentCategoryById[categoryEditItem.cleanId]} categoryNames={categoryNames} onClose={() => setCategoryEditItem(null)} />}
+            {categoryEditItem && isAdmin && <AdminCategoryPickerModal item={categoryEditItem} imageFileName={imageForItem(imagesList, categoryEditItem)} currentCategory={categoryForItem(categoryEditItem, currentCategoryById)} categoryNames={categoryNames} onClose={() => setCategoryEditItem(null)} />}
             {zoomItem && <Lightbox fileName={imageForItem(imagesList, zoomItem)} title={`${zoomItem.id} — ${zoomItem.name || ''}`} onClose={() => setZoomItem(null)} />}
         </div>
     );

@@ -206,6 +206,18 @@ const AR = '٠١٢٣٤٥٦٧٨٩', FA = '۰۱۲۳۴۵۶۷۸۹';
 const toEnglishDigits = s => String(s??'').replace(/[٠-٩۰-۹]/g,d=>{const a=AR.indexOf(d);return a>-1?String(a):String(FA.indexOf(d))});
 const normalizeCleanId = s => toEnglishDigits(s).replace(/\D/g,'');
 const normalizeSkuKey = s => toEnglishDigits(String(s??'')).trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'');
+// Preserve full-SKU category keys for identifiers shared with other product families.
+const EXACT_CATEGORY_SKUS = new Set(['AR_285','AR_296','BA_301','JAA_300006','JAA_300008']);
+const normalizeCategoryKey = value => {
+  const raw=String(value||'').trim();
+  if(/^sku:/i.test(raw)){const sku=normalizeSkuKey(raw.slice(4));return sku?'sku:'+sku:''}
+  return normalizeCleanId(raw);
+};
+const categoryForItem = (item,lookup) => {
+  const sku=normalizeSkuKey(item?.imageSku||item?.id||'');
+  const exact=lookup?.['sku:'+sku];
+  return EXACT_CATEGORY_SKUS.has(sku)?(exact||null):(exact||lookup?.[item?.cleanId]||null);
+};
 const normalizeText = s => toEnglishDigits(String(s??'')).toLowerCase().replace(/[\u064B-\u065F\u0670]/g,'').replace(/\u0640/g,'').replace(/[أإآٱ]/g,'ا').replace(/[ىئ]/g,'ي').replace(/ؤ/g,'و').replace(/ة/g,'ه').replace(/[^\u0600-\u06FFa-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
 const roundHalf = n => Math.round((Number(n)||0)*2)/2;
@@ -503,7 +515,7 @@ function parseCategories(text){
   const out={}; if(!text)return out;
   const rows=text.split(/\r?\n/).map(r=>r.split('\t').map(c=>c.trim())); if(!rows.length)return out;
   const headers=rows[0]; headers.forEach(h=>{if(h)out[h]=[]});
-  for(let i=1;i<rows.length;i++) headers.forEach((h,j)=>{if(!h)return;const id=normalizeCleanId(rows[i]?.[j]);if(id)out[h].push(id)});
+  for(let i=1;i<rows.length;i++) headers.forEach((h,j)=>{if(!h)return;const id=normalizeCategoryKey(rows[i]?.[j]);if(id)out[h].push(id)});
   return out;
 }
 function effectiveCategories(base,overrides,meta){
@@ -513,7 +525,7 @@ function effectiveCategories(base,overrides,meta){
     if(!cat||archived.has(cat))return; out[cat]=out[cat]||[];
     ids.forEach(id=>{const o=overrides[id]; if(o&&Object.prototype.hasOwnProperty.call(o,'category')&&(o.category===CATEGORY_UNASSIGNED||o.category!==cat))return; out[cat].push(id)});
   });
-  Object.values(overrides||{}).forEach(o=>{const id=normalizeCleanId(o?.cleanId||o?.id);const cat=o?.category;if(!id||!cat||cat===CATEGORY_UNASSIGNED||archived.has(cat))return;out[cat]=out[cat]||[];out[cat].push(id)});
+  Object.values(overrides||{}).forEach(o=>{const id=normalizeCategoryKey(o?.categoryKey||o?.cleanId||o?.id);const cat=o?.category;if(!id||!cat||cat===CATEGORY_UNASSIGNED||archived.has(cat))return;out[cat]=out[cat]||[];out[cat].push(id)});
   Object.keys(out).forEach(k=>out[k]=[...new Set(out[k])]); return out;
 }
 function categoryLookup(cats){const out={};Object.entries(cats||{}).forEach(([c,ids])=>ids.forEach(id=>out[id]=c));return out}
@@ -1122,7 +1134,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
           db.collection(CATEGORY_META).get({source:'server'})
         ]);
         const next={},nextMeta={};
-        rows.forEach(doc=>{const value=doc.data(),id=normalizeCleanId(value.cleanId||doc.id);if(id)next[id]=value});
+        rows.forEach(doc=>{const value=doc.data(),id=normalizeCategoryKey(value.categoryKey||doc.id||value.cleanId);if(id)next[id]=value});
         metadata.forEach(doc=>nextMeta[doc.id]=doc.data());
         lastRead=Date.now();
         if(!alive)return;
@@ -1155,7 +1167,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
     return()=>{unsubOrders();unsubDrafts()};
   },[user?.uid,page]);
   const categories=useMemo(()=>effectiveCategories(baseCategories,overrides,meta),[baseCategories,overrides,meta]);const catLookup=useMemo(()=>categoryLookup(categories),[categories]);
-  const enriched=useMemo(()=>products.filter(p=>p.imageFile&&!missingImages.has(p.cleanId)).map(p=>({...p,category:catLookup[p.cleanId]||SPECIAL_UNCATEGORIZED})),[products,catLookup,missingImages]);
+  const enriched=useMemo(()=>products.filter(p=>p.imageFile&&!missingImages.has(p.cleanId)).map(p=>({...p,category:categoryForItem(p,catLookup)||SPECIAL_UNCATEGORIZED})),[products,catLookup,missingImages]);
   const newArrivalProducts=useMemo(()=>{const byId=new Map(enriched.map(p=>[p.cleanId,p]));const metaById=new Map((newArrivalsMeta.items||[]).map(row=>[normalizeCleanId(row.sku),row]));const excluded=new Set((newArrivalOverrides.exclude||[]).map(normalizeCleanId).filter(Boolean));const manual=(newArrivalOverrides.include||[]).map(normalizeCleanId).filter(id=>id&&!excluded.has(id));const automatic=[...metaById.keys()].filter(id=>id&&!excluded.has(id)&&!manual.includes(id));return [...manual,...automatic].map(id=>{const product=byId.get(id),row=metaById.get(id);return product?{...product,newFirstSeenAt:row?.firstSeenAt||null,newDaysRemaining:row?.daysRemaining||30}:null}).filter(Boolean)},[enriched,newArrivalsMeta,newArrivalOverrides]);
   const categoryNames=useMemo(()=>{
     const all=Object.keys(categories).filter(Boolean);
@@ -1174,7 +1186,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   const categoryShowcases=useMemo(()=>{
     const groups=new Map();
     enriched.forEach(item=>{
-      const name=catLookup[item.cleanId]||SPECIAL_UNCATEGORIZED;
+      const name=categoryForItem(item,catLookup)||SPECIAL_UNCATEGORIZED;
       if(!groups.has(name))groups.set(name,[]);
       groups.get(name).push(item);
     });
@@ -1182,7 +1194,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   },[enriched,categoryNames,catLookup]);
   const filtered=useMemo(()=>{
     let rows=enriched;
-    if(catalogCategory)rows=rows.filter(p=>(catLookup[p.cleanId]||SPECIAL_UNCATEGORIZED)===catalogCategory);
+    if(catalogCategory)rows=rows.filter(p=>(categoryForItem(p,catLookup)||SPECIAL_UNCATEGORIZED)===catalogCategory);
     const q=query.trim();
     if(q){
       const clean=normalizeCleanId(q),text=normalizeText(q),raw=toEnglishDigits(q).toLowerCase();

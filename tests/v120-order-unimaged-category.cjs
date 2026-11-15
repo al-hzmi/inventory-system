@@ -40,10 +40,10 @@ assert.match(employee, /data-image-state=\{canRenderImage \? 'with-image' : 'wit
 assert.match(employee, /!canRenderImage && <div className="flex flex-wrap/);
 assert.match(employee, /onMissing=\{\(\) => setImageUnavailable\(true\)\}/);
 assert.match(admin, /onChange=\{v=>saveEmployeeSiteControl\(\{showUnimagedProducts:v\}\)\}/);
-assert.match(employeeShell, /catalog-card=120/);
-assert.match(employeeShell, /batco_sw_checked_v120/);
+assert.match(employeeShell, /catalog-card=122/);
+assert.match(employeeShell, /batco_sw_checked_v122/);
 assert.match(customerShell, /whatsapp-names=120/);
-assert.match(read('sw.js'), /batco-navigation-shell-v118-fresh-employee-showroom-bilingual-v120/);
+assert.match(read('sw.js'), /batco-navigation-shell-v118-fresh-employee-showroom-bilingual-v122/);
 
 // The category map must be stable, cover actual inventory across both branches,
 // and not mix products whose digit-only IDs collide with a different prefix.
@@ -73,9 +73,10 @@ for(const [sku,category] of [
   ['BAT-00412','مظلات']
 ])assert(members.get(sku)?.has(category), `${sku} must belong to ${category}`);
 assert(!members.has('AR_100108'), 'ambiguous damaged inventory must not be auto-classified');
-assert(!members.has('JAA_300006'), 'colliding SKU must not be auto-classified');
+assert(members.get('SKU:JAA_300006')?.has('الألعاب والسباحة'), 'football collision must use a qualified SKU key');
+assert(members.get('SKU:AR_285')?.has('البلاستيك'), 'plastic container collision must use a qualified SKU key');
 const audit = JSON.parse(execFileSync(process.execPath,['tools/classify-uncategorized-products.cjs'],{encoding:'utf8'}));
 assert.equal(audit.suggestions,0,'re-running classifier must not duplicate categories');
-assert.equal(audit.pending,6,'only ambiguous or colliding products remain for review');
+assert.equal(audit.pending,1,'only the intentionally ambiguous damaged goods remain for review');
 
-console.log('V120_ORDER_UNIMAGED_CATEGORY_PASS: names in both WhatsApp paths, employee permission, compact no-image cards, 410 category assignments, 6 held for review');
+console.log('V120_ORDER_UNIMAGED_CATEGORY_PASS: names in both WhatsApp paths, employee permission, compact no-image cards, 415 category assignments, 1 held for review');
