@@ -69,5 +69,5 @@ assert.match(customer, /normalizeCategoryKey\(value.categoryKey\|\|doc.id\|\|val
 assert.match(employee, /return pool.filter\(i => categoryForItem\(i, currentCategoryById\) === activeCategory/);
 assert.match(read('index.html'), /exact-categories=122/);
 assert.match(read('customer.html'), /exact-categories=122/);
-assert.match(read('sw.js'), /batco-navigation-shell-v118-fresh-employee-showroom-bilingual-v122/);
+assert.match(read('sw.js'), /batco-navigation-shell-v118-fresh-employee-showroom-bilingual-v123/);
 console.log('V122_EXACT_CATEGORY_SKUS_PASS: five full-SKU assignments, collision isolation, legacy overrides, admin move and undo semantics, revised employee/customer shells');

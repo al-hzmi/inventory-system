@@ -2469,7 +2469,7 @@ const GalleryCard = memo(({ item, imageFileName, showImage, isGrid, view, onTap,
              onClick={() => onTap(item.uid)}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCycle(item.uid); } }}
              data-image-state={canRenderImage ? 'with-image' : 'without-image'}
-             className={`tap-card group relative cursor-pointer border rounded-16 bg-bg overflow-hidden flex flex-col transition-colors duration-200 ${!canRenderImage ? 'self-start' : ''} ${isDetails ? 'border-accent' : 'border-border'}`}>
+             className={`tap-card group relative w-full min-w-0 cursor-pointer border rounded-16 bg-bg overflow-hidden flex flex-col transition-colors duration-200 ${!canRenderImage && isGrid ? 'col-span-full' : ''} ${isDetails ? 'border-accent' : 'border-border'}`}>
 
             {isDetails ? (
                 <div className="animate-flip w-full p-16 flex flex-col gap-10">
