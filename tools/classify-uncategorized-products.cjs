@@ -32,7 +32,7 @@ for (const row of rows.slice(1)) row.forEach((value, col) => {
 function recommend(item) {
   const name = nameKey(item.name), sku = item.sku.toUpperCase();
   if (!name || /توالف|اصناف متنوعه/.test(name)) return null;
-  if (/^BAT-004(09|10|11|12)$/.test(sku)) return null; // "مظلات" has no reliably matching existing section.
+  if (/^مظلات?$/.test(name)) return 'مظلات';
   // Do not mislabel other brands' shoes as "OGS".
   if (/احذي|حذاء/.test(name)) return /^(OGS|OSG)/.test(sku) ? 'أحذية OGS' : 'أحذية متنوعة';
   if (/برطمان|مرطمان/.test(name)) return 'البرطمان';
