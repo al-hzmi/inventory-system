@@ -7,7 +7,7 @@ const entry = fs.readFileSync('index.html', 'utf8');
 new vm.Script(source, { filename: 'sw.js' });
 assert.match(source, /batco-navigation-shell-v118-fresh-employee/);
 assert.match(source, /path==='\/index\.html'&&cached/);
-assert.match(entry, /batco_sw_checked_v118/, 'fresh employee bootstrap must check for the upgraded worker');
+assert.match(entry, /batco_sw_checked_v120/, 'fresh employee bootstrap must check for the upgraded worker');
 
 async function navigate({ offline = false, retry = false }) {
   const listeners = {};

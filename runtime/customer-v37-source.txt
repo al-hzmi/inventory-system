@@ -351,7 +351,10 @@ function buildOrderWhatsAppText(order){
     const rows=items.map(item=>({...item,qty:Number(item.branchQuantities?.[branch.id]||0)})).filter(item=>item.qty>0);
     if(!rows.length)return;
     lines.push('',`${index+1}) ${branch.name||'فرع'}`);
-    rows.forEach(item=>lines.push(`• ${item.id||item.cleanId||'—'} — ${NF.format(item.qty)} كرتون`));
+    rows.forEach(item=>{
+      const name=String(item.name||'اسم الصنف غير متوفر').replace(/[\r\n\t]+/g,' ').replace(/[*_~`]/g,'').replace(/\s+/g,' ').trim();
+      lines.push(`• *${name}*`, `  ${item.id||item.cleanId||'—'} · ${NF.format(item.qty)} كرتون`);
+    });
   });
   if(order?.notes)lines.push('','ملاحظات:',String(order.notes));
   lines.push('','تم إعداد الطلب عبر بوابة عملاء بيت الأواني الطيبة.');
