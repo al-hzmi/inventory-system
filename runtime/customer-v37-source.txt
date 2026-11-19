@@ -219,6 +219,9 @@ const categoryForItem = (item,lookup) => {
   return EXACT_CATEGORY_SKUS.has(sku)?(exact||null):(exact||lookup?.[item?.cleanId]||null);
 };
 const normalizeText = s => toEnglishDigits(String(s??'')).toLowerCase().replace(/[\u064B-\u065F\u0670]/g,'').replace(/\u0640/g,'').replace(/[أإآٱ]/g,'ا').replace(/[ىئ]/g,'ي').replace(/ؤ/g,'و').replace(/ة/g,'ه').replace(/[^\u0600-\u06FFa-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+// Customer-only visibility rule. Keep staff catalog and category data unchanged.
+const HIDDEN_CUSTOMER_CATEGORY_KEYS = new Set(['المخفضه']);
+const isHiddenCustomerCategory = name => HIDDEN_CUSTOMER_CATEGORY_KEYS.has(normalizeText(name));
 const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
 const roundHalf = n => Math.round((Number(n)||0)*2)/2;
 const floorHalf = n => Math.max(0,Math.floor((Number(n)||0)*2+1e-7)/2);
@@ -1170,7 +1173,7 @@ function CustomerApp({user,profile,onProfileUpdate,guestMode=false,onRequireAuth
   const enriched=useMemo(()=>products.filter(p=>p.imageFile&&!missingImages.has(p.cleanId)).map(p=>({...p,category:categoryForItem(p,catLookup)||SPECIAL_UNCATEGORIZED})),[products,catLookup,missingImages]);
   const newArrivalProducts=useMemo(()=>{const byId=new Map(enriched.map(p=>[p.cleanId,p]));const metaById=new Map((newArrivalsMeta.items||[]).map(row=>[normalizeCleanId(row.sku),row]));const excluded=new Set((newArrivalOverrides.exclude||[]).map(normalizeCleanId).filter(Boolean));const manual=(newArrivalOverrides.include||[]).map(normalizeCleanId).filter(id=>id&&!excluded.has(id));const automatic=[...metaById.keys()].filter(id=>id&&!excluded.has(id)&&!manual.includes(id));return [...manual,...automatic].map(id=>{const product=byId.get(id),row=metaById.get(id);return product?{...product,newFirstSeenAt:row?.firstSeenAt||null,newDaysRemaining:row?.daysRemaining||30}:null}).filter(Boolean)},[enriched,newArrivalsMeta,newArrivalOverrides]);
   const categoryNames=useMemo(()=>{
-    const all=Object.keys(categories).filter(Boolean);
+    const all=Object.keys(categories).filter(name=>name&&!isHiddenCustomerCategory(name));
     const configured=Array.isArray(window.__customerPortalControl?.categoryOrder)?window.__customerPortalControl.categoryOrder:[];
     const ranks=new Map(configured.map((name,i)=>[normalizeText(name),i]));
     return all.sort((a,b)=>{
