@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-22T16:50:32.564901Z",
+  "generatedAt": "2026-11-22T16:54:25.294788Z",
   "historyDays": 365,
   "source": "git-inventory-tsv-history",
   "current": {
@@ -11,11 +11,191 @@
     },
     "riyadh": {
       "skuCount": 724,
-      "inStock": 570,
-      "totalQty": 4745.7360622
+      "inStock": 568,
+      "totalQty": 4527.4860622
     }
   },
   "events": [
+    {
+      "id": "8c4ea4b33dd7",
+      "commit": "8c4ea4b33dd7720b306d2af68a41082eec137287",
+      "timestamp": "2026-11-22T19:53:59+03:00",
+      "message": "admin: import data/riyadh.tsv and update inventory timestamp",
+      "paths": [
+        "data/riyadh.tsv"
+      ],
+      "changes": [
+        {
+          "sku": "195",
+          "name": "حافظة 1.5 لتر",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 3,
+          "after": 2.9,
+          "delta": -0.1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "225",
+          "name": "حافظة 3 لتر",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 2,
+          "after": 1.85,
+          "delta": -0.15,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "3030",
+          "name": "برطمانات 750 مل مربع - غطاء اصفر",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 0,
+          "after": 3,
+          "delta": 3,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00112",
+          "name": "ساعات جدارية",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 2,
+          "after": 1,
+          "delta": -1,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00113",
+          "name": "ساعات جدارية",
+          "unit": "حبة",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 72,
+          "after": 48,
+          "delta": -24,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00114",
+          "name": "ساعات جدارية",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 1,
+          "after": 0,
+          "delta": -1,
+          "zeroed": true,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00115",
+          "name": "ساعات جدارية",
+          "unit": "حبة",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 72,
+          "after": 48,
+          "delta": -24,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00116",
+          "name": "ساعات جدارية",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 1,
+          "after": 0,
+          "delta": -1,
+          "zeroed": true,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00119",
+          "name": "ساعات جدارية",
+          "unit": "حبة",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 48,
+          "after": 24,
+          "delta": -24,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00131",
+          "name": "اباجورات",
+          "unit": "حبة",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 144,
+          "after": 72,
+          "delta": -72,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00132",
+          "name": "اباجورات",
+          "unit": "حبة",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 144,
+          "after": 72,
+          "delta": -72,
+          "zeroed": false,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        },
+        {
+          "sku": "00474",
+          "name": "مضرب بينج بونج",
+          "unit": "كرتون",
+          "branch": "riyadh",
+          "branchLabel": "الرياض",
+          "before": 2,
+          "after": 0,
+          "delta": -2,
+          "zeroed": true,
+          "transferMatchedQty": 0,
+          "price": 0,
+          "valueDelta": 0
+        }
+      ],
+      "transfers": []
+    },
     {
       "id": "ba24eee2baf1",
       "commit": "ba24eee2baf1b3c2c8564508cad102e80690a041",
