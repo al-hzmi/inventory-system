@@ -4722,6 +4722,10 @@ const App = () => {
             window.alert('تعذر حفظ السلة والمسودات وإتمام الخروج. حاول مجددًا.');
             return;
         }
+        // Hide the authenticated view immediately, including when navigation is offline.
+        setSessionName('');
+        setIsAdmin(false);
+        setAccessVerified(false);
         window.location.replace('./index.html?employee=1');
     };
 
